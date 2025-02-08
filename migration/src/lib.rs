@@ -7,6 +7,7 @@ mod m20250208_224238_times;
 mod m20250208_224457_tags;
 mod m20250208_224921_locations;
 mod m20250208_225355_gps;
+mod m20250208_230751_weather;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -19,6 +20,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250208_224457_tags::Migration),
             Box::new(m20250208_224921_locations::Migration),
             Box::new(m20250208_225355_gps::Migration),
+            Box::new(m20250208_230751_weather::Migration),
             // inject-above (do not remove this comment)
         ]
     }

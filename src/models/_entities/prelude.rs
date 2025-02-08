@@ -6,3 +6,4 @@ pub use super::metadata::Entity as Metadata;
 pub use super::tags::Entity as Tags;
 pub use super::times::Entity as Times;
 pub use super::users::Entity as Users;
+pub use super::weather::Entity as Weather;

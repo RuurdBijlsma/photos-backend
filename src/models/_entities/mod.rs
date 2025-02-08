@@ -8,3 +8,4 @@ pub mod metadata;
 pub mod tags;
 pub mod times;
 pub mod users;
+pub mod weather;
