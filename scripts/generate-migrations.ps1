@@ -51,3 +51,6 @@ weather_pressure:float `
 weather_sun_hours:float `
 weather_condition:string
 
+cargo loco generate model unique_face `
+label:string
+

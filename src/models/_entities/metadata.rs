@@ -10,11 +10,6 @@ pub struct Model {
     pub updated_at: DateTimeWithTimeZone,
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub width: i32,
-    pub height: i32,
-    pub duration: Option<i32>,
-    pub size_bytes: i32,
-    pub format: String,
     #[sea_orm(column_type = "JsonBinary")]
     pub exif_tool: Json,
     #[sea_orm(column_type = "JsonBinary")]
