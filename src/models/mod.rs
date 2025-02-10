@@ -6,3 +6,4 @@ pub mod tags;
 pub mod locations;
 pub mod gps;
 pub mod weather;
+pub mod unique_faces;

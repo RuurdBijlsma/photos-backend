@@ -7,5 +7,6 @@ pub mod locations;
 pub mod metadata;
 pub mod tags;
 pub mod times;
+pub mod unique_faces;
 pub mod users;
 pub mod weather;

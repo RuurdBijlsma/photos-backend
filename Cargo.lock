@@ -2931,6 +2931,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pgvector"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0e8871b6d7ca78348c6cd29b911b94851f3429f0cd403130ca17f26c1fb91a6"
+dependencies = [
+ "sqlx",
+]
+
+[[package]]
 name = "phf"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2993,9 +3002,11 @@ dependencies = [
  "insta",
  "loco-rs",
  "migration",
+ "pgvector",
  "regex",
  "rstest",
  "sea-orm",
+ "sea-schema",
  "serde",
  "serde_json",
  "serial_test",
@@ -3926,6 +3937,7 @@ dependencies = [
  "chrono",
  "inherent",
  "ordered-float",
+ "pgvector",
  "rust_decimal",
  "sea-query-derive",
  "serde_json",
@@ -3941,6 +3953,7 @@ checksum = "b0019f47430f7995af63deda77e238c17323359af241233ec768aba1faea7608"
 dependencies = [
  "bigdecimal",
  "chrono",
+ "pgvector",
  "rust_decimal",
  "sea-query",
  "serde_json",
@@ -3971,6 +3984,7 @@ checksum = "0ef5dd7848c993f3789d09a2616484c72c9330cae2b048df59d8c9b8c0343e95"
 dependencies = [
  "futures",
  "sea-query",
+ "sea-query-binder",
  "sea-schema-derive",
 ]
 

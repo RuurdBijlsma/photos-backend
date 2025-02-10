@@ -5,5 +5,6 @@ pub use super::locations::Entity as Locations;
 pub use super::metadata::Entity as Metadata;
 pub use super::tags::Entity as Tags;
 pub use super::times::Entity as Times;
+pub use super::unique_faces::Entity as UniqueFaces;
 pub use super::users::Entity as Users;
 pub use super::weather::Entity as Weather;
