@@ -22,7 +22,23 @@ pub struct Model {
     pub eye_right: Vec<f32>,
     #[sea_orm(column_type = "custom(\"vector\")", select_as = "float4[]")]
     pub embedding: Vec<f32>,
+    pub unique_face_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::unique_faces::Entity",
+        from = "Column::UniqueFaceId",
+        to = "super::unique_faces::Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
+    UniqueFaces,
+}
+
+impl Related<super::unique_faces::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UniqueFaces.def()
+    }
+}

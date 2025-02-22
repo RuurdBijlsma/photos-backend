@@ -12,6 +12,7 @@ mod m20250210_133959_add_unique_faces_table;
 mod m20250222_145335_face_boxes;
 mod m20250222_165339_ocr_boxes;
 mod m20250222_170059_object_boxes;
+mod m20250222_215005_add_unique_face_ref_to_face_boxes;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -29,6 +30,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250222_145335_face_boxes::Migration),
             Box::new(m20250222_165339_ocr_boxes::Migration),
             Box::new(m20250222_170059_object_boxes::Migration),
+            Box::new(m20250222_215005_add_unique_face_ref_to_face_boxes::Migration),
             // inject-above (do not remove this comment)
         ]
     }
