@@ -2,16 +2,26 @@
 
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "unique_faces")]
+#[sea_orm(table_name = "face_boxes")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    pub label: String,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
+    pub position: Vec<f32>,
+    #[sea_orm(column_type = "Float")]
+    pub width: f32,
+    #[sea_orm(column_type = "Float")]
+    pub height: f32,
+    pub mouth_left: Vec<f32>,
+    pub mouth_right: Vec<f32>,
+    pub nose_tip: Vec<f32>,
+    pub eye_left: Vec<f32>,
+    pub eye_right: Vec<f32>,
     #[sea_orm(column_type = "custom(\"vector\")", select_as = "float4[]")]
-    pub centroid: Vec<f32>,
+    pub embedding: Vec<f32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
