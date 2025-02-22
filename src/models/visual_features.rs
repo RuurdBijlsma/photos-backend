@@ -1,5 +1,5 @@
+pub use super::_entities::visual_features::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::visual_features::{ActiveModel, Model, Entity};
 pub type VisualFeatures = Entity;
 
 #[async_trait::async_trait]

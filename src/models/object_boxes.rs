@@ -1,5 +1,5 @@
+pub use super::_entities::object_boxes::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::object_boxes::{ActiveModel, Model, Entity};
 pub type ObjectBoxes = Entity;
 
 #[async_trait::async_trait]

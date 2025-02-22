@@ -8,6 +8,6 @@ mod tags;
 mod times;
 mod weather;
 
-mod ocr_boxes;
 mod object_boxes;
+mod ocr_boxes;
 mod visual_features;

@@ -1,5 +1,5 @@
+pub use super::_entities::ocr_boxes::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::ocr_boxes::{ActiveModel, Model, Entity};
 pub type OcrBoxes = Entity;
 
 #[async_trait::async_trait]
