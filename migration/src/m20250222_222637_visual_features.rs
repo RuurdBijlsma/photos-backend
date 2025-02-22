@@ -1,6 +1,5 @@
 use crate::sea_orm::EnumIter;
 use sea_orm_migration::{prelude::*, schema::*};
-use crate::m20250222_170059_object_boxes::ObjectBoxes;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -48,13 +47,13 @@ impl MigrationTrait for Migration {
                 .if_not_exists()
                 .col(pk_auto(VisualFeatures::Id))
                 .col(
-                    ColumnDef::new(ObjectBoxes::CreatedAt)
+                    ColumnDef::new(VisualFeatures::CreatedAt)
                         .timestamp_with_time_zone()
                         .not_null()
                         .default(Expr::cust("CURRENT_TIMESTAMP")),
                 )
                 .col(
-                    ColumnDef::new(ObjectBoxes::UpdatedAt)
+                    ColumnDef::new(VisualFeatures::UpdatedAt)
                         .timestamp_with_time_zone()
                         .not_null()
                         .default(Expr::cust("CURRENT_TIMESTAMP")),
