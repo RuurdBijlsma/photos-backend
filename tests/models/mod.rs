@@ -7,3 +7,5 @@ mod metadata;
 mod tags;
 mod times;
 mod weather;
+
+mod ocr_boxes;

@@ -52,4 +52,7 @@ weather_sun_hours:float `
 weather_condition:string
 
 # Unique faces is manually made
+
 # Face boxes is manually made
+
+# OCR Boxes is manually made
