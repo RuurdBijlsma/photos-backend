@@ -22,7 +22,7 @@ pub struct Model {
     pub eye_right: Vec<f32>,
     #[sea_orm(column_type = "custom(\"vector\")", select_as = "float4[]")]
     pub embedding: Vec<f32>,
-    pub unique_face_id: i32,
+    pub unique_face_id: Option<i32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
