@@ -56,3 +56,5 @@ weather_condition:string
 # Face boxes is manually made
 
 # OCR Boxes is manually made
+
+# Object Boxes is manually made
