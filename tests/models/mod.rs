@@ -1,9 +1,9 @@
 mod users;
 
-mod metadata;
-mod times;
-mod tags;
-mod locations;
-mod gps;
-mod weather;
 mod face_boxes;
+mod gps;
+mod locations;
+mod metadata;
+mod tags;
+mod times;
+mod weather;

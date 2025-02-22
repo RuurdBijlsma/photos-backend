@@ -1,5 +1,5 @@
+pub use super::_entities::times::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::times::{ActiveModel, Model, Entity};
 pub type Times = Entity;
 
 #[async_trait::async_trait]

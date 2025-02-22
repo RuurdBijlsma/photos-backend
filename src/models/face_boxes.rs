@@ -1,5 +1,5 @@
+pub use super::_entities::face_boxes::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::face_boxes::{ActiveModel, Model, Entity};
 pub type FaceBoxes = Entity;
 
 #[async_trait::async_trait]

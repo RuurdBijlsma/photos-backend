@@ -1,5 +1,5 @@
+pub use super::_entities::unique_faces::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::unique_faces::{ActiveModel, Model, Entity};
 pub type UniqueFaces = Entity;
 
 #[async_trait::async_trait]

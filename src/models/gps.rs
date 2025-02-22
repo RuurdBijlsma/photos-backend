@@ -1,5 +1,5 @@
+pub use super::_entities::gps::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::gps::{ActiveModel, Model, Entity};
 pub type Gps = Entity;
 
 #[async_trait::async_trait]

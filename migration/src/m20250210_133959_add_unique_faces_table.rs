@@ -18,7 +18,8 @@ pub enum UniqueFaces {
 impl MigrationTrait for Migration {
     async fn up(&self, m: &SchemaManager) -> Result<(), DbErr> {
         let db = m.get_connection();
-        db.execute_unprepared("CREATE EXTENSION IF NOT EXISTS vector").await?;
+        db.execute_unprepared("CREATE EXTENSION IF NOT EXISTS vector")
+            .await?;
         m.create_table(
             Table::create()
                 .table(UniqueFaces::Table)
