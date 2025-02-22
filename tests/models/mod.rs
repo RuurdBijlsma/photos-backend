@@ -9,3 +9,4 @@ mod times;
 mod weather;
 
 mod ocr_boxes;
+mod object_boxes;

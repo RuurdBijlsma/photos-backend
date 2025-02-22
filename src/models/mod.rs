@@ -9,3 +9,4 @@ pub mod unique_faces;
 pub mod users;
 pub mod weather;
 pub mod ocr_boxes;
+pub mod object_boxes;
