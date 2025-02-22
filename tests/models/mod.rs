@@ -10,3 +10,4 @@ mod weather;
 
 mod ocr_boxes;
 mod object_boxes;
+mod visual_features;

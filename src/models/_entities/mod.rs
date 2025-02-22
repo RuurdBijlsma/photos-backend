@@ -12,4 +12,5 @@ pub mod tags;
 pub mod times;
 pub mod unique_faces;
 pub mod users;
+pub mod visual_features;
 pub mod weather;

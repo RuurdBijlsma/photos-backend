@@ -10,4 +10,5 @@ pub use super::tags::Entity as Tags;
 pub use super::times::Entity as Times;
 pub use super::unique_faces::Entity as UniqueFaces;
 pub use super::users::Entity as Users;
+pub use super::visual_features::Entity as VisualFeatures;
 pub use super::weather::Entity as Weather;

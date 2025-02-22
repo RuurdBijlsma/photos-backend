@@ -32,13 +32,13 @@ country:string! `
 province:string `
 city:string! `
 latitude:float! `
-longitude:float! 
+longitude:float!
 
 cargo loco generate model gps `
 latitude:float! `
 longitude:float! `
 altitude:float `
-location:references! 
+location:references!
 
 cargo loco generate model weather `
 weather_recorded_at:ts `
@@ -52,9 +52,19 @@ weather_sun_hours:float `
 weather_condition:string
 
 # Unique faces is manually made
+cargo loco generate model unique_faces
 
 # Face boxes is manually made
+cargo loco generate model face_boxes
 
 # OCR Boxes is manually made
+cargo loco generate model ocr_boxes
 
 # Object Boxes is manually made
+cargo loco generate model object_boxes
+
+# Create reference from unique face to face boxes, create foreign key manually in code
+cargo loco g migration AddUniqueFaceRefToFaceBoxes unique_face:references
+
+# Visual Features is manually made
+cargo loco generate model visual_features
