@@ -83,7 +83,20 @@ impl MigrationTrait for Migration {
                 )
                 .to_owned(),
         )
-        .await
+        .await?;
+
+        // Create vector index
+        let db = m.get_connection();
+        db.execute_unprepared(
+            r#"
+                CREATE INDEX face_box_emb_idx ON face_boxes
+                USING hnsw (embedding vector_cosine_ops)
+                WITH (m = 16, ef_construction = 200)
+                "#,
+        )
+        .await?;
+
+        Ok(())
     }
 
     async fn down(&self, m: &SchemaManager) -> Result<(), DbErr> {

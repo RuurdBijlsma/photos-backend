@@ -45,7 +45,19 @@ impl MigrationTrait for Migration {
                 )
                 .to_owned(),
         )
-        .await
+        .await?;
+
+        // Create vector index
+        db.execute_unprepared(
+            r#"
+                CREATE INDEX unique_face_emb_idx ON unique_faces
+                USING hnsw (centroid vector_cosine_ops)
+                WITH (m = 16, ef_construction = 200)
+                "#,
+        )
+        .await?;
+
+        Ok(())
     }
 
     async fn down(&self, m: &SchemaManager) -> Result<(), DbErr> {
