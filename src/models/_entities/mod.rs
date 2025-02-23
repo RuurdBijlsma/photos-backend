@@ -4,12 +4,12 @@ pub mod prelude;
 
 pub mod face_boxes;
 pub mod gps;
+pub mod images;
 pub mod locations;
 pub mod metadata;
 pub mod object_boxes;
 pub mod ocr_boxes;
 pub mod tags;
-pub mod times;
 pub mod unique_faces;
 pub mod users;
 pub mod visual_features;

@@ -1,5 +1,5 @@
-use loco_rs::testing::prelude::*;
 use photos_backend::app::App;
+use loco_rs::testing::prelude::*;
 use serial_test::serial;
 
 macro_rules! configure_insta {

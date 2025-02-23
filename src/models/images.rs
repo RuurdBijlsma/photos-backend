@@ -1,6 +1,6 @@
-pub use super::_entities::times::{ActiveModel, Entity, Model};
+pub use super::_entities::images::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub type Times = Entity;
+pub type Images = Entity;
 
 #[async_trait::async_trait]
 impl ActiveModelBehavior for ActiveModel {

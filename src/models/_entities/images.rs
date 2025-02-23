@@ -3,13 +3,23 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "times")]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[sea_orm(table_name = "images")]
 pub struct Model {
+    #[sea_orm(primary_key, auto_increment = false)]
+    pub id: String,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
-    #[sea_orm(primary_key)]
-    pub id: i32,
+    pub filename: String,
+    #[sea_orm(unique)]
+    pub relative_path: String,
+    pub hash: String,
+    pub width: i32,
+    pub height: i32,
+    #[sea_orm(column_type = "Float", nullable)]
+    pub duration: Option<f32>,
+    pub format: String,
+    pub size_bytes: i32,
     pub datetime_local: DateTime,
     pub datetime_utc: Option<DateTime>,
     pub datetime_source: String,

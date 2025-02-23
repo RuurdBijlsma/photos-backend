@@ -4,13 +4,6 @@ composite:jsonb! exif:jsonb xmp:jsonb mpf:jsonb `
 jfif:jsonb icc_profile:jsonb gif:jsonb png:jsonb `
 quicktime:jsonb matroska:jsonb
 
-cargo loco generate model time `
-datetime_local:ts! `
-datetime_utc:ts `
-datetime_source:string! `
-timezone_name:string `
-timezone_offset:string
-
 cargo loco generate model tags `
 use_panorama_viewer:bool! `
 is_photosphere:bool! `
@@ -68,3 +61,6 @@ cargo loco g migration AddUniqueFaceRefToFaceBoxes unique_face:references
 
 # Visual Features is manually made
 cargo loco generate model visual_features
+
+# Images is manually made
+cargo loco generate model images
