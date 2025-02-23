@@ -1,10 +1,10 @@
+use super::prepare_data;
+use crate::helpers;
 use insta::{assert_debug_snapshot, with_settings};
 use loco_rs::testing::prelude::*;
 use photos_backend::{app::App, models::users};
 use rstest::rstest;
 use serial_test::serial;
-
-use super::prepare_data;
 
 // TODO: see how to dedup / extract this to app-local test utils
 // not to framework, because that would require a runtime dep on insta
@@ -52,6 +52,7 @@ async fn can_register() {
         // }, {
         //     assert_debug_snapshot!(ctx.mailer.unwrap().deliveries());
         // });
+        helpers::teardown(&ctx.db).await;
     })
     .await;
 }
@@ -117,6 +118,7 @@ async fn can_login_with_verify(#[case] test_name: &str, #[case] password: &str) 
         }, {
             assert_debug_snapshot!(test_name, (response.status_code(), response.text()));
         });
+        helpers::teardown(&ctx.db).await;
     })
     .await;
 }
@@ -126,7 +128,7 @@ async fn can_login_with_verify(#[case] test_name: &str, #[case] password: &str) 
 async fn can_login_without_verify() {
     configure_insta!();
 
-    request::<App, _, _>(|request, _ctx| async move {
+    request::<App, _, _>(|request, ctx| async move {
         let email = "test@loco.com";
         let password = "12341234";
         let register_payload = serde_json::json!({
@@ -167,6 +169,7 @@ async fn can_login_without_verify() {
         }, {
             assert_debug_snapshot!(login_response.text());
         });
+        helpers::teardown(&ctx.db).await;
     })
     .await;
 }
@@ -245,6 +248,7 @@ async fn can_reset_password() {
         // }, {
         //     assert_debug_snapshot!(deliveries.messages);
         // });
+        helpers::teardown(&ctx.db).await;
     })
     .await;
 }
@@ -274,6 +278,7 @@ async fn can_get_current_user() {
         }, {
             assert_debug_snapshot!((response.status_code(), response.text()));
         });
+        helpers::teardown(&ctx.db).await;
     })
     .await;
 }
@@ -330,6 +335,7 @@ async fn can_auth_with_magic_link() {
         }, {
             assert_debug_snapshot!(magic_link_response.text());
         });
+        helpers::teardown(&ctx.db).await;
     })
     .await;
 }
@@ -338,7 +344,7 @@ async fn can_auth_with_magic_link() {
 #[serial]
 async fn can_reject_invalid_email() {
     configure_insta!();
-    request::<App, _, _>(|request, _ctx| async move {
+    request::<App, _, _>(|request, ctx| async move {
         let invalid_email = "user1@temp-mail.com";
         let payload = serde_json::json!({
             "email": invalid_email,
@@ -349,6 +355,7 @@ async fn can_reject_invalid_email() {
             400,
             "Expected request with invalid email '{invalid_email}' to be blocked, but it was allowed."
         );
+        helpers::teardown(&ctx.db).await;
     })
     .await;
 }
@@ -366,6 +373,7 @@ async fn can_reject_invalid_magic_link_token() {
             401,
             "Magic link authentication should be rejected"
         );
+        helpers::teardown(&ctx.db).await;
     })
     .await;
 }

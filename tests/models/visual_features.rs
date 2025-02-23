@@ -1,3 +1,4 @@
+use crate::helpers;
 use loco_rs::testing::prelude::*;
 use photos_backend::app::App;
 use serial_test::serial;
@@ -17,6 +18,7 @@ async fn test_model() {
 
     let boot = boot_test::<App>().await.unwrap();
     seed::<App>(&boot.app_context).await.unwrap();
+    helpers::teardown(&boot.app_context.db).await;
 
     // query your model, e.g.:
     //
