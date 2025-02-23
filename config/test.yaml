@@ -64,7 +64,7 @@ database:
   # When enabled, the sql query will be logged.
   enable_logging: false
   # Set the timeout duration when acquiring a connection.
-  connect_timeout: {{ get_env(name="DB_CONNECT_TIMEOUT", default="500") }}
+  connect_timeout: {{ get_env(name="DB_CONNECT_TIMEOUT", default="5000") }}
   # Set the idle duration before closing a connection.
   idle_timeout: {{ get_env(name="DB_IDLE_TIMEOUT", default="500") }}
   # Minimum number of connections for a pool.
@@ -73,9 +73,9 @@ database:
   max_connections: {{ get_env(name="DB_MAX_CONNECTIONS", default="1") }}
   # Run migration up when application loaded
   auto_migrate: true
-  # Truncate database when application loaded. This is a dangerous operation, make sure that you using this flag only on dev environments or test mode
+  # Truncate database when application loaded. This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
   dangerously_truncate: true
-  # Recreating schema when application loaded.  This is a dangerous operation, make sure that you using this flag only on dev environments or test mode
+  # Recreating schema when application loaded.  This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
   dangerously_recreate: true
 
 # Authentication Configuration

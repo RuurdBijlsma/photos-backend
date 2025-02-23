@@ -1,5 +1,5 @@
+pub use super::_entities::locations::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::locations::{ActiveModel, Model, Entity};
 pub type Locations = Entity;
 
 #[async_trait::async_trait]

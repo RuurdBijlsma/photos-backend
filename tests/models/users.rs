@@ -1,3 +1,4 @@
+use crate::helpers;
 use chrono::{offset::Local, Duration};
 use insta::assert_debug_snapshot;
 use loco_rs::testing::prelude::*;
@@ -35,6 +36,7 @@ async fn test_can_validate_model() {
     let res = invalid_user.insert(&boot.app_context.db).await;
 
     assert_debug_snapshot!(res);
+    helpers::teardown(&boot.app_context.db).await;
 }
 
 #[tokio::test]
@@ -59,6 +61,7 @@ async fn can_create_with_password() {
     }, {
         assert_debug_snapshot!(res);
     });
+    helpers::teardown(&boot.app_context.db).await;
 }
 #[tokio::test]
 #[serial]
@@ -83,6 +86,7 @@ async fn handle_create_with_password_with_duplicate() {
     .await;
 
     assert_debug_snapshot!(new_user);
+    helpers::teardown(&boot.app_context.db).await;
 }
 
 #[tokio::test]
@@ -103,6 +107,7 @@ async fn can_find_by_email() {
 
     assert_debug_snapshot!(existing_user);
     assert_debug_snapshot!(non_existing_user_results);
+    helpers::teardown(&boot.app_context.db).await;
 }
 
 #[tokio::test]
@@ -124,6 +129,7 @@ async fn can_find_by_pid() {
 
     assert_debug_snapshot!(existing_user);
     assert_debug_snapshot!(non_existing_user_results);
+    helpers::teardown(&boot.app_context.db).await;
 }
 
 #[tokio::test]
@@ -170,6 +176,7 @@ async fn can_verification_token() {
         user.email_verification_token.is_some(),
         "Expected email verification token to be present"
     );
+    helpers::teardown(&boot.app_context.db).await;
 }
 
 #[tokio::test]
@@ -213,6 +220,7 @@ async fn can_set_forgot_password_sent() {
         user.reset_token.is_some(),
         "Expected reset token to be present"
     );
+    helpers::teardown(&boot.app_context.db).await;
 }
 
 #[tokio::test]
@@ -251,6 +259,7 @@ async fn can_verified() {
         user.email_verified_at.is_some(),
         "Expected email to be verified"
     );
+    helpers::teardown(&boot.app_context.db).await;
 }
 
 #[tokio::test]
@@ -290,6 +299,7 @@ async fn can_reset_password() {
         user.verify_password("new-password"),
         "Password verification failed for new password"
     );
+    helpers::teardown(&boot.app_context.db).await;
 }
 
 #[tokio::test]
@@ -297,6 +307,7 @@ async fn can_reset_password() {
 async fn magic_link() {
     let boot = boot_test::<App>().await.unwrap();
     seed::<App>(&boot.app_context).await.unwrap();
+    helpers::teardown(&boot.app_context.db).await;
 
     let user = Model::find_by_pid(&boot.app_context.db, "11111111-1111-1111-1111-111111111111")
         .await
@@ -357,4 +368,5 @@ async fn magic_link() {
         actual_expiration <= should_expired_at,
         "Magic link expiration exceeds expected maximum expiration time"
     );
+    helpers::teardown(&boot.app_context.db).await;
 }

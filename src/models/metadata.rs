@@ -1,5 +1,5 @@
+pub use super::_entities::metadata::{ActiveModel, Entity, Model};
 use sea_orm::entity::prelude::*;
-pub use super::_entities::metadata::{ActiveModel, Model, Entity};
 pub type Metadata = Entity;
 
 #[async_trait::async_trait]
