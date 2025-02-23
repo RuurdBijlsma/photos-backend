@@ -16,7 +16,23 @@ pub struct Model {
     #[sea_orm(column_type = "Float")]
     pub height: f32,
     pub label: String,
+    pub visual_feature_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::visual_features::Entity",
+        from = "Column::VisualFeatureId",
+        to = "super::visual_features::Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
+    VisualFeatures,
+}
+
+impl Related<super::visual_features::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::VisualFeatures.def()
+    }
+}

@@ -48,4 +48,29 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(has_many = "super::face_boxes::Entity")]
+    FaceBoxes,
+    #[sea_orm(has_many = "super::object_boxes::Entity")]
+    ObjectBoxes,
+    #[sea_orm(has_many = "super::ocr_boxes::Entity")]
+    OcrBoxes,
+}
+
+impl Related<super::face_boxes::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::FaceBoxes.def()
+    }
+}
+
+impl Related<super::object_boxes::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ObjectBoxes.def()
+    }
+}
+
+impl Related<super::ocr_boxes::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::OcrBoxes.def()
+    }
+}

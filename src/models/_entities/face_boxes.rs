@@ -23,6 +23,7 @@ pub struct Model {
     #[sea_orm(column_type = "custom(\"vector\")", select_as = "float4[]")]
     pub embedding: Vec<f32>,
     pub unique_face_id: Option<i32>,
+    pub visual_feature_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -35,10 +36,24 @@ pub enum Relation {
         on_delete = "NoAction"
     )]
     UniqueFaces,
+    #[sea_orm(
+        belongs_to = "super::visual_features::Entity",
+        from = "Column::VisualFeatureId",
+        to = "super::visual_features::Column::Id",
+        on_update = "NoAction",
+        on_delete = "NoAction"
+    )]
+    VisualFeatures,
 }
 
 impl Related<super::unique_faces::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::UniqueFaces.def()
+    }
+}
+
+impl Related<super::visual_features::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::VisualFeatures.def()
     }
 }
