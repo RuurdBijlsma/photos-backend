@@ -99,11 +99,11 @@ impl MigrationTrait for Migration {
         // Create vector index
         let db = m.get_connection();
         db.execute_unprepared(
-            r#"
+            r"
                 CREATE INDEX emb_idx ON visual_features
                 USING hnsw (embedding vector_cosine_ops)
                 WITH (m = 16, ef_construction = 200)
-                "#,
+                ",
         )
         .await?;
 

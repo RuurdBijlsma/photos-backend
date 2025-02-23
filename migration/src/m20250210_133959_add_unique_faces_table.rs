@@ -49,11 +49,11 @@ impl MigrationTrait for Migration {
 
         // Create vector index
         db.execute_unprepared(
-            r#"
+            r"
                 CREATE INDEX unique_face_emb_idx ON unique_faces
                 USING hnsw (centroid vector_cosine_ops)
                 WITH (m = 16, ef_construction = 200)
-                "#,
+                ",
         )
         .await?;
 
@@ -61,7 +61,13 @@ impl MigrationTrait for Migration {
     }
 
     async fn down(&self, m: &SchemaManager) -> Result<(), DbErr> {
+        let db = m.get_connection();
         m.drop_table(Table::drop().table(UniqueFaces::Table).to_owned())
-            .await
+            .await?;
+        // Drop the extension. Using CASCADE ensures that dependent objects (like the type)
+        // are also removed.
+        db.execute_unprepared("DROP EXTENSION IF EXISTS vector CASCADE")
+            .await?;
+        Ok(())
     }
 }

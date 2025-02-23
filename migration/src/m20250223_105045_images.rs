@@ -31,7 +31,7 @@ impl MigrationTrait for Migration {
         manager
             .get_connection()
             .execute_unprepared(
-                r#"
+                r"
 CREATE OR REPLACE FUNCTION short_uuid() RETURNS text AS $$
 DECLARE
     uuid_bytes bytea;
@@ -45,7 +45,7 @@ BEGIN
     RETURN encoded;
 END;
 $$ LANGUAGE plpgsql;
-        "#,
+        ",
             )
             .await?;
 

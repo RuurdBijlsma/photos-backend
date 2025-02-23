@@ -3,6 +3,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "visual_features")]
 pub struct Model {
@@ -11,8 +12,8 @@ pub struct Model {
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
     pub frame_percentage: i32,
-    #[sea_orm(column_type = "custom(\"vector\")")]
-    pub embedding: String,
+    #[sea_orm(column_type = "custom(\"vector\")", select_as = "float4[]")]
+    pub embedding: Vec<f32>,
     pub scene_type: String,
     pub people_type: Option<String>,
     pub animal_type: Option<String>,

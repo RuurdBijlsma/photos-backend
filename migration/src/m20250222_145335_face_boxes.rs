@@ -88,11 +88,11 @@ impl MigrationTrait for Migration {
         // Create vector index
         let db = m.get_connection();
         db.execute_unprepared(
-            r#"
+            r"
                 CREATE INDEX face_box_emb_idx ON face_boxes
                 USING hnsw (embedding vector_cosine_ops)
                 WITH (m = 16, ef_construction = 200)
-                "#,
+                ",
         )
         .await?;
 
