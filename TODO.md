@@ -11,15 +11,17 @@ completely replace photos-backend (python) with this:
     * ✅ challenge: enable pgvecto-rs extension and create the vector columns and indices (probably just raw sql it)
     * ✅ Make visual-information-model
     * ✅ make image_data migration with data_url, width/height/format etc.
-4. Make worker job:
+4. Fix clippy
+5. Fix tests.
+6. Make worker job:
     * check for unprocessed photos etc. ->
     * generate all thumbs for them ->
     * run a new job to process a new photo and put in db
-5. after processing photos per user:
+7. after processing photos per user:
     * run recluster worker job
     * clean up dangling thumbnails, db entries, etc.
     * fill timezone gaps
-6. add something like watchdog for rust, watch for new files in directory https://docs.rs/notify/latest/notify/
-7. add random image + theme endpoint
-8. add endpoint to get images by month range
-9. make worker job to cluster images
+8. add something like watchdog for rust, watch for new files in directory https://docs.rs/notify/latest/notify/
+9. add random image + theme endpoint
+10. add endpoint to get images by month range
+11. make worker job to cluster images
