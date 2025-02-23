@@ -11,8 +11,8 @@ pub struct Model {
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
     pub frame_percentage: i32,
-    #[sea_orm(column_type = "custom(\"vector\")", select_as = "float4[]")]
-    pub embedding: Vec<f32>,
+    #[sea_orm(column_type = "custom(\"vector\")")]
+    pub embedding: String,
     pub scene_type: String,
     pub people_type: Option<String>,
     pub animal_type: Option<String>,
@@ -45,12 +45,21 @@ pub struct Model {
     pub quality_score: Option<f32>,
     pub summary: Option<String>,
     pub caption: String,
+    pub image_id: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "super::face_boxes::Entity")]
     FaceBoxes,
+    #[sea_orm(
+        belongs_to = "super::images::Entity",
+        from = "Column::ImageId",
+        to = "super::images::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Cascade"
+    )]
+    Images,
     #[sea_orm(has_many = "super::object_boxes::Entity")]
     ObjectBoxes,
     #[sea_orm(has_many = "super::ocr_boxes::Entity")]
@@ -60,6 +69,12 @@ pub enum Relation {
 impl Related<super::face_boxes::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::FaceBoxes.def()
+    }
+}
+
+impl Related<super::images::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Images.def()
     }
 }
 

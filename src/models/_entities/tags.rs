@@ -26,7 +26,24 @@ pub struct Model {
     pub capture_fps: Option<f32>,
     #[sea_orm(column_type = "Float", nullable)]
     pub video_fps: Option<f32>,
+    #[sea_orm(unique)]
+    pub image_id: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::images::Entity",
+        from = "Column::ImageId",
+        to = "super::images::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Cascade"
+    )]
+    Images,
+}
+
+impl Related<super::images::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Images.def()
+    }
+}

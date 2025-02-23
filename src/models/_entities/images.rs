@@ -28,4 +28,45 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(has_one = "super::gps::Entity")]
+    Gps,
+    #[sea_orm(has_one = "super::metadata::Entity")]
+    Metadata,
+    #[sea_orm(has_one = "super::tags::Entity")]
+    Tags,
+    #[sea_orm(has_many = "super::visual_features::Entity")]
+    VisualFeatures,
+    #[sea_orm(has_one = "super::weather::Entity")]
+    Weather,
+}
+
+impl Related<super::gps::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Gps.def()
+    }
+}
+
+impl Related<super::metadata::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Metadata.def()
+    }
+}
+
+impl Related<super::tags::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Tags.def()
+    }
+}
+
+impl Related<super::visual_features::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::VisualFeatures.def()
+    }
+}
+
+impl Related<super::weather::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Weather.def()
+    }
+}

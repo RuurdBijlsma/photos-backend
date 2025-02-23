@@ -34,7 +34,24 @@ pub struct Model {
     pub quicktime: Option<Json>,
     #[sea_orm(column_type = "JsonBinary", nullable)]
     pub matroska: Option<Json>,
+    #[sea_orm(unique)]
+    pub image_id: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::images::Entity",
+        from = "Column::ImageId",
+        to = "super::images::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Cascade"
+    )]
+    Images,
+}
+
+impl Related<super::images::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Images.def()
+    }
+}

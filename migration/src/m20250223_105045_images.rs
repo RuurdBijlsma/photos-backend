@@ -32,19 +32,19 @@ impl MigrationTrait for Migration {
             .get_connection()
             .execute_unprepared(
                 r#"
-        CREATE OR REPLACE FUNCTION short_uuid() RETURNS text AS $$
-        DECLARE
-            uuid_bytes bytea;
-            encoded text;
-        BEGIN
-            uuid_bytes = gen_random_uuid()::uuid::bytea;
-            encoded = encode(uuid_bytes, 'base64');
-            encoded = replace(encoded, '+', '-');
-            encoded = replace(encoded, '/', '_');
-            encoded = rtrim(encoded, '=');
-            RETURN encoded;
-        END;
-        $$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION short_uuid() RETURNS text AS $$
+DECLARE
+    uuid_bytes bytea;
+    encoded text;
+BEGIN
+    uuid_bytes = uuid_send(gen_random_uuid());
+    encoded = encode(uuid_bytes, 'base64');
+    encoded = replace(encoded, '+', '-');
+    encoded = replace(encoded, '/', '_');
+    encoded = rtrim(encoded, '=');
+    RETURN encoded;
+END;
+$$ LANGUAGE plpgsql;
         "#,
             )
             .await?;
