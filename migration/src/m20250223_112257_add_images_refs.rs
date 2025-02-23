@@ -234,10 +234,6 @@ impl MigrationTrait for Migration {
 enum Images {
     Table,
     Id,
-    GpsId,
-    MetadataId,
-    TagsId,
-    WeatherId,
 }
 
 #[derive(Iden)]
@@ -249,27 +245,23 @@ enum VisualFeatures {
 #[derive(Iden)]
 enum Gps {
     Table,
-    Id,
     ImageId,
 }
 
 #[derive(Iden)]
 enum Metadata {
     Table,
-    Id,
     ImageId,
 }
 
 #[derive(Iden)]
 enum Tags {
     Table,
-    Id,
     ImageId,
 }
 
 #[derive(Iden)]
 enum Weather {
     Table,
-    Id,
     ImageId,
 }
