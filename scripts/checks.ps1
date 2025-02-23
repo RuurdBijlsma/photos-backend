@@ -1,4 +1,5 @@
 Write-Host "Check formatting..."
+cargo fmt --all
 cargo fmt --all -- --check
 
 Write-Host "Running clippy..."
