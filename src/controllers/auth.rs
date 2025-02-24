@@ -67,7 +67,7 @@ async fn register(
     format::json(())
 }
 
-/// Verify register user. if the user not verified his email, he can't login to
+/// Verify register user. if the user not verified his email, he can't log in to
 /// the system.
 #[debug_handler]
 async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) -> Result<Response> {
@@ -84,9 +84,9 @@ async fn verify(State(ctx): State<AppContext>, Path(token): Path<String>) -> Res
     format::json(())
 }
 
-/// In case the user forgot his password  this endpoints generate a forgot token
+/// In case the user forgot his password  these endpoints generate a forgot token
 /// and send email to the user. In case the email not found in our DB, we are
-/// returning a valid request for for security reasons (not exposing users DB
+/// returning a valid request for security reasons (not exposing users DB
 /// list).
 #[debug_handler]
 async fn forgot(
@@ -95,7 +95,7 @@ async fn forgot(
 ) -> Result<Response> {
     let Ok(user) = users::Model::find_by_email(&ctx.db, &params.email).await else {
         // we don't want to expose our users email. if the email is invalid we still
-        // returning success to the caller
+        // return success to the caller
         return format::json(());
     };
 
@@ -114,7 +114,7 @@ async fn forgot(
 async fn reset(State(ctx): State<AppContext>, Json(params): Json<ResetParams>) -> Result<Response> {
     let Ok(user) = users::Model::find_by_reset_token(&ctx.db, &params.token).await else {
         // we don't want to expose our users email. if the email is invalid we still
-        // returning success to the caller
+        // return success to the caller
         tracing::info!("reset token not found");
 
         return format::json(());
@@ -199,7 +199,7 @@ async fn magic_link_verify(
 ) -> Result<Response> {
     let Ok(user) = users::Model::find_by_magic_token(&ctx.db, &token).await else {
         // we don't want to expose our users email. if the email is invalid we still
-        // returning success to the caller
+        // return success to the caller
         return unauthorized("unauthorized!");
     };
 
