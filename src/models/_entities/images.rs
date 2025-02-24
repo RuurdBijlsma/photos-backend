@@ -25,6 +25,7 @@ pub struct Model {
     pub datetime_source: String,
     pub timezone_name: Option<String>,
     pub timezone_offset: Option<String>,
+    pub user_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -35,6 +36,14 @@ pub enum Relation {
     Metadata,
     #[sea_orm(has_one = "super::tags::Entity")]
     Tags,
+    #[sea_orm(
+        belongs_to = "super::users::Entity",
+        from = "Column::UserId",
+        to = "super::users::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Cascade"
+    )]
+    Users,
     #[sea_orm(has_many = "super::visual_features::Entity")]
     VisualFeatures,
     #[sea_orm(has_one = "super::weather::Entity")]
@@ -56,6 +65,12 @@ impl Related<super::metadata::Entity> for Entity {
 impl Related<super::tags::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Tags.def()
+    }
+}
+
+impl Related<super::users::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Users.def()
     }
 }
 

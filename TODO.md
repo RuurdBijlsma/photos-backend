@@ -11,8 +11,9 @@ completely replace photos-backend (python) with this:
     * ✅ challenge: enable pgvecto-rs extension and create the vector columns and indices (probably just raw sql it)
     * ✅ Make visual-information-model
     * ✅ make image_data migration with data_url, width/height/format etc.
-4. Fix clippy
-5. Fix tests.
+    * ✅ add references for users table
+4. ✅ Fix clippy
+5. ✅ Fix tests.
 6. Make worker job:
     * check for unprocessed photos etc. ->
     * generate all thumbs for them ->

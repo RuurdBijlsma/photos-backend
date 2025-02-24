@@ -16,7 +16,7 @@ static magic_link: Dir<'_> = include_dir!("src/mailers/auth/magic_link");
 pub struct AuthMailer {}
 impl Mailer for AuthMailer {}
 impl AuthMailer {
-    /// Sending welcome email the the given user
+    /// Sending welcome email the given user
     ///
     /// # Errors
     ///

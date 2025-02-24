@@ -22,7 +22,7 @@ server:
   binding: localhost
   # The UI hostname or IP address that mailers will point to.
   host: http://localhost
-  # Out of the box middleware configuration. to disable middleware you can changed the `enable` field to `false` of comment the middleware block
+  # Out of the box middleware configuration. to disable middleware you can change the `enable` field to `false` of comment the middleware block
   middlewares:
     fallback:
       enable: false
@@ -34,8 +34,6 @@ workers:
   #   - ForegroundBlocking - Workers operate in the foreground and block until tasks are completed.
   #   - BackgroundAsync - Workers operate asynchronously in the background, processing tasks with async capabilities.
   mode: BackgroundAsync
-
-  
 
 # Mailer Configuration.
 mailer:

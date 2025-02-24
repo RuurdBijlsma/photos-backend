@@ -18,6 +18,7 @@ mod m20250222_232031_fix_locations_unique_constraint;
 mod m20250223_103000_add_visual_feature_refs;
 mod m20250223_105045_images;
 mod m20250223_112257_add_images_refs;
+mod m20250224_105942_add_user_refs;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -41,6 +42,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250223_103000_add_visual_feature_refs::Migration),
             Box::new(m20250223_105045_images::Migration),
             Box::new(m20250223_112257_add_images_refs::Migration),
+            Box::new(m20250224_105942_add_user_refs::Migration),
             // inject-above (do not remove this comment)
         ]
     }
