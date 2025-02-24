@@ -6,3 +6,8 @@ podman run --rm `
   -p 5432:5432 `
   -v pgdata:/var/lib/postgresql/data `
   -d pgvector/pgvector:pg17
+
+podman run --rm `
+  --name photos-redis `
+  -p 6379:6379 `
+  -d redis
