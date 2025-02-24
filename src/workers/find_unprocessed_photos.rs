@@ -27,7 +27,7 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedPhotosWorker {
         while let Some(entry) = entries.next_entry().await? {
             let input_path = entry.path();
             if input_path.is_file() {
-                println!("{:?}", input_path);
+                println!("{input_path:?}");
             }
         }
         println!("✅ Successfully processed photos");
