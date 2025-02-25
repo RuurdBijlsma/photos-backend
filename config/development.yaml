@@ -1,5 +1,8 @@
 # Loco configuration file documentation
 
+settings:
+  media_folder: input_images
+
 # Application logging configuration
 logger:
   # Enable or disable logging.
@@ -76,9 +79,9 @@ database:
   max_connections: {{ get_env(name="DB_MAX_CONNECTIONS", default="1") }}
   # Run migration up when application loaded
   auto_migrate: true
-  # Truncate database when application loaded. This is a dangerous operation, make sure that you using this flag only on dev environments or test mode
+  # Truncate database when application loaded. This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
   dangerously_truncate: false
-  # Recreating schema when application loaded.  This is a dangerous operation, make sure that you using this flag only on dev environments or test mode
+  # Recreating schema when application loaded.  This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
   dangerously_recreate: false
 
 # Authentication Configuration
