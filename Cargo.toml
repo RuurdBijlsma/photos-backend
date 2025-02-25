@@ -10,7 +10,7 @@ default-run = "photos_backend-cli"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace.dependencies]
-loco-rs = { version = "0.14.0" }
+loco-rs = { version = "0.14.1" }
 
 [dependencies]
 pgvector = { version = "0.4.0", features = ["sqlx"] }
