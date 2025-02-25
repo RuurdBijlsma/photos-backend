@@ -14,15 +14,21 @@ completely replace photos-backend (python) with this:
     * ✅ add references for users table
 4. ✅ Fix clippy
 5. ✅ Fix tests.
-6. Make worker job:
+6. Implement find_unprocessed_photos worker
+    1. ✅ get list of photos in folder
+    2. get photos list from db
+    3. for every photo in folder check if it needs processing
+        1. it needs processing if: has all thumbnails and is in db
+    4. make list of photos that need processing
+7. Make worker job:
     * check for unprocessed photos etc. ->
     * generate all thumbs for them ->
     * run a new job to process a new photo and put in db
-7. after processing photos per user:
+8. after processing photos per user:
     * run recluster worker job
     * clean up dangling thumbnails, db entries, etc.
     * fill timezone gaps
-8. add something like watchdog for rust, watch for new files in directory https://docs.rs/notify/latest/notify/
-9. add random image + theme endpoint
-10. add endpoint to get images by month range
-11. make worker job to cluster images
+9. add something like watchdog for rust, watch for new files in directory https://docs.rs/notify/latest/notify/
+10. add random image + theme endpoint
+11. add endpoint to get images by month range
+12. make worker job to cluster images
