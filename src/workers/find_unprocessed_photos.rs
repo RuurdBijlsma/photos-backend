@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
-use tracing::{info, instrument};
+use tracing::{info};
 
 pub struct FindUnprocessedPhotosWorker {
     pub ctx: AppContext,
@@ -20,7 +20,7 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedPhotosWorker {
     fn build(ctx: &AppContext) -> Self {
         Self { ctx: ctx.clone() }
     }
-    // #[instrument(name = "find_unprocessed_photos_worker")]
+
     async fn perform(&self, _args: WorkerArgs) -> Result<()> {
         info!("=================FindUnprocessedPhotos=======================");
         let settings = if let Some(s) = &self.ctx.config.settings {

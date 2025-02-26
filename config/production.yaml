@@ -6,9 +6,9 @@ settings:
 # Application logging configuration
 logger:
   # Enable or disable logging.
-  enable: false
+  enable: true
   # Enable pretty backtrace (sets RUST_BACKTRACE=1)
-  pretty_backtrace: true
+  pretty_backtrace: false
   # Log level, options: trace, debug, info, warn or error.
   level: debug
   # Define the logging format. options: compact, pretty or json
@@ -21,10 +21,14 @@ logger:
 server:
   # Port on which the server will listen. the server binding is 0.0.0.0:{PORT}
   port: 9475
+  # Binding for the server (which interface to bind to)
+  binding: localhost
   # The UI hostname or IP address that mailers will point to.
   host: http://localhost
   # Out of the box middleware configuration. to disable middleware you can change the `enable` field to `false` of comment the middleware block
   middlewares:
+    fallback:
+      enable: false
 
 # Worker Configuration
 workers:
@@ -32,13 +36,10 @@ workers:
   #   - BackgroundQueue - Workers operate asynchronously in the background, processing queued.
   #   - ForegroundBlocking - Workers operate in the foreground and block until tasks are completed.
   #   - BackgroundAsync - Workers operate asynchronously in the background, processing tasks with async capabilities.
-  mode: ForegroundBlocking
-
-
+  mode: BackgroundAsync
 
 # Mailer Configuration.
 mailer:
-  stub: true
   # SMTP mailer configuration.
   smtp:
     # Enable/Disable smtp mailer.
@@ -52,6 +53,8 @@ mailer:
     # auth:
     #   user:
     #   password:
+    # Override the SMTP hello name (default is the machine's hostname)
+    # hello_name:
 
 # Initializers Configuration
 # initializers:
@@ -63,7 +66,7 @@ mailer:
 # Database Configuration
 database:
   # Database connection URI
-  uri: {{ get_env(name="DATABASE_URL", default="postgres://loco:loco@localhost:5432/photos-backend_test") }}
+  uri: {{ get_env(name="DATABASE_URL", default="postgres://loco:loco@localhost:5432/photos-backend_production") }}
   # When enabled, the sql query will be logged.
   enable_logging: false
   # Set the timeout duration when acquiring a connection.
@@ -77,15 +80,15 @@ database:
   # Run migration up when application loaded
   auto_migrate: true
   # Truncate database when application loaded. This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
-  dangerously_truncate: true
+  dangerously_truncate: false
   # Recreating schema when application loaded.  This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
-  dangerously_recreate: true
+  dangerously_recreate: false
 
 # Authentication Configuration
 auth:
   # JWT authentication
   jwt:
     # Secret key for token generation and verification
-    secret: sscO9sodXJppz6wb66FI
+    secret: LPoQxMSvvWqABonifdww
     # Token expiration time in seconds
     expiration: 604800 # 7 days

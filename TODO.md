@@ -16,10 +16,11 @@ completely replace photos-backend (python) with this:
 5. ✅ Fix tests.
 6. Implement find_unprocessed_photos worker
     1. ✅ get list of photos in folder
-    2. get photos list from db
-    3. for every photo in folder check if it needs processing
-        1. it needs processing if: has all thumbnails and is in db
-    4. make list of photos that need processing
+    2. ✅ get photos list from db
+    3. ✅ for every photo in folder check if it needs processing
+        1. ✅ it needs processing if: has all thumbnails and is in db
+    4. ✅ make list of photos that need processing
+    5. todo: check for thumbnails in find_unprocessed_photos
 7. Make worker job:
     * check for unprocessed photos etc. ->
     * generate all thumbs for them ->
