@@ -30,6 +30,8 @@ impl ActiveModel {}
 
 // implement your custom finders, selectors oriented logic here
 impl Entity {
+    /// # Errors
+    /// Returns `DbErr` if there is an error executing the database query.
     pub async fn get_relative_paths<C>(db: &C) -> Result<HashSet<String>, DbErr>
     where
         C: ConnectionTrait,

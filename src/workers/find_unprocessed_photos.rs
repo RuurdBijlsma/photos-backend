@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
-use tracing::{info};
+use tracing::info;
 
 pub struct FindUnprocessedPhotosWorker {
     pub ctx: AppContext,
