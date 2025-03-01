@@ -28,15 +28,10 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedPhotosWorker {
         } else {
             return Err(Error::Message("Settings not found in config".to_string()));
         };
-        let media_folder = settings
-            .media_folder
-            .as_deref()
-            .ok_or_else(|| anyhow::anyhow!("Media folder not specified in settings"))
-            .map_err(|e| Error::Message(e.to_string()))?;
 
-        info!("📸 Starting photo processing from: {:?}", media_folder);
+        info!("📸 Starting photo processing from: {:?}", &settings.media_folder);
 
-        let media_path = Path::new(media_folder);
+        let media_path = Path::new(&settings.media_folder);
         fs::create_dir_all(media_path).await?;
 
         // Get database connection

@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Settings {
-    pub media_folder: Option<String>,
+    pub media_folder: String,
+    pub processing_api_url: String,
 }
 
 impl Settings {
