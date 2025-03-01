@@ -14,25 +14,11 @@ struct ThumbnailRequest {
 
 #[derive(Debug, Deserialize)]
 struct ThumbnailJob {
-    job_id: String,
     photos_done: i32,
     photos_total: i32,
     videos_done: i32,
     videos_total: i32,
     done: bool,
-}
-
-#[derive(Debug, Deserialize)]
-struct HTTPValidationError {
-    detail: Vec<ValidationError>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ValidationError {
-    loc: Vec<String>,
-    msg: String,
-    #[serde(rename = "type")]
-    error_type: String,
 }
 
 // -- API Client --
@@ -61,10 +47,6 @@ impl ThumbnailClient {
 
         match response.status() {
             StatusCode::OK => Ok(response.json().await?),
-            StatusCode::UNPROCESSABLE_ENTITY => {
-                let error = response.json::<HTTPValidationError>().await?;
-                Err(format!("Validation error: {:?}", error).into())
-            }
             status => {
                 let text = response.text().await?;
                 Err(format!("Unexpected status {}: {}", status, text).into())
@@ -81,10 +63,6 @@ impl ThumbnailClient {
 
         match response.status() {
             StatusCode::OK => Ok(response.json().await?),
-            StatusCode::UNPROCESSABLE_ENTITY => {
-                let error = response.json::<HTTPValidationError>().await?;
-                Err(format!("Validation error: {:?}", error).into())
-            }
             status => {
                 let text = response.text().await?;
                 Err(format!("Unexpected status {}: {}", status, text).into())
@@ -98,10 +76,6 @@ impl ThumbnailClient {
 
         match response.status() {
             StatusCode::OK => Ok(()),
-            StatusCode::UNPROCESSABLE_ENTITY => {
-                let error = response.json::<HTTPValidationError>().await?;
-                Err(format!("Validation error: {:?}", error).into())
-            }
             status => {
                 let text = response.text().await?;
                 Err(format!("Unexpected status {}: {}", status, text).into())
@@ -133,7 +107,6 @@ fn split_media_paths(paths: Vec<String>) -> (Vec<String>, Vec<String>) {
         },
     )
 }
-
 pub async fn process_thumbnails(
     image_relative_paths: Vec<String>,
     settings: Settings,
@@ -142,8 +115,8 @@ pub async fn process_thumbnails(
     let (photo_paths, video_paths) = split_media_paths(image_relative_paths);
 
     let job_request = ThumbnailRequest {
-        photos: photo_paths.iter().map(|s| s.to_string()).collect(),
-        videos: video_paths.iter().map(|s| s.to_string()).collect(),
+        photos: photo_paths,
+        videos: video_paths,
     };
 
     // Submit job
@@ -161,10 +134,32 @@ pub async fn process_thumbnails(
     loop {
         tokio::time::sleep(Duration::from_secs(delay)).await;
 
-        let status = client
-            .check_status(&job_id)
-            .await
-            .map_err(|e| loco_rs::Error::Message(e.to_string()))?;
+        // Check status with retry logic because it randomly fails idk why
+        const MAX_RETRIES: u64 = 5;
+        const RETRY_DELAY: u64 = 1;
+        let mut retries: u64 = 0;
+        let status = loop {
+            match client
+                .check_status(&job_id)
+                .await
+                .map_err(|e| loco_rs::Error::Message(e.to_string()))
+            {
+                Ok(status) => break status,
+                Err(e) => {
+                    if retries >= MAX_RETRIES {
+                        return Err(e);
+                    }
+                    retries += 1;
+                    let sleep_duration = Duration::from_secs(RETRY_DELAY * retries);
+                    tokio::time::sleep(sleep_duration).await;
+                    info!(
+                        "Retrying check_status for job {} (attempt {}/{})",
+                        job_id, retries, MAX_RETRIES
+                    );
+                }
+            }
+        };
+
         info!(
             "Job {} progress: {}/{} photos, {}/{} videos",
             job_id,
