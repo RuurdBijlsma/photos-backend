@@ -1,5 +1,9 @@
 # Loco configuration file documentation
 
+settings:
+  media_folder: input_images
+  processing_api_url: {{ get_env(name="PROCESSING_API_URL", default="http://localhost:6000") }}
+
 # Application logging configuration
 logger:
   # Enable or disable logging.
@@ -17,7 +21,7 @@ logger:
 # Web server configuration
 server:
   # Port on which the server will listen. the server binding is 0.0.0.0:{PORT}
-  port: 5150
+  port: 7000
   # Binding for the server (which interface to bind to)
   binding: localhost
   # The UI hostname or IP address that mailers will point to.
@@ -76,9 +80,9 @@ database:
   max_connections: {{ get_env(name="DB_MAX_CONNECTIONS", default="1") }}
   # Run migration up when application loaded
   auto_migrate: true
-  # Truncate database when application loaded. This is a dangerous operation, make sure that you using this flag only on dev environments or test mode
+  # Truncate database when application loaded. This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
   dangerously_truncate: false
-  # Recreating schema when application loaded.  This is a dangerous operation, make sure that you using this flag only on dev environments or test mode
+  # Recreating schema when application loaded.  This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
   dangerously_recreate: false
 
 # Authentication Configuration
