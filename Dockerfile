@@ -1,4 +1,4 @@
-FROM rust:1.83.0-slim as builder
+FROM rust:1.83.0-slim AS builder
 
 WORKDIR /usr/src/
 
