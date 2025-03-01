@@ -1,3 +1,4 @@
+use loco_rs::app::AppContext;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -8,18 +9,19 @@ pub struct Settings {
 }
 
 impl Settings {
-    /// Loads and deserializes the `settings` section from the Loco app's configuration
-    /// file into a strongly-typed `Settings` struct.
+    /// Get a settings object from app context
     ///
-    /// The `settings` section is defined in the configuration file (e.g., `config/development.yaml`)
-    /// and is accessible via `ctx.config.settings` as a `serde_json::Value`. This function
-    /// converts that `serde_json::Value` into a `Settings` struct.
+    /// # Panics
     ///
-    /// # Errors
-    /// This function will return an error if:
-    /// - The `value` cannot be deserialized into the `Settings` struct.
-    /// - The `settings` section in the configuration file does not match the expected structure.
-    pub fn from_json(value: &serde_json::Value) -> Result<Self, serde_json::Error> {
-        serde_json::from_value(value.clone())
+    /// When the settings field can't be found in config, or when it can't be
+    /// deserialized to the expected format.
+    #[allow(clippy::must_use_candidate)]
+    pub fn from_context(ctx: &AppContext) -> Self {
+        let settings_value = ctx
+            .config
+            .settings
+            .clone()
+            .expect("No settings found in config.");
+        serde_json::from_value(settings_value).expect("Error deserializing settings.")
     }
 }
