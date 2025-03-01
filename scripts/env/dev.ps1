@@ -7,8 +7,8 @@ podman run --rm `
   -v pgdata:/var/lib/postgresql/data `
   -d pgvector/pgvector:pg17
 
-podman build -t image-processing ../image-processing
-podman run -d -p 8000:8000 image-processing
+#podman build -t image-processing ../image-processing
+#podman run -d -p 8000:8000 image-processing
 
 #podman run --rm `
 #  --name photos-redis `
