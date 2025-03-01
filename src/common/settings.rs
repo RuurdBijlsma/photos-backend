@@ -9,6 +9,13 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Get a settings object from app context
+    ///
+    /// # Panics
+    ///
+    /// When the settings field can't be found in config, or when it can't be
+    /// deserialized to the expected format.
+    #[allow(clippy::must_use_candidate)]
     pub fn from_context(ctx: &AppContext) -> Self {
         let settings_value = ctx
             .config

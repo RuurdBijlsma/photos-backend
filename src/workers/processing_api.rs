@@ -49,7 +49,7 @@ impl ThumbnailClient {
             StatusCode::OK => Ok(response.json().await?),
             status => {
                 let text = response.text().await?;
-                Err(format!("Unexpected status {}: {}", status, text).into())
+                Err(format!("Unexpected status {status}: {text}").into())
             }
         }
     }
@@ -65,7 +65,7 @@ impl ThumbnailClient {
             StatusCode::OK => Ok(response.json().await?),
             status => {
                 let text = response.text().await?;
-                Err(format!("Unexpected status {}: {}", status, text).into())
+                Err(format!("Unexpected status {status}: {text}").into())
             }
         }
     }
@@ -78,7 +78,7 @@ impl ThumbnailClient {
             StatusCode::OK => Ok(()),
             status => {
                 let text = response.text().await?;
-                Err(format!("Unexpected status {}: {}", status, text).into())
+                Err(format!("Unexpected status {status}: {text}").into())
             }
         }
     }
@@ -111,6 +111,8 @@ pub async fn process_thumbnails(
     image_relative_paths: Vec<String>,
     settings: Settings,
 ) -> Result<(), loco_rs::Error> {
+    const MAX_RETRIES: u64 = 5; // Max retries call to check_status.
+    const RETRY_DELAY: u64 = 1; // For calls to check_status.
     let client = ThumbnailClient::new(&settings.processing_api_url);
     let (photo_paths, video_paths) = split_media_paths(image_relative_paths);
 
@@ -135,8 +137,6 @@ pub async fn process_thumbnails(
         tokio::time::sleep(Duration::from_secs(delay)).await;
 
         // Check status with retry logic because it randomly fails idk why
-        const MAX_RETRIES: u64 = 5;
-        const RETRY_DELAY: u64 = 1;
         let mut retries: u64 = 0;
         let status = loop {
             match client

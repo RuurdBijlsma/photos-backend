@@ -41,7 +41,7 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedPhotosWorker {
         info!("Found {} unprocessed photos", unprocessed_photos.len());
         info!("Unprocessed photos: {:?}", unprocessed_photos);
 
-        if unprocessed_photos.len() > 0 {
+        if !unprocessed_photos.is_empty() {
             process_thumbnails(unprocessed_photos, settings).await?;
         }
 
