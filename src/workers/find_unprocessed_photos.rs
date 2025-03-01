@@ -1,5 +1,6 @@
-use crate::common;
+use crate::common::settings::Settings;
 use crate::models::images;
+use crate::workers::processing_api::process_thumbnails;
 use images::Entity;
 use loco_rs::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -23,11 +24,7 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedPhotosWorker {
 
     async fn perform(&self, _args: WorkerArgs) -> Result<()> {
         info!("=================FindUnprocessedPhotos=======================");
-        let settings = if let Some(s) = &self.ctx.config.settings {
-            common::settings::Settings::from_json(s)?
-        } else {
-            return Err(Error::Message("Settings not found in config".to_string()));
-        };
+        let settings = Settings::from_context(&self.ctx);
 
         info!(
             "📸 Starting photo processing from: {:?}",
@@ -36,18 +33,18 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedPhotosWorker {
 
         let media_path = Path::new(&settings.media_dir);
         fs::create_dir_all(media_path).await?;
-
-        // Get database connection
-        let db = &self.ctx.db;
         // TODO make sure processed images have all thumbnails
 
-        let existing_paths = Entity::get_relative_paths(db).await?;
-
-        // Step 3-4: Find unprocessed photos
+        let existing_paths = Entity::get_relative_paths(&self.ctx.db).await?;
         let unprocessed_photos = collect_unprocessed_photos(media_path, &existing_paths).await?;
 
         info!("Found {} unprocessed photos", unprocessed_photos.len());
         info!("Unprocessed photos: {:?}", unprocessed_photos);
+
+        if unprocessed_photos.len() > 0 {
+            process_thumbnails(unprocessed_photos, settings).await?;
+        }
+
         info!("✅ Successfully processed photos");
         Ok(())
     }

@@ -19,4 +19,4 @@ target/
 *.sqlite
 .idea
 
-input_images/*
+media
