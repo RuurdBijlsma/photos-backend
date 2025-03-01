@@ -1,9 +1,9 @@
 # Loco configuration file documentation
 
 settings:
-  media_dir: { { get_env(name="MEDIA_DIR", default="media/images") } }
-  thumbnails_dir: { { get_env(name="THUMBNAILS_DIR", default="media/thumbnails") } }
-  processing_api_url: { { get_env(name="PROCESSING_API_URL", default="http://localhost:6000") } }
+  media_dir: {{ get_env(name="MEDIA_DIR", default="media/images") }}
+  thumbnails_dir: {{ get_env(name="THUMBNAILS_DIR", default="media/thumbnails") }}
+  processing_api_url: {{ get_env(name="PROCESSING_API_URL", default="http://localhost:6000") }}
 
 # Application logging configuration
 logger:
@@ -68,17 +68,17 @@ mailer:
 # Database Configuration
 database:
   # Database connection URI
-  uri: { { get_env(name="DATABASE_URL", default="postgres://loco:loco@localhost:5432/photos-backend_production") } }
+  uri: {{ get_env(name="DATABASE_URL", default="postgres://loco:loco@localhost:5432/photos-backend_production") }}
   # When enabled, the sql query will be logged.
   enable_logging: false
   # Set the timeout duration when acquiring a connection.
-  connect_timeout: { { get_env(name="DB_CONNECT_TIMEOUT", default="5000") } }
+  connect_timeout: {{ get_env(name="DB_CONNECT_TIMEOUT", default="5000") }}
   # Set the idle duration before closing a connection.
-  idle_timeout: { { get_env(name="DB_IDLE_TIMEOUT", default="500") } }
+  idle_timeout: {{ get_env(name="DB_IDLE_TIMEOUT", default="500") }}
   # Minimum number of connections for a pool.
-  min_connections: { { get_env(name="DB_MIN_CONNECTIONS", default="1") } }
+  min_connections: {{ get_env(name="DB_MIN_CONNECTIONS", default="1") }}
   # Maximum number of connections for a pool.
-  max_connections: { { get_env(name="DB_MAX_CONNECTIONS", default="1") } }
+  max_connections: {{ get_env(name="DB_MAX_CONNECTIONS", default="1") }}
   # Run migration up when application loaded
   auto_migrate: true
   # Truncate database when application loaded. This is a dangerous operation, make sure that you're using this flag only on dev environments or test mode
