@@ -31,10 +31,10 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedPhotosWorker {
 
         info!(
             "📸 Starting photo processing from: {:?}",
-            &settings.media_folder
+            &settings.media_dir
         );
 
-        let media_path = Path::new(&settings.media_folder);
+        let media_path = Path::new(&settings.media_dir);
         fs::create_dir_all(media_path).await?;
 
         // Get database connection

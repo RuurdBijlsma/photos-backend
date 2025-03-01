@@ -1,7 +1,8 @@
 # Loco configuration file documentation
 
 settings:
-  media_folder: input_images
+  media_dir: {{ get_env(name="MEDIA_DIR", default="media/images") }}
+  thumbnails_dir: {{ get_env(name="THUMBNAILS_DIR", default="media/thumbnails") }}
   processing_api_url: {{ get_env(name="PROCESSING_API_URL", default="http://localhost:6000") }}
 
 # Application logging configuration
