@@ -1,4 +1,8 @@
+use crate::api::analyze_api::AnalyzeError;
+use crate::api::analyze_structs::{MediaAnalyzerOutput, ProcessingJob, ProcessingRequest};
+use crate::common::api_client::ApiClientError;
 use crate::common::image_utils::{is_image_file, is_video_file};
+use crate::common::job_polling::JobPollingError;
 use crate::common::settings::Settings;
 use crate::common::{
     api_client::ApiClient,
@@ -7,6 +11,16 @@ use crate::common::{
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::warn;
+
+#[derive(Debug, thiserror::Error)]
+pub enum ThumbnailError {
+    #[error("API error: {0}")]
+    Api(#[from] ApiClientError),
+    #[error("Job polling error: {0}")]
+    JobPolling(#[from] JobPollingError),
+    #[error("Generate thumbnail completed with no result")]
+    NoResult,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ThumbnailRequest {
@@ -31,28 +45,22 @@ impl JobStatus for ThumbnailJob {
 pub async fn process_thumbnails(
     image_relative_paths: Vec<String>,
     settings: &Settings,
-) -> Result<(), loco_rs::Error> {
+) -> Result<(), ThumbnailError> {
     let client = ApiClient::new(&settings.processing_api_url, "thumbnails");
     let (photos, videos) = split_media_paths(image_relative_paths);
 
-    let job_id = client
-        .submit_job(&ThumbnailRequest { photos, videos })
-        .await
-        .map_err(|e| loco_rs::Error::Message(e.to_string()))?;
+    let request = ThumbnailRequest { photos, videos };
+    let job_id = client.submit_job(&request).await?;
 
     let _status: ThumbnailJob = poll_job(
         &client, &job_id, 5,   // delay_secs
         300, // timeout_secs
-        5,   // max_retries
+        3,   // max_retries
         1,   // retry_delay_secs
     )
     .await?;
 
-    client
-        .delete_job(&job_id)
-        .await
-        .map_err(|e| loco_rs::Error::Message(e.to_string()))?;
-
+    client.delete_job(&job_id).await?;
     Ok(())
 }
 

@@ -1,4 +1,4 @@
-use crate::api::thumbnail_api;
+use crate::api::{analyze_api, thumbnail_api};
 use crate::common::settings::Settings;
 use crate::workers::analyze_images::AnalyzeImagesWorker;
 use crate::workers::{analyze_images, generate_thumbnails};
@@ -25,7 +25,9 @@ impl BackgroundWorker<WorkerArgs> for GenerateThumbnailsWorker {
         info!("======================= GenerateThumbnails =======================");
 
         let settings = Settings::from_context(&self.ctx);
-        thumbnail_api::process_thumbnails(args.images.clone(), &settings).await?;
+        thumbnail_api::process_thumbnails(args.images.clone(), &settings)
+            .await
+            .map_err(|e| Error::Message(e.to_string()))?;
 
         info!("✅ Successfully Generated Thumbnails");
 

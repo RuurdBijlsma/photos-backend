@@ -1,18 +1,30 @@
 use anyhow::Error;
 use std::time::Duration;
 use tracing::info;
+use crate::common::api_client::{ApiClient, ApiClientError};
+
+#[derive(Debug, thiserror::Error)]
+pub enum JobPollingError {
+    #[error("Max retries exceeded for job {job_id}: {cause}")]
+    MaxRetriesExceeded { job_id: String, cause: String },
+    #[error("Timeout waiting for job {job_id}")]
+    Timeout { job_id: String },
+    #[error("API error: {0}")]
+    Api(#[from] ApiClientError),
+}
 
 pub trait JobStatus {
     fn is_done(&self) -> bool;
 }
+
 pub async fn poll_job<J: JobStatus + serde::de::DeserializeOwned>(
-    client: &crate::common::api_client::ApiClient,
+    client: &ApiClient,
     job_id: &str,
     delay_secs: u64,
     timeout_secs: u64,
     max_retries: u64,
     retry_delay_secs: u64,
-) -> Result<J, loco_rs::Error> {
+) -> Result<J, JobPollingError> {
     let mut attempts = 0;
     loop {
         tokio::time::sleep(Duration::from_secs(delay_secs)).await;
@@ -23,10 +35,10 @@ pub async fn poll_job<J: JobStatus + serde::de::DeserializeOwned>(
                 Ok(status) => break status,
                 Err(e) => {
                     if retries >= max_retries {
-                        return Err(loco_rs::Error::Message(format!(
-                            "Max retries exceeded for job {}: {}",
-                            job_id, e
-                        )));
+                        return Err(JobPollingError::MaxRetriesExceeded {
+                            job_id: job_id.to_string(),
+                            cause: e.to_string(),
+                        });
                     }
                     retries += 1;
                     let sleep_duration = Duration::from_secs(retry_delay_secs * retries);
@@ -45,10 +57,9 @@ pub async fn poll_job<J: JobStatus + serde::de::DeserializeOwned>(
 
         attempts += 1;
         if attempts * delay_secs >= timeout_secs {
-            return Err(loco_rs::Error::Message(format!(
-                "Timeout waiting for job {}",
-                job_id
-            )));
+            return Err(JobPollingError::Timeout {
+                job_id: job_id.to_string(),
+            });
         }
     }
 }

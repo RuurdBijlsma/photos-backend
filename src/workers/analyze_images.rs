@@ -23,7 +23,9 @@ impl BackgroundWorker<WorkerArgs> for AnalyzeImagesWorker {
         info!("======================= ProcessImages =======================");
 
         let settings = Settings::from_context(&self.ctx);
-        let result = analyze_api::process_media(args.image.clone(), &settings).await?;
+        let result = analyze_api::process_media(args.image.clone(), &settings)
+            .await
+            .map_err(|e| Error::Message(e.to_string()))?;
 
         info!("✅ Successfully Analyzed Image {}", args.image);
         Ok(())

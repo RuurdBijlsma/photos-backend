@@ -40,6 +40,7 @@ uuid = { version = "1.6.0", features = ["v4"] }
 include_dir = { version = "0.7" }
 anyhow = "1.0.95"
 walkdir = "2.5.0"
+thiserror = "2.0.11"
 
 [[bin]]
 name = "photos_backend-cli"

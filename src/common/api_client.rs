@@ -1,8 +1,16 @@
 use anyhow::{Error, Result};
 use reqwest::{Client, StatusCode};
-use serde::ser::StdError;
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
+#[derive(Debug, thiserror::Error)]
+pub enum ApiClientError {
+    #[error("HTTP request failed: {0}")]
+    Request(#[from] reqwest::Error),
+    #[error("Unexpected status {status}: {text}")]
+    UnexpectedStatus { status: StatusCode, text: String },
+    #[error("Serialization error: {0}")]
+    Serialization(#[from] serde_json::Error),
+}
 
 pub struct ApiClient {
     http_client: Client,
@@ -27,7 +35,7 @@ impl ApiClient {
     pub async fn submit_job<T: Serialize>(
         &self,
         request: &T,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Result<String, ApiClientError> {
         let url = format!("{}/{}", self.base_url, self.endpoint);
         let response = self.http_client.post(&url).json(request).send().await?;
 
@@ -35,12 +43,12 @@ impl ApiClient {
             StatusCode::OK => Ok(response.json().await?),
             status => {
                 let text = response.text().await?;
-                Err(format!("Unexpected status {status}: {text}").into())
+                Err(ApiClientError::UnexpectedStatus { status, text })
             }
         }
     }
 
-    pub async fn check_status<J: DeserializeOwned>(&self, job_id: &str) -> Result<J, Error> {
+    pub async fn check_status<J: DeserializeOwned>(&self, job_id: &str) -> Result<J, ApiClientError> {
         let url = format!("{}/{}/{}", self.base_url, self.endpoint, job_id);
         let response = self.http_client.get(&url).send().await?;
 
@@ -48,12 +56,12 @@ impl ApiClient {
             StatusCode::OK => Ok(response.json().await?),
             status => {
                 let text = response.text().await?;
-                Err(Error::msg(format!("Unexpected status {status}: {text}")))
+                Err(ApiClientError::UnexpectedStatus { status, text })
             }
         }
     }
 
-    pub async fn delete_job(&self, job_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete_job(&self, job_id: &str) -> Result<(), ApiClientError> {
         let url = format!("{}/{}/{}", self.base_url, self.endpoint, job_id);
         let response = self.http_client.delete(&url).send().await?;
 
@@ -61,7 +69,7 @@ impl ApiClient {
             StatusCode::OK => Ok(()),
             status => {
                 let text = response.text().await?;
-                Err(format!("Unexpected status {status}: {text}").into())
+                Err(ApiClientError::UnexpectedStatus { status, text })
             }
         }
     }
