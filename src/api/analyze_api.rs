@@ -38,15 +38,15 @@ struct ImageDataOutput {
 
 #[derive(Debug, Deserialize)]
 struct FrameDataOutput {
-    ocr: Option<OCRData>,
-    embedding: Option<Vec<f64>>,
-    faces: Option<Vec<FaceBox>>,
+    ocr: OCRData,
+    embedding: Vec<f64>,
+    faces: Vec<FaceBox>,
     summary: Option<String>,
     caption: Option<String>,
-    objects: Option<Vec<ObjectBox>>,
-    classification: Option<ClassificationData>,
-    measured_quality: Option<MeasuredQualityData>,
-    color: Option<ColorData>,
+    objects: Vec<ObjectBox>,
+    classification: ClassificationData,
+    measured_quality: MeasuredQualityData,
+    color: ColorData,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -54,7 +54,7 @@ struct TimeData {
     datetime_local: String, // ISO 8601 date-time
     datetime_source: String,
     timezone_name: Option<String>,
-    timezone_offset: Option<String>, // Duration format (e.g., "+02:00")
+    timezone_offset: Option<String>, // Duration format (e.g., "PT1H" -> period of 1 hour)
     datetime_utc: Option<String>,    // ISO 8601 date-time
 }
 #[derive(Debug, Deserialize)]
@@ -80,10 +80,10 @@ struct ExifData {
 
 #[derive(Debug, Deserialize)]
 struct GPSData {
-    latitude: Option<f64>,
-    longitude: Option<f64>,
+    latitude: f64,
+    longitude: f64,
     altitude: Option<f64>,
-    location: Option<GeoLocation>,
+    location: GeoLocation,
 }
 
 #[derive(Debug, Deserialize)]
