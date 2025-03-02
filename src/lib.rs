@@ -7,3 +7,4 @@ pub mod models;
 pub mod tasks;
 pub mod views;
 pub mod workers;
+pub mod api;

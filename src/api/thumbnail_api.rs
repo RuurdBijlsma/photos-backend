@@ -109,7 +109,7 @@ fn split_media_paths(paths: Vec<String>) -> (Vec<String>, Vec<String>) {
 }
 pub async fn process_thumbnails(
     image_relative_paths: Vec<String>,
-    settings: Settings,
+    settings: &Settings,
 ) -> Result<(), loco_rs::Error> {
     const MAX_RETRIES: u64 = 5; // Max retries call to check_status.
     const RETRY_DELAY: u64 = 1; // For calls to check_status.

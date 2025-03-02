@@ -55,7 +55,7 @@ impl Hooks for App {
     async fn connect_workers(ctx: &AppContext, queue: &Queue) -> Result<()> {
         queue
             .register(
-                crate::workers::find_unprocessed_photos::FindUnprocessedPhotosWorker::build(ctx),
+                crate::workers::find_unprocessed_images::FindUnprocessedImagesWorker::build(ctx),
             )
             .await?;
         Ok(())
