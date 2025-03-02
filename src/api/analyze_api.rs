@@ -21,9 +21,9 @@ impl JobStatus for ProcessingJob {
 
 pub async fn process_media(
     relative_path: String,
-    settings: &Settings,
+    processing_api_url: &str,
 ) -> Result<MediaAnalyzerOutput, AnalyzeError> {
-    let client = ApiClient::new(&settings.processing_api_url, "process");
+    let client = ApiClient::new(processing_api_url, "process");
     let request = ProcessingRequest { relative_path };
 
     let job_id = client.submit_job(&request).await?;

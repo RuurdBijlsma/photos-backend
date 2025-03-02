@@ -44,9 +44,9 @@ impl JobStatus for ThumbnailJob {
 
 pub async fn process_thumbnails(
     image_relative_paths: Vec<String>,
-    settings: &Settings,
+    processing_api_url: &str,
 ) -> Result<(), ThumbnailError> {
-    let client = ApiClient::new(&settings.processing_api_url, "thumbnails");
+    let client = ApiClient::new(processing_api_url, "thumbnails");
     let (photos, videos) = split_media_paths(image_relative_paths);
 
     let request = ThumbnailRequest { photos, videos };

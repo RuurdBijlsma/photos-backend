@@ -13,7 +13,6 @@ pub struct Model {
     pub filename: String,
     #[sea_orm(unique)]
     pub relative_path: String,
-    pub hash: String,
     pub width: i32,
     pub height: i32,
     #[sea_orm(column_type = "Float", nullable)]

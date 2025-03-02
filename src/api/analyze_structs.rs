@@ -16,150 +16,150 @@ pub struct ProcessingJob {
 
 #[derive(Debug, Deserialize)]
 pub struct MediaAnalyzerOutput {
-    image_data: ImageDataOutput,
-    frame_data: Vec<FrameDataOutput>,
+    pub image_data: ImageDataOutput,
+    pub frame_data: Vec<FrameDataOutput>,
 }
 
 #[derive(Debug, Deserialize)]
-struct ImageDataOutput {
-    path: String,
-    exif: ExifData,
-    data_url: String,
-    gps: Option<GPSData>,
-    time: TimeData,
-    weather: Option<WeatherData>,
-    tags: TagData,
+pub struct ImageDataOutput {
+    pub path: String,
+    pub exif: ExifData,
+    pub data_url: String,
+    pub gps: Option<GPSData>,
+    pub time: TimeData,
+    pub weather: Option<WeatherData>,
+    pub tags: TagData,
 }
 
 #[derive(Debug, Deserialize)]
-struct FrameDataOutput {
-    ocr: OCRData,
-    embedding: Vec<f64>,
-    faces: Vec<FaceBox>,
-    summary: Option<String>,
-    caption: Option<String>,
-    objects: Vec<ObjectBox>,
-    classification: ClassificationData,
-    measured_quality: MeasuredQualityData,
-    color: ColorData,
+pub struct FrameDataOutput {
+    pub ocr: OCRData,
+    pub embedding: Vec<f64>,
+    pub faces: Vec<FaceBox>,
+    pub summary: Option<String>,
+    pub caption: Option<String>,
+    pub objects: Vec<ObjectBox>,
+    pub classification: ClassificationData,
+    pub measured_quality: MeasuredQualityData,
+    pub color: ColorData,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct TimeData {
-    datetime_local: String, // ISO 8601 date-time
-    datetime_source: String,
-    timezone_name: Option<String>,
-    timezone_offset: Option<String>, // Duration format (e.g., "PT1H" -> period of 1 hour)
-    datetime_utc: Option<String>,    // ISO 8601 date-time
+pub struct TimeData {
+    pub datetime_local: String, // ISO 8601 date-time
+    pub datetime_source: String,
+    pub timezone_name: Option<String>,
+    pub timezone_offset: Option<String>, // Duration format (e.g., "PT1H" -> period of 1 hour)
+    pub datetime_utc: Option<String>,    // ISO 8601 date-time
 }
 #[derive(Debug, Deserialize)]
-struct ExifData {
-    width: i32,
-    height: i32,
-    duration: Option<f64>,
-    size_bytes: i64,
-    format: String,
-    exif_tool: Value,
-    file: Value,
-    composite: Value,
-    exif: Option<Value>,
-    xmp: Option<Value>,
-    mpf: Option<Value>,
-    jfif: Option<Value>,
-    icc_profile: Option<Value>,
-    gif: Option<Value>,
-    png: Option<Value>,
-    quicktime: Option<Value>,
-    matroska: Option<Value>,
-}
-
-#[derive(Debug, Deserialize)]
-struct GPSData {
-    latitude: f64,
-    longitude: f64,
-    altitude: Option<f64>,
-    location: GeoLocation,
+pub struct ExifData {
+    pub width: i32,
+    pub height: i32,
+    pub duration: Option<f64>,
+    pub size_bytes: i64,
+    pub format: String,
+    pub exif_tool: Value,
+    pub file: Value,
+    pub composite: Value,
+    pub exif: Option<Value>,
+    pub xmp: Option<Value>,
+    pub mpf: Option<Value>,
+    pub jfif: Option<Value>,
+    pub icc_profile: Option<Value>,
+    pub gif: Option<Value>,
+    pub png: Option<Value>,
+    pub quicktime: Option<Value>,
+    pub matroska: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]
-struct GeoLocation {
-    country: String,
-    city: String,
-    province: Option<String>,
-    place_latitude: f64,
-    place_longitude: f64,
+pub struct GPSData {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub altitude: Option<f64>,
+    pub location: GeoLocation,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GeoLocation {
+    pub country: String,
+    pub city: String,
+    pub province: Option<String>,
+    pub place_latitude: f64,
+    pub place_longitude: f64,
 }
 
 // WeatherData
 #[derive(Debug, Deserialize, Serialize)]
-struct WeatherData {
-    weather_recorded_at: Option<String>, // ISO 8601 date-time
-    weather_temperature: Option<f64>,
-    weather_dewpoint: Option<f64>,
-    weather_relative_humidity: Option<f64>,
-    weather_precipitation: Option<f64>,
-    weather_wind_gust: Option<f64>,
-    weather_pressure: Option<f64>,
-    weather_sun_hours: Option<f64>,
-    weather_condition: Option<i32>,
+pub struct WeatherData {
+    pub weather_recorded_at: Option<String>, // ISO 8601 date-time
+    pub weather_temperature: Option<f64>,
+    pub weather_dewpoint: Option<f64>,
+    pub weather_relative_humidity: Option<f64>,
+    pub weather_precipitation: Option<f64>,
+    pub weather_wind_gust: Option<f64>,
+    pub weather_pressure: Option<f64>,
+    pub weather_sun_hours: Option<f64>,
+    pub weather_condition: Option<i32>,
 }
 
 // TagData
 #[derive(Debug, Deserialize, Serialize)]
-struct TagData {
-    use_panorama_viewer: bool,
-    is_photosphere: bool,
-    projection_type: Option<String>,
-    is_motion_photo: bool,
-    motion_photo_presentation_timestamp: Option<i64>,
-    is_night_sight: bool,
-    is_hdr: bool,
-    is_burst: bool,
-    burst_id: Option<String>,
-    is_timelapse: bool,
-    is_slowmotion: bool,
-    is_video: bool,
-    capture_fps: Option<f64>,
-    video_fps: Option<f64>,
+pub struct TagData {
+    pub use_panorama_viewer: bool,
+    pub is_photosphere: bool,
+    pub projection_type: Option<String>,
+    pub is_motion_photo: bool,
+    pub motion_photo_presentation_timestamp: Option<i64>,
+    pub is_night_sight: bool,
+    pub is_hdr: bool,
+    pub is_burst: bool,
+    pub burst_id: Option<String>,
+    pub is_timelapse: bool,
+    pub is_slowmotion: bool,
+    pub is_video: bool,
+    pub capture_fps: Option<f64>,
+    pub video_fps: Option<f64>,
 }
 
 // OCRData
 #[derive(Debug, Deserialize, Serialize)]
-struct OCRData {
-    has_legible_text: bool,
-    ocr_text: Option<String>,
-    document_summary: Option<String>,
-    ocr_boxes: Vec<OCRBox>,
+pub struct OCRData {
+    pub has_legible_text: bool,
+    pub ocr_text: Option<String>,
+    pub document_summary: Option<String>,
+    pub ocr_boxes: Vec<OCRBox>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct OCRBox {
-    position: [f64; 2], // [x, y]
-    width: f64,
-    height: f64,
-    confidence: f64,
-    text: String,
+pub struct OCRBox {
+    pub position: [f64; 2], // [x, y]
+    pub width: f64,
+    pub height: f64,
+    pub confidence: f64,
+    pub text: String,
 }
 
 // FaceBox
 #[derive(Debug, Deserialize, Serialize)]
-struct FaceBox {
-    position: [f64; 2], // [x, y]
-    width: f64,
-    height: f64,
-    confidence: f64,
-    age: i32,
-    sex: FaceSex,
-    mouth_left: [f64; 2],
-    mouth_right: [f64; 2],
-    nose_tip: [f64; 2],
-    eye_left: [f64; 2],
-    eye_right: [f64; 2],
-    embedding: Vec<f64>,
+pub struct FaceBox {
+    pub position: [f64; 2], // [x, y]
+    pub width: f64,
+    pub height: f64,
+    pub confidence: f64,
+    pub age: i32,
+    pub sex: FaceSex,
+    pub mouth_left: [f64; 2],
+    pub mouth_right: [f64; 2],
+    pub nose_tip: [f64; 2],
+    pub eye_left: [f64; 2],
+    pub eye_right: [f64; 2],
+    pub embedding: Vec<f64>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-enum FaceSex {
+pub enum FaceSex {
     #[serde(rename = "M")]
     Male,
     #[serde(rename = "F")]
@@ -168,49 +168,49 @@ enum FaceSex {
 
 // ObjectBox
 #[derive(Debug, Deserialize, Serialize)]
-struct ObjectBox {
-    position: [f64; 2], // [x, y]
-    width: f64,
-    height: f64,
-    confidence: f64,
-    label: String,
+pub struct ObjectBox {
+    pub position: [f64; 2], // [x, y]
+    pub width: f64,
+    pub height: f64,
+    pub confidence: f64,
+    pub label: String,
 }
 
 // ClassificationData
 #[derive(Debug, Deserialize, Serialize)]
-struct ClassificationData {
-    scene_type: String,
-    people_type: Option<String>,
-    animal_type: Option<String>,
-    document_type: Option<String>,
-    object_type: Option<String>,
-    activity_type: Option<String>,
-    event_type: Option<String>,
-    weather_condition: Option<i32>,
-    is_outside: bool,
-    is_landscape: bool,
-    is_cityscape: bool,
-    is_travel: bool,
+pub struct ClassificationData {
+    pub scene_type: String,
+    pub people_type: Option<String>,
+    pub animal_type: Option<String>,
+    pub document_type: Option<String>,
+    pub object_type: Option<String>,
+    pub activity_type: Option<String>,
+    pub event_type: Option<String>,
+    pub weather_condition: Option<i32>,
+    pub is_outside: bool,
+    pub is_landscape: bool,
+    pub is_cityscape: bool,
+    pub is_travel: bool,
 }
 
 // MeasuredQualityData
 #[derive(Debug, Deserialize, Serialize)]
-struct MeasuredQualityData {
-    measured_sharpness: f64,
-    measured_noise: i32,
-    measured_brightness: f64,
-    measured_contrast: f64,
-    measured_clipping: f64,
-    measured_dynamic_range: f64,
-    quality_score: f64,
+pub struct MeasuredQualityData {
+    pub measured_sharpness: f64,
+    pub measured_noise: i32,
+    pub measured_brightness: f64,
+    pub measured_contrast: f64,
+    pub measured_clipping: f64,
+    pub measured_dynamic_range: f64,
+    pub quality_score: f64,
 }
 
 // ColorData
 #[derive(Debug, Deserialize, Serialize)]
-struct ColorData {
-    themes: Vec<Value>,
-    prominent_colors: Vec<String>,
-    average_hue: f64,
-    average_saturation: f64,
-    average_lightness: f64,
+pub struct ColorData {
+    pub themes: Vec<Value>,
+    pub prominent_colors: Vec<String>,
+    pub average_hue: f64,
+    pub average_saturation: f64,
+    pub average_lightness: f64,
 }

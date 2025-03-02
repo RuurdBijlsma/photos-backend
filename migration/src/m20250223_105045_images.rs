@@ -79,7 +79,6 @@ $$ LANGUAGE plpgsql;
                             .not_null()
                             .unique_key(),
                     )
-                    .col(ColumnDef::new(Images::Hash).string().not_null())
                     .col(ColumnDef::new(Images::Width).integer().not_null())
                     .col(ColumnDef::new(Images::Height).integer().not_null())
                     .col(ColumnDef::new(Images::Duration).float().null())
