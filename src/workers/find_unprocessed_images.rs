@@ -10,6 +10,7 @@ use std::path::Path;
 use tokio::fs;
 use tracing::{error, info};
 use walkdir::WalkDir;
+use crate::common::image_utils::{is_image_file, is_video_file, normalize_path};
 
 pub struct FindUnprocessedImagesWorker {
     pub ctx: AppContext,
@@ -55,35 +56,6 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedImagesWorker {
 
         Ok(())
     }
-}
-
-fn is_image_file(path: &Path) -> bool {
-    if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
-        // Convert to lowercase and then match against known extensions.
-        let ext_lower = ext.to_ascii_lowercase();
-        matches!(
-            ext_lower.as_str(),
-            "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "heif" | "avif"
-        )
-    } else {
-        false
-    }
-}
-
-fn is_video_file(path: &Path) -> bool {
-    if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
-        let ext_lower = ext.to_ascii_lowercase();
-        matches!(
-            ext_lower.as_str(),
-            "mp4" | "mkv" | "avi" | "mov" | "wmv" | "webm"
-        )
-    } else {
-        false
-    }
-}
-
-fn normalize_path(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
 }
 
 async fn collect_unprocessed_images(
