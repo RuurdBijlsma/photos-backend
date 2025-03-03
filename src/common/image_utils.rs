@@ -10,6 +10,7 @@ pub fn parse_iso_datetime(
     NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S%.f")
         .or_else(|_| NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S"))
 }
+
 #[must_use]
 pub fn is_image_file(path: &Path) -> bool {
     path.extension()
