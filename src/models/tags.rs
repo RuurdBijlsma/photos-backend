@@ -26,6 +26,10 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
+    /// Create tags based on `MediaAnalyzerOutput`, and store it in db.
+    ///
+    /// # Errors
+    /// If an INSERT fails.
     pub async fn create_from_analysis<C>(
         db: &C,
         tags: TagData,
@@ -34,7 +38,7 @@ impl ActiveModel {
     where
         C: ConnectionTrait,
     {
-        let tags = ActiveModel {
+        let tags = Self {
             use_panorama_viewer: Set(tags.use_panorama_viewer),
             is_photosphere: Set(tags.is_photosphere),
             projection_type: Set(tags.projection_type),

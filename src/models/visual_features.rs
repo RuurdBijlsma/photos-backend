@@ -27,9 +27,14 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
+    /// Create visual features and all child tables based on `MediaAnalyzerOutput`,
+    /// and store it in db.
+    ///
+    /// # Errors
+    /// If an INSERT fails.
     pub async fn create_from_analysis<C>(
         db: &C,
-        frames: &Vec<FrameDataOutput>,
+        frames: &[FrameDataOutput],
         image_id: String,
     ) -> Result<Vec<Model>, DbErr>
     where
@@ -40,7 +45,7 @@ impl ActiveModel {
             #[allow(clippy::cast_precision_loss)]
             #[allow(clippy::cast_possible_truncation)]
             let frame_percentage = (i as f32 / frames.len() as f32 * 100.0) as i32;
-            let vf = ActiveModel {
+            let vf = Self {
                 frame_percentage: Set(frame_percentage),
                 embedding: Set(frame.embedding.clone()),
                 scene_type: Set(frame.classification.scene_type.clone()),
@@ -77,18 +82,15 @@ impl ActiveModel {
             .await?;
 
             // OCR boxes
-            ocr_boxes::ActiveModel::create_from_analysis(db, &frame.ocr.ocr_boxes, vf.id)
-                .await?;
+            ocr_boxes::ActiveModel::create_from_analysis(db, &frame.ocr.ocr_boxes, vf.id).await?;
 
             // Todo: cluster faces
 
             // Face boxes
-            face_boxes::ActiveModel::create_from_analysis(db, &frame.faces, vf.id)
-                .await?;
+            face_boxes::ActiveModel::create_from_analysis(db, &frame.faces, vf.id).await?;
 
             // Object boxes
-            object_boxes::ActiveModel::create_from_analysis(db, &frame.objects, vf.id)
-                .await?;
+            object_boxes::ActiveModel::create_from_analysis(db, &frame.objects, vf.id).await?;
 
             // todo get full vf here
             results.push(vf);

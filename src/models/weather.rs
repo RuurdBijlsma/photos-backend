@@ -27,8 +27,10 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    /// # Errors
+    /// Create weather based on `MediaAnalyzerOutput`, and store it in db.
     ///
+    /// # Errors
+    /// If an INSERT fails.
     pub async fn create_from_analysis<C>(
         db: &C,
         weather: WeatherData,

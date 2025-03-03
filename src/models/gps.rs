@@ -27,6 +27,11 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
+    /// Create gps and location based on `MediaAnalyzerOutput`, and store it in db.
+    ///
+    /// # Errors
+    /// * If an INSERT fails.
+    /// * If a query in find location fails.
     pub async fn create_from_analysis<C>(
         db: &C,
         gps_data: GPSData,
@@ -45,7 +50,7 @@ impl ActiveModel {
         )
         .await?;
 
-        let gps = ActiveModel {
+        let gps = Self {
             latitude: Set(gps_data.latitude),
             longitude: Set(gps_data.longitude),
             altitude: Set(gps_data.altitude),

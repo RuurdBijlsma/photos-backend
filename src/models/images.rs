@@ -89,12 +89,8 @@ impl ActiveModel {
         }
 
         // Metadata insertion
-        metadata::ActiveModel::create_from_analysis(
-            db,
-            result.image_data.exif,
-            image.id.clone(),
-        )
-        .await?;
+        metadata::ActiveModel::create_from_analysis(db, result.image_data.exif, image.id.clone())
+            .await?;
 
         // Tags insertion
         tags::ActiveModel::create_from_analysis(db, result.image_data.tags, image.id.clone())
@@ -102,8 +98,7 @@ impl ActiveModel {
 
         // Weather insertion
         if let Some(weather_data) = result.image_data.weather {
-            weather::ActiveModel::create_from_analysis(db, weather_data, image.id.clone())
-                .await?;
+            weather::ActiveModel::create_from_analysis(db, weather_data, image.id.clone()).await?;
         }
 
         // Frame processing

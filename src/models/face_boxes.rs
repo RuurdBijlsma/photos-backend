@@ -26,6 +26,10 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
+    /// Create face boxes based on `MediaAnalyzerOutput`, and store it in db.
+    ///
+    /// # Errors
+    /// If an INSERT fails.
     pub async fn create_from_analysis<C>(
         db: &C,
         face_boxes: &Vec<FaceBox>,
@@ -35,7 +39,7 @@ impl ActiveModel {
         C: ConnectionTrait,
     {
         for face in face_boxes {
-            let face_box_active = ActiveModel {
+            let face_box_active = Self {
                 position: Set(face.position.to_vec()),
                 width: Set(face.width),
                 height: Set(face.height),

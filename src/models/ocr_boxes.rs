@@ -26,6 +26,10 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
+    /// Create ocr boxes based on `MediaAnalyzerOutput`, and store it in db.
+    ///
+    /// # Errors
+    /// If an INSERT fails.
     pub async fn create_from_analysis<C>(
         db: &C,
         ocr_boxes: &Vec<OCRBox>,
@@ -35,7 +39,7 @@ impl ActiveModel {
         C: ConnectionTrait,
     {
         for ocr_box in ocr_boxes {
-            let ocr_box_active = ActiveModel {
+            let ocr_box_active = Self {
                 position: Set(ocr_box.position.to_vec()),
                 width: Set(ocr_box.width),
                 height: Set(ocr_box.height),

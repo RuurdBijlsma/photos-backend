@@ -26,6 +26,10 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
+    /// Create metadata based on `MediaAnalyzerOutput`, and store it in db.
+    ///
+    /// # Errors
+    /// If an INSERT fails.
     pub async fn create_from_analysis<C>(
         db: &C,
         metadata: ExifData,
@@ -34,7 +38,7 @@ impl ActiveModel {
     where
         C: ConnectionTrait,
     {
-        let metadata = ActiveModel {
+        let metadata = Self {
             exif_tool: Set(metadata.exif_tool),
             file: Set(metadata.file),
             composite: Set(metadata.composite),
