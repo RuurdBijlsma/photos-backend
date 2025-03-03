@@ -1,7 +1,7 @@
 use crate::api::thumbnail_api;
 use crate::common::settings::Settings;
-use crate::workers::analyze_images::AnalyzeImagesWorker;
 use crate::workers::analyze_images;
+use crate::workers::analyze_images::AnalyzeImagesWorker;
 use loco_rs::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
