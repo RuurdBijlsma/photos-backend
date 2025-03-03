@@ -23,17 +23,18 @@ completely replace photos-backend (python) with this:
     5. todo: check for thumbnails in find_unprocessed_photos
 7. ✅ Reduce duplicate code in analyze_api and thumbnails_api
 8. ✅ Improve error logging for errors in api.
-9. put analyzed image in db
-10. Call analyze worker for every unprocessed photo
-11. Make worker job:
+9. fix weather in db (it's now int I want string)
+10. put analyzed image in db
+11. Call analyze worker for every unprocessed photo
+12. Make worker job:
     * check for unprocessed photos etc. ->
     * generate all thumbs for them ->
     * run a new job to process a new photo and put in db
-12. after processing photos per user:
+13. after processing photos per user:
     * run recluster worker job
     * clean up dangling thumbnails, db entries, etc.
     * fill timezone gaps
-13. add something like watchdog for rust, watch for new files in directory https://docs.rs/notify/latest/notify/
-14. add random image + theme endpoint
-15. add endpoint to get images by month range
-16. make worker job to cluster images
+14. add something like watchdog for rust, watch for new files in directory https://docs.rs/notify/latest/notify/
+15. add random image + theme endpoint
+16. add endpoint to get images by month range
+17. make worker job to cluster images

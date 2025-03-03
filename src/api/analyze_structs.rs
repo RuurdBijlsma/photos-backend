@@ -14,13 +14,13 @@ pub struct ProcessingJob {
     pub done: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct MediaAnalyzerOutput {
     pub image_data: ImageDataOutput,
     pub frame_data: Vec<FrameDataOutput>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ImageDataOutput {
     pub path: String,
     pub exif: ExifData,
@@ -31,7 +31,7 @@ pub struct ImageDataOutput {
     pub tags: TagData,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct FrameDataOutput {
     pub ocr: OCRData,
     pub embedding: Vec<f32>,
@@ -44,7 +44,7 @@ pub struct FrameDataOutput {
     pub color: ColorData,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct TimeData {
     pub datetime_local: String, // ISO 8601 date-time
     pub datetime_source: String,
@@ -52,7 +52,7 @@ pub struct TimeData {
     pub timezone_offset: Option<String>, // Duration format (e.g., "PT1H" -> period of 1 hour)
     pub datetime_utc: Option<String>,    // ISO 8601 date-time
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ExifData {
     pub width: i32,
     pub height: i32,
@@ -73,7 +73,7 @@ pub struct ExifData {
     pub matroska: Option<Value>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct GPSData {
     pub latitude: f32,
     pub longitude: f32,
@@ -81,7 +81,7 @@ pub struct GPSData {
     pub location: GeoLocation,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct GeoLocation {
     pub country: String,
     pub city: String,
@@ -91,7 +91,7 @@ pub struct GeoLocation {
 }
 
 // WeatherData
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct WeatherData {
     pub weather_recorded_at: Option<String>, // ISO 8601 date-time
     pub weather_temperature: Option<f32>,
@@ -106,7 +106,7 @@ pub struct WeatherData {
 
 // TagData
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct TagData {
     pub use_panorama_viewer: bool,
     pub is_photosphere: bool,
@@ -125,7 +125,7 @@ pub struct TagData {
 }
 
 // OCRData
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct OCRData {
     pub has_legible_text: bool,
     pub ocr_text: Option<String>,
@@ -133,7 +133,7 @@ pub struct OCRData {
     pub ocr_boxes: Vec<OCRBox>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct OCRBox {
     pub position: [f32; 2], // [x, y]
     pub width: f32,
@@ -143,7 +143,7 @@ pub struct OCRBox {
 }
 
 // FaceBox
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct FaceBox {
     pub position: [f32; 2], // [x, y]
     pub width: f32,
@@ -159,7 +159,7 @@ pub struct FaceBox {
     pub embedding: Vec<f32>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub enum FaceSex {
     #[serde(rename = "M")]
     Male,
@@ -168,7 +168,7 @@ pub enum FaceSex {
 }
 
 // ObjectBox
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ObjectBox {
     pub position: [f32; 2], // [x, y]
     pub width: f32,
@@ -179,7 +179,7 @@ pub struct ObjectBox {
 
 // ClassificationData
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ClassificationData {
     pub scene_type: String,
     pub people_type: Option<String>,
@@ -196,7 +196,7 @@ pub struct ClassificationData {
 }
 
 // MeasuredQualityData
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct MeasuredQualityData {
     pub measured_sharpness: f32,
     pub measured_noise: i32,
@@ -208,7 +208,7 @@ pub struct MeasuredQualityData {
 }
 
 // ColorData
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct ColorData {
     pub themes: Vec<Value>,
     pub prominent_colors: Vec<String>,
