@@ -34,7 +34,7 @@ pub struct ImageDataOutput {
 #[derive(Debug, Deserialize)]
 pub struct FrameDataOutput {
     pub ocr: OCRData,
-    pub embedding: Vec<f64>,
+    pub embedding: Vec<f32>,
     pub faces: Vec<FaceBox>,
     pub summary: Option<String>,
     pub caption: Option<String>,
@@ -56,7 +56,7 @@ pub struct TimeData {
 pub struct ExifData {
     pub width: i32,
     pub height: i32,
-    pub duration: Option<f64>,
+    pub duration: Option<f32>,
     pub size_bytes: i64,
     pub format: String,
     pub exif_tool: Value,
@@ -75,9 +75,9 @@ pub struct ExifData {
 
 #[derive(Debug, Deserialize)]
 pub struct GPSData {
-    pub latitude: f64,
-    pub longitude: f64,
-    pub altitude: Option<f64>,
+    pub latitude: f32,
+    pub longitude: f32,
+    pub altitude: Option<f32>,
     pub location: GeoLocation,
 }
 
@@ -86,21 +86,21 @@ pub struct GeoLocation {
     pub country: String,
     pub city: String,
     pub province: Option<String>,
-    pub place_latitude: f64,
-    pub place_longitude: f64,
+    pub place_latitude: f32,
+    pub place_longitude: f32,
 }
 
 // WeatherData
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WeatherData {
     pub weather_recorded_at: Option<String>, // ISO 8601 date-time
-    pub weather_temperature: Option<f64>,
-    pub weather_dewpoint: Option<f64>,
-    pub weather_relative_humidity: Option<f64>,
-    pub weather_precipitation: Option<f64>,
-    pub weather_wind_gust: Option<f64>,
-    pub weather_pressure: Option<f64>,
-    pub weather_sun_hours: Option<f64>,
+    pub weather_temperature: Option<f32>,
+    pub weather_dewpoint: Option<f32>,
+    pub weather_relative_humidity: Option<f32>,
+    pub weather_precipitation: Option<f32>,
+    pub weather_wind_gust: Option<f32>,
+    pub weather_pressure: Option<f32>,
+    pub weather_sun_hours: Option<f32>,
     pub weather_condition: Option<i32>,
 }
 
@@ -119,8 +119,8 @@ pub struct TagData {
     pub is_timelapse: bool,
     pub is_slowmotion: bool,
     pub is_video: bool,
-    pub capture_fps: Option<f64>,
-    pub video_fps: Option<f64>,
+    pub capture_fps: Option<f32>,
+    pub video_fps: Option<f32>,
 }
 
 // OCRData
@@ -134,28 +134,28 @@ pub struct OCRData {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OCRBox {
-    pub position: [f64; 2], // [x, y]
-    pub width: f64,
-    pub height: f64,
-    pub confidence: f64,
+    pub position: [f32; 2], // [x, y]
+    pub width: f32,
+    pub height: f32,
+    pub confidence: f32,
     pub text: String,
 }
 
 // FaceBox
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FaceBox {
-    pub position: [f64; 2], // [x, y]
-    pub width: f64,
-    pub height: f64,
-    pub confidence: f64,
+    pub position: [f32; 2], // [x, y]
+    pub width: f32,
+    pub height: f32,
+    pub confidence: f32,
     pub age: i32,
     pub sex: FaceSex,
-    pub mouth_left: [f64; 2],
-    pub mouth_right: [f64; 2],
-    pub nose_tip: [f64; 2],
-    pub eye_left: [f64; 2],
-    pub eye_right: [f64; 2],
-    pub embedding: Vec<f64>,
+    pub mouth_left: [f32; 2],
+    pub mouth_right: [f32; 2],
+    pub nose_tip: [f32; 2],
+    pub eye_left: [f32; 2],
+    pub eye_right: [f32; 2],
+    pub embedding: Vec<f32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -169,10 +169,10 @@ pub enum FaceSex {
 // ObjectBox
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ObjectBox {
-    pub position: [f64; 2], // [x, y]
-    pub width: f64,
-    pub height: f64,
-    pub confidence: f64,
+    pub position: [f32; 2], // [x, y]
+    pub width: f32,
+    pub height: f32,
+    pub confidence: f32,
     pub label: String,
 }
 
@@ -196,13 +196,13 @@ pub struct ClassificationData {
 // MeasuredQualityData
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MeasuredQualityData {
-    pub measured_sharpness: f64,
+    pub measured_sharpness: f32,
     pub measured_noise: i32,
-    pub measured_brightness: f64,
-    pub measured_contrast: f64,
-    pub measured_clipping: f64,
-    pub measured_dynamic_range: f64,
-    pub quality_score: f64,
+    pub measured_brightness: f32,
+    pub measured_contrast: f32,
+    pub measured_clipping: f32,
+    pub measured_dynamic_range: f32,
+    pub quality_score: f32,
 }
 
 // ColorData
@@ -210,7 +210,7 @@ pub struct MeasuredQualityData {
 pub struct ColorData {
     pub themes: Vec<Value>,
     pub prominent_colors: Vec<String>,
-    pub average_hue: f64,
-    pub average_saturation: f64,
-    pub average_lightness: f64,
+    pub average_hue: f32,
+    pub average_saturation: f32,
+    pub average_lightness: f32,
 }
