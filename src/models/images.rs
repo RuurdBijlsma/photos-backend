@@ -85,11 +85,11 @@ impl ActiveModel {
 
         // GPS data insertion
         if let Some(gps_data) = result.image_data.gps {
-            gps::ActiveModel::create_gps_from_analysis(db, gps_data, image.id.clone()).await?;
+            gps::ActiveModel::create_from_analysis(db, gps_data, image.id.clone()).await?;
         }
 
         // Metadata insertion
-        metadata::ActiveModel::create_metadata_from_analysis(
+        metadata::ActiveModel::create_from_analysis(
             db,
             result.image_data.exif,
             image.id.clone(),
@@ -97,17 +97,17 @@ impl ActiveModel {
         .await?;
 
         // Tags insertion
-        tags::ActiveModel::create_tags_from_analysis(db, result.image_data.tags, image.id.clone())
+        tags::ActiveModel::create_from_analysis(db, result.image_data.tags, image.id.clone())
             .await?;
 
         // Weather insertion
         if let Some(weather_data) = result.image_data.weather {
-            weather::ActiveModel::create_weather_from_analysis(db, weather_data, image.id.clone())
+            weather::ActiveModel::create_from_analysis(db, weather_data, image.id.clone())
                 .await?;
         }
 
         // Frame processing
-        visual_features::ActiveModel::create_visual_features_from_analysis(
+        visual_features::ActiveModel::create_from_analysis(
             db,
             &result.frame_data,
             image.id.clone(),

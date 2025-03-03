@@ -26,7 +26,7 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    pub async fn create_object_boxes_from_analysis<C>(
+    pub async fn create_from_analysis<C>(
         db: &C,
         object_boxes: &Vec<ObjectBox>,
         visual_feature_id: i32,

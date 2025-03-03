@@ -27,7 +27,7 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    pub async fn create_visual_features_from_analysis<C>(
+    pub async fn create_from_analysis<C>(
         db: &C,
         frames: &Vec<FrameDataOutput>,
         image_id: String,
@@ -77,17 +77,17 @@ impl ActiveModel {
             .await?;
 
             // OCR boxes
-            ocr_boxes::ActiveModel::create_ocr_boxes_from_analysis(db, &frame.ocr.ocr_boxes, vf.id)
+            ocr_boxes::ActiveModel::create_from_analysis(db, &frame.ocr.ocr_boxes, vf.id)
                 .await?;
 
             // Todo: cluster faces
 
             // Face boxes
-            face_boxes::ActiveModel::create_face_boxes_from_analysis(db, &frame.faces, vf.id)
+            face_boxes::ActiveModel::create_from_analysis(db, &frame.faces, vf.id)
                 .await?;
 
             // Object boxes
-            object_boxes::ActiveModel::create_object_boxes_from_analysis(db, &frame.objects, vf.id)
+            object_boxes::ActiveModel::create_from_analysis(db, &frame.objects, vf.id)
                 .await?;
 
             // todo get full vf here

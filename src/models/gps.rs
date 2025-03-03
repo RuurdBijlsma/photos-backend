@@ -27,7 +27,7 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    pub async fn create_gps_from_analysis<C>(
+    pub async fn create_from_analysis<C>(
         db: &C,
         gps_data: GPSData,
         image_id: String,

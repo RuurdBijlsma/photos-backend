@@ -27,7 +27,9 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    pub async fn create_weather_from_analysis<C>(
+    /// # Errors
+    ///
+    pub async fn create_from_analysis<C>(
         db: &C,
         weather: WeatherData,
         image_id: String,
@@ -39,7 +41,7 @@ impl ActiveModel {
             .weather_recorded_at
             .as_ref()
             .and_then(|ts| parse_iso_datetime(ts).ok());
-        let weather = ActiveModel {
+        let weather = Self {
             weather_recorded_at: Set(recorded_at),
             weather_temperature: Set(weather.weather_temperature),
             weather_dewpoint: Set(weather.weather_dewpoint),

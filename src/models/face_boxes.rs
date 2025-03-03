@@ -26,7 +26,7 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    pub async fn create_face_boxes_from_analysis<C>(
+    pub async fn create_from_analysis<C>(
         db: &C,
         face_boxes: &Vec<FaceBox>,
         visual_feature_id: i32,

@@ -26,7 +26,7 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    pub async fn create_tags_from_analysis<C>(
+    pub async fn create_from_analysis<C>(
         db: &C,
         tags: TagData,
         image_id: String,

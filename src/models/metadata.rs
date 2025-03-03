@@ -26,7 +26,7 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    pub async fn create_metadata_from_analysis<C>(
+    pub async fn create_from_analysis<C>(
         db: &C,
         metadata: ExifData,
         image_id: String,
