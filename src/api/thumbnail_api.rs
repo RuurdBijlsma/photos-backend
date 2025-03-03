@@ -1,9 +1,6 @@
-use crate::api::analyze_api::AnalyzeError;
-use crate::api::analyze_structs::{MediaAnalyzerOutput, ProcessingJob, ProcessingRequest};
 use crate::common::api_client::ApiClientError;
 use crate::common::image_utils::{is_image_file, is_video_file};
 use crate::common::job_polling::JobPollingError;
-use crate::common::settings::Settings;
 use crate::common::{
     api_client::ApiClient,
     job_polling::{poll_job, JobStatus},

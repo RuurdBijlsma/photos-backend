@@ -1,5 +1,4 @@
 use crate::common::api_client::{ApiClient, ApiClientError};
-use anyhow::Error;
 use std::time::Duration;
 use tracing::info;
 

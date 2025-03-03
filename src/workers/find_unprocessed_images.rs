@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
-use tracing::{error, info};
+use tracing::info;
 use walkdir::WalkDir;
 
 pub struct FindUnprocessedImagesWorker {
@@ -61,7 +61,7 @@ impl BackgroundWorker<WorkerArgs> for FindUnprocessedImagesWorker {
 async fn collect_unprocessed_images(
     media_path: &Path,
     existing_paths: &HashSet<String>,
-) -> Result<Vec<String>, loco_rs::Error> {
+) -> Result<Vec<String>, Error> {
     // Clone necessary data to move into the blocking closure.
     let media_path = media_path.to_path_buf();
     let existing_paths = existing_paths.clone();
@@ -84,8 +84,8 @@ async fn collect_unprocessed_images(
             .collect::<Vec<String>>();
     })
     .await
-    .map_err(|e| loco_rs::Error::Message(e.to_string()))
-    .map_err(|e| loco_rs::Error::Message(e.to_string()))?;
+    .map_err(|e| Error::Message(e.to_string()))
+    .map_err(|e| Error::Message(e.to_string()))?;
 
     Ok(result)
 }
