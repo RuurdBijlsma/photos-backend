@@ -3,11 +3,14 @@ use loco_rs::app::Hooks;
 #[allow(unused_imports)]
 use loco_rs::{cli::playground, prelude::*};
 use photos_backend::api::analyze_api;
+use photos_backend::api::analyze_structs::FaceSex;
 use photos_backend::app::App;
 use photos_backend::common::settings::Settings;
 use photos_backend::models::users::RegisterParams;
+use photos_backend::models::{
+    face_boxes, metadata, object_boxes, ocr_boxes, tags, visual_features, weather,
+};
 use photos_backend::models::{gps, images, locations, users};
-use photos_backend::models::{metadata, tags, weather, visual_features, ocr_boxes, face_boxes, object_boxes};
 use sea_orm::ActiveValue::Set;
 use serde_json::Value;
 
@@ -33,8 +36,7 @@ async fn main() -> Result<()> {
             password: "asdf".to_string(),
         },
     )
-        .await?;
-    println!("{:#?}", user);
+    .await?;
 
     // Process the media file
     let image_path = "PXL_20250105_102926142.jpg";
@@ -66,13 +68,13 @@ async fn main() -> Result<()> {
         width: Set(result.image_data.exif.width),
         height: Set(result.image_data.exif.height),
         duration: Set(result.image_data.exif.duration),
-        format: Set(result.image_data.exif.format.clone()),
+        format: Set(result.image_data.exif.format),
         size_bytes: Set(result.image_data.exif.size_bytes),
         datetime_local: Set(datetime_local),
         datetime_utc: Set(datetime_utc),
-        datetime_source: Set(result.image_data.time.datetime_source.clone()),
-        timezone_name: Set(result.image_data.time.timezone_name.clone()),
-        timezone_offset: Set(result.image_data.time.timezone_offset.clone()),
+        datetime_source: Set(result.image_data.time.datetime_source),
+        timezone_name: Set(result.image_data.time.timezone_name),
+        timezone_offset: Set(result.image_data.time.timezone_offset),
         // Foreign key: owner
         user_id: Set(user.id),
         ..Default::default()
@@ -89,7 +91,7 @@ async fn main() -> Result<()> {
             gps_result.latitude,
             gps_result.longitude,
         )
-            .await?;
+        .await?;
 
         let gps_active = gps::ActiveModel {
             latitude: Set(gps_result.latitude),
@@ -107,18 +109,18 @@ async fn main() -> Result<()> {
 
     // Insert metadata from the exif data into the metadata table.
     let metadata_active = metadata::ActiveModel {
-        exif_tool: Set(result.image_data.exif.exif_tool.clone()),
-        file: Set(result.image_data.exif.file.clone()),
-        composite: Set(result.image_data.exif.composite.clone()),
-        exif: Set(result.image_data.exif.exif.clone()),
-        xmp: Set(result.image_data.exif.xmp.clone()),
-        mpf: Set(result.image_data.exif.mpf.clone()),
-        jfif: Set(result.image_data.exif.jfif.clone()),
-        icc_profile: Set(result.image_data.exif.icc_profile.clone()),
-        gif: Set(result.image_data.exif.gif.clone()),
-        png: Set(result.image_data.exif.png.clone()),
-        quicktime: Set(result.image_data.exif.quicktime.clone()),
-        matroska: Set(result.image_data.exif.matroska.clone()),
+        exif_tool: Set(result.image_data.exif.exif_tool),
+        file: Set(result.image_data.exif.file),
+        composite: Set(result.image_data.exif.composite),
+        exif: Set(result.image_data.exif.exif),
+        xmp: Set(result.image_data.exif.xmp),
+        mpf: Set(result.image_data.exif.mpf),
+        jfif: Set(result.image_data.exif.jfif),
+        icc_profile: Set(result.image_data.exif.icc_profile),
+        gif: Set(result.image_data.exif.gif),
+        png: Set(result.image_data.exif.png),
+        quicktime: Set(result.image_data.exif.quicktime),
+        matroska: Set(result.image_data.exif.matroska),
         image_id: Set(image.id.clone()),
         ..Default::default()
     };
@@ -128,13 +130,16 @@ async fn main() -> Result<()> {
     let tags_active = tags::ActiveModel {
         use_panorama_viewer: Set(result.image_data.tags.use_panorama_viewer),
         is_photosphere: Set(result.image_data.tags.is_photosphere),
-        projection_type: Set(result.image_data.tags.projection_type.clone()),
+        projection_type: Set(result.image_data.tags.projection_type),
         is_motion_photo: Set(result.image_data.tags.is_motion_photo),
-        motion_photo_presentation_timestamp: Set(result.image_data.tags.motion_photo_presentation_timestamp),
+        motion_photo_presentation_timestamp: Set(result
+            .image_data
+            .tags
+            .motion_photo_presentation_timestamp),
         is_night_sight: Set(result.image_data.tags.is_night_sight),
         is_hdr: Set(result.image_data.tags.is_hdr),
         is_burst: Set(result.image_data.tags.is_burst),
-        burst_id: Set(result.image_data.tags.burst_id.clone()),
+        burst_id: Set(result.image_data.tags.burst_id),
         is_timelapse: Set(result.image_data.tags.is_timelapse),
         is_slowmotion: Set(result.image_data.tags.is_slowmotion),
         is_video: Set(result.image_data.tags.is_video),
@@ -181,7 +186,10 @@ async fn main() -> Result<()> {
             object_type: Set(frame.classification.object_type.clone()),
             activity_type: Set(frame.classification.activity_type.clone()),
             event_type: Set(frame.classification.event_type.clone()),
-            weather_condition: Set(frame.classification.weather_condition.map(|c| c.to_string())),
+            weather_condition: Set(frame
+                .classification
+                .weather_condition
+                .map(|c| c.to_string())),
             is_outside: Set(frame.classification.is_outside),
             is_landscape: Set(frame.classification.is_landscape),
             is_cityscape: Set(frame.classification.is_cityscape),
@@ -210,12 +218,15 @@ async fn main() -> Result<()> {
                 position: Set(ocr_box.position.to_vec()),
                 width: Set(ocr_box.width),
                 height: Set(ocr_box.height),
+                confidence: Set(ocr_box.confidence),
                 text: Set(ocr_box.text.clone()),
                 visual_feature_id: Set(vf.id),
                 ..Default::default()
             };
             ocr_box_active.insert(&txn).await?;
         }
+
+        // Todo: cluster faces
 
         // Insert face boxes for each detected face.
         for face in &frame.faces {
@@ -225,7 +236,6 @@ async fn main() -> Result<()> {
                 height: Set(face.height),
                 confidence: Set(face.confidence),
                 age: Set(face.age),
-                // Convert FaceSex to its DB representation (here assumed "M" or "F")
                 sex: Set(match face.sex {
                     FaceSex::Male => "M".to_string(),
                     FaceSex::Female => "F".to_string(),
@@ -237,7 +247,6 @@ async fn main() -> Result<()> {
                 eye_right: Set(face.eye_right.to_vec()),
                 embedding: Set(face.embedding.clone()),
                 visual_feature_id: Set(vf.id),
-                // Optionally set unique_face_id if available; otherwise use default
                 ..Default::default()
             };
             face_active.insert(&txn).await?;
@@ -250,6 +259,7 @@ async fn main() -> Result<()> {
                 width: Set(object.width),
                 height: Set(object.height),
                 label: Set(object.label.clone()),
+                confidence: Set(object.confidence),
                 visual_feature_id: Set(vf.id),
                 ..Default::default()
             };
