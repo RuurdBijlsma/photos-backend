@@ -2,8 +2,7 @@ pub use super::_entities::images::{ActiveModel, Entity, Model};
 use crate::api::analyze_structs::{FaceSex, MediaAnalyzerOutput};
 use crate::models::_entities::images;
 use crate::models::{
-    face_boxes, gps, locations, metadata, object_boxes, ocr_boxes, tags, visual_features,
-    weather,
+    face_boxes, gps, locations, metadata, object_boxes, ocr_boxes, tags, visual_features, weather,
 };
 use chrono::NaiveDateTime;
 use sea_orm::entity::prelude::*;
@@ -40,6 +39,15 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
+    /// Create Image model based on `MediaAnalyzerOutput`, and store it in db.
+    ///
+    /// # Panics
+    /// if filename can't be extracted from `media_path`.
+    ///
+    /// # Errors
+    /// * If datetime string can't be parsed.
+    /// * If an INSERT fails.
+    /// * If querying an existing location fails.
     pub async fn create_from_analysis<C>(
         db: &C,
         user_id: i32,
@@ -62,7 +70,7 @@ impl ActiveModel {
             .and_then(|s| parse_iso_datetime(s).ok());
 
         // Create main image record
-        let image = ActiveModel {
+        let image = Self {
             filename: Set(filename.to_string()),
             relative_path: Set(image_path.to_string()),
             width: Set(result.image_data.exif.width),
@@ -174,6 +182,8 @@ impl ActiveModel {
 
         // Frame processing
         for (i, frame) in result.frame_data.iter().enumerate() {
+            #[allow(clippy::cast_precision_loss)]
+            #[allow(clippy::cast_possible_truncation)]
             let frame_percentage = (i as f32 / result.frame_data.len() as f32 * 100.0) as i32;
             let vf = visual_features::ActiveModel {
                 frame_percentage: Set(frame_percentage),

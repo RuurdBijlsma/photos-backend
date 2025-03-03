@@ -19,12 +19,16 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
+    /// Create api client
+    ///
+    /// # Panics
+    /// if it can't create the client.
+    #[must_use]
     pub fn new(base_url: &str, endpoint: &'static str) -> Self {
         Self {
             http_client: Client::builder()
                 .connect_timeout(Duration::from_secs(5))
                 .timeout(Duration::from_secs(30))
-                .read_timeout(Duration::from_secs(30))
                 .build()
                 .expect("Failed to create HTTP client"),
             base_url: base_url.to_string(),
@@ -32,6 +36,13 @@ impl ApiClient {
         }
     }
 
+    /// Submit job to API
+    ///
+    /// # Errors
+    /// * If POST request can't be made to url.
+    /// * If json can't be parsed
+    /// * If body can't be read
+    /// * If unexpected status code is received.
     pub async fn submit_job<T: Serialize>(&self, request: &T) -> Result<String, ApiClientError> {
         let url = format!("{}/{}", self.base_url, self.endpoint);
         let response = self.http_client.post(&url).json(request).send().await?;
@@ -45,6 +56,13 @@ impl ApiClient {
         }
     }
 
+    /// Check status of job via api
+    ///
+    /// # Errors
+    /// * If GET request can't be made to url.
+    /// * If json can't be parsed
+    /// * If body can't be read
+    /// * If unexpected status code is received.
     pub async fn check_status<J: DeserializeOwned>(
         &self,
         job_id: &str,
@@ -61,6 +79,12 @@ impl ApiClient {
         }
     }
 
+    /// Delete job from api, for when it's no longer needed.
+    ///
+    /// # Errors
+    /// * If DELETE request can't be made to url.
+    /// * If unexpected status code is received.
+    /// * If body can't be read
     pub async fn delete_job(&self, job_id: &str) -> Result<(), ApiClientError> {
         let url = format!("{}/{}/{}", self.base_url, self.endpoint, job_id);
         let response = self.http_client.delete(&url).send().await?;

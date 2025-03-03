@@ -39,7 +39,13 @@ impl JobStatus for ThumbnailJob {
     }
 }
 
-pub async fn process_thumbnails(
+/// Generate thumbnails for image
+///
+/// # Errors
+/// * When submitting the job to api fails.
+/// * When poll job fails.
+/// * When delete job fails.
+pub async fn generate_thumbnails(
     image_relative_paths: Vec<String>,
     processing_api_url: &str,
 ) -> Result<(), ThumbnailError> {
@@ -73,6 +79,7 @@ fn split_media_paths(paths: Vec<String>) -> (Vec<String>, Vec<String>) {
             } else if is_video_file(path_obj) {
                 videos.push(path);
             } else {
+                #[allow(clippy::single_match_else)]
                 match path_obj.extension() {
                     Some(_) => warn!("Ignoring unknown file type: {}", path),
                     None => warn!("Ignoring path with no extension: {}", path),

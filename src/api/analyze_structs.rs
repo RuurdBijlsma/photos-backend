@@ -105,6 +105,7 @@ pub struct WeatherData {
 }
 
 // TagData
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TagData {
     pub use_panorama_viewer: bool,
@@ -177,6 +178,7 @@ pub struct ObjectBox {
 }
 
 // ClassificationData
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClassificationData {
     pub scene_type: String,

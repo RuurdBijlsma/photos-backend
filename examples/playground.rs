@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
     // Process the media file
     let image_path = "PXL_20250106_121218134.jpg";
 
-    let result = analyze_api::process_media(image_path.to_string(), &settings.processing_api_url)
+    let result = analyze_api::analyze_image(image_path.to_string(), &settings.processing_api_url)
         .await
         .map_err(Error::wrap)?;
 

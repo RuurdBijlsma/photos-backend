@@ -25,7 +25,7 @@ impl BackgroundWorker<WorkerArgs> for GenerateThumbnailsWorker {
         info!("======================= GenerateThumbnails =======================");
 
         let settings = Settings::from_context(&self.ctx);
-        thumbnail_api::process_thumbnails(args.images.clone(), &settings.processing_api_url)
+        thumbnail_api::generate_thumbnails(args.images.clone(), &settings.processing_api_url)
             .await
             .map_err(|e| Error::Message(e.to_string()))?;
 

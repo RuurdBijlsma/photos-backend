@@ -16,6 +16,11 @@ pub trait JobStatus {
     fn is_done(&self) -> bool;
 }
 
+/// Poll job running on api server.
+///
+/// # Errors
+/// * Max retries exceeded when checking status
+/// * Timeout if job takes too long.
 pub async fn poll_job<J: JobStatus + serde::de::DeserializeOwned>(
     client: &ApiClient,
     job_id: &str,

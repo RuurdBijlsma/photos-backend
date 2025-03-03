@@ -23,6 +23,11 @@ impl ActiveModelBehavior for ActiveModel {
 
 // implement your read-oriented logic here
 impl Model {
+    /// Get location by country/province/city, or create it if it doesn't exist.
+    ///
+    /// # Errors
+    /// * If query for existing location fails.
+    /// * If inserting new location fails.
     pub async fn find_or_create_location<C>(
         db: &C,
         country: String,
@@ -30,7 +35,7 @@ impl Model {
         city: String,
         latitude: f32,
         longitude: f32,
-    ) -> Result<Model, DbErr>
+    ) -> Result<Self, DbErr>
     where
         C: ConnectionTrait,
     {

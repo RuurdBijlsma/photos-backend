@@ -68,9 +68,9 @@ async fn collect_unprocessed_images(
 
     let result = tokio::task::spawn_blocking(move || {
         // Iterate through the directory entries.
-        return WalkDir::new(&media_path)
+        WalkDir::new(&media_path)
             .into_iter()
-            .filter_map(|entry| entry.ok())
+            .filter_map(Result::ok)
             .filter(|entry| entry.file_type().is_file())
             .filter_map(|entry| {
                 let path = entry.path();
@@ -81,7 +81,7 @@ async fn collect_unprocessed_images(
                 }
             })
             .filter(|normalized| !existing_paths.contains(normalized))
-            .collect::<Vec<String>>();
+            .collect::<Vec<String>>()
     })
     .await
     .map_err(|e| Error::Message(e.to_string()))

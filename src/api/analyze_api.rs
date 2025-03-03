@@ -18,7 +18,14 @@ impl JobStatus for ProcessingJob {
     }
 }
 
-pub async fn process_media(
+/// Analyze image by sending it to the analysis api.
+///
+/// # Errors
+/// * When submit job fails.
+/// * When poll job fails.
+/// * When delete job fails.
+/// * When job has no result.
+pub async fn analyze_image(
     relative_path: String,
     processing_api_url: &str,
 ) -> Result<MediaAnalyzerOutput, AnalyzeError> {
