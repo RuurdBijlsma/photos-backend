@@ -1,7 +1,7 @@
+use crate::common::api_client::{ApiClient, ApiClientError};
 use anyhow::Error;
 use std::time::Duration;
 use tracing::info;
-use crate::common::api_client::{ApiClient, ApiClientError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum JobPollingError {

@@ -32,10 +32,7 @@ impl ApiClient {
         }
     }
 
-    pub async fn submit_job<T: Serialize>(
-        &self,
-        request: &T,
-    ) -> Result<String, ApiClientError> {
+    pub async fn submit_job<T: Serialize>(&self, request: &T) -> Result<String, ApiClientError> {
         let url = format!("{}/{}", self.base_url, self.endpoint);
         let response = self.http_client.post(&url).json(request).send().await?;
 
@@ -48,7 +45,10 @@ impl ApiClient {
         }
     }
 
-    pub async fn check_status<J: DeserializeOwned>(&self, job_id: &str) -> Result<J, ApiClientError> {
+    pub async fn check_status<J: DeserializeOwned>(
+        &self,
+        job_id: &str,
+    ) -> Result<J, ApiClientError> {
         let url = format!("{}/{}/{}", self.base_url, self.endpoint, job_id);
         let response = self.http_client.get(&url).send().await?;
 

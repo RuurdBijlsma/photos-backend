@@ -1,3 +1,4 @@
+use crate::common::image_utils::{is_image_file, is_video_file, normalize_path};
 use crate::common::settings::Settings;
 use crate::models::images;
 use crate::workers::generate_thumbnails;
@@ -10,7 +11,6 @@ use std::path::Path;
 use tokio::fs;
 use tracing::{error, info};
 use walkdir::WalkDir;
-use crate::common::image_utils::{is_image_file, is_video_file, normalize_path};
 
 pub struct FindUnprocessedImagesWorker {
     pub ctx: AppContext,

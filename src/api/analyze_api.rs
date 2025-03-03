@@ -29,14 +29,12 @@ pub async fn process_media(
     let job_id = client.submit_job(&request).await?;
 
     let status: ProcessingJob = poll_job(
-        &client,
-        &job_id,
-        5,    // delay_secs
-        300,  // timeout_secs
-        3,    // max_retries
-        1,    // retry_delay_secs
+        &client, &job_id, 5,   // delay_secs
+        300, // timeout_secs
+        3,   // max_retries
+        1,   // retry_delay_secs
     )
-        .await?;
+    .await?;
 
     if let Some(result) = status.result {
         client.delete_job(&job_id).await?;
