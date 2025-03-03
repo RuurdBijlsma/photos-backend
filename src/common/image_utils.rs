@@ -1,6 +1,9 @@
 use chrono::NaiveDateTime;
 use std::path::Path;
 
+/// Parse string into iso datetime
+/// # Errors
+/// If string can't be parsed.
 pub fn parse_iso_datetime(
     datetime_str: &str,
 ) -> loco_rs::Result<NaiveDateTime, chrono::ParseError> {
