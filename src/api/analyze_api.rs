@@ -1,7 +1,6 @@
 use crate::api::analyze_structs::{MediaAnalyzerOutput, ProcessingJob, ProcessingRequest};
 use crate::common::api_client::{ApiClient, ApiClientError};
 use crate::common::job_polling::{poll_job, JobPollingError, JobStatus};
-use crate::common::settings::Settings;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AnalyzeError {
