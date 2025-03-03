@@ -31,19 +31,19 @@ pub struct Model {
     pub ocr_text: Option<String>,
     #[sea_orm(column_type = "Text", nullable)]
     pub document_summary: Option<String>,
-    #[sea_orm(column_type = "Float", nullable)]
-    pub measured_sharpness: Option<f32>,
-    pub measured_noise: Option<i32>,
-    #[sea_orm(column_type = "Float", nullable)]
-    pub measured_brightness: Option<f32>,
-    #[sea_orm(column_type = "Float", nullable)]
-    pub measured_contrast: Option<f32>,
-    #[sea_orm(column_type = "Float", nullable)]
-    pub measured_clipping: Option<f32>,
-    #[sea_orm(column_type = "Float", nullable)]
-    pub measured_dynamic_range: Option<f32>,
-    #[sea_orm(column_type = "Float", nullable)]
-    pub quality_score: Option<f32>,
+    #[sea_orm(column_type = "Float")]
+    pub measured_sharpness: f32,
+    pub measured_noise: i32,
+    #[sea_orm(column_type = "Float")]
+    pub measured_brightness: f32,
+    #[sea_orm(column_type = "Float")]
+    pub measured_contrast: f32,
+    #[sea_orm(column_type = "Float")]
+    pub measured_clipping: f32,
+    #[sea_orm(column_type = "Float")]
+    pub measured_dynamic_range: f32,
+    #[sea_orm(column_type = "Float")]
+    pub quality_score: f32,
     pub summary: Option<String>,
     pub caption: String,
     pub image_id: String,

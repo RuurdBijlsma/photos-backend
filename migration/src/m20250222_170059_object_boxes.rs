@@ -45,6 +45,7 @@ impl MigrationTrait for Migration {
                 .col(ColumnDef::new(ObjectBoxes::Width).float().not_null())
                 .col(ColumnDef::new(ObjectBoxes::Height).float().not_null())
                 .col(ColumnDef::new(ObjectBoxes::Label).string().not_null())
+                .col(ColumnDef::new(ObjectBoxes::Confidence).float().not_null())
                 .to_owned(),
         )
         .await

@@ -37,7 +37,7 @@ pub struct FrameDataOutput {
     pub embedding: Vec<f32>,
     pub faces: Vec<FaceBox>,
     pub summary: Option<String>,
-    pub caption: Option<String>,
+    pub caption: String,
     pub objects: Vec<ObjectBox>,
     pub classification: ClassificationData,
     pub measured_quality: MeasuredQualityData,
