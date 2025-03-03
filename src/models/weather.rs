@@ -49,7 +49,7 @@ impl ActiveModel {
             weather_pressure: Set(weather.weather_pressure),
             weather_sun_hours: Set(weather.weather_sun_hours),
             weather_condition: Set(weather.weather_condition.map(|c| c.to_string())),
-            image_id: Set(image_id.clone()),
+            image_id: Set(image_id),
             ..Default::default()
         }
         .insert(db)

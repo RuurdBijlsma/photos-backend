@@ -47,7 +47,7 @@ impl ActiveModel {
             png: Set(metadata.png),
             quicktime: Set(metadata.quicktime),
             matroska: Set(metadata.matroska),
-            image_id: Set(image_id.clone()),
+            image_id: Set(image_id),
             ..Default::default()
         }
         .insert(db)

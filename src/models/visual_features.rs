@@ -29,7 +29,7 @@ impl Model {}
 impl ActiveModel {
     pub async fn create_visual_features_from_analysis<C>(
         db: &C,
-        frames: Vec<FrameDataOutput>,
+        frames: &Vec<FrameDataOutput>,
         image_id: String,
     ) -> Result<Vec<Model>, DbErr>
     where

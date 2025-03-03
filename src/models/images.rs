@@ -109,7 +109,7 @@ impl ActiveModel {
         // Frame processing
         visual_features::ActiveModel::create_visual_features_from_analysis(
             db,
-            result.frame_data,
+            &result.frame_data,
             image.id.clone(),
         )
         .await?;
