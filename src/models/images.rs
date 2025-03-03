@@ -2,13 +2,13 @@ pub use super::_entities::images::{ActiveModel, Entity, Model};
 use crate::api::analyze_structs::{FaceSex, MediaAnalyzerOutput};
 use crate::models::_entities::images;
 use crate::models::{
-    face_boxes, gps, locations, metadata, object_boxes, ocr_boxes, tags, users, visual_features,
+    face_boxes, gps, locations, metadata, object_boxes, ocr_boxes, tags, visual_features,
     weather,
 };
 use chrono::NaiveDateTime;
 use sea_orm::entity::prelude::*;
 use sea_orm::ActiveValue::Set;
-use sea_orm::{DatabaseTransaction, SelectColumns};
+use sea_orm::SelectColumns;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -40,12 +40,15 @@ impl Model {}
 
 // implement your write-oriented logic here
 impl ActiveModel {
-    pub async fn create_from_analysis(
-        txn: &DatabaseTransaction,
-        user: &users::Model,
+    pub async fn create_from_analysis<C>(
+        db: &C,
+        user_id: i32,
         image_path: &str,
         result: MediaAnalyzerOutput,
-    ) -> Result<Model, DbErr> {
+    ) -> Result<Model, DbErr>
+    where
+        C: ConnectionTrait,
+    {
         let filename = Path::new(image_path).file_name().unwrap().to_str().unwrap();
 
         // Datetime parsing
@@ -72,16 +75,16 @@ impl ActiveModel {
             datetime_source: Set(result.image_data.time.datetime_source),
             timezone_name: Set(result.image_data.time.timezone_name),
             timezone_offset: Set(result.image_data.time.timezone_offset),
-            user_id: Set(user.id),
+            user_id: Set(user_id),
             ..Default::default()
         }
-        .insert(txn)
+        .insert(db)
         .await?;
 
         // GPS data insertion
         if let Some(gps_data) = result.image_data.gps {
             let location = locations::Model::find_or_create_location(
-                txn,
+                db,
                 gps_data.location.country,
                 gps_data.location.province,
                 gps_data.location.city,
@@ -98,7 +101,7 @@ impl ActiveModel {
                 image_id: Set(image.id.clone()),
                 ..Default::default()
             }
-            .insert(txn)
+            .insert(db)
             .await?;
         }
 
@@ -119,7 +122,7 @@ impl ActiveModel {
             image_id: Set(image.id.clone()),
             ..Default::default()
         }
-        .insert(txn)
+        .insert(db)
         .await?;
 
         // Tags insertion
@@ -144,7 +147,7 @@ impl ActiveModel {
             image_id: Set(image.id.clone()),
             ..Default::default()
         }
-        .insert(txn)
+        .insert(db)
         .await?;
 
         // Weather insertion
@@ -166,7 +169,7 @@ impl ActiveModel {
                 image_id: Set(image.id.clone()),
                 ..Default::default()
             };
-            weather_active.insert(txn).await?;
+            weather_active.insert(db).await?;
         }
 
         // Frame processing
@@ -205,7 +208,7 @@ impl ActiveModel {
                 image_id: Set(image.id.clone()),
                 ..Default::default()
             }
-            .insert(txn)
+            .insert(db)
             .await?;
 
             // OCR boxes
@@ -220,7 +223,7 @@ impl ActiveModel {
                     visual_feature_id: Set(vf.id),
                     ..Default::default()
                 };
-                ocr_box_active.insert(txn).await?;
+                ocr_box_active.insert(db).await?;
             }
 
             // Todo: cluster faces
@@ -246,7 +249,7 @@ impl ActiveModel {
                     visual_feature_id: Set(vf.id),
                     ..Default::default()
                 };
-                face_active.insert(txn).await?;
+                face_active.insert(db).await?;
             }
 
             // Object boxes
@@ -260,7 +263,7 @@ impl ActiveModel {
                     visual_feature_id: Set(vf.id),
                     ..Default::default()
                 };
-                object_active.insert(txn).await?;
+                object_active.insert(db).await?;
             }
         }
 

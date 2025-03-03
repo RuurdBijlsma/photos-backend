@@ -36,7 +36,8 @@ async fn main() -> Result<()> {
 
     let txn = ctx.db.begin().await?;
 
-    let image = images::ActiveModel::create_from_analysis(&txn, &user, image_path, result).await?;
+    let image =
+        images::ActiveModel::create_from_analysis(&txn, user.id, image_path, result).await?;
 
     txn.commit().await?;
 
