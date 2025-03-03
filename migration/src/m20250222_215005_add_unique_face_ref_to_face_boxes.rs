@@ -19,6 +19,7 @@ impl MigrationTrait for Migration {
             .name("fk_face_boxes_unique_face_id")
             .from(FaceBoxes::Table, FaceBoxes::UniqueFaceId)
             .to(UniqueFaces::Table, UniqueFaces::Id)
+            .on_delete(ForeignKeyAction::Cascade)
             .to_owned();
 
         manager.create_foreign_key(foreign_key).await

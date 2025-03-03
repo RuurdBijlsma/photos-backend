@@ -24,6 +24,7 @@ impl MigrationTrait for Migration {
             .name("fk_face_boxes_visual_feature_id")
             .from(FaceBoxes::Table, FaceBoxes::VisualFeatureId)
             .to(VisualFeatures::Table, VisualFeatures::Id)
+            .on_delete(ForeignKeyAction::Cascade)
             .to_owned();
         manager.create_foreign_key(face_fk).await?;
 
@@ -44,6 +45,7 @@ impl MigrationTrait for Migration {
             .name("fk_ocr_boxes_visual_feature_id")
             .from(OcrBoxes::Table, OcrBoxes::VisualFeatureId)
             .to(VisualFeatures::Table, VisualFeatures::Id)
+            .on_delete(ForeignKeyAction::Cascade)
             .to_owned();
         manager.create_foreign_key(ocr_fk).await?;
 
@@ -64,6 +66,7 @@ impl MigrationTrait for Migration {
             .name("fk_object_boxes_visual_feature_id")
             .from(ObjectBoxes::Table, ObjectBoxes::VisualFeatureId)
             .to(VisualFeatures::Table, VisualFeatures::Id)
+            .on_delete(ForeignKeyAction::Cascade)
             .to_owned();
         manager.create_foreign_key(object_fk).await
     }

@@ -31,15 +31,15 @@ async fn main() -> Result<()> {
     let user = users::Model::create_with_password(
         &ctx.db,
         &RegisterParams {
-            email: "ruurd@bijlsma.dev".to_string(),
-            name: "rute".to_string(),
-            password: "asdf".to_string(),
+            email: "user@example.com".to_string(),
+            name: "user".to_string(),
+            password: "pw".to_string(),
         },
     )
     .await?;
 
     // Process the media file
-    let image_path = "PXL_20250105_102926142.jpg";
+    let image_path = "PXL_20250106_121218134.jpg";
     let result = analyze_api::process_media(image_path.to_string(), &settings.processing_api_url)
         .await
         .map_err(|e| Error::wrap(e))?;
