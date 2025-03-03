@@ -37,7 +37,7 @@ pub enum Relation {
         from = "Column::UniqueFaceId",
         to = "super::unique_faces::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     UniqueFaces,
     #[sea_orm(
@@ -45,7 +45,7 @@ pub enum Relation {
         from = "Column::VisualFeatureId",
         to = "super::visual_features::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     VisualFeatures,
 }
