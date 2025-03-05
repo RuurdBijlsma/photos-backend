@@ -40,7 +40,7 @@ impl Validatable for ActiveModel {
 }
 
 #[async_trait::async_trait]
-impl ActiveModelBehavior for super::_entities::users::ActiveModel {
+impl ActiveModelBehavior for ActiveModel {
     async fn before_save<C>(self, _db: &C, insert: bool) -> Result<Self, DbErr>
     where
         C: ConnectionTrait,
@@ -62,7 +62,7 @@ impl Authenticable for Model {
     async fn find_by_api_key(db: &DatabaseConnection, api_key: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
             .filter(
-                model::query::condition()
+                query::condition()
                     .eq(users::Column::ApiKey, api_key)
                     .build(),
             )
@@ -85,7 +85,7 @@ impl Model {
     pub async fn find_by_email(db: &DatabaseConnection, email: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
             .filter(
-                model::query::condition()
+                query::condition()
                     .eq(users::Column::Email, email)
                     .build(),
             )
@@ -105,7 +105,7 @@ impl Model {
     ) -> ModelResult<Self> {
         let user = users::Entity::find()
             .filter(
-                model::query::condition()
+                query::condition()
                     .eq(users::Column::EmailVerificationToken, token)
                     .build(),
             )
@@ -158,7 +158,7 @@ impl Model {
     pub async fn find_by_reset_token(db: &DatabaseConnection, token: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
             .filter(
-                model::query::condition()
+                query::condition()
                     .eq(users::Column::ResetToken, token)
                     .build(),
             )
@@ -176,7 +176,7 @@ impl Model {
         let parse_uuid = Uuid::parse_str(pid).map_err(|e| ModelError::Any(e.into()))?;
         let user = users::Entity::find()
             .filter(
-                model::query::condition()
+                query::condition()
                     .eq(users::Column::Pid, parse_uuid)
                     .build(),
             )
@@ -193,7 +193,7 @@ impl Model {
     pub async fn find_by_api_key(db: &DatabaseConnection, api_key: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
             .filter(
-                model::query::condition()
+                query::condition()
                     .eq(users::Column::ApiKey, api_key)
                     .build(),
             )
@@ -226,7 +226,7 @@ impl Model {
 
         if users::Entity::find()
             .filter(
-                model::query::condition()
+                query::condition()
                     .eq(users::Column::Email, &params.email)
                     .build(),
             )
@@ -239,7 +239,7 @@ impl Model {
 
         let password_hash =
             hash::hash_password(&params.password).map_err(|e| ModelError::Any(e.into()))?;
-        let user = users::ActiveModel {
+        let user = ActiveModel {
             email: ActiveValue::set(params.email.to_string()),
             password: ActiveValue::set(password_hash),
             name: ActiveValue::set(params.name.to_string()),
