@@ -24,14 +24,10 @@ completely replace photos-backend (python) with this:
 7. ✅ Reduce duplicate code in analyze_api and thumbnails_api
 8. ✅ Improve error logging for errors in api.
 9. Make frontend for user stuff so i can have a user when analyze->storing photos.
-9. separate thumbnail check -> generate from db image check -> generate
-10. fix weather in db (it's now int I want string)
-11. ✅ put analyzed image in db
-12. ✅ Call analyze worker for every unprocessed photo
-13. ✅ Make worker job:
-    * ✅ check for unprocessed photos etc. ->
-    * ✅ generate all thumbs for them ->
-    * ✅ run a new job to process a new photo and put in db
+10. i dont think i care about magic links, they can go
+11. figure out if email works
+12. separate thumbnail check -> generate from db image check -> generate
+13. fix weather in db (it's now int I want string)
 14. after processing photos per user:
     * run recluster worker job
     * clean up dangling thumbnails, db entries, etc.
