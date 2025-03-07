@@ -3,6 +3,7 @@ use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time::Duration;
+use std::future::Future;
 use tracing::{error, info, warn};
 
 // -- Data structures --
