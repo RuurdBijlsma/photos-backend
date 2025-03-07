@@ -111,55 +111,43 @@ pub async fn process_thumbnails(
     image_relative_paths: Vec<String>,
     settings: Settings,
 ) -> Result<(), loco_rs::Error> {
-    const MAX_RETRIES: u64 = 5; // Max retries call to check_status.
-    const RETRY_DELAY: u64 = 1; // For calls to check_status.
-    let client = ThumbnailClient::new(&settings.processing_api_url);
-    let (photo_paths, video_paths) = split_media_paths(image_relative_paths);
+    // Configuration constants
+    const MAX_STATUS_RETRIES: u64 = 5;
+    const BASE_RETRY_DELAY_MS: u64 = 1000;
+    const POLL_INTERVAL_SEC: u64 = 5;
+    const JOB_TIMEOUT_SEC: u64 = 300; // 5 minutes
 
+    let client = ThumbnailClient::new(&settings.processing_api_url);
+    
+    // Partition media paths by type
+    let (photo_paths, video_paths) = split_media_paths(image_relative_paths);
     let job_request = ThumbnailRequest {
         photos: photo_paths,
         videos: video_paths,
     };
-
-    // Submit job
+    
+    // Submit job with standard error handling
     let job_id = client
         .submit_job(&job_request)
         .await
-        .map_err(|e| loco_rs::Error::Message(e.to_string()))?;
+        .map_err(|e| loco_rs::Error::Message(format!("Failed to submit thumbnail job: {}", e)))?;
+    
     info!("Submitted thumbnail job: {}", job_id);
-
-    // Poll every {delay} seconds
-    let delay = 5;
-    let timeout = 300; // 5 minutes
-    let mut attempts = 0;
-
+    
+    // Poll for completion with timeout
+    let start_time = std::time::Instant::now();
     loop {
-        tokio::time::sleep(Duration::from_secs(delay)).await;
-
-        // Check status with retry logic because it randomly fails idk why
-        let mut retries: u64 = 0;
-        let status = loop {
-            match client
+        tokio::time::sleep(Duration::from_secs(POLL_INTERVAL_SEC)).await;
+        
+        // Check status with exponential backoff retry pattern
+        let status = retry_with_backoff(MAX_STATUS_RETRIES, BASE_RETRY_DELAY_MS, || async {
+            client
                 .check_status(&job_id)
                 .await
-                .map_err(|e| loco_rs::Error::Message(e.to_string()))
-            {
-                Ok(status) => break status,
-                Err(e) => {
-                    if retries >= MAX_RETRIES {
-                        return Err(e);
-                    }
-                    retries += 1;
-                    let sleep_duration = Duration::from_secs(RETRY_DELAY * retries);
-                    tokio::time::sleep(sleep_duration).await;
-                    info!(
-                        "Retrying check_status for job {} (attempt {}/{})",
-                        job_id, retries, MAX_RETRIES
-                    );
-                }
-            }
-        };
-
+                .map_err(|e| loco_rs::Error::Message(format!("Status check failed: {}", e)))
+        })
+        .await?;
+        
         info!(
             "Job {} progress: {}/{} photos, {}/{} videos",
             job_id,
@@ -168,26 +156,60 @@ pub async fn process_thumbnails(
             status.videos_done,
             status.videos_total
         );
-
+        
         if status.done {
             info!("Job {} completed successfully", job_id);
-
-            // Clean up the job
-            client
-                .delete_job(&job_id)
-                .await
-                .map_err(|e| loco_rs::Error::Message(e.to_string()))?;
+            
+            // Clean up the job with retry logic
+            retry_with_backoff(3, BASE_RETRY_DELAY_MS, || async {
+                client
+                    .delete_job(&job_id)
+                    .await
+                    .map_err(|e| loco_rs::Error::Message(format!("Failed to delete job: {}", e)))
+            })
+            .await?;
+            
             info!("Deleted completed job {}", job_id);
-
-            break Ok(());
+            return Ok(());
         }
-
-        attempts += 1;
-        if attempts * delay >= timeout {
-            error!("Job {} timed out after {} attempts", job_id, attempts);
-            break Err(loco_rs::Error::Message(
-                "Generate thumbnail request timed out".to_string(),
+        
+        // Check for timeout
+        if start_time.elapsed().as_secs() >= JOB_TIMEOUT_SEC {
+            error!("Job {} timed out after {} seconds", job_id, JOB_TIMEOUT_SEC);
+            return Err(loco_rs::Error::Message(
+                format!("Generate thumbnail request timed out after {} seconds", JOB_TIMEOUT_SEC)
             ));
+        }
+    }
+}
+
+// Generic retry function with exponential backoff and jitter
+async fn retry_with_backoff<F, Fut, T, E>(max_retries: u64, base_delay_ms: u64, operation: F) -> Result<T, E>
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = Result<T, E>>,
+{
+    use rand::{thread_rng, Rng};
+    
+    let mut retries = 0;
+    loop {
+        match operation().await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                if retries >= max_retries {
+                    return Err(e);
+                }
+                
+                retries += 1;
+                
+                // Calculate exponential backoff with jitter
+                let delay_ms = base_delay_ms * (1 << retries);
+                let jitter = thread_rng().gen_range(0..=delay_ms / 2);
+                let backoff_ms = delay_ms + jitter;
+                
+                info!("Operation failed, retry {}/{} after {}ms", retries, max_retries, backoff_ms);
+                tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
+            }
         }
     }
 }
