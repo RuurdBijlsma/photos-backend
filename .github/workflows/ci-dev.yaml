@@ -11,7 +11,7 @@ env:
 
 jobs:
   rustfmt:
-    name: Check Style
+    name: Check Style (DEV)
     runs-on: ubuntu-latest
 
     permissions:
@@ -31,7 +31,7 @@ jobs:
           args: --all -- --check
 
   clippy:
-    name: Run Clippy
+    name: Run Clippy (DEV)
     runs-on: ubuntu-latest
 
     permissions:
@@ -51,7 +51,7 @@ jobs:
           command: clippy
 
   test:
-    name: Run Tests
+    name: Run Tests (DEV)
     runs-on: ubuntu-latest
 
     permissions:
