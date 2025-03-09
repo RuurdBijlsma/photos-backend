@@ -22,6 +22,10 @@ pub struct Model {
     pub eye_right: Vec<f32>,
     #[sea_orm(column_type = "custom(\"vector\")", select_as = "float4[]")]
     pub embedding: Vec<f32>,
+    pub sex: String,
+    pub age: i32,
+    #[sea_orm(column_type = "Float")]
+    pub confidence: f32,
     pub unique_face_id: Option<i32>,
     pub visual_feature_id: i32,
 }
@@ -33,7 +37,7 @@ pub enum Relation {
         from = "Column::UniqueFaceId",
         to = "super::unique_faces::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     UniqueFaces,
     #[sea_orm(
@@ -41,7 +45,7 @@ pub enum Relation {
         from = "Column::VisualFeatureId",
         to = "super::visual_features::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     VisualFeatures,
 }

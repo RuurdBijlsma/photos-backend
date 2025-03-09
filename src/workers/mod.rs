@@ -1,2 +1,3 @@
-pub mod find_unprocessed_photos;
-mod processing_api;
+mod analyze_images;
+pub mod find_unprocessed_images;
+mod generate_thumbnails;

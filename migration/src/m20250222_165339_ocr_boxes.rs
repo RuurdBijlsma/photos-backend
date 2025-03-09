@@ -45,6 +45,7 @@ impl MigrationTrait for Migration {
                 .col(ColumnDef::new(OcrBoxes::Width).float().not_null())
                 .col(ColumnDef::new(OcrBoxes::Height).float().not_null())
                 .col(ColumnDef::new(OcrBoxes::Text).string().not_null())
+                .col(ColumnDef::new(OcrBoxes::Confidence).float().not_null())
                 .to_owned(),
         )
         .await

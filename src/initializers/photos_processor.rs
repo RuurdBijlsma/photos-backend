@@ -1,5 +1,5 @@
 // src/initializers/photos_processor.rs
-use crate::workers::find_unprocessed_photos::{FindUnprocessedPhotosWorker, WorkerArgs};
+use crate::workers::find_unprocessed_images::{FindUnprocessedImagesWorker, WorkerArgs};
 use loco_rs::prelude::*;
 
 pub struct PhotosProcessorInitializer;
@@ -11,7 +11,7 @@ impl Initializer for PhotosProcessorInitializer {
     }
 
     async fn before_run(&self, ctx: &AppContext) -> Result<()> {
-        FindUnprocessedPhotosWorker::perform_later(ctx, WorkerArgs {}).await?;
+        FindUnprocessedImagesWorker::perform_later(ctx, WorkerArgs {}).await?;
 
         Ok(())
     }

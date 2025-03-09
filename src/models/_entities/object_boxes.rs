@@ -16,6 +16,8 @@ pub struct Model {
     #[sea_orm(column_type = "Float")]
     pub height: f32,
     pub label: String,
+    #[sea_orm(column_type = "Float")]
+    pub confidence: f32,
     pub visual_feature_id: i32,
 }
 
@@ -26,7 +28,7 @@ pub enum Relation {
         from = "Column::VisualFeatureId",
         to = "super::visual_features::Column::Id",
         on_update = "NoAction",
-        on_delete = "NoAction"
+        on_delete = "Cascade"
     )]
     VisualFeatures,
 }

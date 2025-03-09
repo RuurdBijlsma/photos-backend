@@ -13,9 +13,12 @@ impl MigrationTrait for Migration {
             &[
                 ("use_panorama_viewer", ColType::Boolean),
                 ("is_photosphere", ColType::Boolean),
-                ("projection_type", ColType::BooleanNull),
+                ("projection_type", ColType::StringNull),
                 ("is_motion_photo", ColType::Boolean),
-                ("motion_photo_presentation_timestamp", ColType::IntegerNull),
+                (
+                    "motion_photo_presentation_timestamp",
+                    ColType::BigIntegerNull,
+                ),
                 ("is_night_sight", ColType::Boolean),
                 ("is_hdr", ColType::Boolean),
                 ("is_burst", ColType::Boolean),

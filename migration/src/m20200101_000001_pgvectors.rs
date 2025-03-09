@@ -14,8 +14,6 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, m: &SchemaManager) -> Result<(), DbErr> {
         let db = m.get_connection();
-        // Drop the extension. Using CASCADE ensures that dependent objects (like the type)
-        // are also removed.
         db.execute_unprepared("DROP EXTENSION IF EXISTS vector CASCADE")
             .await?;
         Ok(())

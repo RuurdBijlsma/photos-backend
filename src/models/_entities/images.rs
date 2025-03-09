@@ -13,13 +13,12 @@ pub struct Model {
     pub filename: String,
     #[sea_orm(unique)]
     pub relative_path: String,
-    pub hash: String,
     pub width: i32,
     pub height: i32,
     #[sea_orm(column_type = "Float", nullable)]
     pub duration: Option<f32>,
     pub format: String,
-    pub size_bytes: i32,
+    pub size_bytes: i64,
     pub datetime_local: DateTime,
     pub datetime_utc: Option<DateTime>,
     pub datetime_source: String,

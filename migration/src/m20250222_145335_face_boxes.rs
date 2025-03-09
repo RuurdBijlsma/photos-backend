@@ -81,6 +81,9 @@ impl MigrationTrait for Migration {
                         .vector(Some(512))
                         .not_null(),
                 )
+                .col(ColumnDef::new(FaceBoxes::Sex).string().not_null())
+                .col(ColumnDef::new(FaceBoxes::Age).integer().not_null())
+                .col(ColumnDef::new(FaceBoxes::Confidence).float().not_null())
                 .to_owned(),
         )
         .await?;

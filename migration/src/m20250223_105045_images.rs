@@ -79,12 +79,11 @@ $$ LANGUAGE plpgsql;
                             .not_null()
                             .unique_key(),
                     )
-                    .col(ColumnDef::new(Images::Hash).string().not_null())
                     .col(ColumnDef::new(Images::Width).integer().not_null())
                     .col(ColumnDef::new(Images::Height).integer().not_null())
                     .col(ColumnDef::new(Images::Duration).float().null())
                     .col(ColumnDef::new(Images::Format).string().not_null())
-                    .col(ColumnDef::new(Images::SizeBytes).integer().not_null())
+                    .col(ColumnDef::new(Images::SizeBytes).big_integer().not_null())
                     .col(ColumnDef::new(Images::DatetimeLocal).timestamp().not_null())
                     .col(ColumnDef::new(Images::DatetimeUtc).timestamp().null())
                     .col(ColumnDef::new(Images::DatetimeSource).string().not_null())

@@ -2,7 +2,7 @@ use crate::helpers;
 use loco_rs::{bgworker::BackgroundWorker, testing::prelude::*};
 use photos_backend::{
     app::App,
-    workers::find_unprocessed_photos::{FindUnprocessedPhotosWorker, WorkerArgs},
+    workers::find_unprocessed_images::{FindUnprocessedImagesWorker, WorkerArgs},
 };
 use serial_test::serial;
 
@@ -13,7 +13,7 @@ async fn test_run_find_unprocessed_photos_worker() {
 
     // Execute the worker ensuring that it operates in 'ForegroundBlocking' mode, which prevents the addition of your worker to the background
     assert!(
-        FindUnprocessedPhotosWorker::perform_later(&boot.app_context, WorkerArgs {})
+        FindUnprocessedImagesWorker::perform_later(&boot.app_context, WorkerArgs {})
             .await
             .is_ok()
     );
