@@ -84,11 +84,7 @@ impl Model {
     /// When could not find user by the given token or DB query error
     pub async fn find_by_email(db: &DatabaseConnection, email: &str) -> ModelResult<Self> {
         let user = users::Entity::find()
-            .filter(
-                query::condition()
-                    .eq(users::Column::Email, email)
-                    .build(),
-            )
+            .filter(query::condition().eq(users::Column::Email, email).build())
             .one(db)
             .await?;
         user.ok_or_else(|| ModelError::EntityNotFound)

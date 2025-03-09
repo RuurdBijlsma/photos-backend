@@ -43,9 +43,9 @@ impl ApiClient {
     /// * If json can't be parsed
     /// * If body can't be read
     /// * If unexpected status code is received.
-    pub async fn submit_job<T: Serialize>(&self, request: &T) -> Result<String, ApiClientError> {
+    pub async fn submit_job<T: Serialize>(&self, request: T) -> Result<String, ApiClientError> {
         let url = format!("{}/{}", self.base_url, self.endpoint);
-        let response = self.http_client.post(&url).json(request).send().await?;
+        let response = self.http_client.post(&url).json(&request).send().await?;
 
         match response.status() {
             StatusCode::OK => Ok(response.json().await?),
