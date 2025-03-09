@@ -8,7 +8,6 @@ pub struct ProcessingRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct ProcessingJob {
-    job_id: String,
     pub(crate) result: Option<MediaAnalyzerOutput>,
     #[serde(default)]
     pub done: bool,

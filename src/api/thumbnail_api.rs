@@ -27,10 +27,11 @@ struct ThumbnailRequest {
 
 #[derive(Debug, Deserialize)]
 struct ThumbnailJob {
-    photos_done: i32,
-    photos_total: i32,
-    videos_done: i32,
-    videos_total: i32,
+    // TODO: use this later in UI probably
+    // photos_done: i32,
+    // photos_total: i32,
+    // videos_done: i32,
+    // videos_total: i32,
     done: bool,
 }
 impl JobStatus for ThumbnailJob {

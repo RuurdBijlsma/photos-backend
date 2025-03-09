@@ -129,7 +129,7 @@ async fn reset(State(ctx): State<AppContext>, Json(params): Json<ResetParams>) -
 /// Creates a user login and returns a token
 #[debug_handler]
 async fn login(State(ctx): State<AppContext>, Json(params): Json<LoginParams>) -> Result<Response> {
-    if (params.email.is_empty() || params.password.is_empty()) {
+    if params.email.is_empty() || params.password.is_empty() {
         return unauthorized("unauthorized");
     }
 
