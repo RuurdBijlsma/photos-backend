@@ -7,8 +7,6 @@ use photos_backend::common::settings::Settings;
 use photos_backend::models::users::RegisterParams;
 use photos_backend::models::{images, users};
 
-// Helper: parse an ISO 8601 datetime string
-
 #[tokio::main]
 async fn main() -> Result<()> {
     // Setup context, settings and truncate database state for a fresh run
