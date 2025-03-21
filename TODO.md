@@ -23,16 +23,17 @@ completely replace photos-backend (python) with this:
     5. todo: check for thumbnails in find_unprocessed_photos
 7. ✅ Reduce duplicate code in analyze_api and thumbnails_api
 8. ✅ Improve error logging for errors in api.
-9. Make frontend for user stuff so i can have a user when analyze->storing photos.
-10. i dont think i care about magic links, they can go
-11. figure out if email works
-12. separate thumbnail check -> generate from db image check -> generate
-13. fix weather in db (it's now int I want string)
-14. after processing photos per user:
+9. only allow register if no user exists, or if a valid invite token is passed
+10. Make frontend for user stuff so i can have a user when analyze->storing photos.
+11. i dont think i care about magic links, they can go
+12. figure out if email works
+13. separate thumbnail check -> generate from db image check -> generate
+14. fix weather in db (it's now int I want string)
+15. after processing photos per user:
     * run recluster worker job
     * clean up dangling thumbnails, db entries, etc.
     * fill timezone gaps
-15. add something like watchdog for rust, watch for new files in directory https://docs.rs/notify/latest/notify/
-16. add random image + theme endpoint
-17. add endpoint to get images by month range
-18. make worker job to cluster images
+16. add something like watchdog for rust, watch for new files in directory https://docs.rs/notify/latest/notify/
+17. add random image + theme endpoint
+18. add endpoint to get images by month range
+19. make worker job to cluster images
