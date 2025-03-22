@@ -20,7 +20,7 @@ pub fn is_photo_file(path: &Path) -> bool {
             let ext_lower = ext.to_ascii_lowercase();
             matches!(
                 ext_lower.as_str(),
-                "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "heif" | "avif"
+                "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "heif" | "avif" | "dng"
             )
         })
 }
@@ -34,7 +34,7 @@ pub fn is_video_file(path: &Path) -> bool {
             let ext_lower = ext.to_ascii_lowercase();
             matches!(
                 ext_lower.as_str(),
-                "mp4" | "mkv" | "avi" | "mov" | "wmv" | "webm"
+                "mp4" | "mkv" | "avi" | "mov" | "wmv" | "webm" | "m4v"
             )
         })
 }

@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::{error, warn};
 
 use crate::common::settings::Settings;
-use crate::controllers::logic::setup::{process_media_dir, MediaError};
+use crate::controllers::logic::setup::{summarize_folders, MediaError};
 use crate::models::users::users;
 use loco_rs::prelude::*;
 
@@ -37,8 +37,8 @@ impl From<MediaError> for Error {
 #[debug_handler]
 async fn check_media_dir(_: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
     let settings = Settings::from_context(&ctx);
-    let media_dir = settings.media_dir;
-    let media_path = Path::new(&media_dir);
+    let media_path = Path::new(&settings.media_dir);
+    let thumbnail_path = Path::new(&settings.thumbnails_dir);
 
     if !media_path.exists() {
         warn!("Media path {} does not exist", media_path.display());
@@ -51,7 +51,18 @@ async fn check_media_dir(_: auth::JWT, State(ctx): State<AppContext>) -> Result<
         return bad_request(msg);
     }
 
-    let response = process_media_dir(media_path).map_err(Into::<Error>::into)?;
+    if !thumbnail_path.exists() {
+        warn!("Thumbnail path {} does not exist", thumbnail_path.display());
+        return not_found();
+    }
+
+    if !thumbnail_path.is_dir() {
+        let msg = format!("{} is not a directory", thumbnail_path.display());
+        warn!("{}", msg);
+        return bad_request(msg);
+    }
+
+    let response = summarize_folders(media_path, thumbnail_path).map_err(Into::<Error>::into)?;
     format::json(response)
 }
 

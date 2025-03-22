@@ -1,6 +1,11 @@
 use crate::common::image_utils::{is_photo_file, is_video_file};
 use derive_more::Constructor;
+use fs2::available_space;
+use fs2::total_space;
 use serde::Serialize;
+use std::collections::HashSet;
+use std::fs::{self, File};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tracing::error;
@@ -19,11 +24,24 @@ pub enum MediaError {
     PathConversion(String),
 }
 
+#[derive(Constructor, Serialize)]
+pub struct PathInfoResponse {
+    disk_available: u64,
+    disk_used: u64,
+    disk_total: u64,
+    read_access: bool,
+    write_access: bool,
+}
+
 /// Response structure for file count and sample paths.
 #[derive(Constructor, Serialize)]
 pub struct FileCountResponse {
     count: usize,
     samples: Vec<String>,
+    unsupported_files_count: usize,
+    unsupported_extensions: HashSet<String>,
+    media_folder: PathInfoResponse,
+    thumbnails_folder: PathInfoResponse,
 }
 
 /// Processes a media directory by counting photo/video files and collecting up to 10 random samples.
@@ -34,8 +52,13 @@ pub struct FileCountResponse {
 /// # Errors
 ///
 /// Returns a `MediaError` if there is a filesystem issue or if a path cannot be converted to a UTF-8 string.
-pub fn process_media_dir(media_path: &Path) -> Result<FileCountResponse, MediaError> {
+pub fn summarize_folders(
+    media_path: &Path,
+    thumbnail_path: &Path,
+) -> Result<FileCountResponse, MediaError> {
     let mut count = 0;
+    let mut unsupported_count = 0;
+    let mut unsupported_extensions: HashSet<String> = HashSet::default();
     let mut samples = Vec::with_capacity(10);
     let media_path_buf = PathBuf::from(media_path);
 
@@ -55,12 +78,23 @@ pub fn process_media_dir(media_path: &Path) -> Result<FileCountResponse, MediaEr
         if !entry.file_type().is_file()
             || (!is_photo_file(entry.path()) && !is_video_file(entry.path()))
         {
+            if entry.file_type().is_file() {
+                unsupported_count += 1;
+                if let Some(ext) = entry
+                    .path()
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(String::from)
+                {
+                    unsupported_extensions.insert(ext);
+                }
+            }
             continue;
         }
 
         count += 1;
 
-        // Reservoir sampling: for the first 10 files, just push. After that, replace a random element.
+        // for the first 10 files, just push. After that, replace a random element.
         if count <= 10 {
             samples.push(entry);
         } else {
@@ -85,5 +119,93 @@ pub fn process_media_dir(media_path: &Path) -> Result<FileCountResponse, MediaEr
         })
         .collect::<Result<_, _>>()?;
 
-    Ok(FileCountResponse::new(count, relative_samples))
+    let media_folder_info = check_folder_info(media_path)?;
+    let thumbnail_folder_info = check_folder_info(thumbnail_path)?;
+
+    Ok(FileCountResponse::new(
+        count,
+        relative_samples,
+        unsupported_count,
+        unsupported_extensions,
+        media_folder_info,
+        thumbnail_folder_info,
+    ))
+}
+
+/// Retrieves storage and access information for a given folder.
+///
+/// This function gathers details about the total, used, and available storage
+/// for the specified folder, as well as its read and write permissions.
+///
+/// # Arguments
+///
+/// * `folder` - A reference to the folder path.
+///
+/// # Returns
+///
+/// * `Ok(PathInfoResponse)` containing:
+///   - `available`: The available storage space in bytes.
+///   - `used`: The used storage space in bytes.
+///   - `total`: The total storage space in bytes.
+///   - `read`: Whether the folder is readable.
+///   - `write`: Whether the folder is writable.
+///
+/// # Errors
+///
+/// This function returns an `Err(MediaError)` if:
+/// * Retrieving the total or available storage space fails.
+/// * Checking read/write permissions encounters an error.
+/// ```
+pub fn check_folder_info(folder: &Path) -> Result<PathInfoResponse, MediaError> {
+    let total = total_space(folder)?;
+    let available = available_space(folder)?;
+    let used = total - available;
+    let (read, write) = check_read_write_access(folder)?;
+
+    Ok(PathInfoResponse::new(available, used, total, read, write))
+}
+
+/// Checks whether the given folder has both read and write access.
+///
+/// This function attempts to:
+/// 1. Verify if the folder can be read by checking the ability to list its contents.
+/// 2. Check if the folder is writable by creating, writing, and deleting a temporary file.
+///
+/// # Arguments
+///
+/// * `path` - A reference to the folder path.
+///
+/// # Returns
+///
+/// * `Ok((bool, bool))`:
+///   - The first boolean indicates if the folder is readable (`true` if readable, `false` otherwise).
+///   - The second boolean indicates if the folder is writable (`true` if writable, `false` otherwise).
+///
+/// # Errors
+///
+/// This function returns an `Err(io::Error)` if:
+/// * The path provided is not a directory (checked with `path.is_dir()`).
+/// * The read access check fails (due to insufficient permissions, for example).
+/// * The write access check fails (due to permissions, full disk, or other errors).
+///
+/// The errors are propagated from the `fs::read_dir` and file creation/removal operations.
+fn check_read_write_access(path: &Path) -> Result<(bool, bool), io::Error> {
+    if !path.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Provided path is not a directory",
+        ));
+    }
+
+    // Check read access
+    let can_read = fs::read_dir(path).is_ok();
+
+    // Check write access by trying to create and delete a temporary file
+    let tmp_file_path = path.join(".tmp_access_test");
+    let can_write = File::create(&tmp_file_path)
+        .and_then(|mut file| file.write_all(b"test")) // Try writing some data
+        .and_then(|()| fs::remove_file(&tmp_file_path)) // Try deleting it
+        .is_ok();
+
+    Ok((can_read, can_write))
 }
