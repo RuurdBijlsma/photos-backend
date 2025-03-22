@@ -3118,7 +3118,6 @@ dependencies = [
  "loco-rs",
  "migration",
  "pgvector",
- "rand 0.9.0",
  "regex",
  "reqwest",
  "rstest",
