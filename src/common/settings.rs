@@ -6,8 +6,6 @@ pub struct Settings {
     pub media_dir: String,
     pub thumbnails_dir: String,
     pub processing_api_url: String,
-    pub photo_suffixes: Vec<String>,
-    pub video_suffixes: Vec<String>,
 }
 
 impl Settings {

@@ -1,31 +1,14 @@
 use axum::debug_handler;
-use derive_more::with_trait::Constructor;
-use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use thiserror::Error;
 use tracing::{error, warn};
-use walkdir::WalkDir;
 
-use crate::common::image_utils::{is_photo_file, is_video_file};
 use crate::common::settings::Settings;
+use crate::controllers::logic::setup::{process_media_dir, MediaError};
 use crate::models::users::users;
 use loco_rs::prelude::*;
 
-/// Custom error type for media directory operations.
-#[derive(Debug, Error)]
-pub enum MediaError {
-    #[error("Invalid media directory: {0}")]
-    InvalidMediaDir(String),
-
-    #[error("File system error: {0}")]
-    FileSystem(#[from] std::io::Error),
-
-    #[error("Path conversion error for path: {0}")]
-    PathConversion(String),
-}
-
-impl From<MediaError> for loco_rs::Error {
+impl From<MediaError> for Error {
     fn from(err: MediaError) -> Self {
         match err {
             MediaError::InvalidMediaDir(msg) => {
@@ -42,75 +25,6 @@ impl From<MediaError> for loco_rs::Error {
             }
         }
     }
-}
-
-/// Response structure for file count and sample paths.
-#[derive(Constructor, Serialize)]
-pub struct FileCountResponse {
-    count: usize,
-    samples: Vec<String>,
-}
-
-/// Processes a media directory by counting photo/video files and collecting up to 10 random samples.
-///
-/// Uses reservoir sampling to maintain a fixed-size sample set.
-/// Returns a `FileCountResponse` containing the total count and relative file paths.
-///
-/// # Errors
-///
-/// Returns a `MediaError` if there is a filesystem issue or if a path cannot be converted to a UTF-8 string.
-fn process_media_dir(media_path: &Path) -> Result<FileCountResponse, MediaError> {
-    let mut count = 0;
-    let mut samples = Vec::with_capacity(10);
-    let media_path_buf = PathBuf::from(media_path);
-
-    for entry in WalkDir::new(media_path).into_iter().filter_map(|e| {
-        match e {
-            Ok(entry) => Some(entry),
-            Err(e) => {
-                // Convert walkdir::Error to std::io::Error and log the error.
-                let io_error = e
-                    .into_io_error()
-                    .unwrap_or_else(|| std::io::Error::other("walkdir error"));
-                error!("Directory walk error: {}", io_error);
-                None
-            }
-        }
-    }) {
-        if !entry.file_type().is_file()
-            || (!is_photo_file(entry.path()) && !is_video_file(entry.path()))
-        {
-            continue;
-        }
-
-        count += 1;
-
-        // Reservoir sampling: for the first 10 files, just push. After that, replace a random element.
-        if count <= 10 {
-            samples.push(entry);
-        } else {
-            let random_index = fastrand::usize(0..count);
-            if random_index < 10 {
-                samples[random_index] = entry;
-            }
-        }
-    }
-
-    // Convert absolute paths to paths relative to the media directory.
-    let relative_samples: Vec<String> = samples
-        .into_iter()
-        .map(|entry| {
-            entry
-                .path()
-                .strip_prefix(&media_path_buf)
-                .map_err(|_| MediaError::PathConversion(entry.path().display().to_string()))?
-                .to_str()
-                .ok_or_else(|| MediaError::PathConversion(entry.path().display().to_string()))
-                .map(std::string::ToString::to_string)
-        })
-        .collect::<Result<_, _>>()?;
-
-    Ok(FileCountResponse::new(count, relative_samples))
 }
 
 /// Asynchronous handler to check if a given media directory is valid and process it.
@@ -137,7 +51,7 @@ async fn check_media_dir(_: auth::JWT, State(ctx): State<AppContext>) -> Result<
         return bad_request(msg);
     }
 
-    let response = process_media_dir(media_path).map_err(Into::<loco_rs::Error>::into)?;
+    let response = process_media_dir(media_path).map_err(Into::<Error>::into)?;
     format::json(response)
 }
 
