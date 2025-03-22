@@ -345,7 +345,7 @@ async fn can_auth_with_magic_link() {
 async fn can_reject_invalid_email() {
     configure_insta!();
     request::<App, _, _>(|request, ctx| async move {
-        let invalid_email = "user1@temp-mail.com";
+        let invalid_email = "user1-at-example.com";
         let payload = serde_json::json!({
             "email": invalid_email,
         });

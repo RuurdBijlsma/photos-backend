@@ -12,8 +12,6 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
 pub static EMAIL_DOMAIN_RE: OnceLock<Regex> = OnceLock::new();
 
 fn get_allow_email_domain_re() -> &'static Regex {
@@ -48,10 +46,7 @@ async fn register(
 ) -> Result<Response> {
     let email_regex = get_allow_email_domain_re();
     if !email_regex.is_match(&params.email) {
-        tracing::debug!(
-            email = params.email,
-            "The provided email is invalid."
-        );
+        tracing::debug!(email = params.email, "The provided email is invalid.");
         return bad_request("The provided email is invalid.");
     }
 
@@ -189,10 +184,7 @@ async fn magic_link(
 ) -> Result<Response> {
     let email_regex = get_allow_email_domain_re();
     if !email_regex.is_match(&params.email) {
-        tracing::debug!(
-            email = params.email,
-            "The provided email is invalid."
-        );
+        tracing::debug!(email = params.email, "The provided email is invalid.");
         return bad_request("invalid request");
     }
 
@@ -231,23 +223,6 @@ async fn magic_link_verify(
     format::json(LoginResponse::new(&user, &token))
 }
 
-static SETUP_DONE: AtomicBool = AtomicBool::new(false);
-
-pub async fn setup_needed(State(ctx): State<AppContext>) -> Result<Response> {
-    if SETUP_DONE.load(Ordering::Relaxed) {
-        return format::json(false);
-    }
-
-    let user_exists = users::Entity::find().one(&ctx.db).await?.is_some();
-    SETUP_DONE.store(user_exists, Ordering::Relaxed);
-
-    if user_exists {
-        return format::json(false);
-    }
-
-    format::json(true)
-}
-
 pub fn routes() -> Routes {
     Routes::new()
         .prefix("/api/auth")
@@ -259,5 +234,4 @@ pub fn routes() -> Routes {
         .add("/current", get(current))
         .add("/magic-link", post(magic_link))
         .add("/magic-link/{token}", get(magic_link_verify))
-        .add("/setup-needed", get(setup_needed))
 }

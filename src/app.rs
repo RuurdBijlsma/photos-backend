@@ -13,7 +13,6 @@ use loco_rs::{
 use migration::Migrator;
 use std::path::Path;
 
-use crate::initializers;
 #[allow(unused_imports)]
 use crate::{controllers, models::_entities::users, tasks};
 
@@ -43,14 +42,17 @@ impl Hooks for App {
     }
 
     async fn initializers(_ctx: &AppContext) -> Result<Vec<Box<dyn Initializer>>> {
-        Ok(vec![Box::new(
-            initializers::photos_processor::PhotosProcessorInitializer,
-        )])
+        Ok(vec![
+        //     Box::new(
+        //     initializers::photos_processor::PhotosProcessorInitializer,
+        // )
+        ])
     }
 
     fn routes(_ctx: &AppContext) -> AppRoutes {
         AppRoutes::with_default_routes() // controller routes below
             .add_route(controllers::auth::routes())
+            .add_route(controllers::setup::routes())
     }
     async fn connect_workers(ctx: &AppContext, queue: &Queue) -> Result<()> {
         queue

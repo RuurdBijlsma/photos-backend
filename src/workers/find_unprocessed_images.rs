@@ -1,4 +1,4 @@
-use crate::common::image_utils::{is_image_file, is_video_file, normalize_path};
+use crate::common::image_utils::{is_photo_file, is_video_file, normalize_path};
 use crate::common::settings::Settings;
 use crate::models::images;
 use crate::workers::generate_thumbnails;
@@ -74,7 +74,7 @@ async fn collect_unprocessed_images(
             .filter(|entry| entry.file_type().is_file())
             .filter_map(|entry| {
                 let path = entry.path();
-                if is_image_file(path) || is_video_file(path) {
+                if is_photo_file(path) || is_video_file(path) {
                     path.strip_prefix(&media_path).ok().map(normalize_path)
                 } else {
                     None

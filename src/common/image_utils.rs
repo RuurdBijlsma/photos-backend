@@ -12,7 +12,7 @@ pub fn parse_iso_datetime(
 }
 
 #[must_use]
-pub fn is_image_file(path: &Path) -> bool {
+pub fn is_photo_file(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
         .is_some_and(|ext| {

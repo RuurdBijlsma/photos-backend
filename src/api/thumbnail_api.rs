@@ -1,5 +1,5 @@
 use crate::common::api_client::ApiClientError;
-use crate::common::image_utils::{is_image_file, is_video_file};
+use crate::common::image_utils::{is_photo_file, is_video_file};
 use crate::common::job_polling::JobPollingError;
 use crate::common::{
     api_client::ApiClient,
@@ -75,7 +75,7 @@ fn split_media_paths(paths: Vec<String>) -> (Vec<String>, Vec<String>) {
             let path_obj = Path::new(&path);
 
             // First check if we can determine the file type
-            if is_image_file(path_obj) {
+            if is_photo_file(path_obj) {
                 photos.push(path);
             } else if is_video_file(path_obj) {
                 videos.push(path);
