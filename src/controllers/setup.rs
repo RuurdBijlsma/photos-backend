@@ -35,7 +35,7 @@ impl From<MediaError> for Error {
 ///
 /// A JSON response with the count and sample file paths.
 #[debug_handler]
-async fn check_media_dir(_: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
+async fn validate_folders(_: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
     let settings = Settings::from_context(&ctx);
     let media_path = Path::new(&settings.media_dir);
     let thumbnail_path = Path::new(&settings.thumbnails_dir);
@@ -75,6 +75,10 @@ static SETUP_DONE: AtomicBool = AtomicBool::new(false);
 /// # Returns
 ///
 /// A JSON response indicating whether setup is needed.
+///
+/// # Errors
+///
+/// DB connection error is possible when requesting user accounts.
 pub async fn setup_needed(State(ctx): State<AppContext>) -> Result<Response> {
     if SETUP_DONE.load(Ordering::Relaxed) {
         return format::json(false);
@@ -90,10 +94,9 @@ pub async fn setup_needed(State(ctx): State<AppContext>) -> Result<Response> {
     format::json(true)
 }
 
-/// Defines API routes for setup-related endpoints.
 pub fn routes() -> Routes {
     Routes::new()
         .prefix("/api/setup")
         .add("/needed", get(setup_needed))
-        .add("/check-media-dir", get(check_media_dir))
+        .add("/validate-folders", get(validate_folders))
 }

@@ -3,7 +3,7 @@ use derive_more::Constructor;
 use fs2::available_space;
 use fs2::total_space;
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -18,7 +18,7 @@ pub enum MediaError {
     InvalidMediaDir(String),
 
     #[error("File system error: {0}")]
-    FileSystem(#[from] std::io::Error),
+    FileSystem(#[from] io::Error),
 
     #[error("Path conversion error for path: {0}")]
     PathConversion(String),
@@ -26,6 +26,7 @@ pub enum MediaError {
 
 #[derive(Constructor, Serialize)]
 pub struct PathInfoResponse {
+    folder: String,
     disk_available: u64,
     disk_used: u64,
     disk_total: u64,
@@ -38,8 +39,8 @@ pub struct PathInfoResponse {
 pub struct FileCountResponse {
     count: usize,
     samples: Vec<String>,
-    unsupported_files_count: usize,
-    unsupported_extensions: HashSet<String>,
+    unsupported_files: HashMap<String, Vec<String>>,
+    unsupported_count: usize,
     media_folder: PathInfoResponse,
     thumbnails_folder: PathInfoResponse,
 }
@@ -56,9 +57,9 @@ pub fn summarize_folders(
     media_path: &Path,
     thumbnail_path: &Path,
 ) -> Result<FileCountResponse, MediaError> {
-    let mut count = 0;
     let mut unsupported_count = 0;
-    let mut unsupported_extensions: HashSet<String> = HashSet::default();
+    let mut count = 0;
+    let mut unsupported_files: HashMap<String, Vec<String>> = HashMap::new();
     let mut samples = Vec::with_capacity(10);
     let media_path_buf = PathBuf::from(media_path);
 
@@ -86,7 +87,16 @@ pub fn summarize_folders(
                     .and_then(|ext| ext.to_str())
                     .map(String::from)
                 {
-                    unsupported_extensions.insert(ext);
+                    if !unsupported_files.contains_key(&ext) {
+                        unsupported_files.insert(ext.clone(), Vec::new());
+                    }
+                    if let Some(val) = unsupported_files.get_mut(&ext) {
+                        let relative_path =
+                            entry.path().strip_prefix(&media_path_buf).map_err(|_| {
+                                MediaError::PathConversion(to_posix_string(entry.path()))
+                            })?;
+                        val.push(to_posix_string(relative_path));
+                    }
                 }
             }
             continue;
@@ -112,10 +122,10 @@ pub fn summarize_folders(
             entry
                 .path()
                 .strip_prefix(&media_path_buf)
-                .map_err(|_| MediaError::PathConversion(entry.path().display().to_string()))?
+                .map_err(|_| MediaError::PathConversion(to_posix_string(entry.path())))?
                 .to_str()
-                .ok_or_else(|| MediaError::PathConversion(entry.path().display().to_string()))
-                .map(std::string::ToString::to_string)
+                .ok_or_else(|| MediaError::PathConversion(to_posix_string(entry.path())))
+                .map(String::from)
         })
         .collect::<Result<_, _>>()?;
 
@@ -125,8 +135,8 @@ pub fn summarize_folders(
     Ok(FileCountResponse::new(
         count,
         relative_samples,
+        unsupported_files,
         unsupported_count,
-        unsupported_extensions,
         media_folder_info,
         thumbnail_folder_info,
     ))
@@ -162,7 +172,18 @@ pub fn check_folder_info(folder: &Path) -> Result<PathInfoResponse, MediaError> 
     let used = total - available;
     let (read, write) = check_read_write_access(folder)?;
 
-    Ok(PathInfoResponse::new(available, used, total, read, write))
+    Ok(PathInfoResponse::new(
+        to_posix_string(folder),
+        available,
+        used,
+        total,
+        read,
+        write,
+    ))
+}
+
+fn to_posix_string(path: &std::path::Path) -> String {
+    path.to_str().unwrap_or_default().replace('\\', "/")
 }
 
 /// Checks whether the given folder has both read and write access.

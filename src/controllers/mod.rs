@@ -1,4 +1,5 @@
 pub mod auth;
-pub(crate) mod setup;
+pub mod setup;
 
+pub mod download;
 pub mod logic;
