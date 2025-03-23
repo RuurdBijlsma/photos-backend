@@ -8,7 +8,7 @@ use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
-use tracing::error;
+use tracing::{debug, error};
 use walkdir::WalkDir;
 
 /// Custom error type for media directory operations.
@@ -37,13 +37,17 @@ pub struct PathInfoResponse {
 /// Response structure for file count and sample paths.
 #[derive(Constructor, Serialize)]
 pub struct FileCountResponse {
-    count: usize,
+    photo_count: usize,
+    video_count: usize,
     samples: Vec<String>,
     unsupported_files: HashMap<String, Vec<String>>,
+    inaccessible_entries: Vec<String>,
     unsupported_count: usize,
     media_folder: PathInfoResponse,
     thumbnails_folder: PathInfoResponse,
 }
+
+const N_SAMPLES: usize = 8;
 
 /// Processes a media directory by counting photo/video files and collecting up to 10 random samples.
 ///
@@ -59,26 +63,45 @@ pub fn summarize_folders(
 ) -> Result<FileCountResponse, MediaError> {
     let mut unsupported_count = 0;
     let mut count = 0;
+    let mut photo_count = 0;
     let mut unsupported_files: HashMap<String, Vec<String>> = HashMap::new();
-    let mut samples = Vec::with_capacity(10);
+    let mut inaccessible_entries = Vec::new();
+    let mut samples = Vec::with_capacity(N_SAMPLES);
     let media_path_buf = PathBuf::from(media_path);
 
-    for entry in WalkDir::new(media_path).into_iter().filter_map(|e| {
-        match e {
+    let media_folder_info = check_folder_info(media_path)?;
+    let thumbnail_folder_info = check_folder_info(thumbnail_path)?;
+
+    if !media_folder_info.read_access {
+        return Ok(FileCountResponse::new(
+            0,
+            0,
+            Vec::new(),
+            unsupported_files,
+            Vec::new(),
+            0,
+            media_folder_info,
+            thumbnail_folder_info,
+        ));
+    }
+
+    for entry in WalkDir::new(media_path)
+        .into_iter()
+        .filter_map(|e| match e {
             Ok(entry) => Some(entry),
             Err(e) => {
-                // Convert walkdir::Error to std::io::Error and log the error.
-                let io_error = e
-                    .into_io_error()
-                    .unwrap_or_else(|| std::io::Error::other("walkdir error"));
-                error!("Directory walk error: {}", io_error);
+                if let Some(path) = e.path() {
+                    let owned_path = path.to_path_buf();
+                    inaccessible_entries.push(owned_path);
+                }
+                debug!("Skipping inaccessible entry: {}", e);
                 None
             }
-        }
-    }) {
-        if !entry.file_type().is_file()
-            || (!is_photo_file(entry.path()) && !is_video_file(entry.path()))
-        {
+        })
+    {
+        let is_photo_path = is_photo_file(entry.path());
+        let is_file = entry.file_type().is_file();
+        if !is_file || (!is_photo_path && !is_video_file(entry.path())) {
             if entry.file_type().is_file() {
                 unsupported_count += 1;
                 if let Some(ext) = entry
@@ -104,13 +127,16 @@ pub fn summarize_folders(
 
         count += 1;
 
-        // for the first 10 files, just push. After that, replace a random element.
-        if count <= 10 {
-            samples.push(entry);
-        } else {
-            let random_index = fastrand::usize(0..count);
-            if random_index < 10 {
-                samples[random_index] = entry;
+        if is_file && is_photo_path {
+            photo_count += 1;
+            // for the first N files, just push. After that, replace a random element.
+            if photo_count <= N_SAMPLES {
+                samples.push(entry);
+            } else {
+                let random_index = fastrand::usize(0..photo_count);
+                if random_index < N_SAMPLES {
+                    samples[random_index] = entry;
+                }
             }
         }
     }
@@ -129,13 +155,25 @@ pub fn summarize_folders(
         })
         .collect::<Result<_, _>>()?;
 
-    let media_folder_info = check_folder_info(media_path)?;
-    let thumbnail_folder_info = check_folder_info(thumbnail_path)?;
+    // Convert inaccesible entries to relative path strings
+    let inaccessible_entries_str: Vec<String> = inaccessible_entries
+        .into_iter()
+        .map(|entry| {
+            entry
+                .strip_prefix(&media_path_buf)
+                .map_err(|_| MediaError::PathConversion(to_posix_string(&entry)))?
+                .to_str()
+                .ok_or_else(|| MediaError::PathConversion(to_posix_string(&entry)))
+                .map(String::from)
+        })
+        .collect::<Result<_, _>>()?;
 
     Ok(FileCountResponse::new(
-        count,
+        photo_count,
+        count - photo_count,
         relative_samples,
         unsupported_files,
+        inaccessible_entries_str,
         unsupported_count,
         media_folder_info,
         thumbnail_folder_info,
