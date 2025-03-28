@@ -34,22 +34,42 @@ pub struct PathInfoResponse {
     write_access: bool,
 }
 
-/// Response structure for file count and sample paths.
 #[derive(Constructor, Serialize)]
-pub struct FileCountResponse {
+pub struct UserFolderResponse {
+    read_access: bool,
+    folder: String,
     photo_count: usize,
     video_count: usize,
     samples: Vec<String>,
-    unsupported_files: HashMap<String, Vec<String>>,
     inaccessible_entries: Vec<String>,
+    unsupported_files: HashMap<String, Vec<String>>,
     unsupported_count: usize,
+}
+
+#[derive(Constructor, Serialize)]
+pub struct DiskResponse {
     media_folder: PathInfoResponse,
     thumbnails_folder: PathInfoResponse,
 }
 
+/// Get info about the media and thumbnail dirs.
+///
+/// # Errors
+///
+/// Returns a `MediaError` if there is a filesystem issue or if a path cannot be converted to a UTF-8 string.
+pub fn validate_disks(
+    media_path: &Path,
+    thumbnail_path: &Path,
+) -> Result<DiskResponse, MediaError> {
+    let media_folder_info = check_drive_info(media_path)?;
+    let thumbnail_folder_info = check_drive_info(thumbnail_path)?;
+
+    Ok(DiskResponse::new(media_folder_info, thumbnail_folder_info))
+}
+
 const N_SAMPLES: usize = 8;
 
-/// Processes a media directory by counting photo/video files and collecting up to 10 random samples.
+/// Processes a user picked folder by counting photo/video files and collecting up to 10 random samples.
 ///
 /// Uses reservoir sampling to maintain a fixed-size sample set.
 /// Returns a `FileCountResponse` containing the total count and relative file paths.
@@ -57,10 +77,10 @@ const N_SAMPLES: usize = 8;
 /// # Errors
 ///
 /// Returns a `MediaError` if there is a filesystem issue or if a path cannot be converted to a UTF-8 string.
-pub fn summarize_folders(
+pub fn validate_user_folder(
     media_path: &Path,
-    thumbnail_path: &Path,
-) -> Result<FileCountResponse, MediaError> {
+    user_folder: &Path,
+) -> Result<UserFolderResponse, MediaError> {
     let mut unsupported_count = 0;
     let mut count = 0;
     let mut photo_count = 0;
@@ -69,23 +89,25 @@ pub fn summarize_folders(
     let mut samples = Vec::with_capacity(N_SAMPLES);
     let media_path_buf = PathBuf::from(media_path);
 
-    let media_folder_info = check_folder_info(media_path)?;
-    let thumbnail_folder_info = check_folder_info(thumbnail_path)?;
+    let media_folder_info = check_drive_info(user_folder)?;
+
+    let folder_relative = relative_path(media_path, user_folder)
+        .map_err(|_| MediaError::PathConversion(to_posix_string(user_folder)))?;
 
     if !media_folder_info.read_access {
-        return Ok(FileCountResponse::new(
+        return Ok(UserFolderResponse::new(
+            false,
+            folder_relative,
             0,
             0,
+            Vec::new(),
             Vec::new(),
             unsupported_files,
-            Vec::new(),
             0,
-            media_folder_info,
-            thumbnail_folder_info,
         ));
     }
 
-    for entry in WalkDir::new(media_path)
+    for entry in WalkDir::new(user_folder)
         .into_iter()
         .filter_map(|e| match e {
             Ok(entry) => Some(entry),
@@ -168,15 +190,15 @@ pub fn summarize_folders(
         })
         .collect::<Result<_, _>>()?;
 
-    Ok(FileCountResponse::new(
+    Ok(UserFolderResponse::new(
+        true,
+        folder_relative,
         photo_count,
         count - photo_count,
         relative_samples,
-        unsupported_files,
         inaccessible_entries_str,
+        unsupported_files,
         unsupported_count,
-        media_folder_info,
-        thumbnail_folder_info,
     ))
 }
 
@@ -204,7 +226,7 @@ pub fn summarize_folders(
 /// * Retrieving the total or available storage space fails.
 /// * Checking read/write permissions encounters an error.
 /// ```
-pub fn check_folder_info(folder: &Path) -> Result<PathInfoResponse, MediaError> {
+pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, MediaError> {
     let total = total_space(folder)?;
     let available = available_space(folder)?;
     let used = total - available;
@@ -220,7 +242,12 @@ pub fn check_folder_info(folder: &Path) -> Result<PathInfoResponse, MediaError> 
     ))
 }
 
-fn to_posix_string(path: &std::path::Path) -> String {
+fn relative_path(base: &Path, path: &Path) -> Result<String, Box<dyn std::error::Error>> {
+    let relative = path.strip_prefix(base)?;
+    Ok(to_posix_string(relative))
+}
+
+fn to_posix_string(path: &Path) -> String {
     path.to_str().unwrap_or_default().replace('\\', "/")
 }
 

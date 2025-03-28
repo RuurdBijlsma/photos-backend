@@ -1,12 +1,15 @@
 use axum::debug_handler;
-use std::path::Path;
+use axum::extract::Query;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use crate::common::settings::Settings;
-use crate::controllers::logic::setup::{summarize_folders, MediaError};
+use crate::controllers::logic::setup::{validate_disks, validate_user_folder, MediaError};
 use crate::models::users::users;
 use loco_rs::prelude::*;
+use serde::Deserialize;
+use tokio::fs;
 
 impl From<MediaError> for Error {
     fn from(err: MediaError) -> Self {
@@ -27,15 +30,13 @@ impl From<MediaError> for Error {
     }
 }
 
-/// Asynchronous handler to check if a given media directory is valid and process it.
-///
-/// Validates that the media directory exists and is a directory, then processes it to count media files.
+/// Asynchronous handler to check if the configured disks are valid and process it.
 ///
 /// # Returns
 ///
-/// A JSON response with the count and sample file paths.
+/// A JSON response with info on the disks.
 #[debug_handler]
-async fn validate_folders(_: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
+async fn get_disk_response(_: auth::JWT, State(ctx): State<AppContext>) -> Result<Response> {
     let settings = Settings::from_context(&ctx);
     let media_path = Path::new(&settings.media_dir);
     let thumbnail_path = Path::new(&settings.thumbnails_dir);
@@ -62,7 +63,62 @@ async fn validate_folders(_: auth::JWT, State(ctx): State<AppContext>) -> Result
         return bad_request(msg);
     }
 
-    let response = summarize_folders(media_path, thumbnail_path).map_err(Into::<Error>::into)?;
+    let response = validate_disks(media_path, thumbnail_path).map_err(Into::<Error>::into)?;
+    format::json(response)
+}
+
+#[derive(Deserialize)]
+struct UserFolderQuery {
+    user_folder: PathBuf,
+}
+
+/// Asynchronous handler to check if a given media directory is valid and process it.
+///
+/// Validates that the media directory exists and is a directory, then processes it to count media files.
+///
+/// # Returns
+///
+/// A JSON response with the count and sample file paths.
+#[debug_handler]
+async fn get_user_folder_response(
+    _: auth::JWT,
+    State(ctx): State<AppContext>,
+    Query(query): Query<UserFolderQuery>,
+) -> Result<Response> {
+    let settings = Settings::from_context(&ctx);
+    let media_path = fs::canonicalize(Path::new(&settings.media_dir)).await?;
+
+    if !media_path.exists() {
+        warn!("Media path {} does not exist", media_path.display());
+        return not_found();
+    }
+
+    if !media_path.is_dir() {
+        let msg = format!("{} is not a directory", media_path.display());
+        warn!("{}", msg);
+        return bad_request(msg);
+    }
+
+    let user_path = fs::canonicalize(media_path.join(query.user_folder)).await?;
+
+    if user_path.strip_prefix(&media_path).is_err() {
+        let msg = "User path escapes media directory";
+        warn!(path = %user_path.display(), msg);
+        return bad_request(msg);
+    }
+
+    if !user_path.exists() {
+        warn!(path = %user_path.display(), "Provided user path does not exist.");
+        return not_found();
+    }
+
+    if !user_path.is_dir() {
+        let msg = "Provided user path is not a directory.";
+        warn!(path = %user_path.display(), msg);
+        return bad_request(msg);
+    }
+
+    let response = validate_user_folder(&media_path, &user_path).map_err(Into::<Error>::into)?;
     format::json(response)
 }
 
@@ -98,5 +154,6 @@ pub fn routes() -> Routes {
     Routes::new()
         .prefix("/api/setup")
         .add("/needed", get(setup_needed))
-        .add("/validate-folders", get(validate_folders))
+        .add("/disk-info", get(get_disk_response))
+        .add("/user-folder-info", get(get_user_folder_response))
 }
