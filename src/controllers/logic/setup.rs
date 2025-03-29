@@ -8,7 +8,8 @@ use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
-use tracing::{debug, error};
+use tokio::task;
+use tracing::{debug, error, warn};
 use walkdir::WalkDir;
 
 /// Custom error type for media directory operations.
@@ -247,7 +248,7 @@ fn relative_path(base: &Path, path: &Path) -> Result<String, Box<dyn std::error:
     Ok(to_posix_string(relative))
 }
 
-fn to_posix_string(path: &Path) -> String {
+pub(crate) fn to_posix_string(path: &Path) -> String {
     path.to_str().unwrap_or_default().replace('\\', "/")
 }
 
@@ -294,4 +295,67 @@ fn check_read_write_access(path: &Path) -> Result<(bool, bool), io::Error> {
         .is_ok();
 
     Ok((can_read, can_write))
+}
+
+pub async fn list_folders(user_folder: &Path) -> Result<Vec<PathBuf>, io::Error> {
+    let user_folder = user_folder.to_path_buf();
+    task::spawn_blocking(move || list_folders_sync(&user_folder)).await?
+}
+
+pub fn list_folders_sync(user_folder: &Path) -> Result<Vec<PathBuf>, io::Error> {
+    let mut folders = Vec::new();
+    for entry in fs::read_dir(user_folder)? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            folders.push(entry.path());
+        }
+    }
+    Ok(folders)
+}
+
+pub async fn validate_media_and_user_directory(
+    media_dir: &str,
+    user_folder: &Path,
+) -> Result<(PathBuf, PathBuf), ()> {
+    // Canonicalize the media directory to get an absolute path.
+    let media_path = tokio::fs::canonicalize(media_dir).await.map_err(|e| {
+        warn!(
+            "Failed to canonicalize media directory {}: {}",
+            media_dir, e
+        );
+    })?;
+
+    if !media_path.is_dir() {
+        warn!("Media path {} is not a directory", media_path.display());
+        return Err(());
+    }
+
+    // Resolve the user's directory within the media directory.
+    let user_path = tokio::fs::canonicalize(media_path.join(user_folder))
+        .await
+        .map_err(|e| {
+            warn!(
+                "Failed to canonicalize user directory {}: {}",
+                media_path.join(user_folder).display(),
+                e
+            );
+            ()
+        })?;
+
+    // Ensure that the resolved user_path is inside the media_path.
+    if user_path.strip_prefix(&media_path).is_err() {
+        warn!(
+            "User path {} escapes media directory {}",
+            user_path.display(),
+            media_path.display()
+        );
+        return Err(());
+    }
+
+    if !user_path.is_dir() {
+        warn!("User path {} is not a directory", user_path.display());
+        return Err(());
+    }
+
+    Ok((media_path, user_path))
 }

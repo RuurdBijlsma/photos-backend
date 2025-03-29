@@ -44,6 +44,11 @@ async fn register(
     State(ctx): State<AppContext>,
     Json(params): Json<RegisterParams>,
 ) -> Result<Response> {
+    let user_exists = users::Entity::find().one(&ctx.db).await?.is_some();
+    if user_exists {
+        return unauthorized("Admin already exists.");
+    }
+
     let email_regex = get_allow_email_domain_re();
     if !email_regex.is_match(&params.email) {
         tracing::debug!(email = params.email, "The provided email is invalid.");

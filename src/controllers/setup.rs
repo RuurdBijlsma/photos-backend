@@ -2,14 +2,16 @@ use axum::debug_handler;
 use axum::extract::Query;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 use crate::common::settings::Settings;
-use crate::controllers::logic::setup::{validate_disks, validate_user_folder, MediaError};
+use crate::controllers::logic::setup::{
+    list_folders, to_posix_string, validate_disks, validate_media_and_user_directory,
+    validate_user_folder, MediaError,
+};
 use crate::models::users::users;
 use loco_rs::prelude::*;
 use serde::Deserialize;
-use tokio::fs;
 
 impl From<MediaError> for Error {
     fn from(err: MediaError) -> Self {
@@ -68,8 +70,8 @@ async fn get_disk_response(_: auth::JWT, State(ctx): State<AppContext>) -> Resul
 }
 
 #[derive(Deserialize)]
-struct UserFolderQuery {
-    user_folder: PathBuf,
+struct FolderQuery {
+    folder: PathBuf,
 }
 
 /// Asynchronous handler to check if a given media directory is valid and process it.
@@ -83,43 +85,17 @@ struct UserFolderQuery {
 async fn get_user_folder_response(
     _: auth::JWT,
     State(ctx): State<AppContext>,
-    Query(query): Query<UserFolderQuery>,
+    Query(query): Query<FolderQuery>,
 ) -> Result<Response> {
     let settings = Settings::from_context(&ctx);
-    let media_path = fs::canonicalize(Path::new(&settings.media_dir)).await?;
-
-    if !media_path.exists() {
-        warn!("Media path {} does not exist", media_path.display());
-        return not_found();
+    match validate_media_and_user_directory(&settings.media_dir, &query.folder).await {
+        Ok((media_path, user_path)) => {
+            let response =
+                validate_user_folder(&media_path, &user_path).map_err(Into::<Error>::into)?;
+            format::json(response)
+        }
+        Err(_) => bad_request("Incorrect folder or MEDIA_DIR provided."),
     }
-
-    if !media_path.is_dir() {
-        let msg = format!("{} is not a directory", media_path.display());
-        warn!("{}", msg);
-        return bad_request(msg);
-    }
-
-    let user_path = fs::canonicalize(media_path.join(query.user_folder)).await?;
-
-    if user_path.strip_prefix(&media_path).is_err() {
-        let msg = "User path escapes media directory";
-        warn!(path = %user_path.display(), msg);
-        return bad_request(msg);
-    }
-
-    if !user_path.exists() {
-        warn!(path = %user_path.display(), "Provided user path does not exist.");
-        return not_found();
-    }
-
-    if !user_path.is_dir() {
-        let msg = "Provided user path is not a directory.";
-        warn!(path = %user_path.display(), msg);
-        return bad_request(msg);
-    }
-
-    let response = validate_user_folder(&media_path, &user_path).map_err(Into::<Error>::into)?;
-    format::json(response)
 }
 
 static SETUP_DONE: AtomicBool = AtomicBool::new(false);
@@ -135,7 +111,7 @@ static SETUP_DONE: AtomicBool = AtomicBool::new(false);
 /// # Errors
 ///
 /// DB connection error is possible when requesting user accounts.
-pub async fn setup_needed(State(ctx): State<AppContext>) -> Result<Response> {
+async fn setup_needed(State(ctx): State<AppContext>) -> Result<Response> {
     if SETUP_DONE.load(Ordering::Relaxed) {
         return format::json(false);
     }
@@ -149,6 +125,34 @@ pub async fn setup_needed(State(ctx): State<AppContext>) -> Result<Response> {
 
     format::json(true)
 }
+async fn get_folders(
+    _: auth::JWT,
+    Query(query): Query<FolderQuery>,
+    State(ctx): State<AppContext>,
+) -> Result<Response> {
+    let settings = Settings::from_context(&ctx);
+    match validate_media_and_user_directory(&settings.media_dir, &query.folder).await {
+        Ok((_, user_path)) => {
+            let folders = list_folders(&user_path)
+                .await
+                .map_err(Into::<Error>::into)?;
+
+            let relative_folders: Vec<String> = folders
+                .into_iter()
+                .map(|entry| {
+                    entry
+                        .strip_prefix(&user_path)
+                        .map_err(|_| MediaError::PathConversion(to_posix_string(&entry)))?
+                        .to_str()
+                        .ok_or_else(|| MediaError::PathConversion(to_posix_string(&entry)))
+                        .map(String::from)
+                })
+                .collect::<std::result::Result<_, _>>()?;
+            format::json(relative_folders)
+        }
+        Err(_) => bad_request("Incorrect folder or MEDIA_DIR provided."),
+    }
+}
 
 pub fn routes() -> Routes {
     Routes::new()
@@ -156,4 +160,5 @@ pub fn routes() -> Routes {
         .add("/needed", get(setup_needed))
         .add("/disk-info", get(get_disk_response))
         .add("/user-folder-info", get(get_user_folder_response))
+        .add("/folders", get(get_folders))
 }
