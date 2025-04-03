@@ -2,11 +2,13 @@ use crate::common::image_utils::{is_photo_file, is_video_file};
 use derive_more::Constructor;
 use fs2::available_space;
 use fs2::total_space;
+use regex::Regex;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs::{self};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use tempfile::NamedTempFile;
 use thiserror::Error;
 use tokio::task;
 use tracing::{debug, error, warn};
@@ -21,7 +23,7 @@ pub enum MediaError {
     #[error("File system error: {0}")]
     FileSystem(#[from] io::Error),
 
-    #[error("Path conversion error for path: {0}")]
+    #[error("Path conversion error: {0}")]
     PathConversion(String),
 }
 
@@ -36,12 +38,18 @@ pub struct PathInfoResponse {
 }
 
 #[derive(Constructor, Serialize)]
-pub struct UserFolderResponse {
+pub struct MediaSampleResponse {
     read_access: bool,
     folder: String,
     photo_count: usize,
     video_count: usize,
     samples: Vec<String>,
+}
+
+#[derive(Constructor, Serialize)]
+pub struct UnsupportedFilesResponse {
+    read_access: bool,
+    folder: String,
     inaccessible_entries: Vec<String>,
     unsupported_files: HashMap<String, Vec<String>>,
     unsupported_count: usize,
@@ -70,25 +78,13 @@ pub fn validate_disks(
 
 const N_SAMPLES: usize = 8;
 
-/// Processes a user picked folder by counting photo/video files and collecting up to 10 random samples.
-///
-/// Uses reservoir sampling to maintain a fixed-size sample set.
-/// Returns a `FileCountResponse` containing the total count and relative file paths.
-///
-/// # Errors
-///
-/// Returns a `MediaError` if there is a filesystem issue or if a path cannot be converted to a UTF-8 string.
-pub fn validate_user_folder(
+pub fn get_media_sample(
     media_path: &Path,
     user_folder: &Path,
-) -> Result<UserFolderResponse, MediaError> {
-    let mut unsupported_count = 0;
+) -> Result<MediaSampleResponse, MediaError> {
     let mut count = 0;
     let mut photo_count = 0;
-    let mut unsupported_files: HashMap<String, Vec<String>> = HashMap::new();
-    let mut inaccessible_entries = Vec::new();
     let mut samples = Vec::with_capacity(N_SAMPLES);
-    let media_path_buf = PathBuf::from(media_path);
 
     let media_folder_info = check_drive_info(user_folder)?;
 
@@ -96,12 +92,75 @@ pub fn validate_user_folder(
         .map_err(|_| MediaError::PathConversion(to_posix_string(user_folder)))?;
 
     if !media_folder_info.read_access {
-        return Ok(UserFolderResponse::new(
+        return Ok(MediaSampleResponse::new(
             false,
             folder_relative,
             0,
             0,
             Vec::new(),
+        ));
+    }
+
+    for entry in WalkDir::new(user_folder)
+        .into_iter()
+        .filter_map(|e| match e {
+            Ok(entry) => Some(entry),
+            Err(_) => None,
+        })
+    {
+        let is_photo_path = is_photo_file(entry.path());
+        let is_file = entry.file_type().is_file();
+
+        if is_file {
+            count += 1;
+        }
+
+        if is_file && is_photo_path {
+            photo_count += 1;
+            // for the first N files, just push. After that, replace a random element.
+            if photo_count <= N_SAMPLES {
+                samples.push(entry);
+            } else {
+                let random_index = fastrand::usize(0..photo_count);
+                if random_index < N_SAMPLES {
+                    samples[random_index] = entry;
+                }
+            }
+        }
+    }
+
+    // Convert absolute paths to paths relative to the media directory.
+    let relative_samples: Vec<String> = samples
+        .into_iter()
+        .map(|entry| relative_path(media_path, entry.path()))
+        .collect::<Result<_, _>>()?;
+
+    Ok(MediaSampleResponse::new(
+        true,
+        folder_relative,
+        photo_count,
+        count - photo_count,
+        relative_samples,
+    ))
+}
+
+pub fn get_folder_unsupported_files(
+    media_path: &Path,
+    user_folder: &Path,
+) -> Result<UnsupportedFilesResponse, MediaError> {
+    let mut unsupported_count = 0;
+    let mut unsupported_files: HashMap<String, Vec<String>> = HashMap::new();
+    let mut inaccessible_entries = Vec::new();
+
+    let media_folder_info = check_drive_info(user_folder)?;
+
+    let folder_relative = relative_path(media_path, user_folder)
+        .map_err(|_| MediaError::PathConversion(to_posix_string(user_folder)))?;
+
+    if !media_folder_info.read_access {
+        return Ok(UnsupportedFilesResponse::new(
+            false,
+            folder_relative,
             Vec::new(),
             unsupported_files,
             0,
@@ -127,76 +186,31 @@ pub fn validate_user_folder(
         if !is_file || (!is_photo_path && !is_video_file(entry.path())) {
             if entry.file_type().is_file() {
                 unsupported_count += 1;
-                if let Some(ext) = entry
+                let ext = entry
                     .path()
                     .extension()
                     .and_then(|ext| ext.to_str())
                     .map(String::from)
-                {
-                    if !unsupported_files.contains_key(&ext) {
-                        unsupported_files.insert(ext.clone(), Vec::new());
-                    }
-                    if let Some(val) = unsupported_files.get_mut(&ext) {
-                        let relative_path =
-                            entry.path().strip_prefix(&media_path_buf).map_err(|_| {
-                                MediaError::PathConversion(to_posix_string(entry.path()))
-                            })?;
-                        val.push(to_posix_string(relative_path));
-                    }
-                }
+                    .unwrap_or_else(String::new);
+                let relative_path = relative_path(media_path, entry.path())?;
+                unsupported_files
+                    .entry(ext)
+                    .or_default()
+                    .push(relative_path);
             }
             continue;
         }
-
-        count += 1;
-
-        if is_file && is_photo_path {
-            photo_count += 1;
-            // for the first N files, just push. After that, replace a random element.
-            if photo_count <= N_SAMPLES {
-                samples.push(entry);
-            } else {
-                let random_index = fastrand::usize(0..photo_count);
-                if random_index < N_SAMPLES {
-                    samples[random_index] = entry;
-                }
-            }
-        }
     }
-
-    // Convert absolute paths to paths relative to the media directory.
-    let relative_samples: Vec<String> = samples
-        .into_iter()
-        .map(|entry| {
-            entry
-                .path()
-                .strip_prefix(&media_path_buf)
-                .map_err(|_| MediaError::PathConversion(to_posix_string(entry.path())))?
-                .to_str()
-                .ok_or_else(|| MediaError::PathConversion(to_posix_string(entry.path())))
-                .map(String::from)
-        })
-        .collect::<Result<_, _>>()?;
 
     // Convert inaccesible entries to relative path strings
     let inaccessible_entries_str: Vec<String> = inaccessible_entries
         .into_iter()
-        .map(|entry| {
-            entry
-                .strip_prefix(&media_path_buf)
-                .map_err(|_| MediaError::PathConversion(to_posix_string(&entry)))?
-                .to_str()
-                .ok_or_else(|| MediaError::PathConversion(to_posix_string(&entry)))
-                .map(String::from)
-        })
+        .map(|entry| relative_path(media_path, &entry))
         .collect::<Result<_, _>>()?;
 
-    Ok(UserFolderResponse::new(
+    Ok(UnsupportedFilesResponse::new(
         true,
         folder_relative,
-        photo_count,
-        count - photo_count,
-        relative_samples,
         inaccessible_entries_str,
         unsupported_files,
         unsupported_count,
@@ -230,7 +244,7 @@ pub fn validate_user_folder(
 pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, MediaError> {
     let total = total_space(folder)?;
     let available = available_space(folder)?;
-    let used = total - available;
+    let used = total.saturating_sub(available);
     let (read, write) = check_read_write_access(folder)?;
 
     Ok(PathInfoResponse::new(
@@ -243,13 +257,20 @@ pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, MediaError> {
     ))
 }
 
-fn relative_path(base: &Path, path: &Path) -> Result<String, Box<dyn std::error::Error>> {
-    let relative = path.strip_prefix(base)?;
-    Ok(to_posix_string(relative))
+fn relative_path(base: &Path, path: &Path) -> Result<String, MediaError> {
+    let stripped = path.strip_prefix(base).map_err(|e| {
+        MediaError::PathConversion(format!(
+            "{} (base: {}): {}",
+            to_posix_string(path),
+            to_posix_string(base),
+            e
+        ))
+    })?;
+    Ok(to_posix_string(stripped))
 }
 
-pub(crate) fn to_posix_string(path: &Path) -> String {
-    path.to_str().unwrap_or_default().replace('\\', "/")
+pub fn to_posix_string(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 /// Checks whether the given folder has both read and write access.
@@ -287,11 +308,9 @@ fn check_read_write_access(path: &Path) -> Result<(bool, bool), io::Error> {
     // Check read access
     let can_read = fs::read_dir(path).is_ok();
 
-    // Check write access by trying to create and delete a temporary file
-    let tmp_file_path = path.join(".tmp_access_test");
-    let can_write = File::create(&tmp_file_path)
-        .and_then(|mut file| file.write_all(b"test")) // Try writing some data
-        .and_then(|()| fs::remove_file(&tmp_file_path)) // Try deleting it
+    // Check write access by trying to write to a temporary file
+    let can_write = NamedTempFile::new_in(path)
+        .and_then(|mut file| file.write_all(b"test"))
         .is_ok();
 
     Ok((can_read, can_write))
@@ -358,4 +377,9 @@ pub async fn validate_media_and_user_directory(
     }
 
     Ok((media_path, user_path))
+}
+
+pub fn contains_non_alphanumeric(s: &str) -> bool {
+    let re = Regex::new(r"[^a-zA-Z0-9]").unwrap();
+    re.is_match(s)
 }

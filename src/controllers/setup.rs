@@ -6,12 +6,25 @@ use tracing::{error, warn};
 
 use crate::common::settings::Settings;
 use crate::controllers::logic::setup::{
-    list_folders, to_posix_string, validate_disks, validate_media_and_user_directory,
-    validate_user_folder, MediaError,
+    contains_non_alphanumeric, get_folder_unsupported_files, get_media_sample, list_folders,
+    to_posix_string, validate_disks, validate_media_and_user_directory,
+    MediaError,
 };
-use crate::models::users::users;
+use crate::models::users::{users};
 use loco_rs::prelude::*;
 use serde::Deserialize;
+use tokio::fs;
+
+#[derive(Deserialize)]
+pub struct FolderQuery {
+    folder: PathBuf,
+}
+
+#[derive(Deserialize)]
+pub struct MakeFolderBody {
+    base_folder: PathBuf,
+    new_name: String,
+}
 
 impl From<MediaError> for Error {
     fn from(err: MediaError) -> Self {
@@ -69,20 +82,8 @@ async fn get_disk_response(_: auth::JWT, State(ctx): State<AppContext>) -> Resul
     format::json(response)
 }
 
-#[derive(Deserialize)]
-struct FolderQuery {
-    folder: PathBuf,
-}
-
-/// Asynchronous handler to check if a given media directory is valid and process it.
-///
-/// Validates that the media directory exists and is a directory, then processes it to count media files.
-///
-/// # Returns
-///
-/// A JSON response with the count and sample file paths.
 #[debug_handler]
-async fn get_user_folder_response(
+async fn get_folder_media_sample(
     _: auth::JWT,
     State(ctx): State<AppContext>,
     Query(query): Query<FolderQuery>,
@@ -91,10 +92,27 @@ async fn get_user_folder_response(
     match validate_media_and_user_directory(&settings.media_dir, &query.folder).await {
         Ok((media_path, user_path)) => {
             let response =
-                validate_user_folder(&media_path, &user_path).map_err(Into::<Error>::into)?;
+                get_media_sample(&media_path, &user_path).map_err(Into::<Error>::into)?;
             format::json(response)
         }
-        Err(_) => bad_request("Incorrect folder or MEDIA_DIR provided."),
+        Err(_) => bad_request("Something went wrong reading the folder."),
+    }
+}
+
+#[debug_handler]
+async fn get_folder_unsupported(
+    _: auth::JWT,
+    State(ctx): State<AppContext>,
+    Query(query): Query<FolderQuery>,
+) -> Result<Response> {
+    let settings = Settings::from_context(&ctx);
+    match validate_media_and_user_directory(&settings.media_dir, &query.folder).await {
+        Ok((media_path, user_path)) => {
+            let response = get_folder_unsupported_files(&media_path, &user_path)
+                .map_err(Into::<Error>::into)?;
+            format::json(response)
+        }
+        Err(_) => bad_request("Something went wrong reading the folder."),
     }
 }
 
@@ -150,7 +168,26 @@ async fn get_folders(
                 .collect::<std::result::Result<_, _>>()?;
             format::json(relative_folders)
         }
-        Err(_) => bad_request("Incorrect folder or MEDIA_DIR provided."),
+        Err(_) => bad_request("Something went wrong reading the folder."),
+    }
+}
+
+async fn make_folder(
+    _: auth::JWT,
+    State(ctx): State<AppContext>,
+    Json(params): Json<MakeFolderBody>,
+) -> Result<Response> {
+    let settings = Settings::from_context(&ctx);
+    if contains_non_alphanumeric(&params.new_name) {
+        return bad_request("Wrong format for new folder name.");
+    }
+
+    match validate_media_and_user_directory(&settings.media_dir, &params.base_folder).await {
+        Ok((_, user_path)) => {
+            fs::create_dir_all(&user_path.join(params.new_name)).await?;
+            format::empty_json()
+        }
+        Err(_) => bad_request("Something went wrong reading the folder."),
     }
 }
 
@@ -159,6 +196,8 @@ pub fn routes() -> Routes {
         .prefix("/api/setup")
         .add("/needed", get(setup_needed))
         .add("/disk-info", get(get_disk_response))
-        .add("/user-folder-info", get(get_user_folder_response))
+        .add("/media-sample", get(get_folder_media_sample))
+        .add("/unsupported-files", get(get_folder_unsupported))
         .add("/folders", get(get_folders))
+        .add("/folders", post(make_folder))
 }
