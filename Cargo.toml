@@ -1,2 +1,3 @@
 [workspace]
+resolver = "3"
 members = ["crates/photos_api", "crates/photos_core", "crates/photos_indexer"]

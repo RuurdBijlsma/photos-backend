@@ -27,7 +27,6 @@ pub struct MediaItem {
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct Gps {
-    // In a real query, you would likely join and select this as media_item_id
     pub media_item_id: String,
     pub location_id: Option<i32>,
     pub latitude: f64,
