@@ -11,7 +11,7 @@ pub struct WorkerConfig {
 pub fn worker_config() -> WorkerConfig {
     WorkerConfig {
         wait_after_empty_queue_s: 10,
-        wait_after_error_s: 5,
+        wait_after_error_s: 10,
         max_retries: 5,
     }
 }

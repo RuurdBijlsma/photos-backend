@@ -84,6 +84,7 @@ pub async fn process_one_job(
                     .bind(relative_path)
                     .execute(&mut *tx)
                     .await?;
+                return Err(e);
             }
         }
     }
