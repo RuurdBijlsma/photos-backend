@@ -20,3 +20,9 @@ pub async fn process_file(
     insert_full_media_item(pool, file.to_str().unwrap(), &media_info).await?;
     Ok(())
 }
+
+pub async fn remove_file(file: &Path, pool: &PgPool) -> color_eyre::Result<()> {
+    let _file = file;
+    let _pool = pool;
+    Ok(())
+}

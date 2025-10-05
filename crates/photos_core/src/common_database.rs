@@ -8,7 +8,7 @@ pub async fn get_db_pool() -> Result<Pool<Postgres>> {
     let database_url = env::var("DATABASE_URL")?;
     let pool = PgPool::connect(&database_url).await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
-    return Ok(pool);
+    Ok(pool)
 }
 
 

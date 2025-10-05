@@ -1,4 +1,4 @@
-use crate::indexer::process_file::process_file;
+use crate::indexer::process_file::{process_file, remove_file};
 use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
 use media_analyzer::MediaAnalyzer;
@@ -22,10 +22,11 @@ async fn handle_create_file(
 
 async fn handle_remove_file(
     path: &Path,
-    config: &ThumbOptions,
     pool: &Pool<Postgres>,
 ) -> color_eyre::Result<()> {
     println!("Removed {:?}", path);
+
+    remove_file(path, pool).await?;
 
     Ok(())
 }
@@ -37,11 +38,10 @@ pub fn start_watching(
 ) -> color_eyre::Result<()> {
     futures::executor::block_on(async {
         let analyzer_result = MediaAnalyzer::builder().build().await;
-        if let Ok(mut analyzer) = analyzer_result {
-            if let Err(e) = async_watch(path, config, &mut analyzer, pool).await {
+        if let Ok(mut analyzer) = analyzer_result
+            && let Err(e) = async_watch(path, config, &mut analyzer, pool).await {
                 println!("error: {:?}", e)
             }
-        }
     });
 
     Ok(())
@@ -86,7 +86,7 @@ async fn async_watch<P: AsRef<Path>>(
                 }
                 EventKind::Remove(_) => {
                     if let Some(file) = event.paths.first() {
-                        let result = handle_remove_file(file, config, pool).await;
+                        let result = handle_remove_file(file, pool).await;
                         if let Err(e) = result {
                             eprintln!("Error handling file remove: {:?}", e);
                         }
