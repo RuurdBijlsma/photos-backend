@@ -1,8 +1,11 @@
 use crate::process_file::process_file;
 use color_eyre::Result;
 use media_analyzer::MediaAnalyzer;
-use photos_core::{get_db_pool, get_media_dir, get_thumbnail_options, get_thumbnails_dir};
-use sqlx::PgPool;
+use photos_core::{
+    get_db_pool, get_media_dir, get_thumbnail_options, get_thumbnails_dir,
+    max_worker_processing_retries,
+};
+use sqlx::{FromRow, PgPool};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,6 +17,12 @@ pub mod process_file;
 enum WorkResult {
     Processed,
     QueueEmpty,
+}
+
+#[derive(FromRow)]
+struct Job {
+    relative_path: String,
+    retry_count: Option<i32>,
 }
 
 #[tokio::main]
@@ -37,14 +46,18 @@ async fn main() -> Result<()> {
 
         match task.await? {
             Ok(WorkResult::Processed) => {
-                println!("Item processed. Checking for next item immediately.");
+                println!("Item processed.");
             }
             Ok(WorkResult::QueueEmpty) => {
-                println!("Queue is empty. Waiting for 30 seconds.");
+                println!("Queue is empty...");
                 time::sleep(Duration::from_secs(30)).await;
             }
             Err(e) => {
-                eprintln!("Worker failed: {}. Retrying in 5 seconds.", e);
+                // This now only catches critical errors like a lost database connection
+                eprintln!(
+                    "A critical worker error occurred: {}. Retrying in 5 seconds.",
+                    e
+                );
                 time::sleep(Duration::from_secs(5)).await;
             }
         }
@@ -58,35 +71,78 @@ async fn do_work(
 ) -> Result<WorkResult> {
     let mut tx = pool.begin().await?;
 
-    // Atomically select and lock a job
-    let relative_path: Option<String> = sqlx::query_scalar(
-        "SELECT relative_path from process_queue ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED",
+    // Atomically select and lock a job, fetching all necessary columns
+    let job: Option<Job> = sqlx::query_as(
+        "SELECT relative_path, retry_count FROM process_queue ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED",
     )
         .fetch_optional(&mut *tx)
         .await?;
 
-    let Some(path) = relative_path else {
+    // Use `let Some(...) else` for cleaner exit if queue is empty
+    let Some(job) = job else {
+        // No job found, transaction will be implicitly rolled back.
         return Ok(WorkResult::QueueEmpty);
     };
 
-    println!("Processing file: {}", &path);
-    let file = media_dir.join(&path);
+    let path = &job.relative_path;
+    println!("Processing file: {}", path);
+    let file = media_dir.join(path);
 
     let thumb_dir = get_thumbnails_dir();
     let thumb_config = get_thumbnail_options(&thumb_dir);
 
-    // Process the file. If it fails, the transaction will be rolled back,
-    // and the job will become available again after a short time.
-    process_file(&file, &thumb_config, analyzer, &mut tx).await?;
+    // Attempt to process the file and match on the result
+    let processing_result = process_file(&file, &thumb_config, analyzer, &mut tx).await;
 
-    // If processing is successful, delete the job from the queue
-    sqlx::query("DELETE FROM process_queue WHERE relative_path = $1")
-        .bind(&path)
-        .execute(&mut *tx)
-        .await?;
+    match processing_result {
+        Ok(_) => {
+            // SUCCESS: Delete the job from the queue
+            sqlx::query("DELETE FROM process_queue WHERE relative_path = $1")
+                .bind(job.relative_path)
+                .execute(&mut *tx)
+                .await?;
+        }
+        Err(e) => {
+            // FAILURE: Decide whether to retry or move to dead-letter queue
+            eprintln!("Error processing file '{}': {}", path, e);
+            let current_retries = job.retry_count.unwrap_or(0);
 
-    // Commit the transaction to release the lock and finalize the deletion
+            if current_retries >= max_worker_processing_retries() - 1 {
+                // Max retries reached: move to failures queue
+                println!(
+                    "File has failed {} times. Moving to failures queue.",
+                    current_retries
+                );
+                // TODO alert here
+
+                // Insert into failures, ignoring if it's somehow already there
+                sqlx::query("INSERT INTO queue_failures (relative_path) VALUES ($1) ON CONFLICT (relative_path) DO NOTHING")
+                    .bind(path)
+                    .execute(&mut *tx)
+                    .await?;
+
+                // Delete from the main queue
+                sqlx::query("DELETE FROM process_queue WHERE relative_path = $1")
+                    .bind(job.relative_path)
+                    .execute(&mut *tx)
+                    .await?;
+            } else {
+                // Increment retry count
+                println!("Incrementing retry count for file.");
+                sqlx::query("UPDATE process_queue SET retry_count = $1 WHERE relative_path = $2")
+                    .bind(current_retries + 1)
+                    .bind(job.relative_path)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+        }
+    }
+
+    // Commit the transaction to finalize either the success or failure handling
     tx.commit().await?;
 
+    // We return "Processed" even on failure because the queue item itself
+    // was handled (by being retried or moved). This tells the main loop
+    // to immediately look for the next job.
     Ok(WorkResult::Processed)
 }

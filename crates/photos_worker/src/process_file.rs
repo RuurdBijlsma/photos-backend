@@ -10,7 +10,6 @@ pub async fn process_file(
     analyzer: &mut MediaAnalyzer,
     tx: &mut PgTransaction<'_>,
 ) -> color_eyre::Result<()> {
-    println!("Processing {}", file.display());
     let relative_path_str = get_relative_path_str(file)?;
     let tiny_thumb_path = config
         .thumbnails_dir
