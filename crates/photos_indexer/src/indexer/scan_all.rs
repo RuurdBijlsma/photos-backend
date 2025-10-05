@@ -50,7 +50,7 @@ pub async fn scan_all_files(media_dir: &Path, config: &ThumbOptions, pool: &Pool
         let analyzer = Arc::clone(&analyzer);
         let action = || async {
             let mut guard = analyzer.lock().await;
-            process_file(&file, config, &mut guard, pool).await
+            process_file(media_dir, &file, config, &mut guard, pool).await
         };
 
         if let Err(e) = Retry::spawn(retry_strategy.clone(), action).await {

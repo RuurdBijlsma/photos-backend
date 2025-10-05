@@ -14,7 +14,7 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
     let pool = get_db_pool().await?;
 
-    let source_folder = Path::new("assets");
+    let media_dir = Path::new("assets");
     let thumbs_dir = Path::new("thumbs");
     fs::create_dir_all(&thumbs_dir).await?;
     
@@ -47,10 +47,10 @@ async fn main() -> Result<()> {
         ],
     };
 
-    println!("Scanning {} ...", source_folder.display());
-    scan_all_files(source_folder, &config, &pool).await?;
+    println!("Scanning {} ...", media_dir.display());
+    scan_all_files(media_dir, &config, &pool).await?;
     println!("Scan done, start watching for file changes...");
-    start_watching(source_folder, &config, &pool)?;
+    start_watching(media_dir, &config, &pool)?;
 
     Ok(())
 }
