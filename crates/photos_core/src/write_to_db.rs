@@ -1,7 +1,7 @@
-use crate::database::utils::nice_id;
 use crate::insert_query;
+use crate::utils::nice_id;
 use media_analyzer::{AnalyzeResult, LocationName};
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{PgTransaction, Postgres, Transaction};
 
 async fn get_or_create_location(
     tx: &mut Transaction<'_, Postgres>,
@@ -39,17 +39,16 @@ async fn get_or_create_location(
 
 
 /// Inserts a full media item using your `AnalyzeResult` struct within a single transaction.
-pub async fn insert_full_media_item(
-    pool: &PgPool,
+pub async fn store_media_item(
+    tx: &mut PgTransaction<'_>,
     relative_path: &str,
     data: &AnalyzeResult,
 ) -> Result<String, sqlx::Error> {
-    let mut tx = pool.begin().await?;
 
     let existing_id: Option<String> =
         sqlx::query_scalar("SELECT id FROM media_item WHERE relative_path = $1")
             .bind(relative_path)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(&mut **tx)
             .await?;
 
     if let Some(id) = existing_id {
@@ -58,7 +57,7 @@ pub async fn insert_full_media_item(
 
     let media_item_id = nice_id(10);
 
-    insert_query!(&mut tx, "media_item", {
+    insert_query!(tx, "media_item", {
         id: &media_item_id,
         relative_path: relative_path,
         width: data.metadata.width as i32,
@@ -71,8 +70,8 @@ pub async fn insert_full_media_item(
     }).await?;
 
     if let Some(gps_info) = &data.gps_info {
-        let location_id = get_or_create_location(&mut tx, &gps_info.location).await?;
-        insert_query!(&mut tx, "gps", {
+        let location_id = get_or_create_location(tx, &gps_info.location).await?;
+        insert_query!(tx, "gps", {
             media_item_id: &media_item_id,
             location_id: location_id,
             latitude: gps_info.latitude,
@@ -82,7 +81,7 @@ pub async fn insert_full_media_item(
         }).await?;
     }
 
-    insert_query!(&mut tx, "time_details", {
+    insert_query!(tx, "time_details", {
         media_item_id: &media_item_id,
         datetime_utc: data.time_info.datetime_utc,
         timezone_name: data.time_info.timezone.as_ref().map(|tz| &tz.name),
@@ -95,7 +94,7 @@ pub async fn insert_full_media_item(
     if let Some(weather_info) = &data.weather_info {
         let hourly = weather_info.hourly.as_ref();
         let condition = hourly.and_then(|h| h.condition).map(|c| c.to_string());
-        insert_query!(&mut tx, "weather", {
+        insert_query!(tx, "weather", {
             media_item_id: &media_item_id,
             temperature: hourly.and_then(|h| h.temperature).map(|t| t as f32),
             dew_point: hourly.and_then(|h| h.dew_point).map(|dp| dp as f32),
@@ -116,7 +115,7 @@ pub async fn insert_full_media_item(
         }).await?;
     }
 
-    insert_query!(&mut tx, "details", {
+    insert_query!(tx, "details", {
         media_item_id: &media_item_id,
         is_motion_photo: data.tags.is_motion_photo,
         motion_photo_presentation_timestamp: data.tags.motion_photo_presentation_timestamp,
@@ -132,7 +131,7 @@ pub async fn insert_full_media_item(
         exif: &data.exif,
     }).await?;
 
-    insert_query!(&mut tx, "capture_details", {
+    insert_query!(tx, "capture_details", {
         media_item_id: &media_item_id,
         iso: data.capture_details.iso.map(|i| i as i32),
         exposure_time: data.capture_details.exposure_time.map(|a| a as f32),
@@ -142,7 +141,7 @@ pub async fn insert_full_media_item(
         camera_model: &data.capture_details.camera_model,
     }).await?;
 
-    insert_query!(&mut tx, "panorama", {
+    insert_query!(tx, "panorama", {
         media_item_id: &media_item_id,
         is_photosphere: data.pano_info.is_photosphere,
         projection_type: &data.pano_info.projection_type,
@@ -152,6 +151,5 @@ pub async fn insert_full_media_item(
         center_pitch_deg: data.pano_info.view_info.as_ref().map(|vi| vi.center_pitch_deg as f32),
     }).await?;
 
-    tx.commit().await?;
     Ok(media_item_id)
 }

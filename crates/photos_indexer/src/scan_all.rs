@@ -1,12 +1,7 @@
-use crate::indexer::process_file::process_file;
-use media_analyzer::MediaAnalyzer;
+use photos_core::enqueue_file;
 use ruurd_photos_thumbnail_generation::ThumbOptions;
 use sqlx::{Pool, Postgres};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tokio_retry::strategy::FixedInterval;
-use tokio_retry::Retry;
 use walkdir::WalkDir;
 
 fn get_media_files(folder: &Path, allowed_exts: &[&str]) -> Vec<PathBuf> {
@@ -24,9 +19,11 @@ fn get_media_files(folder: &Path, allowed_exts: &[&str]) -> Vec<PathBuf> {
         .collect()
 }
 
-pub async fn scan_all_files(media_dir: &Path, config: &ThumbOptions, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    let analyzer = Arc::new(Mutex::new(MediaAnalyzer::builder().build().await?));
-
+pub async fn scan_all_files(
+    media_dir: &Path,
+    config: &ThumbOptions,
+    pool: &Pool<Postgres>,
+) -> color_eyre::Result<()> {
     let mut all_files = get_media_files(
         media_dir,
         &config
@@ -44,18 +41,8 @@ pub async fn scan_all_files(media_dir: &Path, config: &ThumbOptions, pool: &Pool
             .collect::<Vec<_>>(),
     ));
 
-    let retry_strategy = FixedInterval::from_millis(200).take(3);
-
     for file in all_files {
-        let analyzer = Arc::clone(&analyzer);
-        let action = || async {
-            let mut guard = analyzer.lock().await;
-            process_file(media_dir, &file, config, &mut guard, pool).await
-        };
-
-        if let Err(e) = Retry::spawn(retry_strategy.clone(), action).await {
-            eprintln!("Failed to process {}: {}", file.display(), e);
-        }
+        enqueue_file(&file, pool).await?;
     }
 
     Ok(())

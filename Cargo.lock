@@ -2411,25 +2411,48 @@ dependencies = [
  "chrono",
  "color-eyre",
  "dotenv",
- "serde_json",
+ "media_analyzer",
+ "rand 0.10.0-rc.0",
+ "ruurd_photos_thumbnail_generation",
  "sqlx",
- "tokio",
 ]
 
 [[package]]
 name = "photos_indexer"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "color-eyre",
- "dotenv",
+ "media_analyzer",
+ "photos_core",
+ "ruurd_photos_thumbnail_generation",
+ "sqlx",
+ "tokio",
+ "tokio-retry",
+ "walkdir",
+]
+
+[[package]]
+name = "photos_watcher"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
  "futures",
  "media_analyzer",
  "notify",
  "photos_core",
- "rand 0.10.0-rc.0",
  "ruurd_photos_thumbnail_generation",
- "serde_json",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "photos_worker"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "media_analyzer",
+ "photos_core",
+ "ruurd_photos_thumbnail_generation",
  "sqlx",
  "tokio",
  "tokio-retry",

@@ -1,4 +1,3 @@
-use crate::indexer::process_file::{process_file, remove_file};
 use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
 use media_analyzer::MediaAnalyzer;
@@ -6,23 +5,21 @@ use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watche
 use ruurd_photos_thumbnail_generation::ThumbOptions;
 use sqlx::{Pool, Postgres};
 use std::path::Path;
+use photos_core::{enqueue_file, remove_file};
 
 async fn handle_create_file(
-    media_dir: &Path,
-    path: &Path,
-    config: &ThumbOptions,
-    analyzer: &mut MediaAnalyzer,
+    file: &Path,
     pool: &Pool<Postgres>,
 ) -> color_eyre::Result<()> {
-    println!("Created {:?}", path);
+    println!("File created {:?}", file);
 
-    process_file(media_dir, path, config, analyzer, pool).await?;
+    enqueue_file(file, pool).await?;
 
     Ok(())
 }
 
 async fn handle_remove_file(path: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    println!("Removed {:?}", path);
+    println!("File removed {:?}", path);
 
     remove_file(path, pool).await?;
 
@@ -31,13 +28,12 @@ async fn handle_remove_file(path: &Path, pool: &Pool<Postgres>) -> color_eyre::R
 
 pub fn start_watching(
     media_dir: &Path,
-    config: &ThumbOptions,
     pool: &Pool<Postgres>,
 ) -> color_eyre::Result<()> {
     futures::executor::block_on(async {
         let analyzer_result = MediaAnalyzer::builder().build().await;
         if let Ok(mut analyzer) = analyzer_result
-            && let Err(e) = async_watch(media_dir, config, &mut analyzer, pool).await
+            && let Err(e) = async_watch(media_dir, pool).await
         {
             println!("error: {:?}", e)
         }
@@ -65,8 +61,6 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
 
 async fn async_watch(
     media_dir: &Path,
-    config: &ThumbOptions,
-    analyzer: &mut MediaAnalyzer,
     pool: &Pool<Postgres>,
 ) -> notify::Result<()> {
     let (mut watcher, mut rx) = async_watcher()?;
@@ -78,7 +72,7 @@ async fn async_watch(
                 EventKind::Create(_) => {
                     if let Some(file) = event.paths.first() {
                         let result =
-                            handle_create_file(media_dir, file, config, analyzer, pool).await;
+                            handle_create_file(file, pool).await;
                         if let Err(e) = result {
                             eprintln!("Error handling file create: {:?}", e);
                         }
