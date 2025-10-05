@@ -2455,8 +2455,6 @@ dependencies = [
  "ruurd_photos_thumbnail_generation",
  "sqlx",
  "tokio",
- "tokio-retry",
- "walkdir",
 ]
 
 [[package]]

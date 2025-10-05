@@ -7,9 +7,7 @@ use photos_core::{
 };
 use sqlx::{FromRow, PgPool};
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Mutex;
 use tokio::time;
 
 pub mod process_file;
@@ -29,42 +27,29 @@ struct Job {
 async fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let analyzer = Arc::new(Mutex::new(MediaAnalyzer::builder().build().await?));
+    println!("[Worker PID: {}] Starting.", std::process::id());
+    let mut analyzer = MediaAnalyzer::builder().build().await?;
+    let media_dir = get_media_dir();
     let pool = get_db_pool().await?;
 
     loop {
-        let analyzer = Arc::clone(&analyzer);
-        let pool = pool.clone();
-        let media_dir = get_media_dir();
+        let result = process_one_job(&media_dir, &mut analyzer, &pool).await;
 
-        println!("Checking for work...");
-
-        let task = tokio::spawn(async move {
-            let mut guard = analyzer.lock().await;
-            do_work(&media_dir, &mut guard, &pool).await
-        });
-
-        match task.await? {
-            Ok(WorkResult::Processed) => {
-                println!("Item processed.");
-            }
+        match result {
+            Ok(WorkResult::Processed) => { /* no-op, just loop again */ }
             Ok(WorkResult::QueueEmpty) => {
-                println!("Queue is empty...");
-                time::sleep(Duration::from_secs(30)).await;
+                println!("Queue empty. Sleeping for 5 min.");
+                time::sleep(Duration::from_secs(5 * 60)).await;
             }
             Err(e) => {
-                // This now only catches critical errors like a lost database connection
-                eprintln!(
-                    "A critical worker error occurred: {}. Retrying in 5 seconds.",
-                    e
-                );
+                eprintln!("A critical error occurred: {}. Retrying in 5s.", e);
                 time::sleep(Duration::from_secs(5)).await;
             }
         }
     }
 }
 
-async fn do_work(
+async fn process_one_job(
     media_dir: &Path,
     analyzer: &mut MediaAnalyzer,
     pool: &PgPool,

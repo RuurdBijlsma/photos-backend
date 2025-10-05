@@ -33,5 +33,7 @@ macro_rules! count_tts {
 /// Helper macro for count_tts.
 #[macro_export]
 macro_rules! replace_expr {
-    ($_t:tt $sub:expr) => {$sub};
+    ($_t:tt $sub:expr) => {
+        $sub
+    };
 }

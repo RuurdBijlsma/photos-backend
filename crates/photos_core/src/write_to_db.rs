@@ -10,11 +10,11 @@ async fn get_or_create_location(
     let existing_id: Option<i32> = sqlx::query_scalar(
         "SELECT id FROM location WHERE name = $1 AND admin1 = $2 AND country_code = $3",
     )
-        .bind(&location_data.name)
-        .bind(&location_data.admin1)
-        .bind(&location_data.country_code)
-        .fetch_optional(&mut **tx)
-        .await?;
+    .bind(&location_data.name)
+    .bind(&location_data.admin1)
+    .bind(&location_data.country_code)
+    .fetch_optional(&mut **tx)
+    .await?;
 
     if let Some(id) = existing_id {
         Ok(id)
@@ -26,17 +26,16 @@ async fn get_or_create_location(
             RETURNING id
             "#,
         )
-            .bind(&location_data.name)
-            .bind(&location_data.admin1)
-            .bind(&location_data.admin2)
-            .bind(&location_data.country_code)
-            .bind(&location_data.country_name)
-            .fetch_one(&mut **tx)
-            .await?;
+        .bind(&location_data.name)
+        .bind(&location_data.admin1)
+        .bind(&location_data.admin2)
+        .bind(&location_data.country_code)
+        .bind(&location_data.country_name)
+        .fetch_one(&mut **tx)
+        .await?;
         Ok(new_id)
     }
 }
-
 
 /// Inserts a full media item using your `AnalyzeResult` struct within a single transaction.
 pub async fn store_media_item(
@@ -44,7 +43,6 @@ pub async fn store_media_item(
     relative_path: &str,
     data: &AnalyzeResult,
 ) -> Result<String, sqlx::Error> {
-
     let existing_id: Option<String> =
         sqlx::query_scalar("SELECT id FROM media_item WHERE relative_path = $1")
             .bind(relative_path)
@@ -67,7 +65,8 @@ pub async fn store_media_item(
         duration_ms: data.metadata.duration.map(|d| (d * 1000.0) as i64),
         taken_at_naive: data.time_info.datetime_naive,
         use_panorama_viewer: data.pano_info.use_panorama_viewer,
-    }).await?;
+    })
+    .await?;
 
     if let Some(gps_info) = &data.gps_info {
         let location_id = get_or_create_location(tx, &gps_info.location).await?;
@@ -78,7 +77,8 @@ pub async fn store_media_item(
             longitude: gps_info.longitude,
             altitude: gps_info.altitude,
             image_direction: gps_info.image_direction,
-        }).await?;
+        })
+        .await?;
     }
 
     insert_query!(tx, "time_details", {
@@ -89,7 +89,8 @@ pub async fn store_media_item(
         source: data.time_info.timezone.as_ref().map(|tz| &tz.source),
         source_details: &data.time_info.source_details.time_source,
         source_confidence: &data.time_info.source_details.confidence,
-    }).await?;
+    })
+    .await?;
 
     if let Some(weather_info) = &data.weather_info {
         let hourly = weather_info.hourly.as_ref();
@@ -112,7 +113,8 @@ pub async fn store_media_item(
             dawn: weather_info.sun_info.dawn,
             dusk: weather_info.sun_info.dusk,
             is_daytime: weather_info.sun_info.is_daytime,
-        }).await?;
+        })
+        .await?;
     }
 
     insert_query!(tx, "details", {
@@ -129,7 +131,8 @@ pub async fn store_media_item(
         mime_type: &data.metadata.mime_type,
         size_bytes: data.metadata.size_bytes as i64,
         exif: &data.exif,
-    }).await?;
+    })
+    .await?;
 
     insert_query!(tx, "capture_details", {
         media_item_id: &media_item_id,
@@ -139,7 +142,8 @@ pub async fn store_media_item(
         focal_length: data.capture_details.focal_length.map(|fl| fl as f32),
         camera_make: &data.capture_details.camera_make,
         camera_model: &data.capture_details.camera_model,
-    }).await?;
+    })
+    .await?;
 
     insert_query!(tx, "panorama", {
         media_item_id: &media_item_id,

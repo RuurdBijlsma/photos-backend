@@ -7,7 +7,8 @@ mod utils;
 mod write_to_db;
 
 pub use config::{
-    get_media_dir, get_thumbnail_options, get_thumbnails_dir, max_worker_processing_retries,
+    get_media_dir, get_thumbnail_options, get_thumbnails_dir, max_concurrent_worker_jobs,
+    max_worker_processing_retries,
 };
 pub use queue::enqueue_file;
 pub use read_model::*;

@@ -1,16 +1,11 @@
-use futures::channel::mpsc::{channel, Receiver};
+use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
-use media_analyzer::MediaAnalyzer;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use ruurd_photos_thumbnail_generation::ThumbOptions;
+use photos_core::{enqueue_file, remove_file};
 use sqlx::{Pool, Postgres};
 use std::path::Path;
-use photos_core::{enqueue_file, remove_file};
 
-async fn handle_create_file(
-    file: &Path,
-    pool: &Pool<Postgres>,
-) -> color_eyre::Result<()> {
+async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     println!("File created {:?}", file);
 
     enqueue_file(file, pool).await?;
@@ -26,15 +21,9 @@ async fn handle_remove_file(path: &Path, pool: &Pool<Postgres>) -> color_eyre::R
     Ok(())
 }
 
-pub fn start_watching(
-    media_dir: &Path,
-    pool: &Pool<Postgres>,
-) -> color_eyre::Result<()> {
+pub fn start_watching(media_dir: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     futures::executor::block_on(async {
-        let analyzer_result = MediaAnalyzer::builder().build().await;
-        if let Ok(mut analyzer) = analyzer_result
-            && let Err(e) = async_watch(media_dir, pool).await
-        {
+        if let Err(e) = async_watch(media_dir, pool).await {
             println!("error: {:?}", e)
         }
     });
@@ -59,10 +48,7 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
     Ok((watcher, rx))
 }
 
-async fn async_watch(
-    media_dir: &Path,
-    pool: &Pool<Postgres>,
-) -> notify::Result<()> {
+async fn async_watch(media_dir: &Path, pool: &Pool<Postgres>) -> notify::Result<()> {
     let (mut watcher, mut rx) = async_watcher()?;
     watcher.watch(media_dir.as_ref(), RecursiveMode::Recursive)?;
 
@@ -71,8 +57,7 @@ async fn async_watch(
             Ok(event) => match event.kind {
                 EventKind::Create(_) => {
                     if let Some(file) = event.paths.first() {
-                        let result =
-                            handle_create_file(file, pool).await;
+                        let result = handle_create_file(file, pool).await;
                         if let Err(e) = result {
                             eprintln!("Error handling file create: {:?}", e);
                         }

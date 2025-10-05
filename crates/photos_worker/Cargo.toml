@@ -9,6 +9,4 @@ media_analyzer = "0.2.3"
 ruurd_photos_thumbnail_generation = "0.1.0"
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "json"] }
 tokio = { version = "1.47.1", features = ["full"] }
-walkdir = "2.5.0"
-tokio-retry = "0.3.0"
 color-eyre = "0.6.5"

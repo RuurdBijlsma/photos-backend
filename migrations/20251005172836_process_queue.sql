@@ -2,7 +2,7 @@ CREATE TABLE process_queue
 (
     id            SERIAL PRIMARY KEY,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    retry_count   INT,
+    retry_count   INT DEFAULT 0,
     relative_path TEXT,
     CONSTRAINT process_queue_relative_path_key UNIQUE (relative_path)
 );

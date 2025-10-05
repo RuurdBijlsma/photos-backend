@@ -1,8 +1,11 @@
 use ruurd_photos_thumbnail_generation::{ThumbOptions, VideoOutputFormat};
 use std::path::{Path, PathBuf};
 
-pub fn max_worker_processing_retries()->i32{
+pub fn max_worker_processing_retries() -> i32 {
     5
+}
+pub fn max_concurrent_worker_jobs() -> usize {
+    3
 }
 
 pub fn get_thumbnails_dir() -> PathBuf {

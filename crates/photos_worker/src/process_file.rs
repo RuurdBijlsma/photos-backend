@@ -1,6 +1,6 @@
 use media_analyzer::MediaAnalyzer;
 use photos_core::{get_relative_path_str, store_media_item};
-use ruurd_photos_thumbnail_generation::{generate_thumbnails, ThumbOptions};
+use ruurd_photos_thumbnail_generation::{ThumbOptions, generate_thumbnails};
 use sqlx::PgTransaction;
 use std::path::Path;
 
@@ -16,9 +16,9 @@ pub async fn process_file(
         .join(file.file_name().unwrap())
         .join("10p.avif");
 
-    generate_thumbnails(&file, config).await?;
+    generate_thumbnails(file, config).await?;
 
-    let media_info = analyzer.analyze_media(&file, &tiny_thumb_path).await?;
+    let media_info = analyzer.analyze_media(file, &tiny_thumb_path).await?;
 
     store_media_item(tx, &relative_path_str, &media_info).await?;
 
