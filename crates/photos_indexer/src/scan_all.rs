@@ -1,4 +1,4 @@
-use photos_core::enqueue_file;
+use photos_core::enqueue_file_ingest;
 use ruurd_photos_thumbnail_generation::ThumbOptions;
 use sqlx::{Pool, Postgres};
 use std::path::{Path, PathBuf};
@@ -42,7 +42,7 @@ pub async fn scan_all_files(
     ));
 
     for file in all_files {
-        enqueue_file(&file, pool).await?;
+        enqueue_file_ingest(&file, pool).await?;
     }
 
     Ok(())

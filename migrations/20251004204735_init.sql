@@ -24,6 +24,7 @@ CREATE TABLE media_item
     duration_ms         BIGINT,
     taken_at_naive      TIMESTAMP, -- Naive timestamp without timezone
     use_panorama_viewer BOOLEAN,
+    deleted             BOOLEAN     NOT NULL DEFAULT false,
     CONSTRAINT media_item_relative_path_key UNIQUE (relative_path)
 );
 

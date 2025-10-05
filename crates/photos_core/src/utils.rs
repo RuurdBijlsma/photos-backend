@@ -1,11 +1,12 @@
 use crate::get_media_dir;
 use sqlx::{PgPool, Pool, Postgres};
 use std::env;
+use std::path::absolute;
 use std::path::Path;
 
 pub fn get_relative_path_str(file: &Path) -> color_eyre::Result<String> {
-    let file = file.canonicalize()?;
-    let relative_path = file.strip_prefix(get_media_dir())?;
+    let file_abs = absolute(file)?;
+    let relative_path = file_abs.strip_prefix(get_media_dir())?;
     let relative_path_str = relative_path.to_string_lossy().to_string();
     Ok(relative_path_str)
 }

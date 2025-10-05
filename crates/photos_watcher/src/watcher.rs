@@ -1,14 +1,14 @@
-use futures::channel::mpsc::{Receiver, channel};
+use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use photos_core::{enqueue_file, remove_file};
+use photos_core::{enqueue_file_ingest, enqueue_file_remove};
 use sqlx::{Pool, Postgres};
 use std::path::Path;
 
 async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     println!("File created {:?}", file);
 
-    enqueue_file(file, pool).await?;
+    enqueue_file_ingest(file, pool).await?;
 
     Ok(())
 }
@@ -16,7 +16,7 @@ async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::R
 async fn handle_remove_file(path: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     println!("File removed {:?}", path);
 
-    remove_file(path, pool).await?;
+    enqueue_file_remove(path, pool).await?;
 
     Ok(())
 }

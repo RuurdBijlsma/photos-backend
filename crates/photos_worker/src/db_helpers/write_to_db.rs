@@ -1,7 +1,7 @@
 use crate::insert_query;
-use crate::utils::nice_id;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::{PgTransaction, Postgres, Transaction};
+use photos_core::nice_id;
 
 async fn get_or_create_location(
     tx: &mut Transaction<'_, Postgres>,

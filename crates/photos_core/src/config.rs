@@ -1,11 +1,19 @@
 use ruurd_photos_thumbnail_generation::{ThumbOptions, VideoOutputFormat};
-use std::path::{Path, PathBuf};
+use std::path::{absolute, Path, PathBuf};
 
-pub fn max_worker_processing_retries() -> i32 {
-    5
+#[derive(Debug)]
+pub struct WorkerConfig {
+    pub max_retries: i32,
+    pub wait_after_empty_queue_s: u64,
+    pub wait_after_error_s: u64,
 }
-pub fn max_concurrent_worker_jobs() -> usize {
-    3
+
+pub fn worker_config() -> WorkerConfig {
+    WorkerConfig {
+        wait_after_empty_queue_s: 10,
+        wait_after_error_s: 5,
+        max_retries: 5,
+    }
 }
 
 pub fn get_thumbnails_dir() -> PathBuf {
@@ -13,7 +21,8 @@ pub fn get_thumbnails_dir() -> PathBuf {
 }
 
 pub fn get_media_dir() -> PathBuf {
-    Path::new("assets").canonicalize().expect("Media dir")
+    let media_dir = Path::new("assets");
+    absolute(media_dir).expect("invalid media dir")
 }
 
 pub fn get_thumbnail_options(thumbs_dir: &Path) -> ThumbOptions {

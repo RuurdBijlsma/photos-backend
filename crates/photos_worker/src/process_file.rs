@@ -1,8 +1,9 @@
 use media_analyzer::MediaAnalyzer;
-use photos_core::{get_relative_path_str, store_media_item};
+use photos_core::{get_relative_path_str};
 use ruurd_photos_thumbnail_generation::{ThumbOptions, generate_thumbnails};
 use sqlx::PgTransaction;
 use std::path::Path;
+use crate::db_helpers::write_to_db::store_media_item;
 
 pub async fn process_file(
     file: &Path,

@@ -1,14 +1,18 @@
-CREATE TABLE process_queue
+CREATE TYPE job_type AS ENUM ('INGEST', 'REMOVE');
+
+CREATE TABLE job_queue
 (
     id            SERIAL PRIMARY KEY,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    retry_count   INT DEFAULT 0,
+    job_type      job_type    NOT NULL,
+    priority      INT         NOT NULL DEFAULT 0,
+    retry_count   INT                  DEFAULT 0,
     relative_path TEXT,
-    CONSTRAINT process_queue_relative_path_key UNIQUE (relative_path)
+    CONSTRAINT job_queue_relative_path_key UNIQUE (relative_path)
 );
--- Add a unique constraint to relative_path in process_queue
-ALTER TABLE process_queue
-    ADD CONSTRAINT uq_process_queue_relative_path UNIQUE (relative_path);
+-- Add a unique constraint to relative_path in job_queue
+ALTER TABLE job_queue
+    ADD CONSTRAINT uq_job_queue_relative_path UNIQUE (relative_path);
 
 CREATE TABLE queue_failures
 (
