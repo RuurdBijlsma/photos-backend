@@ -1,0 +1,2 @@
+[workspace]
+members = ["crates/photos_api", "crates/photos_core", "crates/photos_indexer"]

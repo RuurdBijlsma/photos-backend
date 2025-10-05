@@ -1,0 +1,19 @@
+[package]
+name = "photos_indexer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+photos_core = { path = "../photos_core" }
+media_analyzer = "0.2.3"
+ruurd_photos_thumbnail_generation = "0.1.0"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "json"] }
+futures = "0.3.31"
+tokio = { version = "1.47.1", features = ["full"] }
+walkdir = "2.5.0"
+tokio-retry = "0.3.0"
+serde_json = "1.0.145"
+chrono = { version = "0.4.42", features = ["serde"] }
+rand = "0.10.0-rc.0"
+dotenv = "0.15.0"
+color-eyre = "0.6.5"

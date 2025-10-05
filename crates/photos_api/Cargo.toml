@@ -1,0 +1,7 @@
+[package]
+name = "photos_api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+photos_core = { path = "../photos_core" }
