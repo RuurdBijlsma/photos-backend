@@ -2,7 +2,7 @@ mod watcher;
 
 use crate::watcher::start_watching;
 use color_eyre::Result;
-use photos_core::{get_db_pool, get_media_dir, get_thumbnails_dir};
+use common_photos::{get_db_pool, get_media_dir, get_thumbnails_dir};
 use tokio::fs;
 use tracing::info;
 

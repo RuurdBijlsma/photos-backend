@@ -126,6 +126,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
+name = "api"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "common_photos",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "argminmax"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -524,6 +534,20 @@ dependencies = [
  "crossterm",
  "unicode-segmentation",
  "unicode-width 0.2.1",
+]
+
+[[package]]
+name = "common_photos"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "color-eyre",
+ "dotenv",
+ "rand 0.10.0-rc.0",
+ "ruurd_photos_thumbnail_generation",
+ "sqlx",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -1681,6 +1705,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "964de6e86d545b246d84badc0fef527924ace5134f30641c203ef52ba83f58d5"
 
 [[package]]
+name = "indexer"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "common_photos",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "walkdir",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2395,72 +2432,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06005508882fb681fd97892ecff4b7fd0fee13ef1aa569f8695dae7ab9099981"
 dependencies = [
  "siphasher",
-]
-
-[[package]]
-name = "photos_api"
-version = "0.1.0"
-dependencies = [
- "color-eyre",
- "photos_core",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "photos_core"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "color-eyre",
- "dotenv",
- "rand 0.10.0-rc.0",
- "ruurd_photos_thumbnail_generation",
- "sqlx",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "photos_indexer"
-version = "0.1.0"
-dependencies = [
- "color-eyre",
- "photos_core",
- "ruurd_photos_thumbnail_generation",
- "sqlx",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "walkdir",
-]
-
-[[package]]
-name = "photos_watcher"
-version = "0.1.0"
-dependencies = [
- "color-eyre",
- "futures",
- "notify",
- "photos_core",
- "sqlx",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "photos_worker"
-version = "0.1.0"
-dependencies = [
- "color-eyre",
- "media_analyzer",
- "photos_core",
- "ruurd_photos_thumbnail_generation",
- "sqlx",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -4731,6 +4702,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "watcher"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "common_photos",
+ "futures",
+ "notify",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "web-sys"
 version = "0.3.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5229,6 +5214,20 @@ name = "wit-bindgen"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
+
+[[package]]
+name = "worker"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "common_photos",
+ "media_analyzer",
+ "ruurd_photos_thumbnail_generation",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "writeable"

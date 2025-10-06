@@ -1,5 +1,5 @@
 use crate::queue_logic::Job;
-use photos_core::get_thumbnails_dir;
+use common_photos::get_thumbnails_dir;
 use sqlx::PgTransaction;
 use std::path::Path;
 

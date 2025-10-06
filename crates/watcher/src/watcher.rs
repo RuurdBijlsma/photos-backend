@@ -1,7 +1,7 @@
 use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use photos_core::{enqueue_file_ingest, enqueue_file_remove};
+use common_photos::{enqueue_file_ingest, enqueue_file_remove};
 use sqlx::{Pool, Postgres};
 use std::path::Path;
 use tracing::{error, info, warn};

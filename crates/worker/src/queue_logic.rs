@@ -3,7 +3,7 @@ use crate::ingest_file::ingest_file;
 use crate::remove_file::remove_file;
 use color_eyre::Result;
 use media_analyzer::MediaAnalyzer;
-use photos_core::worker_config;
+use common_photos::worker_config;
 use sqlx::{FromRow, PgPool, Type};
 use std::path::Path;
 use tracing::{info, warn};

@@ -1,7 +1,7 @@
 pub mod scan_all;
 
 use color_eyre::Result;
-use photos_core::{get_db_pool, get_media_dir, get_thumbnails_dir};
+use common_photos::{get_db_pool, get_media_dir, get_thumbnails_dir};
 use scan_all::sync_files_to_db;
 use std::time::Duration;
 use tokio::{fs, time};

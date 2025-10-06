@@ -1,7 +1,7 @@
 use crate::queue_logic::process_one_job;
 use color_eyre::Result;
 use media_analyzer::MediaAnalyzer;
-use photos_core::{get_db_pool, get_media_dir, worker_config};
+use common_photos::{get_db_pool, get_media_dir, worker_config};
 use std::time::Duration;
 use tokio::time;
 use tracing::{info, warn};
