@@ -1,6 +1,6 @@
+use crate::WorkResult;
 use crate::ingest_file::ingest_file;
 use crate::remove_file::remove_file;
-use crate::WorkResult;
 use color_eyre::Result;
 use media_analyzer::MediaAnalyzer;
 use photos_core::worker_config;

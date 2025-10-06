@@ -1,4 +1,4 @@
-use futures::channel::mpsc::{channel, Receiver};
+use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use photos_core::{enqueue_file_ingest, enqueue_file_remove};

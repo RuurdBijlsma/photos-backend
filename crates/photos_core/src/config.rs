@@ -1,5 +1,5 @@
 use ruurd_photos_thumbnail_generation::{ThumbOptions, VideoOutputFormat};
-use std::path::{absolute, Path, PathBuf};
+use std::path::{Path, PathBuf, absolute};
 
 #[derive(Debug)]
 pub struct WorkerConfig {

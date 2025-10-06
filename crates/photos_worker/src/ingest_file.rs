@@ -1,6 +1,8 @@
 use crate::db_helpers::write_to_db::store_media_item;
 use media_analyzer::MediaAnalyzer;
-use photos_core::{get_relative_path_str, get_thumbnail_options, get_thumbnails_dir, media_item_id_length, nice_id};
+use photos_core::{
+    get_relative_path_str, get_thumbnail_options, get_thumbnails_dir, media_item_id_length, nice_id,
+};
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgTransaction;
 use std::path::Path;

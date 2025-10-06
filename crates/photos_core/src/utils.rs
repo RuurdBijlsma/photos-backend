@@ -1,8 +1,8 @@
 use crate::get_media_dir;
 use sqlx::{PgPool, Pool, Postgres};
 use std::env;
-use std::path::absolute;
 use std::path::Path;
+use std::path::absolute;
 
 pub fn get_relative_path_str(file: impl AsRef<Path>) -> color_eyre::Result<String> {
     let file_abs = absolute(file)?;
