@@ -4,7 +4,7 @@ use std::env;
 use std::path::absolute;
 use std::path::Path;
 
-pub fn get_relative_path_str(file: &Path) -> color_eyre::Result<String> {
+pub fn get_relative_path_str(file: impl AsRef<Path>) -> color_eyre::Result<String> {
     let file_abs = absolute(file)?;
     let relative_path = file_abs.strip_prefix(get_media_dir())?;
     let relative_path_str = relative_path.to_string_lossy().to_string();

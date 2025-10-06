@@ -1,12 +1,13 @@
 use crate::utils::get_relative_path_str;
 use sqlx::PgPool;
 use std::path::Path;
+use tracing::info;
 
 pub async fn enqueue_file_ingest(file: &Path, pool: &PgPool) -> color_eyre::Result<()> {
     let relative_path_str = get_relative_path_str(file)?;
     let mut tx = pool.begin().await?;
 
-    println!("Enqueueing file creation: {:?}", file);
+    info!("Enqueueing file creation: {:?}", file.display());
     sqlx::query!(
         "
         INSERT INTO job_queue (relative_path, job_type, priority)
@@ -32,7 +33,7 @@ pub async fn enqueue_file_remove(file: &Path, pool: &PgPool) -> color_eyre::Resu
     let relative_path = get_relative_path_str(file)?;
     let mut tx = pool.begin().await?;
 
-    println!("Enqueueing file deletion: {:?}", file);
+    info!("Enqueueing file removal: {:?}", file);
     sqlx::query!(
         "
         INSERT INTO job_queue (relative_path, job_type, priority)

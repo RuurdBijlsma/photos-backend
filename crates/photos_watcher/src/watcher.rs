@@ -4,9 +4,10 @@ use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watche
 use photos_core::{enqueue_file_ingest, enqueue_file_remove};
 use sqlx::{Pool, Postgres};
 use std::path::Path;
+use tracing::{error, info, warn};
 
 async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    println!("File created {:?}", file);
+    info!("File created {:?}", file);
 
     enqueue_file_ingest(file, pool).await?;
 
@@ -14,7 +15,7 @@ async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::R
 }
 
 async fn handle_remove_file(path: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    println!("File removed {:?}", path);
+    info!("File removed {:?}", path);
 
     enqueue_file_remove(path, pool).await?;
 
@@ -24,7 +25,7 @@ async fn handle_remove_file(path: &Path, pool: &Pool<Postgres>) -> color_eyre::R
 pub fn start_watching(media_dir: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     futures::executor::block_on(async {
         if let Err(e) = async_watch(media_dir, pool).await {
-            println!("error: {:?}", e)
+            error!("async_watch error: {:?}", e)
         }
     });
 
@@ -59,7 +60,7 @@ async fn async_watch(media_dir: &Path, pool: &Pool<Postgres>) -> notify::Result<
                     if let Some(file) = event.paths.first() {
                         let result = handle_create_file(file, pool).await;
                         if let Err(e) = result {
-                            eprintln!("Error handling file create: {:?}", e);
+                            warn!("Error handling file create: {:?}", e);
                         }
                     }
                 }
@@ -67,13 +68,13 @@ async fn async_watch(media_dir: &Path, pool: &Pool<Postgres>) -> notify::Result<
                     if let Some(file) = event.paths.first() {
                         let result = handle_remove_file(file, pool).await;
                         if let Err(e) = result {
-                            eprintln!("Error handling file remove: {:?}", e);
+                            warn!("Error handling file remove: {:?}", e);
                         }
                     }
                 }
                 _ => {}
             },
-            Err(err) => eprintln!("Watch error: {:?}", err),
+            Err(err) => error!("Watch error: {:?}", err),
         }
     }
 

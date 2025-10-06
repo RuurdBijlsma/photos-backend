@@ -11,13 +11,17 @@ pub struct WorkerConfig {
 pub fn worker_config() -> WorkerConfig {
     WorkerConfig {
         wait_after_empty_queue_s: 10,
-        wait_after_error_s: 10,
+        wait_after_error_s: 5,
         max_retries: 5,
     }
 }
 
+pub fn media_item_id_length() -> usize {
+    10
+}
+
 pub fn get_thumbnails_dir() -> PathBuf {
-    Path::new("thumbnails").to_path_buf()
+    absolute(Path::new("thumbnails")).expect("Invalid thumbnails dir")
 }
 
 pub fn get_media_dir() -> PathBuf {
@@ -25,9 +29,8 @@ pub fn get_media_dir() -> PathBuf {
     absolute(media_dir).expect("invalid media dir")
 }
 
-pub fn get_thumbnail_options(thumbs_dir: &Path) -> ThumbOptions {
+pub fn get_thumbnail_options() -> ThumbOptions {
     ThumbOptions {
-        thumbnails_dir: thumbs_dir.to_path_buf(),
         thumb_ext: "avif".to_string(),
         transcode_ext: "webm".to_string(),
         skip_if_exists: true,

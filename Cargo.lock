@@ -1037,9 +1037,9 @@ checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
 
 [[package]]
 name = "flate2"
-version = "1.1.3"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04bcaeafafdd3cd1cb5d986ff32096ad1136630207c49b9091e3ae541090d938"
+checksum = "dc5a4e564e38c699f2880d3fda590bedc2e69f3f84cd48b457bd892ce61d0aa9"
 dependencies = [
  "crc32fast",
  "libz-rs-sys",
@@ -2401,7 +2401,10 @@ dependencies = [
 name = "photos_api"
 version = "0.1.0"
 dependencies = [
+ "color-eyre",
  "photos_core",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2411,10 +2414,11 @@ dependencies = [
  "chrono",
  "color-eyre",
  "dotenv",
- "media_analyzer",
  "rand 0.10.0-rc.0",
  "ruurd_photos_thumbnail_generation",
  "sqlx",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2422,12 +2426,12 @@ name = "photos_indexer"
 version = "0.1.0"
 dependencies = [
  "color-eyre",
- "media_analyzer",
  "photos_core",
  "ruurd_photos_thumbnail_generation",
  "sqlx",
  "tokio",
- "tokio-retry",
+ "tracing",
+ "tracing-subscriber",
  "walkdir",
 ]
 
@@ -2437,12 +2441,12 @@ version = "0.1.0"
 dependencies = [
  "color-eyre",
  "futures",
- "media_analyzer",
  "notify",
  "photos_core",
- "ruurd_photos_thumbnail_generation",
  "sqlx",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -2455,6 +2459,8 @@ dependencies = [
  "ruurd_photos_thumbnail_generation",
  "sqlx",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3487,9 +3493,9 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
 name = "ruurd_photos_thumbnail_generation"
-version = "0.1.3"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33e1011960d24deecb3d3e18c2694b52ea0a85eb459abf445dcbe37acdbb43e9"
+checksum = "048fe90b5b273d243048ddf7e6d22747b6ed33999fe5258c6c838fb342ea27e1"
 dependencies = [
  "color-eyre",
  "futures",

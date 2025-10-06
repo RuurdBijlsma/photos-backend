@@ -1,11 +1,11 @@
 use crate::process_file::process_file;
 use crate::WorkResult;
-use color_eyre::eyre::bail;
 use color_eyre::Result;
 use media_analyzer::MediaAnalyzer;
-use photos_core::{get_thumbnail_options, get_thumbnails_dir, worker_config};
+use photos_core::{get_thumbnails_dir, worker_config};
 use sqlx::{FromRow, PgPool, PgTransaction, Type};
 use std::path::Path;
+use tracing::{info, warn};
 
 #[derive(Debug, Type, PartialEq)]
 #[sqlx(type_name = "job_type", rename_all = "UPPERCASE")]
@@ -55,7 +55,7 @@ pub async fn process_one_job(
     match job_result {
         Ok(_) => {
             // SUCCESS: Delete the job from the queue
-            println!("✅ {:?}", &job);
+            info!("✅ {:?}", &job);
             sqlx::query("DELETE FROM job_queue WHERE relative_path = $1")
                 .bind(job.relative_path)
                 .execute(&mut *tx)
@@ -66,7 +66,7 @@ pub async fn process_one_job(
             let current_retries = job.retry_count.unwrap_or(0);
 
             if current_retries >= config.max_retries - 1 {
-                println!("‼️ Moving to failures queue ‼️ {:?}", &job);
+                warn!("‼️ Moving to failures queue ‼️ {:?}", &job);
                 // TODO alert here
 
                 sqlx::query("INSERT INTO queue_failures (relative_path) VALUES ($1) ON CONFLICT (relative_path) DO NOTHING")
@@ -78,12 +78,15 @@ pub async fn process_one_job(
                     .execute(&mut *tx)
                     .await?;
             } else {
-                println!("⚠️ Job {:?} {}", &job, e);
-                sqlx::query("UPDATE job_queue SET retry_count = $1 WHERE relative_path = $2")
-                    .bind(current_retries + 1)
-                    .bind(relative_path)
-                    .execute(&mut *tx)
-                    .await?;
+                warn!("⚠️ {:?} {}", &job, e);
+                sqlx::query!(
+                    "UPDATE job_queue SET retry_count = $1 WHERE relative_path = $2",
+                    current_retries + 1,
+                    relative_path
+                )
+                .execute(&mut *tx)
+                .await?;
+                tx.commit().await?;
                 return Err(e);
             }
         }
@@ -98,25 +101,28 @@ async fn handle_ingest(
     analyzer: &mut MediaAnalyzer,
     tx: &mut PgTransaction<'_>,
 ) -> Result<()> {
-    let thumb_dir = get_thumbnails_dir();
-    let thumb_config = get_thumbnail_options(&thumb_dir);
-    process_file(file, &thumb_config, analyzer, tx).await
+    process_file(file, analyzer, tx).await
 }
 
 async fn handle_remove(job: &Job, file: &Path, tx: &mut PgTransaction<'_>) -> Result<()> {
     // 1. Delete from main media items table (cascades should handle the rest)
-    sqlx::query("DELETE FROM media_item WHERE relative_path = $1")
-        .bind(&job.relative_path)
-        .execute(&mut **tx)
-        .await?;
+    let deleted_id: String = sqlx::query_scalar!(
+        "DELETE FROM media_item WHERE relative_path = $1 RETURNING id",
+        &job.relative_path
+    )
+    .fetch_one(&mut **tx)
+    .await?;
 
     // 2. Delete thumbnails from the filesystem
     let thumb_dir = get_thumbnails_dir();
-    let Some(filename) = file.file_name().map(|f| f.to_string_lossy().to_string()) else {
-        bail!("Could not get filename for {:?}", file);
-    };
-    let thumb_file_dir = thumb_dir.join(filename);
-    tokio::fs::remove_dir_all(thumb_file_dir).await?;
+    let thumb_file_dir = thumb_dir.join(deleted_id);
+    if thumb_file_dir.exists() {
+        tokio::fs::remove_dir_all(thumb_file_dir).await?;
+    }
+
+    if file.exists() {
+        tokio::fs::remove_file(file).await?;
+    }
 
     Ok(())
 }

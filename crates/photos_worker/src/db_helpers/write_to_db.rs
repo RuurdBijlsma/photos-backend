@@ -1,7 +1,6 @@
 use crate::insert_query;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::{PgTransaction, Postgres, Transaction};
-use photos_core::nice_id;
 
 async fn get_or_create_location(
     tx: &mut Transaction<'_, Postgres>,
@@ -42,6 +41,7 @@ pub async fn store_media_item(
     tx: &mut PgTransaction<'_>,
     relative_path: &str,
     data: &AnalyzeResult,
+    item_id: &str,
 ) -> Result<String, sqlx::Error> {
     let existing_id: Option<String> =
         sqlx::query_scalar("SELECT id FROM media_item WHERE relative_path = $1")
@@ -53,10 +53,8 @@ pub async fn store_media_item(
         return Ok(id);
     }
 
-    let media_item_id = nice_id(10);
-
     insert_query!(tx, "media_item", {
-        id: &media_item_id,
+        id: &item_id,
         relative_path: relative_path,
         width: data.metadata.width as i32,
         height: data.metadata.height as i32,
@@ -71,7 +69,7 @@ pub async fn store_media_item(
     if let Some(gps_info) = &data.gps_info {
         let location_id = get_or_create_location(tx, &gps_info.location).await?;
         insert_query!(tx, "gps", {
-            media_item_id: &media_item_id,
+            media_item_id: &item_id,
             location_id: location_id,
             latitude: gps_info.latitude,
             longitude: gps_info.longitude,
@@ -82,7 +80,7 @@ pub async fn store_media_item(
     }
 
     insert_query!(tx, "time_details", {
-        media_item_id: &media_item_id,
+        media_item_id: &item_id,
         datetime_utc: data.time_info.datetime_utc,
         timezone_name: data.time_info.timezone.as_ref().map(|tz| &tz.name),
         timezone_offset_seconds: data.time_info.timezone.as_ref().map(|tz| tz.offset_seconds),
@@ -96,7 +94,7 @@ pub async fn store_media_item(
         let hourly = weather_info.hourly.as_ref();
         let condition = hourly.and_then(|h| h.condition).map(|c| c.to_string());
         insert_query!(tx, "weather", {
-            media_item_id: &media_item_id,
+            media_item_id: &item_id,
             temperature: hourly.and_then(|h| h.temperature).map(|t| t as f32),
             dew_point: hourly.and_then(|h| h.dew_point).map(|dp| dp as f32),
             relative_humidity: hourly.and_then(|h| h.relative_humidity).map(|rh| rh as f32),
@@ -118,7 +116,7 @@ pub async fn store_media_item(
     }
 
     insert_query!(tx, "details", {
-        media_item_id: &media_item_id,
+        media_item_id: &item_id,
         is_motion_photo: data.tags.is_motion_photo,
         motion_photo_presentation_timestamp: data.tags.motion_photo_presentation_timestamp,
         is_hdr: data.tags.is_hdr,
@@ -135,7 +133,7 @@ pub async fn store_media_item(
     .await?;
 
     insert_query!(tx, "capture_details", {
-        media_item_id: &media_item_id,
+        media_item_id: &item_id,
         iso: data.capture_details.iso.map(|i| i as i32),
         exposure_time: data.capture_details.exposure_time.map(|a| a as f32),
         aperture: data.capture_details.aperture.map(|a| a as f32),
@@ -146,7 +144,7 @@ pub async fn store_media_item(
     .await?;
 
     insert_query!(tx, "panorama", {
-        media_item_id: &media_item_id,
+        media_item_id: &item_id,
         is_photosphere: data.pano_info.is_photosphere,
         projection_type: &data.pano_info.projection_type,
         horizontal_fov_deg: data.pano_info.view_info.as_ref().map(|vi| vi.horizontal_fov_deg as f32),
@@ -155,5 +153,5 @@ pub async fn store_media_item(
         center_pitch_deg: data.pano_info.view_info.as_ref().map(|vi| vi.center_pitch_deg as f32),
     }).await?;
 
-    Ok(media_item_id)
+    Ok(item_id.to_string())
 }
