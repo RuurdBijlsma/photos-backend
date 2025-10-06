@@ -1,9 +1,10 @@
-use crate::process_file::process_file;
+use crate::ingest_file::ingest_file;
+use crate::remove_file::remove_file;
 use crate::WorkResult;
 use color_eyre::Result;
 use media_analyzer::MediaAnalyzer;
-use photos_core::{get_thumbnails_dir, worker_config};
-use sqlx::{FromRow, PgPool, PgTransaction, Type};
+use photos_core::worker_config;
+use sqlx::{FromRow, PgPool, Type};
 use std::path::Path;
 use tracing::{info, warn};
 
@@ -48,8 +49,8 @@ pub async fn process_one_job(
     let file = media_dir.join(relative_path);
 
     let job_result = match job.job_type {
-        JobType::Ingest => handle_ingest(&file, analyzer, &mut tx).await,
-        JobType::Remove => handle_remove(&job, &file, &mut tx).await,
+        JobType::Ingest => ingest_file(&file, analyzer, &mut tx).await,
+        JobType::Remove => remove_file(&job, &file, &mut tx).await,
     };
 
     match job_result {
@@ -69,10 +70,15 @@ pub async fn process_one_job(
                 warn!("‼️ Moving to failures queue ‼️ {:?}", &job);
                 // TODO alert here
 
-                sqlx::query("INSERT INTO queue_failures (relative_path) VALUES ($1) ON CONFLICT (relative_path) DO NOTHING")
-                    .bind(relative_path)
-                    .execute(&mut *tx)
-                    .await?;
+                sqlx::query(
+                    "INSERT INTO queue_failures (relative_path, job_type)
+                                    VALUES ($1, $2)
+                                    ON CONFLICT (relative_path, job_type) DO NOTHING",
+                )
+                .bind(relative_path)
+                .bind(job.job_type)
+                .execute(&mut *tx)
+                .await?;
                 sqlx::query("DELETE FROM job_queue WHERE relative_path = $1")
                     .bind(relative_path)
                     .execute(&mut *tx)
@@ -94,35 +100,4 @@ pub async fn process_one_job(
 
     tx.commit().await?;
     Ok(WorkResult::Processed)
-}
-
-async fn handle_ingest(
-    file: &Path,
-    analyzer: &mut MediaAnalyzer,
-    tx: &mut PgTransaction<'_>,
-) -> Result<()> {
-    process_file(file, analyzer, tx).await
-}
-
-async fn handle_remove(job: &Job, file: &Path, tx: &mut PgTransaction<'_>) -> Result<()> {
-    // 1. Delete from main media items table (cascades should handle the rest)
-    let deleted_id: String = sqlx::query_scalar!(
-        "DELETE FROM media_item WHERE relative_path = $1 RETURNING id",
-        &job.relative_path
-    )
-    .fetch_one(&mut **tx)
-    .await?;
-
-    // 2. Delete thumbnails from the filesystem
-    let thumb_dir = get_thumbnails_dir();
-    let thumb_file_dir = thumb_dir.join(deleted_id);
-    if thumb_file_dir.exists() {
-        tokio::fs::remove_dir_all(thumb_file_dir).await?;
-    }
-
-    if file.exists() {
-        tokio::fs::remove_file(file).await?;
-    }
-
-    Ok(())
 }

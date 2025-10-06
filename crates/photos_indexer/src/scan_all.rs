@@ -1,6 +1,6 @@
 use photos_core::{
-    enqueue_file_ingest, enqueue_file_remove, get_relative_path_str, get_thumbnail_options,
-    get_thumbnails_dir,
+    enqueue_file_ingest, enqueue_file_remove, get_media_dir, get_relative_path_str,
+    get_thumbnail_options, get_thumbnails_dir,
 };
 use sqlx::{Pool, Postgres};
 use std::collections::HashSet;
@@ -16,12 +16,12 @@ fn has_allowed_ext(path: &Path, allowed: &HashSet<&str>) -> bool {
         .unwrap_or(false)
 }
 
-async fn get_media_files(folder: &Path, allowed_exts: HashSet<&str>) -> color_eyre::Result<Vec<PathBuf>> {
+async fn get_media_files(
+    folder: &Path,
+    allowed_exts: HashSet<&str>,
+) -> color_eyre::Result<Vec<PathBuf>> {
     let mut files = Vec::new();
-    for entry in WalkDir::new(folder)
-        .into_iter()
-        .filter_map(Result::ok)
-    {
+    for entry in WalkDir::new(folder).into_iter().filter_map(Result::ok) {
         if entry.file_type().is_file() && has_allowed_ext(entry.path(), &allowed_exts) {
             files.push(entry.into_path());
         }
@@ -34,14 +34,15 @@ async fn get_thumbnail_folders() -> color_eyre::Result<HashSet<String>> {
     let mut entries = fs::read_dir(get_thumbnails_dir()).await?;
     while let Some(entry) = entries.next_entry().await? {
         if entry.file_type().await?.is_dir()
-            && let Some(name) = entry.file_name().to_str() {
-                set.insert(name.to_owned());
-            }
+            && let Some(name) = entry.file_name().to_str()
+        {
+            set.insert(name.to_owned());
+        }
     }
     Ok(set)
 }
 
-async fn remove_unused_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
+async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     let job_count: i64 = sqlx::query_scalar("SELECT count(id) FROM job_queue")
         .fetch_one(pool)
         .await?;
@@ -59,7 +60,23 @@ async fn remove_unused_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<(
     let to_delete: Vec<_> = thumb_ids.difference(&db_ids).cloned().collect();
     let base = get_thumbnails_dir();
     for id in to_delete {
+        info!("Deleting thumbnail folder {}", id);
         fs::remove_dir_all(base.join(id)).await?;
+    }
+
+    let db_items_missing_thumbnails = db_ids.difference(&thumb_ids).cloned().collect::<Vec<_>>();
+    let media_dir = get_media_dir();
+    for id in db_items_missing_thumbnails {
+        let relative_path: String =
+            sqlx::query_scalar!("SELECT relative_path FROM media_item WHERE id = $1", id)
+                .fetch_one(pool)
+                .await?;
+        let file = media_dir.join(&relative_path);
+        if file.exists() {
+            info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
+            // Re-ingest files with missing thumbnails, as long as the fs file exists.
+            enqueue_file_ingest(&file, pool).await?;
+        }
     }
 
     Ok(())
@@ -96,7 +113,6 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
         enqueue_file_remove(&media_dir.join(&path), pool).await?;
     }
 
-    remove_unused_thumbnails(pool).await?;
-    info!("Sync complete");
+    sync_thumbnails(pool).await?;
     Ok(())
 }

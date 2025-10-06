@@ -18,9 +18,10 @@ CREATE TABLE queue_failures
 (
     id            SERIAL PRIMARY KEY,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    job_type      job_type    NOT NULL,
     relative_path TEXT,
-    CONSTRAINT queue_failures_relative_path_key UNIQUE (relative_path)
+    CONSTRAINT queue_failures_relative_path_job_type_key UNIQUE (relative_path, job_type)
 );
 -- Add a unique constraint to relative_path in queue_failures
 ALTER TABLE queue_failures
-    ADD CONSTRAINT uq_queue_failures_relative_path UNIQUE (relative_path);
+    ADD CONSTRAINT uq_queue_failures_relative_path_job_type UNIQUE (relative_path, job_type);

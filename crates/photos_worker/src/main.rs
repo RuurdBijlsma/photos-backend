@@ -7,8 +7,9 @@ use tokio::time;
 use tracing::{info, warn};
 
 mod db_helpers;
-pub mod process_file;
+pub mod ingest_file;
 mod queue_logic;
+mod remove_file;
 
 pub enum WorkResult {
     Processed,
@@ -44,7 +45,7 @@ async fn main() -> Result<()> {
             Err(e) => {
                 last_check_was_work = true;
                 warn!(
-                    "A critical error occurred: {}. Retrying in {}.",
+                    "Job failed: {}. Retrying in {}.",
                     e, config.wait_after_error_s
                 );
                 time::sleep(Duration::from_secs(config.wait_after_error_s)).await;

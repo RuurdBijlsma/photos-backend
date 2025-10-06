@@ -43,15 +43,13 @@ pub async fn store_media_item(
     data: &AnalyzeResult,
     item_id: &str,
 ) -> Result<String, sqlx::Error> {
-    let existing_id: Option<String> =
-        sqlx::query_scalar("SELECT id FROM media_item WHERE relative_path = $1")
-            .bind(relative_path)
-            .fetch_optional(&mut **tx)
-            .await?;
-
-    if let Some(id) = existing_id {
-        return Ok(id);
-    }
+    // Overwrite if it already exists.
+    sqlx::query_scalar!(
+        "DELETE FROM media_item WHERE relative_path = $1",
+        relative_path
+    )
+    .execute(&mut **tx)
+    .await?;
 
     insert_query!(tx, "media_item", {
         id: &item_id,

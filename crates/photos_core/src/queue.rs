@@ -7,6 +7,33 @@ pub async fn enqueue_file_ingest(file: &Path, pool: &PgPool) -> color_eyre::Resu
     let relative_path_str = get_relative_path_str(file)?;
     let mut tx = pool.begin().await?;
 
+    let existing_job: Option<i32> = sqlx::query_scalar!(
+        "SELECT id FROM job_queue WHERE relative_path = $1 AND job_type = 'INGEST'",
+        relative_path_str
+    )
+    .fetch_optional(&mut *tx)
+    .await?;
+    if existing_job.is_some() {
+        info!(
+            "Tried to enqueue job that already existed for file {:?}",
+            file
+        );
+        return Ok(());
+    }
+    let is_failure: Option<i32> = sqlx::query_scalar!(
+        "SELECT id FROM queue_failures WHERE relative_path = $1 AND job_type = 'INGEST'",
+        relative_path_str,
+    )
+    .fetch_optional(&mut *tx)
+    .await?;
+    if is_failure.is_some() {
+        info!(
+            "Tried to enqueue job for file that failed before, file: {:?}",
+            file
+        );
+        return Ok(());
+    }
+
     info!("Enqueueing file creation: {:?}", file.display());
     sqlx::query!(
         "

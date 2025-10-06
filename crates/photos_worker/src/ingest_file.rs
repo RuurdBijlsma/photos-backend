@@ -5,7 +5,7 @@ use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgTransaction;
 use std::path::Path;
 
-pub async fn process_file(
+pub async fn ingest_file(
     file: &Path,
     analyzer: &mut MediaAnalyzer,
     tx: &mut PgTransaction<'_>,
