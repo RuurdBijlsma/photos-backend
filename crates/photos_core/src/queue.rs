@@ -21,7 +21,11 @@ pub async fn enqueue_file_ingest(file: &Path, pool: &PgPool) -> color_eyre::Resu
         return Ok(());
     }
     let is_failure: Option<i32> = sqlx::query_scalar!(
-        "SELECT id FROM queue_failures WHERE relative_path = $1 AND job_type = 'INGEST'",
+        r#"
+            SELECT id
+            FROM queue_failures
+            WHERE relative_path = $1 AND job_type = 'INGEST'
+        "#,
         relative_path_str,
     )
     .fetch_optional(&mut *tx)
