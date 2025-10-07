@@ -1,7 +1,4 @@
-use common_photos::{
-    enqueue_file_ingest, enqueue_file_remove, get_media_dir, get_relative_path_str,
-    get_thumbnail_options, get_thumbnails_dir,
-};
+use common_photos::{enqueue_file_ingest, enqueue_file_remove, get_media_dir, get_relative_path_str, get_thumbnail_options, get_thumbnails_dir};
 use sqlx::{Pool, Postgres};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
