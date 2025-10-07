@@ -4,7 +4,7 @@ use crate::config::structs::{CommonConfig, IndexerConfig};
 use ruurd_photos_thumbnail_generation::ThumbOptions;
 use serde_yaml;
 use std::fs;
-use std::path::{absolute, Path, PathBuf};
+use std::path::{Path, PathBuf, absolute};
 
 static INDEXER_CONFIG: OnceLock<IndexerConfig> = OnceLock::new();
 static COMMON_CONFIG: OnceLock<CommonConfig> = OnceLock::new();
@@ -42,7 +42,7 @@ pub fn get_thumbnail_options() -> &'static ThumbOptions {
     THUMBNAIL_OPTIONS.get_or_init(|| {
         let thumb_gen_config = &get_indexer_config().thumbnail_generation;
         ThumbOptions {
-            video_options:thumb_gen_config.video_options.clone(),
+            video_options: thumb_gen_config.video_options.clone(),
             avif_options: thumb_gen_config.avif_options.clone(),
             heights: thumb_gen_config.heights.clone(),
             thumbnail_extension: thumb_gen_config.thumbnail_extension.clone(),

@@ -3,7 +3,9 @@ mod queue;
 mod read_model;
 mod utils;
 
-pub use config::get_config::{get_media_dir, get_thumbnails_dir, get_indexer_config, get_common_config, get_thumbnail_options};
+pub use config::get_config::{
+    get_common_config, get_indexer_config, get_media_dir, get_thumbnail_options, get_thumbnails_dir,
+};
 pub use config::structs::*;
 pub use queue::{enqueue_file_ingest, enqueue_file_remove};
 pub use read_model::*;
