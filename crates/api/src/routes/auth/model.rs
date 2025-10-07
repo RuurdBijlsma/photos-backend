@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::fmt;
 
-/// A custom enum that maps to the `user_role` PostgreSQL enum.
+/// Maps to the `user_role` Postgres enum.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "user_role", rename_all = "UPPERCASE")]
 #[serde(rename_all = "UPPERCASE")]
@@ -12,7 +12,6 @@ pub enum UserRole {
     User,
 }
 
-// Implement the Display trait for UserRole
 impl fmt::Display for UserRole {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -22,8 +21,6 @@ impl fmt::Display for UserRole {
     }
 }
 
-/// Represents a user record to be safely sent to clients.
-/// Note the absence of the `password` field.
 #[derive(Debug, Serialize, FromRow, Clone)]
 pub struct User {
     pub id: i32,
@@ -46,23 +43,17 @@ pub struct UserRecord {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 pub struct CreateUser {
     pub email: String,
     pub name: String,
     pub password: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 pub struct LoginUser {
     pub email: String,
     pub password: String,
-}
-
-#[derive(serde::Serialize)]
-pub struct Tokens {
-    pub access_token: String,
-    pub refresh_token: String,
 }
 
 #[derive(Deserialize)]
@@ -70,9 +61,22 @@ pub struct RefreshTokenPayload {
     pub refresh_token: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(Serialize)]
+pub struct Tokens {
+    pub access_token: String,
+    pub refresh_token: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Claims {
-    pub sub: i32, // Subject (user id)
+    pub sub: i32,   // user id
     pub role: String,
-    pub exp: usize, // Expiration time
+    pub exp: usize, // expiration (unix)
+}
+
+#[derive(Serialize)]
+pub struct ProtectedResponse {
+    pub message: String,
+    pub user_email: String,
+    pub user_id: i32,
 }

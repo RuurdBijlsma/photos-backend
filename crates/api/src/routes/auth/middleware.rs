@@ -1,52 +1,61 @@
-use crate::routes::auth::structs::{Claims, User, UserRole};
+use crate::auth::UserRole;
 use axum::{
-    extract::State,
-    http::{Request, StatusCode},
-    middleware::Next,
-    response::Response,
+    extract::{FromRequestParts, State},
+    http::{request::Parts, StatusCode},
 };
-use axum_extra::headers::{authorization::Bearer, Authorization};
-use axum_extra::TypedHeader;
+use crate::auth::model::{Claims, User};
 use common_photos::get_config;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use sqlx::PgPool;
 
-pub async fn auth(
-    State(pool): State<PgPool>,
-    TypedHeader(auth_header): TypedHeader<Authorization<Bearer>>,
-    mut request: Request<axum::body::Body>, // The body type is now explicit
-    next: Next,                             // `Next` no longer takes a generic parameter
-) -> Result<Response, StatusCode> {
-    let secret = &get_config().auth.jwt_secret;
+impl<S> FromRequestParts<S> for User
+where
+    S: Send + Sync,
+    State<PgPool>: FromRequestParts<S>,
+{
+    type Rejection = StatusCode;
 
-    let token_data = decode::<Claims>(
-        auth_header.token(),
-        &DecodingKey::from_secret(secret.as_ref()),
-        &Validation::default(),
-    )
-    .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let auth_header = parts
+            .headers
+            .get("Authorization")
+            .and_then(|v| v.to_str().ok())
+            .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    // The SQL query is now fixed:
-    // 1. We select columns explicitly instead of using `*`.
-    // 2. We omit the `password` column.
-    // 3. We provide the type hint for the `role` column to fix the mapping error.
-    let user = sqlx::query_as!(
-        User,
-        r#"
-        SELECT id, name, email, media_folder, created_at, updated_at, role as "role: UserRole"
-        FROM app_user 
-        WHERE id = $1
-        "#,
-        token_data.claims.sub
-    )
-    .fetch_optional(&pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    .ok_or(StatusCode::UNAUTHORIZED)?;
+        let token = auth_header
+            .strip_prefix("Bearer ")
+            .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    // This part adds the user data to the request, so handlers
-    // after this middleware can access it.
-    request.extensions_mut().insert(user);
+        let cfg = get_config();
+        let token_data = decode::<Claims>(
+            token,
+            &DecodingKey::from_secret(cfg.auth.jwt_secret.as_ref()),
+            &Validation::default(),
+        )
+            .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
-    Ok(next.run(request).await)
+        let user_id = token_data.claims.sub;
+
+        let State(pool) = State::<PgPool>::from_request_parts(parts, state)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let user = sqlx::query_as!(
+            User,
+            r#"SELECT id, email, name, media_folder, role as "role: UserRole",
+                      created_at, updated_at
+               FROM app_user WHERE id = $1"#,
+            user_id
+        )
+            .fetch_optional(&pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .ok_or(StatusCode::UNAUTHORIZED)?;
+
+        parts.extensions.insert(user.clone());
+        Ok(user)
+    }
 }
