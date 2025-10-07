@@ -26,3 +26,4 @@
   13. http://localhost:3567/auth/logout
   14. try http://localhost:3567/auth/refresh -> should not work
 * Api docs swagger
+* use db config when setting up db.

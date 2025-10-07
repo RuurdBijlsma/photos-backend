@@ -5,7 +5,16 @@ use crate::auth::{model::*, service::*, token::*};
 
 use crate::routes::auth::error::AuthError;
 
-/// POST /auth/login
+/// Login to get a new session
+#[utoipa::path(
+    post,
+    path = "/auth/login",
+    request_body = LoginUser,
+    responses(
+        (status = 200, description = "Login successful", body = Tokens),
+        (status = 401, description = "Invalid credentials"),
+    )
+)]
 pub async fn login(
     State(pool): State<PgPool>,
     Json(payload): Json<LoginUser>,
@@ -21,7 +30,16 @@ pub async fn login(
     }))
 }
 
-/// POST /auth/register
+/// Register a new user
+#[utoipa::path(
+    post,
+    path = "/auth/register",
+    request_body = CreateUser,
+    responses(
+        (status = 200, description = "User created successfully", body = User),
+        (status = 409, description = "User with this email already exists"),
+    )
+)]
 pub async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateUser>,
@@ -30,7 +48,16 @@ pub async fn register(
     Ok(Json(user))
 }
 
-/// POST /auth/refresh
+/// Refresh the session using a refresh token
+#[utoipa::path(
+    post,
+    path = "/auth/refresh",
+    request_body = RefreshTokenPayload,
+    responses(
+        (status = 200, description = "Session refreshed successfully", body = Tokens),
+        (status = 401, description = "Invalid or expired refresh token"),
+    )
+)]
 pub async fn refresh_session(
     State(pool): State<PgPool>,
     Json(payload): Json<RefreshTokenPayload>,
@@ -38,7 +65,16 @@ pub async fn refresh_session(
     refresh_tokens(&pool, &payload.refresh_token).await
 }
 
-/// POST /auth/logout
+/// Logout and invalidate the refresh token
+#[utoipa::path(
+    post,
+    path = "/auth/logout",
+    request_body = RefreshTokenPayload,
+    responses(
+        (status = 200, description = "Logout successful"),
+        (status = 401, description = "Invalid or expired refresh token"),
+    )
+)]
 pub async fn logout(
     State(pool): State<PgPool>,
     Json(payload): Json<RefreshTokenPayload>,
@@ -46,7 +82,18 @@ pub async fn logout(
     logout_user(&pool, &payload.refresh_token).await
 }
 
-/// GET /auth/me
+/// Get the current user's details
+#[utoipa::path(
+    get,
+    path = "/auth/me",
+    responses(
+        (status = 200, description = "Current user data", body = ProtectedResponse),
+        (status = 401, description = "Authentication required"),
+    ),
+    security(
+        ("bearer_auth" = [])
+    )
+)]
 pub async fn get_me(
     Extension(user): Extension<User>,
 ) -> Result<Json<ProtectedResponse>, StatusCode> {
@@ -57,7 +104,19 @@ pub async fn get_me(
     }))
 }
 
-/// GET /auth/admin-check
+/// Check if the current user is an admin
+#[utoipa::path(
+    get,
+    path = "/auth/admin-check",
+    responses(
+        (status = 200, description = "Admin check successful", body = AdminResponse),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Admin privileges required"),
+    ),
+    security(
+        ("bearer_auth" = [])
+    )
+)]
 pub async fn check_admin(
     Extension(user): Extension<User>,
 ) -> Result<Json<AdminResponse>, StatusCode> {
