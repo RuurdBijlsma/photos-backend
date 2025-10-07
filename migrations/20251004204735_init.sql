@@ -9,6 +9,20 @@ CREATE TABLE location
     country_code TEXT,
     country_name TEXT
 );
+CREATE TYPE user_role AS ENUM ('ADMIN', 'USER');
+
+CREATE TABLE app_user
+(
+    id           SERIAL PRIMARY KEY,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    email        TEXT        NOT NULL,
+    password     TEXT        NOT NULL,
+    name         TEXT        NOT NULL,
+    media_folder TEXT,
+    role         user_role   NOT NULL DEFAULT 'USER',
+    CONSTRAINT app_user_email_key UNIQUE (email)
+);
 
 -- Create the central MediaItem table.
 CREATE TABLE media_item
@@ -25,6 +39,7 @@ CREATE TABLE media_item
     taken_at_naive      TIMESTAMP, -- Naive timestamp without timezone
     use_panorama_viewer BOOLEAN,
     deleted             BOOLEAN     NOT NULL DEFAULT false,
+    user_id             INT REFERENCES app_user (id) ON DELETE CASCADE,
     CONSTRAINT media_item_relative_path_key UNIQUE (relative_path)
 );
 
@@ -117,10 +132,6 @@ CREATE TABLE panorama
     center_yaw_deg     REAL,
     center_pitch_deg   REAL
 );
-
--- Add a unique constraint to relative_path in media_item
-ALTER TABLE media_item
-    ADD CONSTRAINT uq_media_item_relative_path UNIQUE (relative_path);
 
 -- Add indices for foreign keys and frequently queried columns
 CREATE INDEX idx_gps_location_id ON gps (location_id);
