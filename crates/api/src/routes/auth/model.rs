@@ -67,11 +67,11 @@ pub struct Tokens {
     pub refresh_token: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    pub sub: i32,   // user id
-    pub role: String,
-    pub exp: usize, // expiration (unix)
+    pub sub: i32,
+    pub exp: usize,
+    pub role: UserRole,
 }
 
 #[derive(Serialize)]
@@ -79,4 +79,11 @@ pub struct ProtectedResponse {
     pub message: String,
     pub user_email: String,
     pub user_id: i32,
+}
+#[derive(Serialize)]
+pub struct AdminResponse {
+    pub message: String,
+    pub user_email: String,
+    pub user_id: i32,
+    pub user_role: UserRole,
 }

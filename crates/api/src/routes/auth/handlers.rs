@@ -1,11 +1,7 @@
-use axum::{extract::State, http::StatusCode, Json, Extension};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use sqlx::PgPool;
 
-use crate::auth::{
-    model::*,
-    service::*,
-    token::*,
-};
+use crate::auth::{model::*, service::*, token::*};
 
 /// POST /auth/login
 pub async fn login(
@@ -13,7 +9,7 @@ pub async fn login(
     Json(payload): Json<LoginUser>,
 ) -> Result<Json<Tokens>, (StatusCode, String)> {
     let user = authenticate_user(&pool, &payload.email, &payload.password).await?;
-    let access_token = create_access_token(user.id, &user.role.to_string())?;
+    let access_token = create_access_token(user.id, user.role)?;
 
     let token_parts = generate_refresh_token_parts()?;
     store_refresh_token(&pool, user.id, &token_parts).await?;
@@ -49,13 +45,25 @@ pub async fn logout(
     logout_user(&pool, &payload.refresh_token).await
 }
 
-/// Example protected route
-pub async fn protected_route(
+/// GET /auth/me
+pub async fn get_me(
     Extension(user): Extension<User>,
 ) -> Result<Json<ProtectedResponse>, StatusCode> {
     Ok(Json(ProtectedResponse {
         message: "You are accessing a protected route!".into(),
         user_email: user.email,
         user_id: user.id,
+    }))
+}
+
+/// GET /auth/admin-check
+pub async fn check_admin(
+    Extension(user): Extension<User>,
+) -> Result<Json<AdminResponse>, StatusCode> {
+    Ok(Json(AdminResponse {
+        message: "You are an admin!".into(),
+        user_email: user.email,
+        user_id: user.id,
+        user_role: user.role,
     }))
 }

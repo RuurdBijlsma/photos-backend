@@ -73,12 +73,12 @@ pub async fn store_refresh_token(
     Ok(())
 }
 
-pub fn create_access_token(user_id: i32, role: &str) -> Result<String, (StatusCode, String)> {
+pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, (StatusCode, String)> {
     let cfg = get_config();
     let exp = (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp() as usize;
     let claims = Claims {
         sub: user_id,
-        role: role.to_string(),
+        role,
         exp,
     };
     encode(&Header::default(), &claims, &EncodingKey::from_secret(cfg.auth.jwt_secret.as_ref()))
@@ -140,7 +140,7 @@ pub async fn refresh_tokens(
         .map_err(internal_err)?;
     tx.commit().await.map_err(internal_err)?;
 
-    let access_token = create_access_token(record.user_id, &user_role.to_string())?;
+    let access_token = create_access_token(record.user_id, user_role)?;
     Ok(Json(Tokens {
         access_token,
         refresh_token: new_parts.raw_token,
