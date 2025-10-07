@@ -1,5 +1,5 @@
-use utoipa::openapi::OpenApi;
 use serde_json::to_string_pretty;
+use utoipa::openapi::OpenApi;
 
 pub fn get_custom_html(open_api: &OpenApi) -> String {
     let json = to_string_pretty(open_api).expect("failed to serialize OpenApi to JSON");

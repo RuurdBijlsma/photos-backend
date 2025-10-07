@@ -1,7 +1,7 @@
 use crate::routes::root::route::__path_root;
 use utoipa::{
-    openapi::security::{Http, HttpAuthScheme, SecurityScheme}, Modify,
-    OpenApi,
+    Modify, OpenApi,
+    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
 };
 
 mod routes;
@@ -9,12 +9,12 @@ mod routes;
 use crate::auth::model::User;
 use crate::routes::auth;
 use crate::routes::auth::middleware::require_role;
-use crate::routes::auth::{handlers, UserRole};
+use crate::routes::auth::{UserRole, handlers};
 use crate::routes::root::route::root;
 use crate::routes::scalar_config::get_custom_html;
 use axum::{
-    middleware, routing::{get, post},
-    Router,
+    Router, middleware,
+    routing::{get, post},
 };
 use common_photos::get_db_pool;
 use sqlx::PgPool;
