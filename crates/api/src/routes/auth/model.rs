@@ -43,25 +43,25 @@ pub struct UserRecord {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CreateUser {
     pub email: String,
     pub name: String,
     pub password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct LoginUser {
     pub email: String,
     pub password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct RefreshTokenPayload {
     pub refresh_token: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Tokens {
     pub access_token: String,
     pub refresh_token: String,
@@ -74,13 +74,13 @@ pub struct Claims {
     pub role: UserRole,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct ProtectedResponse {
     pub message: String,
     pub user_email: String,
     pub user_id: i32,
 }
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct AdminResponse {
     pub message: String,
     pub user_email: String,

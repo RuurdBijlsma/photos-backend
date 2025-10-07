@@ -1,7 +1,7 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use bcrypt::{hash, verify, DEFAULT_COST};
-use rand::{rng, RngCore};
+use crate::routes::auth::hashing::{hash_password, verify_password};
 use axum::http::StatusCode;
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use rand::{RngCore, rng};
 
 pub struct RefreshTokenParts {
     pub raw_token: String,
@@ -18,8 +18,12 @@ pub fn generate_refresh_token_parts() -> Result<RefreshTokenParts, (StatusCode, 
 
     let selector = URL_SAFE_NO_PAD.encode(selector_bytes);
     let raw_token = URL_SAFE_NO_PAD.encode(raw_bytes);
-    let verifier_hash = hash(verifier_bytes, DEFAULT_COST)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to hash token".to_string()))?;
+    let verifier_hash = hash_password(verifier_bytes).map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to hash token".to_string(),
+        )
+    })?;
 
     Ok(RefreshTokenParts {
         raw_token,
@@ -28,9 +32,7 @@ pub fn generate_refresh_token_parts() -> Result<RefreshTokenParts, (StatusCode, 
     })
 }
 
-pub fn split_refresh_token(
-    token: &str,
-) -> Result<(String, Vec<u8>), (StatusCode, String)> {
+pub fn split_refresh_token(token: &str) -> Result<(String, Vec<u8>), (StatusCode, String)> {
     let bytes = URL_SAFE_NO_PAD
         .decode(token)
         .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token format".to_string()))?;
@@ -43,7 +45,14 @@ pub fn split_refresh_token(
     Ok((selector, bytes[16..].to_vec()))
 }
 
-pub fn verify_token(verifier_bytes: &[u8], verifier_hash: &str) -> Result<bool, (StatusCode, String)> {
-    verify(verifier_bytes, verifier_hash)
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Verification failed".to_string()))
+pub fn verify_token(
+    verifier_bytes: &[u8],
+    verifier_hash: &str,
+) -> Result<bool, (StatusCode, String)> {
+    verify_password(verifier_bytes, verifier_hash).map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Verification failed".to_string(),
+        )
+    })
 }

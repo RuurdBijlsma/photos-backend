@@ -1,5 +1,7 @@
 use crate::db_helpers::write_to_db::store_media_item;
-use common_photos::{get_config, get_relative_path_str, get_thumbnail_options, get_thumbnails_dir, nice_id};
+use common_photos::{
+    get_config, get_relative_path_str, get_thumbnail_options, get_thumbnails_dir, nice_id,
+};
 use media_analyzer::MediaAnalyzer;
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgTransaction;

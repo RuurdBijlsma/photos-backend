@@ -1,15 +1,15 @@
-use crate::auth::model::{Claims, User};
 use crate::auth::UserRole;
+use crate::auth::model::{Claims, User};
 use axum::body::Body;
 use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::Response;
 use axum::{
     extract::{FromRequestParts, State},
-    http::{request::Parts, StatusCode},
+    http::{StatusCode, request::Parts},
 };
 use common_photos::get_config;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
 
 impl<S> FromRequestParts<S> for User

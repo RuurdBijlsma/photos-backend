@@ -2,12 +2,14 @@ mod routes;
 
 use crate::auth::model::User;
 use crate::routes::auth;
-use crate::routes::auth::middleware::{require_role};
-use crate::routes::auth::{check_admin, get_me, login, logout, refresh_session, register, UserRole};
+use crate::routes::auth::middleware::require_role;
+use crate::routes::auth::{
+    UserRole, check_admin, get_me, login, logout, refresh_session, register,
+};
 use crate::routes::root::route::root;
 use axum::{
-    middleware, routing::{get, post},
-    Router,
+    Router, middleware,
+    routing::{get, post},
 };
 use common_photos::get_db_pool;
 use sqlx::PgPool;
@@ -37,8 +39,13 @@ async fn start_server() -> color_eyre::Result<()> {
 
     let admin_routes = Router::new()
         .route("/auth/admin-check", get(check_admin))
-        .route_layer(middleware::from_fn_with_state(UserRole::Admin, require_role))
-        .route_layer(middleware::from_extractor_with_state::<User, PgPool>(pool.clone()));
+        .route_layer(middleware::from_fn_with_state(
+            UserRole::Admin,
+            require_role,
+        ))
+        .route_layer(middleware::from_extractor_with_state::<User, PgPool>(
+            pool.clone(),
+        ));
 
     let app = Router::new()
         .merge(public_routes)

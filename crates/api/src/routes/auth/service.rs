@@ -1,12 +1,13 @@
-use axum::http::StatusCode;
-use axum::Json;
-use bcrypt::{hash, verify, DEFAULT_COST};
-use chrono::{Duration, Utc};
-use jsonwebtoken::{encode, EncodingKey, Header};
-use sqlx::PgPool;
-use common_photos::get_config;
 use crate::auth::model::*;
 use crate::auth::token::*;
+use crate::routes::auth::hashing::{hash_password, verify_password};
+use axum::Json;
+use axum::http::StatusCode;
+use chrono::{Duration, Utc};
+use common_photos::get_config;
+use jsonwebtoken::{EncodingKey, Header, encode};
+use sqlx::PgPool;
+use tracing::info;
 
 pub async fn authenticate_user(
     pool: &PgPool,
@@ -19,12 +20,12 @@ pub async fn authenticate_user(
            FROM app_user WHERE email = $1"#,
         email
     )
-        .fetch_optional(pool)
-        .await
-        .map_err(internal_err)?
-        .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Invalid credentials".into()))?;
+    .fetch_optional(pool)
+    .await
+    .map_err(internal_err)?
+    .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Invalid credentials".into()))?;
 
-    let valid = verify(password, &user.password).map_err(internal_err)?;
+    let valid = verify_password(password.as_ref(), &user.password).map_err(internal_err)?;
     if !valid {
         return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
     }
@@ -36,7 +37,8 @@ pub async fn create_user(
     pool: &PgPool,
     payload: &CreateUser,
 ) -> Result<User, (StatusCode, String)> {
-    let hashed = hash(&payload.password, DEFAULT_COST).map_err(internal_err)?;
+    let hashed = hash_password(payload.password.as_ref()).map_err(internal_err)?;
+    info!("Creating user {:?}", payload);
     sqlx::query_as!(
         User,
         r#"
@@ -48,9 +50,9 @@ pub async fn create_user(
         payload.name,
         hashed
     )
-        .fetch_one(pool)
-        .await
-        .map_err(internal_err)
+    .fetch_one(pool)
+    .await
+    .map_err(internal_err)
 }
 
 pub async fn store_refresh_token(
@@ -67,22 +69,32 @@ pub async fn store_refresh_token(
         parts.verifier_hash,
         exp
     )
-        .execute(pool)
-        .await
-        .map_err(internal_err)?;
+    .execute(pool)
+    .await
+    .map_err(internal_err)?;
     Ok(())
 }
 
 pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, (StatusCode, String)> {
     let cfg = get_config();
-    let exp = (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp() as usize;
+    let exp =
+        (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp() as usize;
     let claims = Claims {
         sub: user_id,
         role,
         exp,
     };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(cfg.auth.jwt_secret.as_ref()))
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to sign token".into()))
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(cfg.auth.jwt_secret.as_ref()),
+    )
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to sign token".into(),
+        )
+    })
 }
 
 /// Handles refresh token rotation
@@ -96,17 +108,25 @@ pub async fn refresh_tokens(
          WHERE selector = $1 AND expires_at > NOW()",
         selector
     )
-        .fetch_optional(pool)
-        .await
-        .map_err(internal_err)?
-        .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Token not found or expired".into()))?;
+    .fetch_optional(pool)
+    .await
+    .map_err(internal_err)?
+    .ok_or_else(|| {
+        (
+            StatusCode::UNAUTHORIZED,
+            "Token not found or expired".into(),
+        )
+    })?;
 
     let valid = verify_token(&verifier_bytes, &record.verifier_hash)?;
     if !valid {
-        sqlx::query!("DELETE FROM refresh_token WHERE user_id = $1", record.user_id)
-            .execute(pool)
-            .await
-            .ok();
+        sqlx::query!(
+            "DELETE FROM refresh_token WHERE user_id = $1",
+            record.user_id
+        )
+        .execute(pool)
+        .await
+        .ok();
         return Err((StatusCode::UNAUTHORIZED, "Invalid token".into()));
     }
 
@@ -114,10 +134,10 @@ pub async fn refresh_tokens(
         r#"SELECT role as "role: UserRole" FROM app_user WHERE id = $1"#,
         record.user_id
     )
-        .fetch_one(pool)
-        .await
-        .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".into()))?
-        .role;
+    .fetch_one(pool)
+    .await
+    .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".into()))?
+    .role;
 
     let mut tx = pool.begin().await.map_err(internal_err)?;
     sqlx::query!("DELETE FROM refresh_token WHERE selector = $1", selector)
@@ -135,9 +155,9 @@ pub async fn refresh_tokens(
         new_parts.verifier_hash,
         exp
     )
-        .execute(&mut *tx)
-        .await
-        .map_err(internal_err)?;
+    .execute(&mut *tx)
+    .await
+    .map_err(internal_err)?;
     tx.commit().await.map_err(internal_err)?;
 
     let access_token = create_access_token(record.user_id, user_role)?;
@@ -161,9 +181,9 @@ pub async fn logout_user(
         "SELECT user_id, verifier_hash FROM refresh_token WHERE selector = $1",
         selector
     )
-        .fetch_optional(pool)
-        .await
-        .map_err(internal_err)?;
+    .fetch_optional(pool)
+    .await
+    .map_err(internal_err)?;
 
     if let Some(rec) = record {
         if verify_token(&verifier_bytes, &rec.verifier_hash).unwrap_or(false) {

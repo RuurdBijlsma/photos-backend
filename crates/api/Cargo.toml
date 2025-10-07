@@ -14,8 +14,6 @@ tokio = { version = "1.47.1", features = ["full"] }
 jsonwebtoken = { version = "10.0.0", features = ["rust_crypto"] }
 argon2 = { version = "0.6.0-rc.1" }
 chrono = { version = "0.4.42", features = ["serde"] }
-bcrypt = "0.17.1"
 sqlx = "0.8.6"
 rand = "0.10.0-rc.0"
 base64 = "0.22.1"
-uuid = { version = "1.18.1", features = ["v4"] }

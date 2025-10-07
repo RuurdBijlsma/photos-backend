@@ -1,8 +1,9 @@
-pub mod model;
-pub mod token;
-pub mod service;
 pub mod handlers;
+mod hashing;
 pub(crate) mod middleware;
+pub mod model;
+pub mod service;
+pub mod token;
 
-pub use model::*;
 pub use handlers::*;
+pub use model::*;

@@ -1,18 +1,18 @@
 use std::sync::OnceLock;
 
+use crate::Config;
 use ruurd_photos_thumbnail_generation::ThumbOptions;
 use serde_yaml;
 use std::fs;
 use std::path::{Path, PathBuf, absolute};
-use crate::Config;
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
 static THUMBNAIL_OPTIONS: OnceLock<ThumbOptions> = OnceLock::new();
 
 pub fn get_config() -> &'static Config {
     CONFIG.get_or_init(|| {
-        let config_str = fs::read_to_string("config/config.yaml")
-            .expect("config/config.yaml not found");
+        let config_str =
+            fs::read_to_string("config/config.yaml").expect("config/config.yaml not found");
 
         serde_yaml::from_str(&config_str).expect("Error reading config.yaml file")
     })

@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use sqlx::PgPool;
 
 use crate::auth::{model::*, service::*, token::*};
