@@ -1,19 +1,22 @@
+// in service.rs
+
 use crate::auth::model::*;
 use crate::auth::token::*;
+use crate::routes::auth::error::AuthError;
 use crate::routes::auth::hashing::{hash_password, verify_password};
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
 use common_photos::get_config;
 use jsonwebtoken::{EncodingKey, Header, encode};
-use sqlx::PgPool;
+use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
 
 pub async fn authenticate_user(
     pool: &PgPool,
     email: &str,
     password: &str,
-) -> Result<UserRecord, (StatusCode, String)> {
+) -> Result<UserRecord, AuthError> {
     let user = sqlx::query_as!(
         UserRecord,
         r#"SELECT id, email, name, password, role as "role: UserRole", created_at, updated_at
@@ -21,25 +24,21 @@ pub async fn authenticate_user(
         email
     )
     .fetch_optional(pool)
-    .await
-    .map_err(internal_err)?
-    .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Invalid credentials".into()))?;
+    .await?
+    .ok_or(AuthError::InvalidCredentials)?;
 
-    let valid = verify_password(password.as_ref(), &user.password).map_err(internal_err)?;
+    let valid = verify_password(password.as_ref(), &user.password)?;
     if !valid {
-        return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".into()));
+        return Err(AuthError::InvalidCredentials);
     }
 
     Ok(user)
 }
 
-pub async fn create_user(
-    pool: &PgPool,
-    payload: &CreateUser,
-) -> Result<User, (StatusCode, String)> {
-    let hashed = hash_password(payload.password.as_ref()).map_err(internal_err)?;
+pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, AuthError> {
+    let hashed = hash_password(payload.password.as_ref())?;
     info!("Creating user {:?}", payload);
-    sqlx::query_as!(
+    let result = sqlx::query_as!(
         User,
         r#"
         INSERT INTO app_user (email, name, password)
@@ -51,15 +50,25 @@ pub async fn create_user(
         hashed
     )
     .fetch_one(pool)
-    .await
-    .map_err(internal_err)
+    .await;
+
+    match result {
+        Ok(user) => Ok(user),
+        Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
+            Err(AuthError::UserAlreadyExists)
+        }
+        Err(e) => Err(e.into()), // Convert other errors to AuthError::Internal
+    }
 }
 
-pub async fn store_refresh_token(
-    pool: &PgPool,
+pub async fn store_refresh_token<'c, E>(
+    executor: E,
     user_id: i32,
     parts: &RefreshTokenParts,
-) -> Result<(), (StatusCode, String)> {
+) -> Result<(), AuthError>
+where
+    E: Executor<'c, Database = Postgres>,
+{
     let exp = Utc::now() + Duration::days(get_config().auth.refresh_token_expiry_days);
     sqlx::query!(
         "INSERT INTO refresh_token (user_id, selector, verifier_hash, expires_at)
@@ -69,13 +78,12 @@ pub async fn store_refresh_token(
         parts.verifier_hash,
         exp
     )
-    .execute(pool)
-    .await
-    .map_err(internal_err)?;
+    .execute(executor)
+    .await?;
     Ok(())
 }
 
-pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, (StatusCode, String)> {
+pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, AuthError> {
     let cfg = get_config();
     let exp =
         (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp() as usize;
@@ -89,19 +97,11 @@ pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, (Stat
         &claims,
         &EncodingKey::from_secret(cfg.auth.jwt_secret.as_ref()),
     )
-    .map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to sign token".into(),
-        )
-    })
+    .map_err(Into::into) // Convert jsonwebtoken::Error into AuthError::Internal
 }
 
 /// Handles refresh token rotation
-pub async fn refresh_tokens(
-    pool: &PgPool,
-    raw_token: &str,
-) -> Result<Json<Tokens>, (StatusCode, String)> {
+pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Tokens>, AuthError> {
     let (selector, verifier_bytes) = split_refresh_token(raw_token)?;
     let record = sqlx::query!(
         "SELECT user_id, verifier_hash FROM refresh_token
@@ -109,56 +109,42 @@ pub async fn refresh_tokens(
         selector
     )
     .fetch_optional(pool)
-    .await
-    .map_err(internal_err)?
-    .ok_or_else(|| {
-        (
-            StatusCode::UNAUTHORIZED,
-            "Token not found or expired".into(),
-        )
-    })?;
+    .await?
+    .ok_or(AuthError::RefreshTokenExpiredOrNotFound)?;
 
-    let valid = verify_token(&verifier_bytes, &record.verifier_hash)?;
-    if !valid {
+    if !verify_token(&verifier_bytes, &record.verifier_hash)? {
+        // As a security measure, if the verifier is wrong, we assume token theft
+        // and delete all refresh tokens for that user.
         sqlx::query!(
             "DELETE FROM refresh_token WHERE user_id = $1",
             record.user_id
         )
         .execute(pool)
         .await
-        .ok();
-        return Err((StatusCode::UNAUTHORIZED, "Invalid token".into()));
+        .ok(); // Ignore error if deletion fails
+        return Err(AuthError::InvalidToken);
     }
 
+    // Safely look up the user's role
     let user_role = sqlx::query!(
         r#"SELECT role as "role: UserRole" FROM app_user WHERE id = $1"#,
         record.user_id
     )
     .fetch_one(pool)
     .await
-    .map_err(|_| (StatusCode::UNAUTHORIZED, "User not found".into()))?
+    .map_err(|_| AuthError::UserNotFound)?
     .role;
 
-    let mut tx = pool.begin().await.map_err(internal_err)?;
+    // Begin transaction for token rotation
+    let mut tx = pool.begin().await?;
     sqlx::query!("DELETE FROM refresh_token WHERE selector = $1", selector)
         .execute(&mut *tx)
-        .await
-        .map_err(internal_err)?;
+        .await?;
 
     let new_parts = generate_refresh_token_parts()?;
-    let exp = Utc::now() + Duration::days(get_config().auth.refresh_token_expiry_days);
-    sqlx::query!(
-        "INSERT INTO refresh_token (user_id, selector, verifier_hash, expires_at)
-         VALUES ($1, $2, $3, $4)",
-        record.user_id,
-        new_parts.selector,
-        new_parts.verifier_hash,
-        exp
-    )
-    .execute(&mut *tx)
-    .await
-    .map_err(internal_err)?;
-    tx.commit().await.map_err(internal_err)?;
+    store_refresh_token(&mut *tx, record.user_id, &new_parts).await?;
+
+    tx.commit().await?;
 
     let access_token = create_access_token(record.user_id, user_role)?;
     Ok(Json(Tokens {
@@ -168,35 +154,23 @@ pub async fn refresh_tokens(
 }
 
 /// Deletes the refresh token matching the provided one
-pub async fn logout_user(
-    pool: &PgPool,
-    raw_token: &str,
-) -> Result<StatusCode, (StatusCode, String)> {
-    let (selector, verifier_bytes) = match split_refresh_token(raw_token) {
-        Ok(v) => v,
-        Err(_) => return Ok(StatusCode::NO_CONTENT),
-    };
-
-    let record = sqlx::query!(
-        "SELECT user_id, verifier_hash FROM refresh_token WHERE selector = $1",
-        selector
-    )
-    .fetch_optional(pool)
-    .await
-    .map_err(internal_err)?;
-
-    if let Some(rec) = record {
-        if verify_token(&verifier_bytes, &rec.verifier_hash).unwrap_or(false) {
-            sqlx::query!("DELETE FROM refresh_token WHERE selector = $1", selector)
-                .execute(pool)
-                .await
-                .ok();
-        }
+pub async fn logout_user(pool: &PgPool, raw_token: &str) -> Result<StatusCode, AuthError> {
+    // If the token is malformed, we just ignore it and succeed silently.
+    if let Ok((selector, verifier_bytes)) = split_refresh_token(raw_token)
+        && let Some(rec) = sqlx::query!(
+            "SELECT user_id, verifier_hash FROM refresh_token WHERE selector = $1",
+            selector
+        )
+        .fetch_optional(pool)
+        .await?
+        && verify_token(&verifier_bytes, &rec.verifier_hash).unwrap_or(false)
+    {
+        sqlx::query!("DELETE FROM refresh_token WHERE selector = $1", selector)
+            .execute(pool)
+            .await?;
     }
-
+    // Logout should always appear successful to prevent token enumeration attacks.
     Ok(StatusCode::NO_CONTENT)
 }
 
-fn internal_err<E: std::fmt::Display>(e: E) -> (StatusCode, String) {
-    (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-}
+// The internal_err function is no longer needed!

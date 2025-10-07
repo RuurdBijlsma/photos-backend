@@ -1,3 +1,4 @@
+mod error;
 pub mod handlers;
 mod hashing;
 pub(crate) mod middleware;

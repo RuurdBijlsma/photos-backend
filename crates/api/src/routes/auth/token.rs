@@ -1,5 +1,5 @@
+use crate::routes::auth::error::AuthError;
 use crate::routes::auth::hashing::{hash_password, verify_password};
-use axum::http::StatusCode;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand::{RngCore, rng};
 
@@ -9,7 +9,7 @@ pub struct RefreshTokenParts {
     pub verifier_hash: String,
 }
 
-pub fn generate_refresh_token_parts() -> Result<RefreshTokenParts, (StatusCode, String)> {
+pub fn generate_refresh_token_parts() -> Result<RefreshTokenParts, AuthError> {
     let mut raw_bytes = [0u8; 32];
     rng().fill_bytes(&mut raw_bytes);
 
@@ -18,12 +18,7 @@ pub fn generate_refresh_token_parts() -> Result<RefreshTokenParts, (StatusCode, 
 
     let selector = URL_SAFE_NO_PAD.encode(selector_bytes);
     let raw_token = URL_SAFE_NO_PAD.encode(raw_bytes);
-    let verifier_hash = hash_password(verifier_bytes).map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to hash token".to_string(),
-        )
-    })?;
+    let verifier_hash = hash_password(verifier_bytes)?; // This now propagates AuthError
 
     Ok(RefreshTokenParts {
         raw_token,
@@ -32,27 +27,19 @@ pub fn generate_refresh_token_parts() -> Result<RefreshTokenParts, (StatusCode, 
     })
 }
 
-pub fn split_refresh_token(token: &str) -> Result<(String, Vec<u8>), (StatusCode, String)> {
+pub fn split_refresh_token(token: &str) -> Result<(String, Vec<u8>), AuthError> {
     let bytes = URL_SAFE_NO_PAD
         .decode(token)
-        .map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid token format".to_string()))?;
+        .map_err(|_| AuthError::InvalidToken)?;
 
     if bytes.len() != 32 {
-        return Err((StatusCode::UNAUTHORIZED, "Invalid token length".to_string()));
+        return Err(AuthError::InvalidToken);
     }
 
     let selector = URL_SAFE_NO_PAD.encode(&bytes[..16]);
     Ok((selector, bytes[16..].to_vec()))
 }
 
-pub fn verify_token(
-    verifier_bytes: &[u8],
-    verifier_hash: &str,
-) -> Result<bool, (StatusCode, String)> {
-    verify_password(verifier_bytes, verifier_hash).map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Verification failed".to_string(),
-        )
-    })
+pub fn verify_token(verifier_bytes: &[u8], verifier_hash: &str) -> Result<bool, AuthError> {
+    Ok(verify_password(verifier_bytes, verifier_hash)?)
 }

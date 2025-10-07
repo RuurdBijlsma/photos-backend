@@ -8,3 +8,21 @@
 * cors met tower-http::cors
 * password reset flow
 * look at rust config package
+* add expiry time to auth responses
+* fix errors in api, abstraction for it, probably.
+* auth integration test:
+  1. clear db
+  2. http://localhost:3567/auth/register
+  3. http://localhost:3567/auth/login
+  4. use access_token on http://localhost:3567/auth/me -> verify
+  5. set user role to USER
+  6. http://localhost:3567/auth/admin-check -> should be forbidden
+  7. set user role to ADMIN
+  8. http://localhost:3567/auth/admin-check -> should work
+  9. http://localhost:3567/auth/refresh -> should work, store refresh_token output
+  10. re-run with old refresh_token -> should not work, token is rotated
+  11. re-run with stored refresh_token -> should work, store access_token
+  12. try access token on get_me
+  13. http://localhost:3567/auth/logout
+  14. try http://localhost:3567/auth/refresh -> should not work
+* Api docs swagger

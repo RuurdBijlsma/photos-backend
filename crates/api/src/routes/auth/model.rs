@@ -32,6 +32,7 @@ pub struct User {
     pub role: UserRole,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, FromRow)]
 pub struct UserRecord {
     pub id: i32,
