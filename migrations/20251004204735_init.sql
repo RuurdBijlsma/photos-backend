@@ -9,6 +9,7 @@ CREATE TABLE location
     country_code TEXT,
     country_name TEXT
 );
+
 CREATE TYPE user_role AS ENUM ('ADMIN', 'USER');
 
 CREATE TABLE app_user
@@ -23,6 +24,17 @@ CREATE TABLE app_user
     role         user_role   NOT NULL DEFAULT 'USER',
     CONSTRAINT app_user_email_key UNIQUE (email)
 );
+
+CREATE TABLE refresh_token
+(
+    id            SERIAL PRIMARY KEY,
+    user_id       INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    selector      TEXT        NOT NULL UNIQUE, -- The selector must be unique for lookups
+    verifier_hash TEXT        NOT NULL,        -- The hash of the verifier part
+    expires_at    TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_refresh_token_selector ON refresh_token (selector);
 
 -- Create the central MediaItem table.
 CREATE TABLE media_item

@@ -9,6 +9,13 @@ pub struct Config {
     pub worker: WorkerConfig,
     pub thumbnail_generation: ThumbnailGenerationConfig,
     pub api: ApiConfig,
+    pub auth: AuthConfig,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AuthConfig {
+    pub jwt_secret: String,
+    pub access_token_expiry_minutes: i64,
 }
 
 #[derive(Debug, Deserialize)]

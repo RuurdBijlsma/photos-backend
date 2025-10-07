@@ -1,71 +1,45 @@
+mod routes;
+
+use crate::routes::auth;
+use crate::routes::auth::middleware::auth;
+use crate::routes::auth::route::{create_user, login, logout, protected_route, refresh_session};
+use crate::routes::root::route::root;
 use axum::{
-    http::StatusCode, routing::{get, post},
-    Json,
+    middleware, routing::{get, post},
     Router,
 };
-use serde::{Deserialize, Serialize};
+use common_photos::get_db_pool;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
 
-    // build our application with a route
-    let app = Router::new()
-        // `GET /` goes to `root`
-        .route("/", get(root))
-        // `POST /users` goes to `create_user`
-        .route("/users", post(create_user));
-
-    // run our app with hyper, listening globally on port 3567
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3567").await?;
-    axum::serve(listener, app).await?;
+    start_server().await?;
 
     Ok(())
 }
 
-// basic handler that responds with a static string
-async fn root() -> &'static str {
-    "Hello, World!"
-}
+async fn start_server() -> color_eyre::Result<()> {
+    let pool = get_db_pool().await?;
+    let public_routes = Router::new()
+        .route("/", get(root))
+        .route("/auth/refresh", post(refresh_session))
+        .route("/auth/register", post(create_user))
+        .route("/auth/login", post(login))
+        .route("/auth/logout", post(logout));
 
-async fn create_user(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Json(payload): Json<CreateUser>,
-) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-    let user = User {
-        id: 1337,
-        name: payload.name,
-        role: UserRole::Admin,
-        email: payload.email,
-    };
+    let protected_routes = Router::new()
+        .route("/auth/me", get(protected_route))
+        .route_layer(middleware::from_fn_with_state(pool.clone(), auth));
 
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user))
-}
-// the input to our `create_user` handler
-#[derive(Deserialize)]
-struct CreateUser {
-    name: String,
-    email: String,
-    password:String,
-}
+    let app = Router::new()
+        .merge(public_routes)
+        .merge(protected_routes)
+        .with_state(pool);
 
-#[derive(Serialize)]
-enum UserRole{
-    Admin,
-    User,
-}
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3567").await?;
+    axum::serve(listener, app).await?;
 
-
-// the output to our `create_user` handler
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    name: String,
-    email: String,
-    role: UserRole,
+    Ok(())
 }
