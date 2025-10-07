@@ -14,7 +14,6 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::{rng, RngCore};
 use serde::Serialize;
 use sqlx::PgPool;
-
 //=========================================================================================
 // HELPER FUNCTION: This encapsulates the logic for creating refresh token components.
 //=========================================================================================
@@ -108,7 +107,7 @@ pub async fn login(
 
     // --- 3. Generate and Store Refresh Token using Selector-Verifier Pattern ---
     let token_parts = generate_refresh_token_parts()?;
-    let refresh_token_exp = now + Duration::days(7);
+    let refresh_token_exp = now + Duration::days(config.auth.refresh_token_expiry_days);
 
     sqlx::query!(
         r#"
@@ -162,6 +161,7 @@ pub async fn create_user(
     )
     .fetch_one(&pool)
     .await
+    //     todo: better error here, and in general
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(user))
@@ -264,8 +264,9 @@ pub async fn refresh_session(
         })?;
 
     // Issue a new pair of tokens
+    let config = get_config();
     let new_token_parts = generate_refresh_token_parts()?;
-    let new_refresh_token_exp = Utc::now() + Duration::days(7);
+    let new_refresh_token_exp = Utc::now() + Duration::days(config.auth.refresh_token_expiry_days);
 
     sqlx::query!(
         "INSERT INTO refresh_token (user_id, selector, verifier_hash, expires_at) VALUES ($1, $2, $3, $4)",
@@ -274,13 +275,14 @@ pub async fn refresh_session(
 
     // Create the new access token
     let now = Utc::now();
-    let access_token_exp = (now + Duration::minutes(15)).timestamp() as usize;
+    let access_token_exp =
+        (now + Duration::minutes(config.auth.access_token_expiry_minutes)).timestamp() as usize;
     let access_claims = Claims {
         sub: record.user_id,
         role: user_role.to_string(),
         exp: access_token_exp,
     };
-    let secret = &get_config().auth.jwt_secret;
+    let secret = &config.auth.jwt_secret;
     let access_token = encode(
         &Header::default(),
         &access_claims,

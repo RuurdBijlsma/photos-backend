@@ -7,3 +7,4 @@
 * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
 * cors met tower-http::cors
 * password reset flow
+* look at rust config package

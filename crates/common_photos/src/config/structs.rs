@@ -16,6 +16,7 @@ pub struct Config {
 pub struct AuthConfig {
     pub jwt_secret: String,
     pub access_token_expiry_minutes: i64,
+    pub refresh_token_expiry_days: i64,
 }
 
 #[derive(Debug, Deserialize)]

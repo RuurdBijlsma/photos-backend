@@ -15,6 +15,7 @@ auth:
   #  todo get from env
   jwt_secret: "a1b2c3d4e5"
   access_token_expiry_minutes: 60
+  refresh_token_expiry_days: 7
 
 database:
   #  todo get from env

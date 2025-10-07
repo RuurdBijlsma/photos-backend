@@ -28,6 +28,7 @@ CREATE TABLE app_user
 CREATE TABLE refresh_token
 (
     id            SERIAL PRIMARY KEY,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     user_id       INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     selector      TEXT        NOT NULL UNIQUE, -- The selector must be unique for lookups
     verifier_hash TEXT        NOT NULL,        -- The hash of the verifier part
