@@ -1,6 +1,6 @@
 use crate::queue_logic::process_one_job;
 use color_eyre::Result;
-use common_photos::{get_db_pool, get_indexer_config, get_media_dir};
+use common_photos::{get_config, get_db_pool, get_media_dir};
 use media_analyzer::MediaAnalyzer;
 use std::time::Duration;
 use tokio::time;
@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
     info!("[Worker PID: {}] Starting.", std::process::id());
     let mut analyzer = MediaAnalyzer::builder().build().await?;
     let media_dir = get_media_dir();
-    let config = &get_indexer_config().worker;
+    let config = &get_config().worker;
     let pool = get_db_pool().await?;
     let mut last_check_was_work = true;
 

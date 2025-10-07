@@ -1,7 +1,5 @@
 use crate::db_helpers::write_to_db::store_media_item;
-use common_photos::{
-    get_indexer_config, get_relative_path_str, get_thumbnail_options, get_thumbnails_dir, nice_id,
-};
+use common_photos::{get_config, get_relative_path_str, get_thumbnail_options, get_thumbnails_dir, nice_id};
 use media_analyzer::MediaAnalyzer;
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgTransaction;
@@ -15,7 +13,7 @@ pub async fn ingest_file(
     let thumb_config = get_thumbnail_options();
     let relative_path_str = get_relative_path_str(file)?;
     let thumb_base_dir = get_thumbnails_dir();
-    let media_item_id = nice_id(get_indexer_config().database.media_item_id_length);
+    let media_item_id = nice_id(get_config().database.media_item_id_length);
     let thumbnail_out_dir = thumb_base_dir.join(&media_item_id);
     let smallest_thumb_size = thumb_config
         .heights

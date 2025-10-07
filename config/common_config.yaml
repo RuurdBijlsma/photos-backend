@@ -1,6 +1,0 @@
-directories:
-  media_folder: media_dir
-  thumbnails_folder: thumbnails
-
-logging:
-  level: "info"

@@ -2,10 +2,13 @@ use ruurd_photos_thumbnail_generation::{AvifOptions, VideoThumbOptions};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-pub struct IndexerConfig {
+pub struct Config {
+    pub directories: DirectoriesConfig,
+    pub logging: LoggingConfig,
     pub database: DatabaseConfig,
     pub worker: WorkerConfig,
     pub thumbnail_generation: ThumbnailGenerationConfig,
+    pub api: ApiConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -13,12 +16,6 @@ pub struct ApiConfig {
     pub host: String,
     pub port: u32,
     pub allowed_origins: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CommonConfig {
-    pub directories: DirectoriesConfig,
-    pub logging: LoggingConfig,
 }
 
 #[derive(Debug, Deserialize)]

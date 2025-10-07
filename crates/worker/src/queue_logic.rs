@@ -2,11 +2,11 @@ use crate::WorkResult;
 use crate::ingest_file::ingest_file;
 use crate::remove_file::remove_file;
 use color_eyre::Result;
-use common_photos::get_indexer_config;
 use media_analyzer::MediaAnalyzer;
 use sqlx::{FromRow, PgPool, Type};
 use std::path::Path;
 use tracing::{info, warn};
+use common_photos::get_config;
 
 #[derive(Debug, Type, PartialEq)]
 #[sqlx(type_name = "job_type", rename_all = "UPPERCASE")]
@@ -27,7 +27,7 @@ pub async fn process_one_job(
     analyzer: &mut MediaAnalyzer,
     pool: &PgPool,
 ) -> Result<WorkResult> {
-    let config = &get_indexer_config().worker;
+    let config = &get_config().worker;
     let mut tx = pool.begin().await?;
 
     let job: Option<Job> = sqlx::query_as(
