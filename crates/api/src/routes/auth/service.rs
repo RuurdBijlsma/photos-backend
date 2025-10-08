@@ -1,4 +1,4 @@
-use crate::auth::model::{Claims, CreateUser, Tokens, User, UserRecord, UserRole};
+use crate::auth::db_model::{User, UserRecord, UserRole};
 use crate::auth::token::{
     RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
@@ -11,6 +11,7 @@ use common_photos::get_config;
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
+use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
 
 /// Authenticates a user based on email and password.
 ///

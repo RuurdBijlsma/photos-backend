@@ -1,4 +1,4 @@
-* copy setup-related endpoints from old backend
+* ✅ copy setup-related endpoints from old backend
 * ✅ set up new api backend.
 * Show photos
 * clean refresh token table on schedule

@@ -22,7 +22,7 @@ use crate::routes::setup::handlers::{
     get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
     setup_needed,
 };
-use auth::model::User;
+use auth::db_model::User;
 use axum::{
     Router, middleware,
     routing::{get, post},
@@ -55,14 +55,14 @@ use utoipa_scalar::{Scalar, Servable};
     components(
         schemas(
             // Auth schemas
-            auth::model::User,
-            auth::model::UserRole,
-            auth::model::CreateUser,
-            auth::model::LoginUser,
-            auth::model::RefreshTokenPayload,
-            auth::model::Tokens,
-            auth::model::ProtectedResponse,
-            auth::model::AdminResponse,
+            auth::db_model::User,
+            auth::db_model::UserRole,
+            auth::interfaces::CreateUser,
+            auth::interfaces::LoginUser,
+            auth::interfaces::RefreshTokenPayload,
+            auth::interfaces::Tokens,
+            auth::interfaces::GetMeResponse,
+            auth::interfaces::AdminResponse,
             // Setup schemas
             interfaces::FolderQuery,
             interfaces::MakeFolderBody,

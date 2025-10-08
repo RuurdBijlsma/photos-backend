@@ -1,5 +1,4 @@
 use crate::auth::UserRole;
-use crate::auth::model::{Claims, User};
 use crate::routes::auth::error::AuthError;
 use axum::body::Body;
 use axum::extract::{FromRequestParts, State};
@@ -10,6 +9,8 @@ use color_eyre::eyre::eyre;
 use common_photos::get_config;
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
+use crate::routes::auth::interfaces::{Claims};
+use crate::routes::auth::User;
 
 impl<S> FromRequestParts<S> for User
 where

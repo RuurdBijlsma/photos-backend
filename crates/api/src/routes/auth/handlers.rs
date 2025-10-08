@@ -2,9 +2,6 @@ use axum::{Extension, Json, extract::State, http::StatusCode};
 use sqlx::PgPool;
 
 use crate::auth::{
-    model::{
-        AdminResponse, CreateUser, LoginUser, ProtectedResponse, RefreshTokenPayload, Tokens, User,
-    },
     service::{
         authenticate_user, create_access_token, create_user, logout_user, refresh_tokens,
         store_refresh_token,
@@ -13,6 +10,8 @@ use crate::auth::{
 };
 
 use crate::routes::auth::error::AuthError;
+use crate::routes::auth::interfaces::{AdminResponse, CreateUser, LoginUser, GetMeResponse, RefreshTokenPayload, Tokens};
+use crate::routes::auth::User;
 
 /// Login to get a new session.
 #[utoipa::path(
@@ -96,7 +95,7 @@ pub async fn logout(
     get,
     path = "/auth/me",
     responses(
-        (status = 200, description = "Current user data", body = ProtectedResponse),
+        (status = 200, description = "Current user data", body = GetMeResponse),
         (status = 401, description = "Authentication required"),
     ),
     security(
@@ -105,8 +104,8 @@ pub async fn logout(
 )]
 pub async fn get_me(
     Extension(user): Extension<User>,
-) -> Result<Json<ProtectedResponse>, StatusCode> {
-    Ok(Json(ProtectedResponse {
+) -> Result<Json<GetMeResponse>, StatusCode> {
+    Ok(Json(GetMeResponse {
         message: "You are accessing a protected route!".into(),
         user_email: user.email,
         user_id: user.id,

@@ -1,51 +1,6 @@
-use chrono::{DateTime, Utc};
+use crate::routes::auth::UserRole;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use std::fmt;
-use utoipa::ToSchema; // Import ToSchema
-
-/// Maps to the `user_role` Postgres enum.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq, ToSchema)]
-#[sqlx(type_name = "user_role", rename_all = "UPPERCASE")]
-#[serde(rename_all = "UPPERCASE")]
-pub enum UserRole {
-    Admin,
-    User,
-}
-
-impl fmt::Display for UserRole {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Admin => write!(f, "ADMIN"),
-            Self::User => write!(f, "USER"),
-        }
-    }
-}
-
-/// Represents a user in the application.
-#[derive(Debug, Serialize, FromRow, Clone, ToSchema)]
-pub struct User {
-    pub id: i32,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub email: String,
-    pub name: String,
-    pub media_folder: Option<String>,
-    pub role: UserRole,
-}
-
-/// Represents a user record from db, including the password hash.
-#[allow(dead_code)]
-#[derive(Debug, FromRow)]
-pub struct UserRecord {
-    pub id: i32,
-    pub email: String,
-    pub name: String,
-    pub password: String,
-    pub role: UserRole,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
+use utoipa::ToSchema;
 
 /// Represents the data required to create a new user.
 #[derive(Deserialize, Debug, ToSchema)]
@@ -87,7 +42,7 @@ pub struct Claims {
 
 /// Represents the response for a protected route, containing user details.
 #[derive(Serialize, Debug, ToSchema)]
-pub struct ProtectedResponse {
+pub struct GetMeResponse {
     pub message: String,
     pub user_email: String,
     pub user_id: i32,
