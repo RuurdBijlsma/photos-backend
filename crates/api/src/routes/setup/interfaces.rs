@@ -1,19 +1,19 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use utoipa::ToSchema;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct FolderQuery {
-    pub folder: PathBuf,
+    pub folder: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct MakeFolderBody {
-    pub base_folder: PathBuf,
+    pub base_folder: String,
     pub new_name: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct PathInfoResponse {
     pub folder: String,
     pub disk_available: u64,
@@ -23,7 +23,7 @@ pub struct PathInfoResponse {
     pub write_access: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct MediaSampleResponse {
     pub read_access: bool,
     pub folder: String,
@@ -32,7 +32,7 @@ pub struct MediaSampleResponse {
     pub samples: Vec<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct UnsupportedFilesResponse {
     pub read_access: bool,
     pub folder: String,
@@ -41,7 +41,7 @@ pub struct UnsupportedFilesResponse {
     pub unsupported_count: usize,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct DiskResponse {
     pub media_folder: PathInfoResponse,
     pub thumbnails_folder: PathInfoResponse,

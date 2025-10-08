@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 common_photos = { path = "../common_photos" }
 tracing = "0.1.41"
-tracing-subscriber = "0.3.20"
+tracing-subscriber = {version =  "0.3.20", features = ["ansi"] }
 color-eyre = "0.6.5"
 axum = { version = "0.8.6", features = ["macros"] }
 serde = { version = "1.0.228", features = ["derive"] }

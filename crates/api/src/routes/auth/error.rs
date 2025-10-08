@@ -44,9 +44,7 @@ fn log_auth_failure(error: &AuthError) {
                 user_email, path
             );
         }
-        AuthError::Internal(e) => {
-            tracing::error!("Internal server error during authentication: {:?}", e);
-        }
+        AuthError::Internal(e) => println!("Error in /auth: {e:?}"),
     }
 }
 

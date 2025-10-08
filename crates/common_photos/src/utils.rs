@@ -1,6 +1,7 @@
 use crate::{get_config, get_media_dir};
 use sqlx::{PgPool, Pool, Postgres};
 use std::env;
+use std::fs::canonicalize;
 use std::path::absolute;
 use std::path::Path;
 
@@ -10,6 +11,7 @@ pub fn to_posix_string(path: &Path) -> String {
 }
 
 /// Get the relative path string for a given file.
+/// Can be used if the `file` may not exist.
 /// # Errors
 ///
 /// * `absolute` can return an error if the path cannot be resolved.
@@ -19,6 +21,20 @@ pub fn get_relative_path_str(file: impl AsRef<Path>) -> color_eyre::Result<Strin
     let relative_path = file_abs.strip_prefix(get_media_dir())?;
     let relative_path_str = to_posix_string(relative_path);
     Ok(relative_path_str)
+}
+
+/// Get the relative path string for a given file, canonicalizes the file and media dir first.
+/// Can only be used if the `file` exists.
+/// # Errors
+///
+/// * `canonicalize` can return an error if the `file` cannot be resolved.
+/// * `canonicalize` can return an error if the `media_dir` cannot be resolved.
+/// * `strip_prefix` can return an error if the media directory is not a prefix of the file's canonicalized path.
+pub fn canon_relative_path(file: impl AsRef<Path>) -> color_eyre::Result<String> {
+    let file = canonicalize(file)?;
+    let media_dir = canonicalize(get_media_dir())?;
+    let relative_path = file.strip_prefix(media_dir)?;
+    Ok(to_posix_string(relative_path))
 }
 
 /// Generate a URL-safe random ID of a given length.

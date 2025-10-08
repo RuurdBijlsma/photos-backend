@@ -34,7 +34,7 @@ fn log_setup_failure(error: &SetupError) {
         SetupError::PathNotInMediaDir(e) => error!("Path hierarchy error: {}", e),
         SetupError::Io(e) => error!("I/O error: {}", e),
         SetupError::DirectoryCreation(path) => error!("Failed to create directory: {}", path),
-        SetupError::Internal(e) => error!("Internal server error in setup: {:?}", e),
+        SetupError::Internal(e) => println!("Error in /setup: {e:?}"),
     }
 }
 

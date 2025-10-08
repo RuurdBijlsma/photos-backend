@@ -1,51 +1,73 @@
 #![allow(clippy::needless_for_each)]
 
+use crate::routes::setup::interfaces;
 use crate::routes::root::route::__path_root;
 use utoipa::{
     openapi::security::{Http, HttpAuthScheme, SecurityScheme}, Modify,
     OpenApi,
 };
 
+
 mod routes;
 
-use crate::auth::model::User;
+use auth::model::User;
 use crate::routes::auth;
+use crate::routes::auth::handlers::{
+    check_admin, get_me, login, logout, refresh_session, register,
+};
 use crate::routes::auth::middleware::require_role;
-use crate::routes::auth::{handlers, UserRole};
+use crate::routes::auth::{UserRole};
 use crate::routes::root::route::root;
 use crate::routes::scalar_config::get_custom_html;
 use axum::{
     middleware, routing::{get, post},
     Router,
 };
+use crate::routes::setup;
 use common_photos::get_db_pool;
 use sqlx::PgPool;
 use tracing::info;
+use tracing_subscriber::fmt;
 use utoipa_scalar::{Scalar, Servable};
-use crate::routes::auth::handlers::{check_admin, get_me, login, logout, refresh_session, register};
 use crate::routes::setup::handlers::{get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder, setup_needed};
 
 #[derive(OpenApi)]
 #[openapi(
     paths(
         root,
-        handlers::login,
-        handlers::register,
-        handlers::refresh_session,
-        handlers::logout,
-        handlers::get_me,
-        handlers::check_admin,
+        // Auth handlers
+        auth::handlers::login,
+        auth::handlers::register,
+        auth::handlers::refresh_session,
+        auth::handlers::logout,
+        auth::handlers::get_me,
+        auth::handlers::check_admin,
+        // Setup handlers
+        setup::handlers::setup_needed,
+        setup::handlers::get_disk_response,
+        setup::handlers::get_folder_media_sample,
+        setup::handlers::get_folder_unsupported,
+        setup::handlers::get_folders,
+        setup::handlers::make_folder,
     ),
     components(
         schemas(
-            crate::auth::model::User,
-            crate::auth::model::UserRole,
-            crate::auth::model::CreateUser,
-            crate::auth::model::LoginUser,
-            crate::auth::model::RefreshTokenPayload,
-            crate::auth::model::Tokens,
-            crate::auth::model::ProtectedResponse,
-            crate::auth::model::AdminResponse,
+            // Auth schemas
+            auth::model::User,
+            auth::model::UserRole,
+            auth::model::CreateUser,
+            auth::model::LoginUser,
+            auth::model::RefreshTokenPayload,
+            auth::model::Tokens,
+            auth::model::ProtectedResponse,
+            auth::model::AdminResponse,
+            // Setup schemas
+            interfaces::FolderQuery,
+            interfaces::MakeFolderBody,
+            interfaces::PathInfoResponse,
+            interfaces::MediaSampleResponse,
+            interfaces::UnsupportedFilesResponse,
+            interfaces::DiskResponse,
         )
     ),
     modifiers(&SecurityAddon),
@@ -75,7 +97,7 @@ impl Modify for SecurityAddon {
 /// * Returns an error if `color_eyre` fails to install or if `start_server` fails.
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
-    tracing_subscriber::fmt::init();
+    fmt::Subscriber::builder().with_ansi(true).init();
     color_eyre::install()?;
 
     start_server().await?;
@@ -117,7 +139,7 @@ async fn start_server() -> color_eyre::Result<()> {
         .route("/setup/media-sample", get(get_folder_media_sample))
         .route("/setup/unsupported-files", get(get_folder_unsupported))
         .route("/setup/folders", get(get_folders))
-        .route("/setup/folders", post(make_folder))
+        .route("/setup/make-folder", post(make_folder))
         // ======== [ MIDDLEWARES ] =========
         .route_layer(middleware::from_fn_with_state(
             UserRole::Admin,

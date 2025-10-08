@@ -1,4 +1,4 @@
 pub mod handlers;
-mod service;
-mod interfaces;
-mod error;
+pub mod service;
+pub mod interfaces;
+pub mod error;

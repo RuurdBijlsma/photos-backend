@@ -10,6 +10,6 @@ pub use config::structs::*;
 pub use queue::{enqueue_file_ingest, enqueue_file_remove};
 pub use read_model::*;
 pub use utils::{
-    get_db_pool, get_relative_path_str, is_media_file, is_photo_file, is_video_file, nice_id,
-    to_posix_string,
+    canon_relative_path, get_db_pool, get_relative_path_str, is_media_file, is_photo_file,
+    is_video_file, nice_id, to_posix_string,
 };

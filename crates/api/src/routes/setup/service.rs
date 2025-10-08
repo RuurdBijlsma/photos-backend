@@ -3,7 +3,7 @@ use crate::routes::setup::interfaces::{
     DiskResponse, MediaSampleResponse, PathInfoResponse, UnsupportedFilesResponse,
 };
 use common_photos::{
-    get_config, get_media_dir, get_relative_path_str, is_photo_file, is_video_file, to_posix_string,
+    canon_relative_path, get_config, get_media_dir, is_photo_file, is_video_file, to_posix_string,
 };
 use fs2::available_space;
 use fs2::total_space;
@@ -24,7 +24,7 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Setup
     let mut samples = Vec::with_capacity(n_samples);
 
     let media_folder_info = check_drive_info(user_folder)?;
-    let folder_relative = get_relative_path_str(user_folder)?;
+    let folder_relative = canon_relative_path(user_folder)?;
 
     if !media_folder_info.read_access {
         return Ok(MediaSampleResponse {
@@ -59,7 +59,7 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Setup
 
     let relative_samples: Vec<String> = samples
         .into_iter()
-        .map(|path| get_relative_path_str(&path))
+        .map(|path| canon_relative_path(&path))
         .collect::<Result<_, _>>()?;
 
     Ok(MediaSampleResponse {
@@ -133,37 +133,25 @@ pub fn list_folders_sync(user_folder: &Path) -> Result<Vec<PathBuf>, io::Error> 
     Ok(folders)
 }
 
-pub async fn validate_media_and_user_directory(
-    user_folder: &Path,
-) -> Result<PathBuf, SetupError> {
-    let media_path = get_media_dir();
-    let user_path = media_path.join(user_folder);
+pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, SetupError> {
+    let media_path = get_media_dir().canonicalize()?;
+    let user_path = media_path.join(user_folder).canonicalize()?;
 
-    // Using canonicalize() helps prevent directory traversal attacks.
-    let canonical_path = tokio::fs::canonicalize(user_path.clone()).await.map_err(|e| {
-        warn!(
-            "Failed to canonicalize user directory {}: {}",
-            user_path.display(),
-            e
-        );
-        SetupError::InvalidPath(to_posix_string(&user_path))
-    })?;
-
-    if !canonical_path.starts_with(&media_path) {
+    if !user_path.starts_with(&media_path) {
         warn!(
             "User path {} escapes media directory {}",
-            canonical_path.display(),
+            user_path.display(),
             media_path.display()
         );
-        return Err(SetupError::InvalidPath(to_posix_string(&canonical_path)));
+        return Err(SetupError::InvalidPath(to_posix_string(&user_path)));
     }
 
-    if !canonical_path.is_dir() {
-        warn!("User path {} is not a directory", canonical_path.display());
-        return Err(SetupError::InvalidPath(to_posix_string(&canonical_path)));
+    if !user_path.is_dir() {
+        warn!("User path {} is not a directory", user_path.display());
+        return Err(SetupError::InvalidPath(to_posix_string(&user_path)));
     }
 
-    Ok(canonical_path)
+    Ok(user_path)
 }
 
 pub fn contains_non_alphanumeric(s: &str) -> bool {
@@ -180,7 +168,7 @@ pub fn get_folder_unsupported_files(
 
     let media_folder_info = check_drive_info(user_folder)?;
 
-    let folder_relative = get_relative_path_str(user_folder)?;
+    let folder_relative = canon_relative_path(user_folder)?;
 
     if !media_folder_info.read_access {
         return Ok(UnsupportedFilesResponse {
@@ -213,8 +201,9 @@ pub fn get_folder_unsupported_files(
             let ext = entry
                 .path()
                 .extension()
-                .and_then(|ext| ext.to_str()).map_or_else(String::new, String::from);
-            let relative_path = get_relative_path_str(entry.path())?;
+                .and_then(|ext| ext.to_str())
+                .map_or_else(String::new, String::from);
+            let relative_path = canon_relative_path(entry.path())?;
             unsupported_files
                 .entry(ext)
                 .or_default()
@@ -224,7 +213,7 @@ pub fn get_folder_unsupported_files(
 
     let inaccessible_entries_str: Vec<String> = inaccessible_entries
         .into_iter()
-        .map(|entry| get_relative_path_str(&entry))
+        .map(|entry| canon_relative_path(&entry))
         .collect::<Result<_, _>>()?;
 
     Ok(UnsupportedFilesResponse {
