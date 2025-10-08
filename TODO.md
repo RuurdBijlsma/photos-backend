@@ -1,15 +1,14 @@
-* some kind of configs so it's not set in different places
 * copy setup-related endpoints from old backend
 * set up new api backend.
 * Show photos
 * clean refresh token table on schedule
-* fix shitty refresh token finding
+* ✅ fix shitty refresh token finding
 * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
 * cors met tower-http::cors
-* password reset flow
+* password reset flow (email) (make mail optional)
 * look at rust config package
 * add expiry time to auth responses
-* fix errors in api, abstraction for it, probably.
+* ✅ fix errors in api, abstraction for it, probably.
 * auth integration test:
   1. clear db
   2. http://localhost:3567/auth/register
@@ -25,5 +24,5 @@
   12. try access token on get_me
   13. http://localhost:3567/auth/logout
   14. try http://localhost:3567/auth/refresh -> should not work
-* Api docs swagger
-* use db config when setting up db.
+* ✅ Api docs swagger
+* use db config when setting up db. (pool size etc.)
