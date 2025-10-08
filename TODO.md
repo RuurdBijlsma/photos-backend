@@ -27,4 +27,4 @@
 * ✅ Api docs swagger
 * use db config when setting up db. (pool size etc.)
 * i accidentally made this a new repo, original was photos-processing
-* in auth/model, split db models and api interfaces
+* ✅ in auth/model, split db models and api interfaces

@@ -4,6 +4,7 @@ use crate::auth::token::{
 };
 use crate::routes::auth::error::AuthError;
 use crate::routes::auth::hashing::{hash_password, verify_password};
+use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
@@ -11,7 +12,6 @@ use common_photos::get_config;
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
-use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
 
 /// Authenticates a user based on email and password.
 ///

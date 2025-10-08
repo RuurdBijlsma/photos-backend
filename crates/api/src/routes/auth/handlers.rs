@@ -9,9 +9,11 @@ use crate::auth::{
     token::generate_refresh_token_parts,
 };
 
-use crate::routes::auth::error::AuthError;
-use crate::routes::auth::interfaces::{AdminResponse, CreateUser, LoginUser, GetMeResponse, RefreshTokenPayload, Tokens};
 use crate::routes::auth::User;
+use crate::routes::auth::error::AuthError;
+use crate::routes::auth::interfaces::{
+    AdminResponse, CreateUser, GetMeResponse, LoginUser, RefreshTokenPayload, Tokens,
+};
 
 /// Login to get a new session.
 #[utoipa::path(
@@ -102,9 +104,7 @@ pub async fn logout(
         ("bearer_auth" = [])
     )
 )]
-pub async fn get_me(
-    Extension(user): Extension<User>,
-) -> Result<Json<GetMeResponse>, StatusCode> {
+pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<GetMeResponse>, StatusCode> {
     Ok(Json(GetMeResponse {
         message: "You are accessing a protected route!".into(),
         user_email: user.email,
