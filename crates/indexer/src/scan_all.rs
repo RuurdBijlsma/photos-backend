@@ -24,7 +24,7 @@ fn has_allowed_ext(path: &Path, allowed: &HashSet<&str>) -> bool {
 fn get_media_files(
     folder: &Path,
     allowed_exts: &HashSet<&str>,
-) -> std::vec::Vec<std::path::PathBuf> {
+) -> Vec<std::path::PathBuf> {
     let mut files = Vec::new();
     for entry in WalkDir::new(folder).into_iter().filter_map(Result::ok) {
         if entry.file_type().is_file() && has_allowed_ext(entry.path(), allowed_exts) {
@@ -108,7 +108,7 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
         .photo_extensions
         .iter()
         .chain(cfg.video_extensions.iter())
-        .map(std::string::String::as_str)
+        .map(String::as_str)
         .collect();
 
     let all_files = get_media_files(media_dir, &allowed);
