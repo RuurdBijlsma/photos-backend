@@ -19,11 +19,11 @@ async fn get_or_create_location(
         Ok(id)
     } else {
         let new_id: i32 = sqlx::query_scalar(
-            r#"
+            r"
             INSERT INTO location (name, admin1, admin2, country_code, country_name)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id
-            "#,
+            ",
         )
         .bind(&location_data.name)
         .bind(&location_data.admin1)
@@ -37,6 +37,12 @@ async fn get_or_create_location(
 }
 
 /// Inserts a full media item using your `AnalyzeResult` struct within a single transaction.
+#[allow(
+    clippy::too_many_lines,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_wrap
+)]
 pub async fn store_media_item(
     tx: &mut PgTransaction<'_>,
     relative_path: &str,

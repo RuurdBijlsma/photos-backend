@@ -16,12 +16,13 @@ pub enum UserRole {
 impl fmt::Display for UserRole {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            UserRole::Admin => write!(f, "ADMIN"),
-            UserRole::User => write!(f, "USER"),
+            Self::Admin => write!(f, "ADMIN"),
+            Self::User => write!(f, "USER"),
         }
     }
 }
 
+/// Represents a user in the application.
 #[derive(Debug, Serialize, FromRow, Clone, ToSchema)]
 pub struct User {
     pub id: i32,
@@ -33,6 +34,7 @@ pub struct User {
     pub role: UserRole,
 }
 
+/// Represents a user record from db, including the password hash.
 #[allow(dead_code)]
 #[derive(Debug, FromRow)]
 pub struct UserRecord {
@@ -45,6 +47,7 @@ pub struct UserRecord {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Represents the data required to create a new user.
 #[derive(Deserialize, Debug, ToSchema)]
 pub struct CreateUser {
     pub email: String,
@@ -53,6 +56,7 @@ pub struct CreateUser {
     pub password: String,
 }
 
+/// Represents the data required for user login.
 #[derive(Deserialize, Debug, ToSchema)]
 pub struct LoginUser {
     pub email: String,
@@ -60,30 +64,36 @@ pub struct LoginUser {
     pub password: String,
 }
 
+/// Represents the payload for a refresh token request.
 #[derive(Deserialize, Debug, ToSchema)]
 pub struct RefreshTokenPayload {
     pub refresh_token: String,
 }
 
+/// Represents a pair of access and refresh tokens.
 #[derive(Serialize, Debug, ToSchema)]
 pub struct Tokens {
     pub access_token: String,
     pub refresh_token: String,
 }
 
+/// Represents the claims contained within a JWT.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct Claims {
-    pub sub: i32,
-    pub exp: usize,
+    pub sub: i32, // Subject (user ID)
+    pub exp: i64, // Expiration time
     pub role: UserRole,
 }
 
+/// Represents the response for a protected route, containing user details.
 #[derive(Serialize, Debug, ToSchema)]
 pub struct ProtectedResponse {
     pub message: String,
     pub user_email: String,
     pub user_id: i32,
 }
+
+/// Represents the response for an admin-protected route.
 #[derive(Serialize, Debug, ToSchema)]
 pub struct AdminResponse {
     pub message: String,

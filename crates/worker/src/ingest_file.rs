@@ -7,6 +7,19 @@ use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgTransaction;
 use std::path::Path;
 
+/// Processes a media file by generating thumbnails, analyzing its metadata, and storing the result.
+///
+/// # Errors
+///
+/// * Fails if any of the following operations return an error:
+///   - Path resolution (`get_relative_path_str`)
+///   - Thumbnail generation (`generate_thumbnails`)
+///   - Media analysis (`analyzer.analyze_media`)
+///   - Database insertion (`store_media_item`)
+///
+/// # Panics
+///
+/// * Panics if the `thumbnail_generation.heights` configuration array is empty.
 pub async fn ingest_file(
     file: &Path,
     analyzer: &mut MediaAnalyzer,
@@ -22,7 +35,7 @@ pub async fn ingest_file(
         .iter()
         .min()
         .expect("Thumb config heights should have at least one item.");
-    let smallest_thumb_filename = format!("{}p.avif", smallest_thumb_size);
+    let smallest_thumb_filename = format!("{smallest_thumb_size}p.avif");
     let tiny_thumb_path = thumbnail_out_dir.join(smallest_thumb_filename);
 
     generate_thumbnails(file, &thumbnail_out_dir, thumb_config).await?;

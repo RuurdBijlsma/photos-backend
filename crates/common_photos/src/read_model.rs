@@ -1,6 +1,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::types::JsonValue;
 
+/// Represents a geographical location.
 #[derive(Debug, sqlx::FromRow)]
 pub struct Location {
     pub id: i32,
@@ -11,6 +12,7 @@ pub struct Location {
     pub country_name: Option<String>,
 }
 
+/// Represents a single media item (photo or video) in the database.
 #[derive(Debug, sqlx::FromRow)]
 pub struct MediaItem {
     pub id: String,
@@ -25,6 +27,7 @@ pub struct MediaItem {
     pub use_panorama_viewer: Option<bool>,
 }
 
+/// Represents GPS data associated with a media item.
 #[derive(Debug, sqlx::FromRow)]
 pub struct Gps {
     pub media_item_id: String,
@@ -35,6 +38,7 @@ pub struct Gps {
     pub image_direction: Option<f64>,
 }
 
+/// Represents detailed time information for a media item.
 #[derive(Debug, sqlx::FromRow)]
 pub struct TimeDetails {
     pub media_item_id: String,
@@ -46,6 +50,7 @@ pub struct TimeDetails {
     pub source_confidence: Option<i32>,
 }
 
+/// Represents weather data associated with a media item.
 #[derive(Debug, sqlx::FromRow)]
 pub struct Weather {
     pub media_item_id: String,
@@ -67,7 +72,9 @@ pub struct Weather {
     pub is_daytime: Option<bool>,
 }
 
+/// Represents technical details of a media item's file and format.
 #[derive(Debug, sqlx::FromRow)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Details {
     pub media_item_id: String,
     pub is_motion_photo: bool,
@@ -84,6 +91,7 @@ pub struct Details {
     pub exif: Option<JsonValue>, // Using sqlx::types::JsonValue for JSONB
 }
 
+/// Represents the camera and settings used to capture a media item.
 #[derive(Debug, sqlx::FromRow)]
 pub struct CaptureDetails {
     pub media_item_id: String,
@@ -95,6 +103,7 @@ pub struct CaptureDetails {
     pub camera_model: Option<String>,
 }
 
+/// Represents panorama-specific metadata for a media item.
 #[derive(Debug, sqlx::FromRow)]
 pub struct Panorama {
     pub media_item_id: String,

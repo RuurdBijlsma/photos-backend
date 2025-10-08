@@ -1,3 +1,5 @@
+#![allow(clippy::needless_for_each)]
+
 use crate::routes::root::route::__path_root;
 use utoipa::{
     Modify, OpenApi,
@@ -51,6 +53,7 @@ use utoipa_scalar::{Scalar, Servable};
 )]
 struct ApiDoc;
 
+/// A modifier to add bearer token security to the `OpenAPI` specification.
 struct SecurityAddon;
 
 impl Modify for SecurityAddon {
@@ -59,10 +62,15 @@ impl Modify for SecurityAddon {
         components.add_security_scheme(
             "bearer_auth",
             SecurityScheme::Http(Http::new(HttpAuthScheme::Bearer)),
-        )
+        );
     }
 }
 
+/// The main entry point for the application.
+///
+/// # Errors
+///
+/// * Returns an error if `color_eyre` fails to install or if `start_server` fails.
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     tracing_subscriber::fmt::init();
@@ -72,10 +80,14 @@ async fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// Initializes and runs the Axum web server.
+///
+/// # Errors
+///
+/// * Returns an error if the database pool cannot be created or the server fails to bind or start.
 async fn start_server() -> color_eyre::Result<()> {
     let pool = get_db_pool().await?;
 
-    // --- routes setup is the same ---
     let public_routes = Router::new()
         .route("/", get(root))
         .route("/auth/refresh", post(handlers::refresh_session))
@@ -99,7 +111,6 @@ async fn start_server() -> color_eyre::Result<()> {
             pool.clone(),
         ));
 
-    // The openapi spec is generated once and can be cloned for each UI
     let openapi = ApiDoc::openapi();
 
     let app = Router::new()

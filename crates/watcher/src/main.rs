@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
     fs::create_dir_all(&thumbnails_dir).await?;
 
     info!("Start watching for file changes...");
-    start_watching(&media_dir, &pool)?;
+    start_watching(&media_dir, &pool);
 
     Ok(())
 }

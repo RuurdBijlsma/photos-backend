@@ -1,6 +1,7 @@
 use ruurd_photos_thumbnail_generation::{AvifOptions, VideoThumbOptions};
 use serde::Deserialize;
 
+/// Overall application configuration structure.
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub directories: DirectoriesConfig,
@@ -12,6 +13,7 @@ pub struct Config {
     pub auth: AuthConfig,
 }
 
+/// Configuration for authentication, including JWT secrets and token expiry.
 #[derive(Debug, Deserialize)]
 pub struct AuthConfig {
     pub jwt_secret: String,
@@ -19,6 +21,7 @@ pub struct AuthConfig {
     pub refresh_token_expiry_days: i64,
 }
 
+/// Configuration for the API server.
 #[derive(Debug, Deserialize)]
 pub struct ApiConfig {
     pub host: String,
@@ -26,6 +29,7 @@ pub struct ApiConfig {
     pub allowed_origins: Vec<String>,
 }
 
+/// Defines paths for media and thumbnail storage.
 #[derive(Debug, Deserialize)]
 pub struct DirectoriesConfig {
     /// Folder with source photos and video
@@ -34,6 +38,7 @@ pub struct DirectoriesConfig {
     pub thumbnails_folder: String,
 }
 
+/// Configuration for the background worker process.
 #[derive(Debug, Deserialize)]
 pub struct WorkerConfig {
     pub wait_after_empty_queue_s: u64,
@@ -41,6 +46,7 @@ pub struct WorkerConfig {
     pub max_retries: i32,
 }
 
+/// Database connection and related configuration.
 #[derive(Debug, Deserialize)]
 pub struct DatabaseConfig {
     pub url: String,
@@ -49,11 +55,13 @@ pub struct DatabaseConfig {
     pub media_item_id_length: usize,
 }
 
+/// Logging configuration.
 #[derive(Debug, Deserialize)]
 pub struct LoggingConfig {
     pub level: String,
 }
 
+/// Configuration for thumbnail generation settings.
 #[derive(Debug, Deserialize)]
 pub struct ThumbnailGenerationConfig {
     /// The file extension for photo thumbnails (e.g., "avif", "webp", "jpg").

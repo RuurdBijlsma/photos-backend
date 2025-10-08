@@ -18,6 +18,14 @@ where
 {
     type Rejection = AuthError;
 
+    /// Extracts a `User` from the request parts by validating a JWT from the "Authorization" header.
+    /// # Errors
+    ///
+    /// * `AuthError::MissingToken` if the "Authorization" header is missing.
+    /// * `AuthError::InvalidToken` if the token is not a "Bearer" token or is invalid.
+    /// * `AuthError::Internal` if the `PgPool` state is not configured correctly.
+    /// * `sqlx::Error` if there's a database error.
+    /// * `AuthError::UserNotFound` if the user ID from the token does not correspond to an existing user.
     async fn from_request_parts(
         parts: &mut axum::http::request::Parts,
         state: &S,
@@ -67,6 +75,11 @@ where
     }
 }
 
+/// Middleware to require a specific user role for accessing a route.
+/// # Errors
+///
+/// * `AuthError::UserNotFound` if the `User` is not present in the request extensions (i.e., `User` extractor failed).
+/// * `AuthError::PermissionDenied` if the authenticated user's role does not match the required role.
 pub async fn require_role(
     State(required_role): State<UserRole>,
     req: Request<Body>,

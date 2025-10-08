@@ -5,25 +5,27 @@ use color_eyre::eyre;
 use serde_json::json;
 use tracing::{info, warn};
 
+/// Represents various authentication-related errors.
 pub enum AuthError {
     MissingToken,
     InvalidToken,
-    InvalidCredentials,            // New
-    RefreshTokenExpiredOrNotFound, // New
-    UserAlreadyExists,             // New
+    InvalidCredentials,
+    RefreshTokenExpiredOrNotFound,
+    UserAlreadyExists,
     UserNotFound,
     PermissionDenied { user_email: String, path: String },
     Internal(eyre::Report),
 }
 
-// Helper function to log failures.
+/// Helper function to log authentication failures with appropriate tracing levels.
+#[allow(clippy::cognitive_complexity)]
 fn log_auth_failure(error: &AuthError) {
     match error {
         AuthError::MissingToken => warn!("Authentication failed: Missing Authorization token."),
         AuthError::InvalidToken => warn!("Authentication failed: Invalid token provided."),
         AuthError::InvalidCredentials => {
-            info!("Authentication failed: Invalid credentials provided.")
-        } // Use info to reduce noise
+            info!("Authentication failed: Invalid credentials provided.");
+        }
         AuthError::RefreshTokenExpiredOrNotFound => info!("Refresh token not found or expired."),
         AuthError::UserAlreadyExists => info!("Registration failed: User already exists."),
         AuthError::UserNotFound => warn!("Authentication failed: User from token not found."),
@@ -34,32 +36,30 @@ fn log_auth_failure(error: &AuthError) {
             );
         }
         AuthError::Internal(e) => {
-            tracing::error!("Internal server error during authentication: {:?}", e)
+            tracing::error!("Internal server error during authentication: {:?}", e);
         }
     }
 }
 
-// Implementation to turn an AuthError into a user-facing response.
+/// Converts an `AuthError` into an Axum `Response`, including logging and a JSON error body.
 impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         log_auth_failure(&self);
 
         let (status, error_message) = match self {
-            AuthError::InvalidCredentials => {
-                (StatusCode::UNAUTHORIZED, "Invalid email or password")
-            }
-            AuthError::MissingToken
-            | AuthError::InvalidToken
-            | AuthError::UserNotFound
-            | AuthError::RefreshTokenExpiredOrNotFound => {
+            Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
+            Self::MissingToken
+            | Self::InvalidToken
+            | Self::UserNotFound
+            | Self::RefreshTokenExpiredOrNotFound => {
                 (StatusCode::UNAUTHORIZED, "Authentication failed")
             }
-            AuthError::UserAlreadyExists => (
+            Self::UserAlreadyExists => (
                 StatusCode::CONFLICT,
                 "A user with this email already exists",
             ),
-            AuthError::PermissionDenied { .. } => (StatusCode::FORBIDDEN, "Permission denied"),
-            AuthError::Internal(_) => (
+            Self::PermissionDenied { .. } => (StatusCode::FORBIDDEN, "Permission denied"),
+            Self::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An internal error occurred",
             ),
@@ -70,7 +70,7 @@ impl IntoResponse for AuthError {
     }
 }
 
-// This allows us to use `?` to convert `sqlx::Error` and other errors into `AuthError::Internal`.
+/// Allows conversion from any type that can be converted into `eyre::Report` into `AuthError::Internal`.
 impl<E> From<E> for AuthError
 where
     E: Into<eyre::Report>,

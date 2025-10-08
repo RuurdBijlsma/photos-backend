@@ -1,11 +1,20 @@
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use sqlx::PgPool;
 
-use crate::auth::{model::*, service::*, token::*};
+use crate::auth::{
+    model::{
+        AdminResponse, CreateUser, LoginUser, ProtectedResponse, RefreshTokenPayload, Tokens, User,
+    },
+    service::{
+        authenticate_user, create_access_token, create_user, logout_user, refresh_tokens,
+        store_refresh_token,
+    },
+    token::generate_refresh_token_parts,
+};
 
 use crate::routes::auth::error::AuthError;
 
-/// Login to get a new session
+/// Login to get a new session.
 #[utoipa::path(
     post,
     path = "/auth/login",
@@ -30,7 +39,7 @@ pub async fn login(
     }))
 }
 
-/// Register a new user
+/// Register a new user.
 #[utoipa::path(
     post,
     path = "/auth/register",
@@ -48,7 +57,7 @@ pub async fn register(
     Ok(Json(user))
 }
 
-/// Refresh the session using a refresh token
+/// Refresh the session using a refresh token.
 #[utoipa::path(
     post,
     path = "/auth/refresh",
@@ -65,7 +74,7 @@ pub async fn refresh_session(
     refresh_tokens(&pool, &payload.refresh_token).await
 }
 
-/// Logout and invalidate the refresh token
+/// Logout and invalidate the refresh token.
 #[utoipa::path(
     post,
     path = "/auth/logout",
@@ -82,7 +91,7 @@ pub async fn logout(
     logout_user(&pool, &payload.refresh_token).await
 }
 
-/// Get the current user's details
+/// Get the current user's details.
 #[utoipa::path(
     get,
     path = "/auth/me",
@@ -104,7 +113,7 @@ pub async fn get_me(
     }))
 }
 
-/// Check if the current user is an admin
+/// Check if the current user is an admin.
 #[utoipa::path(
     get,
     path = "/auth/admin-check",

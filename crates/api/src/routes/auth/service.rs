@@ -1,7 +1,7 @@
-// in service.rs
-
-use crate::auth::model::*;
-use crate::auth::token::*;
+use crate::auth::model::{Claims, CreateUser, Tokens, User, UserRecord, UserRole};
+use crate::auth::token::{
+    RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
+};
 use crate::routes::auth::error::AuthError;
 use crate::routes::auth::hashing::{hash_password, verify_password};
 use axum::Json;
@@ -12,6 +12,12 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
 
+/// Authenticates a user based on email and password.
+///
+/// # Errors
+///
+/// * `AuthError::InvalidCredentials` if the email or password is incorrect.
+/// * `sqlx::Error` for database-related issues.
 pub async fn authenticate_user(
     pool: &PgPool,
     email: &str,
@@ -35,6 +41,13 @@ pub async fn authenticate_user(
     Ok(user)
 }
 
+/// Creates a new user in the database.
+///
+/// # Errors
+///
+/// * `AuthError::UserAlreadyExists` if a user with the given email already exists.
+/// * `sqlx::Error` for other database-related issues.
+/// * `AuthError::Internal` for hashing errors.
 pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, AuthError> {
     let hashed = hash_password(payload.password.as_ref())?;
     info!("Creating user {:?}", payload);
@@ -57,10 +70,15 @@ pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, Au
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
             Err(AuthError::UserAlreadyExists)
         }
-        Err(e) => Err(e.into()), // Convert other errors to AuthError::Internal
+        Err(e) => Err(e.into()),
     }
 }
 
+/// Stores a refresh token in the database.
+///
+/// # Errors
+///
+/// * `sqlx::Error` for database-related issues.
 pub async fn store_refresh_token<'c, E>(
     executor: E,
     user_id: i32,
@@ -83,10 +101,14 @@ where
     Ok(())
 }
 
+/// Creates a new access token for a given user ID and role.
+///
+/// # Errors
+///
+/// * `jsonwebtoken::Error` if token encoding fails.
 pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, AuthError> {
     let cfg = get_config();
-    let exp =
-        (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp() as usize;
+    let exp = (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp();
     let claims = Claims {
         sub: user_id,
         role,
@@ -97,10 +119,16 @@ pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, AuthE
         &claims,
         &EncodingKey::from_secret(cfg.auth.jwt_secret.as_ref()),
     )
-    .map_err(Into::into) // Convert jsonwebtoken::Error into AuthError::Internal
+    .map_err(Into::into)
 }
 
-/// Handles refresh token rotation
+/// Handles refresh token rotation, invalidating the old token and issuing a new pair.
+///
+/// # Errors
+/// * `AuthError::InvalidToken` if the provided refresh token is malformed or invalid.
+/// * `AuthError::RefreshTokenExpiredOrNotFound` if the refresh token is not found or has expired.
+/// * `AuthError::UserNotFound` if the user associated with the token cannot be found.
+/// * `sqlx::Error` for database transaction issues.
 pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Tokens>, AuthError> {
     let (selector, verifier_bytes) = split_refresh_token(raw_token)?;
     let record = sqlx::query!(
@@ -113,8 +141,7 @@ pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Token
     .ok_or(AuthError::RefreshTokenExpiredOrNotFound)?;
 
     if !verify_token(&verifier_bytes, &record.verifier_hash)? {
-        // As a security measure, if the verifier is wrong, we assume token theft
-        // and delete all refresh tokens for that user.
+        // If the verifier is wrong, assume token theft and delete all refresh tokens for that user.
         sqlx::query!(
             "DELETE FROM refresh_token WHERE user_id = $1",
             record.user_id
@@ -125,7 +152,6 @@ pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Token
         return Err(AuthError::InvalidToken);
     }
 
-    // Safely look up the user's role
     let user_role = sqlx::query!(
         r#"SELECT role as "role: UserRole" FROM app_user WHERE id = $1"#,
         record.user_id
@@ -135,7 +161,6 @@ pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Token
     .map_err(|_| AuthError::UserNotFound)?
     .role;
 
-    // Begin transaction for token rotation
     let mut tx = pool.begin().await?;
     sqlx::query!("DELETE FROM refresh_token WHERE selector = $1", selector)
         .execute(&mut *tx)
@@ -153,7 +178,11 @@ pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Token
     }))
 }
 
-/// Deletes the refresh token matching the provided one
+/// Deletes the refresh token matching the provided one, effectively logging out the user.
+///
+/// # Errors
+///
+/// * `sqlx::Error` for database-related issues.
 pub async fn logout_user(pool: &PgPool, raw_token: &str) -> Result<StatusCode, AuthError> {
     // If the token is malformed, we just ignore it and succeed silently.
     if let Ok((selector, verifier_bytes)) = split_refresh_token(raw_token)
@@ -172,5 +201,3 @@ pub async fn logout_user(pool: &PgPool, raw_token: &str) -> Result<StatusCode, A
     // Logout should always appear successful to prevent token enumeration attacks.
     Ok(StatusCode::NO_CONTENT)
 }
-
-// The internal_err function is no longer needed!

@@ -4,31 +4,41 @@ use common_photos::{
 };
 use sqlx::{Pool, Postgres};
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tokio::fs;
 use tracing::info;
 use walkdir::WalkDir;
 
+/// Checks if a file path has an extension present in a given set of allowed extensions.
 fn has_allowed_ext(path: &Path, allowed: &HashSet<&str>) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
-        .map(|ext| allowed.contains(ext.to_lowercase().as_str()))
-        .unwrap_or(false)
+        .is_some_and(|ext| allowed.contains(ext.to_lowercase().as_str()))
 }
 
-async fn get_media_files(
+/// Recursively finds all media files in a folder that have an allowed extension.
+///
+/// # Errors
+///
+/// * Can return an I/O error if the specified folder cannot be read.
+fn get_media_files(
     folder: &Path,
-    allowed_exts: HashSet<&str>,
-) -> color_eyre::Result<Vec<PathBuf>> {
+    allowed_exts: &HashSet<&str>,
+) -> std::vec::Vec<std::path::PathBuf> {
     let mut files = Vec::new();
     for entry in WalkDir::new(folder).into_iter().filter_map(Result::ok) {
-        if entry.file_type().is_file() && has_allowed_ext(entry.path(), &allowed_exts) {
+        if entry.file_type().is_file() && has_allowed_ext(entry.path(), allowed_exts) {
             files.push(entry.into_path());
         }
     }
-    Ok::<_, color_eyre::Report>(files)
+    files
 }
 
+/// Reads the thumbnails directory and returns a set of all sub-directory names (media item IDs).
+///
+/// # Errors
+///
+/// * Returns an I/O error if the thumbnails directory or its entries cannot be read.
 async fn get_thumbnail_folders() -> color_eyre::Result<HashSet<String>> {
     let mut set = HashSet::new();
     let mut entries = fs::read_dir(get_thumbnails_dir()).await?;
@@ -42,6 +52,11 @@ async fn get_thumbnail_folders() -> color_eyre::Result<HashSet<String>> {
     Ok(set)
 }
 
+/// Synchronizes thumbnail folders with the database, deleting orphans and re-ingesting items with missing thumbnails.
+///
+/// # Errors
+///
+/// * Returns an error for database query failures or file system I/O errors during deletion.
 async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     let job_count: i64 = sqlx::query_scalar("SELECT count(id) FROM job_queue")
         .fetch_one(pool)
@@ -82,16 +97,21 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// Synchronizes the filesystem state with the database by enqueuing new files for ingest and old files for removal.
+///
+/// # Errors
+///
+/// * Returns an error if file system scanning, database queries, or job enqueuing fails.
 pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     let cfg = get_thumbnail_options();
     let allowed: HashSet<_> = cfg
         .photo_extensions
         .iter()
         .chain(cfg.video_extensions.iter())
-        .map(|s| s.as_str())
+        .map(std::string::String::as_str)
         .collect();
 
-    let all_files = get_media_files(media_dir, allowed).await?;
+    let all_files = get_media_files(media_dir, &allowed);
     let fs_paths: HashSet<String> = all_files
         .into_iter()
         .flat_map(|p| get_relative_path_str(&p))
