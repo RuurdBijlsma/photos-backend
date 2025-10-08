@@ -1,8 +1,13 @@
-use crate::get_media_dir;
+use crate::{get_config, get_media_dir};
 use sqlx::{PgPool, Pool, Postgres};
 use std::env;
-use std::path::Path;
 use std::path::absolute;
+use std::path::Path;
+
+#[must_use]
+pub fn to_posix_string(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
 
 /// Get the relative path string for a given file.
 /// # Errors
@@ -12,7 +17,7 @@ use std::path::absolute;
 pub fn get_relative_path_str(file: impl AsRef<Path>) -> color_eyre::Result<String> {
     let file_abs = absolute(file)?;
     let relative_path = file_abs.strip_prefix(get_media_dir())?;
-    let relative_path_str = relative_path.to_string_lossy().to_string();
+    let relative_path_str = to_posix_string(relative_path);
     Ok(relative_path_str)
 }
 
@@ -40,4 +45,33 @@ pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
     let pool = PgPool::connect(&database_url).await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
     Ok(pool)
+}
+
+#[must_use]
+pub fn is_media_file(file: &Path) -> bool {
+    let config = &get_config().thumbnail_generation;
+    let photo_extensions = &config.photo_extensions;
+    let video_extensions = &config.video_extensions;
+    let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_lowercase()) else {
+        return false;
+    };
+    photo_extensions.contains(&extension) || video_extensions.contains(&extension)
+}
+
+#[must_use]
+pub fn is_photo_file(file: &Path) -> bool {
+    let photo_extensions = &get_config().thumbnail_generation.photo_extensions;
+    let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_lowercase()) else {
+        return false;
+    };
+    photo_extensions.contains(&extension)
+}
+
+#[must_use]
+pub fn is_video_file(file: &Path) -> bool {
+    let video_extensions = &get_config().thumbnail_generation.video_extensions;
+    let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_lowercase()) else {
+        return false;
+    };
+    video_extensions.contains(&extension)
 }

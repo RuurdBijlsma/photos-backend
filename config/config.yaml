@@ -17,6 +17,9 @@ auth:
   access_token_expiry_minutes: 60
   refresh_token_expiry_days: 7
 
+setup:
+  n_media_samples: 8
+
 database:
   #  todo get from env
   url: postgres://user:pass@localhost/photos

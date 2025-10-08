@@ -1,20 +1,29 @@
-use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
+use thiserror::Error;
 use tracing::{info, warn};
 
-/// Represents various authentication-related errors.
+#[derive(Debug, Error)]
 pub enum AuthError {
+    #[error("missing token")]
     MissingToken,
+    #[error("invalid token")]
     InvalidToken,
+    #[error("invalid credentials")]
     InvalidCredentials,
+    #[error("refresh token expired or not found")]
     RefreshTokenExpiredOrNotFound,
+    #[error("user already exists")]
     UserAlreadyExists,
+    #[error("user not found")]
     UserNotFound,
+    #[error("permission denied for {user_email} on {path}")]
     PermissionDenied { user_email: String, path: String },
-    Internal(eyre::Report),
+    #[error(transparent)]
+    Internal(#[from] eyre::Report),
 }
 
 /// Helper function to log authentication failures with appropriate tracing levels.
@@ -70,12 +79,14 @@ impl IntoResponse for AuthError {
     }
 }
 
-/// Allows conversion from any type that can be converted into `eyre::Report` into `AuthError::Internal`.
-impl<E> From<E> for AuthError
-where
-    E: Into<eyre::Report>,
-{
-    fn from(err: E) -> Self {
-        Self::Internal(err.into())
+impl From<sqlx::Error> for AuthError {
+    fn from(err: sqlx::Error) -> Self {
+        Self::Internal(eyre::Report::new(err))
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for AuthError {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        Self::Internal(eyre::Report::new(err))
     }
 }

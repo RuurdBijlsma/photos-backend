@@ -2,8 +2,8 @@
 
 use crate::routes::root::route::__path_root;
 use utoipa::{
-    Modify, OpenApi,
-    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
+    openapi::security::{Http, HttpAuthScheme, SecurityScheme}, Modify,
+    OpenApi,
 };
 
 mod routes;
@@ -11,17 +11,19 @@ mod routes;
 use crate::auth::model::User;
 use crate::routes::auth;
 use crate::routes::auth::middleware::require_role;
-use crate::routes::auth::{UserRole, handlers};
+use crate::routes::auth::{handlers, UserRole};
 use crate::routes::root::route::root;
 use crate::routes::scalar_config::get_custom_html;
 use axum::{
-    Router, middleware,
-    routing::{get, post},
+    middleware, routing::{get, post},
+    Router,
 };
 use common_photos::get_db_pool;
 use sqlx::PgPool;
 use tracing::info;
 use utoipa_scalar::{Scalar, Servable};
+use crate::routes::auth::handlers::{check_admin, get_me, login, logout, refresh_session, register};
+use crate::routes::setup::handlers::{get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder, setup_needed};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -89,20 +91,34 @@ async fn start_server() -> color_eyre::Result<()> {
     let pool = get_db_pool().await?;
 
     let public_routes = Router::new()
+        // ======== [ ROOT ] =========
         .route("/", get(root))
-        .route("/auth/refresh", post(handlers::refresh_session))
-        .route("/auth/register", post(handlers::register))
-        .route("/auth/login", post(handlers::login))
-        .route("/auth/logout", post(handlers::logout));
+        // ======== [ /setup/ ] =========
+        .route("/setup/needed", get(setup_needed))
+        // ======== [ /auth/ ] =========
+        .route("/auth/refresh", post(refresh_session))
+        .route("/auth/register", post(register))
+        .route("/auth/login", post(login))
+        .route("/auth/logout", post(logout));
 
     let protected_routes = Router::new()
-        .route("/auth/me", get(handlers::get_me))
+        // ======== [ /auth/ ] =========
+        .route("/auth/me", get(get_me))
+        // ======== [ MIDDLEWARES ] =========
         .route_layer(middleware::from_extractor_with_state::<User, PgPool>(
             pool.clone(),
         ));
 
     let admin_routes = Router::new()
-        .route("/auth/admin-check", get(handlers::check_admin))
+        // ======== [ /auth/ ] =========
+        .route("/auth/admin-check", get(check_admin))
+        // ======== [ /setup/ ] =========
+        .route("/setup/disk-info", get(get_disk_response))
+        .route("/setup/media-sample", get(get_folder_media_sample))
+        .route("/setup/unsupported-files", get(get_folder_unsupported))
+        .route("/setup/folders", get(get_folders))
+        .route("/setup/folders", post(make_folder))
+        // ======== [ MIDDLEWARES ] =========
         .route_layer(middleware::from_fn_with_state(
             UserRole::Admin,
             require_role,

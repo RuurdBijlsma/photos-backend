@@ -11,6 +11,12 @@ pub struct Config {
     pub thumbnail_generation: ThumbnailGenerationConfig,
     pub api: ApiConfig,
     pub auth: AuthConfig,
+    pub setup: SetupConfig,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetupConfig{
+    pub n_media_samples: usize,
 }
 
 /// Configuration for authentication, including JWT secrets and token expiry.
