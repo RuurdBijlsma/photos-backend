@@ -15,7 +15,7 @@ pub struct Config {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SetupConfig{
+pub struct SetupConfig {
     pub n_media_samples: usize,
 }
 

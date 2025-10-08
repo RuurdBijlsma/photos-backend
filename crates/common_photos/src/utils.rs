@@ -2,8 +2,8 @@ use crate::{get_config, get_media_dir};
 use sqlx::{PgPool, Pool, Postgres};
 use std::env;
 use std::fs::canonicalize;
-use std::path::absolute;
 use std::path::Path;
+use std::path::absolute;
 
 #[must_use]
 pub fn to_posix_string(path: &Path) -> String {

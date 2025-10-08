@@ -32,6 +32,18 @@ pub struct MediaSampleResponse {
     pub samples: Vec<String>,
 }
 
+impl MediaSampleResponse {
+    pub const fn unreadable(folder: String) -> Self {
+        Self {
+            read_access: false,
+            folder,
+            photo_count: 0,
+            video_count: 0,
+            samples: Vec::new(),
+        }
+    }
+}
+
 #[derive(Serialize, ToSchema)]
 pub struct UnsupportedFilesResponse {
     pub read_access: bool,
@@ -39,6 +51,18 @@ pub struct UnsupportedFilesResponse {
     pub inaccessible_entries: Vec<String>,
     pub unsupported_files: HashMap<String, Vec<String>>,
     pub unsupported_count: usize,
+}
+
+impl UnsupportedFilesResponse {
+    pub fn unreadable(folder: String) -> Self {
+        Self {
+            read_access: false,
+            folder,
+            inaccessible_entries: Vec::new(),
+            unsupported_files: HashMap::new(),
+            unsupported_count: 0,
+        }
+    }
 }
 
 #[derive(Serialize, ToSchema)]

@@ -21,10 +21,7 @@ fn has_allowed_ext(path: &Path, allowed: &HashSet<&str>) -> bool {
 /// # Errors
 ///
 /// * Can return an I/O error if the specified folder cannot be read.
-fn get_media_files(
-    folder: &Path,
-    allowed_exts: &HashSet<&str>,
-) -> Vec<std::path::PathBuf> {
+fn get_media_files(folder: &Path, allowed_exts: &HashSet<&str>) -> Vec<std::path::PathBuf> {
     let mut files = Vec::new();
     for entry in WalkDir::new(folder).into_iter().filter_map(Result::ok) {
         if entry.file_type().is_file() && has_allowed_ext(entry.path(), allowed_exts) {

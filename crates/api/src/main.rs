@@ -1,35 +1,37 @@
 #![allow(clippy::needless_for_each)]
 
-use crate::routes::setup::interfaces;
 use crate::routes::root::route::__path_root;
+use crate::routes::setup::interfaces;
 use utoipa::{
-    openapi::security::{Http, HttpAuthScheme, SecurityScheme}, Modify,
-    OpenApi,
+    Modify, OpenApi,
+    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
 };
-
 
 mod routes;
 
-use auth::model::User;
 use crate::routes::auth;
+use crate::routes::auth::UserRole;
 use crate::routes::auth::handlers::{
     check_admin, get_me, login, logout, refresh_session, register,
 };
 use crate::routes::auth::middleware::require_role;
-use crate::routes::auth::{UserRole};
 use crate::routes::root::route::root;
 use crate::routes::scalar_config::get_custom_html;
-use axum::{
-    middleware, routing::{get, post},
-    Router,
-};
 use crate::routes::setup;
+use crate::routes::setup::handlers::{
+    get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
+    setup_needed,
+};
+use auth::model::User;
+use axum::{
+    Router, middleware,
+    routing::{get, post},
+};
 use common_photos::get_db_pool;
 use sqlx::PgPool;
 use tracing::info;
 use tracing_subscriber::fmt;
 use utoipa_scalar::{Scalar, Servable};
-use crate::routes::setup::handlers::{get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder, setup_needed};
 
 #[derive(OpenApi)]
 #[openapi(

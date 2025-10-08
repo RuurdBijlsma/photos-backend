@@ -1,6 +1,6 @@
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use std::path::StripPrefixError;
@@ -18,12 +18,13 @@ pub enum SetupError {
     #[error("i/o error")]
     Io(#[from] std::io::Error),
 
-    #[error("failed to create directory: {0}")]
+    #[error("failed to create directory with invalid name: {0}")]
     DirectoryCreation(String),
 
-    // This single attribute correctly and safely handles the conversion from
-    // `color_eyre::Result`, resolving the conflict.
-    #[error(transparent)]
+    #[error("database error")]
+    Database(#[from] sqlx::Error),
+
+    #[error("internal error")]
     Internal(#[from] eyre::Report),
 }
 
@@ -34,6 +35,7 @@ fn log_setup_failure(error: &SetupError) {
         SetupError::PathNotInMediaDir(e) => error!("Path hierarchy error: {}", e),
         SetupError::Io(e) => error!("I/O error: {}", e),
         SetupError::DirectoryCreation(path) => error!("Failed to create directory: {}", path),
+        SetupError::Database(e) => error!("Database query failed: {}", e),
         SetupError::Internal(e) => println!("Error in /setup: {e:?}"),
     }
 }
@@ -42,26 +44,20 @@ impl IntoResponse for SetupError {
     fn into_response(self) -> Response {
         log_setup_failure(&self);
 
-        let (status, error_message) = match &self {
+        let (status, error_message) = match self {
             Self::InvalidPath(path) => (
                 StatusCode::BAD_REQUEST,
                 format!("The provided path is invalid: {path}"),
             ),
-            Self::PathNotInMediaDir(_) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An internal error occurred while processing a file path.".into(),
-            ),
-            Self::Io(_) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "A filesystem error occurred.".into(),
-            ),
             Self::DirectoryCreation(name) => (
                 StatusCode::BAD_REQUEST,
-                format!(
-                    "The directory '{name}' contains invalid characters and cannot be created."
-                ),
+                format!("The directory name '{name}' contains invalid characters."),
             ),
-            Self::Internal(_) => (
+            Self::Database(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "A database error occurred.".into(),
+            ),
+            Self::PathNotInMediaDir(_) | Self::Io(_) | Self::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An unexpected internal error occurred.".into(),
             ),
@@ -74,12 +70,6 @@ impl IntoResponse for SetupError {
 
 impl From<tokio::task::JoinError> for SetupError {
     fn from(err: tokio::task::JoinError) -> Self {
-        Self::Internal(eyre::Report::new(err))
-    }
-}
-
-impl From<sqlx::Error> for SetupError {
-    fn from(err: sqlx::Error) -> Self {
         Self::Internal(eyre::Report::new(err))
     }
 }
