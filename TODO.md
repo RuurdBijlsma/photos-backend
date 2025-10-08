@@ -1,5 +1,5 @@
 * copy setup-related endpoints from old backend
-* set up new api backend.
+* ✅ set up new api backend.
 * Show photos
 * clean refresh token table on schedule
 * ✅ fix shitty refresh token finding
@@ -26,3 +26,4 @@
   14. try http://localhost:3567/auth/refresh -> should not work
 * ✅ Api docs swagger
 * use db config when setting up db. (pool size etc.)
+* i accidentally made this a new repo, original was photos-processing
