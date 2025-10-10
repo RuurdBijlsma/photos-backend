@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 common_photos = { path = "../common_photos" }
+ml_analysis = { path = "../ml_analysis" }
 media_analyzer = "0.2.3"
 ruurd_photos_thumbnail_generation = "0.3.2"
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "json"] }
@@ -12,3 +13,4 @@ tokio = { version = "1.47.1", features = ["full"] }
 color-eyre = "0.6.5"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.20"
+pyo3 = { version = "0.26.0", features = ["auto-initialize"] }

@@ -3,9 +3,12 @@ use common_photos::{
     get_config, get_relative_path_str, get_thumbnail_options, get_thumbnails_dir, nice_id,
 };
 use media_analyzer::MediaAnalyzer;
+use ml_analysis::VisualAnalyzer;
+use pyo3::{PyErr, Python};
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgTransaction;
 use std::path::Path;
+use std::time::Instant;
 
 /// Processes a media file by generating thumbnails, analyzing its metadata, and storing the result.
 ///
@@ -41,6 +44,20 @@ pub async fn ingest_file(
     generate_thumbnails(file, &thumbnail_out_dir, thumb_config).await?;
 
     let media_info = analyzer.analyze_media(file, &tiny_thumb_path).await?;
+
+    Python::attach(|py| -> Result<(), PyErr> {
+        let now = Instant::now();
+        let analyzer = VisualAnalyzer::new(py).unwrap();
+        let elapsed = now.elapsed();
+        println!("Make analyzer took {elapsed:?}");
+        let now = Instant::now();
+        let caption = analyzer.caption_image(file, None)?;
+        let elapsed = now.elapsed();
+        println!("caption_image took {elapsed:?}");
+        println!("Caption for {} is {caption}", file.display());
+
+        Ok(())
+    })?;
 
     store_media_item(tx, &relative_path_str, &media_info, &media_item_id).await?;
 
