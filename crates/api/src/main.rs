@@ -1,13 +1,13 @@
 #![allow(clippy::needless_for_each)]
 
+mod routes;
+
 use crate::routes::root::route::__path_root;
 use crate::routes::setup::interfaces;
 use utoipa::{
     Modify, OpenApi,
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
 };
-
-mod routes;
 
 use crate::routes::auth;
 use crate::routes::auth::UserRole;
@@ -27,7 +27,7 @@ use axum::{
     Router, middleware,
     routing::{get, post},
 };
-use common_photos::{get_db_pool, settings};
+use common_photos::get_db_pool;
 use sqlx::PgPool;
 use tracing::info;
 use tracing_subscriber::fmt;
