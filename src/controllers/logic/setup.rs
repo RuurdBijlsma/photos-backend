@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::fs::{self};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use loco_rs::Error;
 use tempfile::NamedTempFile;
 use thiserror::Error;
 use tokio::task;
@@ -25,6 +26,25 @@ pub enum MediaError {
 
     #[error("Path conversion error: {0}")]
     PathConversion(String),
+}
+
+impl From<MediaError> for Error {
+    fn from(err: MediaError) -> Self {
+        match err {
+            MediaError::InvalidMediaDir(msg) => {
+                error!("Invalid Media Directory: {:?}", msg);
+                Self::BadRequest(msg)
+            }
+            MediaError::FileSystem(e) => {
+                error!("File system error: {:?}", e);
+                Self::InternalServerError
+            }
+            MediaError::PathConversion(path) => {
+                error!("Path conversion error for path: {}", path);
+                Self::InternalServerError
+            }
+        }
+    }
 }
 
 #[derive(Constructor, Serialize)]

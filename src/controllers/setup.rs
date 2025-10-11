@@ -26,25 +26,6 @@ pub struct MakeFolderBody {
     new_name: String,
 }
 
-impl From<MediaError> for Error {
-    fn from(err: MediaError) -> Self {
-        match err {
-            MediaError::InvalidMediaDir(msg) => {
-                error!("Invalid Media Directory: {:?}", msg);
-                Self::BadRequest(msg)
-            }
-            MediaError::FileSystem(e) => {
-                error!("File system error: {:?}", e);
-                Self::InternalServerError
-            }
-            MediaError::PathConversion(path) => {
-                error!("Path conversion error for path: {}", path);
-                Self::InternalServerError
-            }
-        }
-    }
-}
-
 /// Asynchronous handler to check if the configured disks are valid and process it.
 ///
 /// # Returns
@@ -57,6 +38,7 @@ async fn get_disk_response(_: auth::JWT, State(ctx): State<AppContext>) -> Resul
     let thumbnail_path = Path::new(&settings.thumbnails_dir);
 
     if !media_path.exists() {
+        // todo make this error clear to the user
         warn!("Media path {} does not exist", media_path.display());
         return not_found();
     }
@@ -143,6 +125,7 @@ async fn setup_needed(State(ctx): State<AppContext>) -> Result<Response> {
 
     format::json(true)
 }
+
 async fn get_folders(
     _: auth::JWT,
     Query(query): Query<FolderQuery>,
