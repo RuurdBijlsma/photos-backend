@@ -1,0 +1,28 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+common_photos = { path = "../common_photos" }
+tracing = "0.1.41"
+tracing-subscriber = {version =  "0.3.20", features = ["ansi"] }
+color-eyre = "0.6.5"
+axum = { version = "0.8.6", features = ["macros"] }
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "1.47.1", features = ["full"] }
+jsonwebtoken = { version = "10.0.0", features = ["rust_crypto"] }
+argon2 = { version = "0.6.0-rc.1" }
+chrono = { version = "0.4.42", features = ["serde"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "chrono", "macros"] }
+rand = "0.10.0-rc.0"
+base64 = "0.22.1"
+serde_json = "1.0.145"
+utoipa = { version = "5", features = ["axum_extras", "chrono"] }
+utoipa-scalar = { version = "0.3.0", features = ["axum"] }
+thiserror = "2.0.17"
+regex = "1.11.3"
+tempfile = "3.23.0"
+fs2 = "0.4.3"
+walkdir = "2.5.0"
+fastrand = "2.3.0"
