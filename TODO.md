@@ -4,8 +4,13 @@
 * ✅ fix errors in api, abstraction for it, probably.
 * ✅ Api docs swagger
 * ✅ in auth/model, split db models and api interfaces
+* ✅ I accidentally made this a new repo, original was photos-processing
+* ✅ look at rust config package
+* schedule runner
+  * make scanning a crate and call from schedule runner
+  * clean refresh token table on schedule
+  * clustering on schedule
 * color data from python, make in rust
-* look at rust config package
 * quality measure from python, make in rust
 * api:
     * Show photos in ui
@@ -29,12 +34,7 @@
     13. http://localhost:3567/auth/logout
     14. try http://localhost:3567/auth/refresh -> should not work
 * use db config when setting up db. (pool size etc.)
-* I accidentally made this a new repo, original was photos-processing
 * hdbscan face & photo clustering
-* schedule runner
-    * make scanning a crate and call from schedule runner
-    * clean refresh token table on schedule
-    * clustering on schedule
 * captioner logic in rust (all the questions like is_animal)
 * users have to be implemented in photos processing at some point (media item must have user id) (user folders)
 * only allow register if no user exists, or if a valid invite token is passed

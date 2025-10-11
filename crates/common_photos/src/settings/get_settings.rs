@@ -1,6 +1,6 @@
 use crate::settings::structs::AppSettings;
 use std::fs::canonicalize;
-use std::path::{absolute, Path, PathBuf};
+use std::path::{Path, PathBuf, absolute};
 use std::sync::LazyLock;
 
 /// Load the app settings from YAML + environment variables
