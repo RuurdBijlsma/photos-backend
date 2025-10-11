@@ -1,6 +1,5 @@
 use crate::{canon_media_dir, media_dir, settings};
 use sqlx::{PgPool, Pool, Postgres};
-use std::env;
 use std::fs::canonicalize;
 use std::path::Path;
 use std::path::absolute;
