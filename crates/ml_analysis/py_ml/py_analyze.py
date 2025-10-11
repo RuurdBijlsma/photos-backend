@@ -2,13 +2,40 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from PIL import Image
-from ruurd_photos_ml import get_captioner, get_facial_recognition, get_object_detection, get_ocr
+from numpy.typing import NDArray
+from ruurd_photos_ml import (
+    get_captioner,
+    get_facial_recognition,
+    get_object_detection,
+    get_ocr,
+    get_embedder,
+)
 
 captioner_instance = get_captioner()
 facial_recognition_instance = get_facial_recognition()
 object_detection_instance = get_object_detection()
 ocr_instance = get_ocr()
+embedder_instance = get_embedder()
+
+
+def embed_image(image_path: Path) -> NDArray[np.float32]:
+    loaded_image = Image.open(image_path)
+    return embedder_instance.embed_image(loaded_image)
+
+
+def embed_images(image_paths: list[Path]) -> NDArray[np.float32]:
+    loaded_images = [Image.open(image_path) for image_path in image_paths]
+    return embedder_instance.embed_images(loaded_images)
+
+
+def embed_text(text: str) -> NDArray[np.float32]:
+    return embedder_instance.embed_text(text)
+
+
+def embed_texts(texts: list[str]) -> NDArray[np.float32]:
+    return embedder_instance.embed_texts(texts)
 
 
 def caption(image_path: Path, instruction: str | None = None) -> str:
@@ -16,12 +43,12 @@ def caption(image_path: Path, instruction: str | None = None) -> str:
     return captioner_instance.caption(loaded_image, instruction)
 
 
-def facial_recognition(image_path: Path) -> list[dict[str, Any]]:
+def recognize_faces(image_path: Path) -> list[dict[str, Any]]:
     loaded_image = Image.open(image_path)
     return [asdict(x) for x in facial_recognition_instance.get_faces(loaded_image)]
 
 
-def object_detection(image_path: Path) -> list[dict[str, Any]]:
+def detect_objects(image_path: Path) -> list[dict[str, Any]]:
     loaded_image = Image.open(image_path)
     return [asdict(x) for x in object_detection_instance.detect_objects(loaded_image)]
 

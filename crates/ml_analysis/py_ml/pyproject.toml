@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "ruurd-photos-ml>=0.1.1",
+    "ruurd-photos-ml>=0.2.1",
     "torch>=2.8.0",
 ]
 
@@ -18,3 +18,8 @@ torch = [
 name = "pytorch_gpu"
 url = "https://download.pytorch.org/whl/cu126"
 explicit = true
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.0",
+]
