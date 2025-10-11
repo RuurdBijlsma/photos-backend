@@ -56,7 +56,7 @@ pub fn nice_id(length: usize) -> String {
 /// * `sqlx::migrate` can return an error if migrations fail.
 pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
     dotenv::from_path(".env").ok();
-    let database_url = env::var("DATABASE_URL")?;
+    let database_url = &settings().database.url;
     let pool = PgPool::connect(&database_url).await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
     Ok(pool)

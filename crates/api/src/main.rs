@@ -27,7 +27,7 @@ use axum::{
     Router, middleware,
     routing::{get, post},
 };
-use common_photos::get_db_pool;
+use common_photos::{get_db_pool, settings};
 use sqlx::PgPool;
 use tracing::info;
 use tracing_subscriber::fmt;
