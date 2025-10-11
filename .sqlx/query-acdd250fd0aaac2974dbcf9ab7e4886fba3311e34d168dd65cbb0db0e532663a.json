@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO job_queue (relative_path, job_type, priority)\n        SELECT $1, 'INGEST', $2\n        WHERE NOT EXISTS (\n            SELECT 1 FROM queue_failures WHERE relative_path = $1 AND job_type = 'INGEST'\n        )\n        ON CONFLICT (relative_path) DO UPDATE\n        SET\n            job_type = 'INGEST',\n            priority = $2,\n            retry_count = 0,\n            created_at = NOW()\n        WHERE\n            -- Only update if it's not already an INGEST job, preventing redundant work.\n            job_queue.job_type IS DISTINCT FROM 'INGEST'\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "acdd250fd0aaac2974dbcf9ab7e4886fba3311e34d168dd65cbb0db0e532663a"
+}

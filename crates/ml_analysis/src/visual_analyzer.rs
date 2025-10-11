@@ -66,7 +66,7 @@ impl VisualAnalyzer {
         })
     }
 
-    /// Embeds text by calling a Python function and returns the result as a native Rust Vec<f32>.
+    /// Embeds text by calling a Python function.
     ///
     /// # Errors
     ///
@@ -83,7 +83,7 @@ impl VisualAnalyzer {
         })
     }
 
-    /// Embeds a list of texts by calling a Python function and returns the result as a native Rust Vec<Vec<f32>>.
+    /// Embeds a list of texts by calling a Python function.
     ///
     /// # Errors
     ///
@@ -105,7 +105,7 @@ impl VisualAnalyzer {
         })
     }
 
-    /// Embeds an image by calling a Python function and returns the result as a native Rust Vec<f32>.
+    /// Embeds an image by calling a Python function.
     ///
     /// # Errors
     ///
@@ -122,7 +122,7 @@ impl VisualAnalyzer {
         })
     }
 
-    /// Embeds a list of images by calling a Python function and returns the result as a native Rust Vec<Vec<f32>>.
+    /// Embeds a list of images by calling a Python function.
     ///
     /// # Errors
     ///

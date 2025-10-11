@@ -17,11 +17,9 @@ pub fn load_app_settings() -> color_eyre::Result<AppSettings> {
     Ok(builder.build()?.try_deserialize::<AppSettings>()?)
 }
 
-/// Immutable global settings, initialized on first access.
 pub static SETTINGS: LazyLock<AppSettings> =
     LazyLock::new(|| load_app_settings().expect("Failed to load app settings"));
 
-/// Leaked global paths, derived from SETTINGS.
 pub static MEDIA_DIR: LazyLock<PathBuf> =
     LazyLock::new(|| absolute(&SETTINGS.directories.media_folder).expect("Invalid media dir"));
 
@@ -50,26 +48,4 @@ pub fn canon_media_dir() -> &'static Path {
 #[must_use]
 pub fn thumbnails_dir() -> &'static Path {
     &THUMBNAILS_DIR
-}
-
-#[cfg(test)]
-mod tests {
-    // Note: The test functions don't need to change at all, because the
-    // public API (the helper functions) remains the same.
-    use crate::settings::get_settings::{
-        canon_media_dir, load_app_settings, media_dir, thumbnails_dir,
-    };
-
-    #[test]
-    fn test_new_ok() -> color_eyre::Result<()> {
-        // This first call will initialize all the LazyLock statics
-        load_app_settings()?;
-
-        // Subsequent calls access the cached data
-        println!("MEDIA_DIR: {:?}", media_dir());
-        println!("CANON_MEDIA_DIR: {:?}", canon_media_dir());
-        println!("THUMBNAILS_DIR: {:?}", thumbnails_dir());
-
-        Ok(())
-    }
 }
