@@ -8,10 +8,10 @@ use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
+use common_photos::settings;
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
-use common_photos::settings;
 
 /// Authenticates a user based on email and password.
 ///

@@ -1,11 +1,11 @@
 use crate::settings::structs::AppSettings;
 use std::fs::canonicalize;
-use std::path::{absolute, Path, PathBuf};
+use std::path::{Path, PathBuf, absolute};
 use std::sync::LazyLock;
 
 /// Load the app settings from YAML + environment variables
 pub fn load_app_settings() -> color_eyre::Result<AppSettings> {
-    let config_path =  Path::new("config/settings.yaml").canonicalize()?;
+    let config_path = Path::new("config/settings.yaml").canonicalize()?;
 
     let builder = config::Config::builder()
         .add_source(config::File::from(config_path))
@@ -18,27 +18,19 @@ pub fn load_app_settings() -> color_eyre::Result<AppSettings> {
 }
 
 /// Immutable global settings, initialized on first access.
-pub static SETTINGS: LazyLock<AppSettings> = LazyLock::new(|| {
-    load_app_settings().expect("Failed to load app settings")
-});
+pub static SETTINGS: LazyLock<AppSettings> =
+    LazyLock::new(|| load_app_settings().expect("Failed to load app settings"));
 
 /// Leaked global paths, derived from SETTINGS.
-pub static MEDIA_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
-    absolute(&SETTINGS.directories.media_folder)
-        .expect("Invalid media dir")
+pub static MEDIA_DIR: LazyLock<PathBuf> =
+    LazyLock::new(|| absolute(&SETTINGS.directories.media_folder).expect("Invalid media dir"));
 
-});
-
-pub static CANON_MEDIA_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
-    canonicalize(&*MEDIA_DIR).expect("Cannot canonicalize media dir")
-});
+pub static CANON_MEDIA_DIR: LazyLock<PathBuf> =
+    LazyLock::new(|| canonicalize(&*MEDIA_DIR).expect("Cannot canonicalize media dir"));
 
 pub static THUMBNAILS_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
-    absolute(&SETTINGS.directories.thumbnails_folder)
-        .expect("Invalid thumbnails dir")
-
+    absolute(&SETTINGS.directories.thumbnails_folder).expect("Invalid thumbnails dir")
 });
-
 
 #[must_use]
 pub fn settings() -> &'static AppSettings {
@@ -64,7 +56,9 @@ pub fn thumbnails_dir() -> &'static Path {
 mod tests {
     // Note: The test functions don't need to change at all, because the
     // public API (the helper functions) remains the same.
-    use crate::settings::get_settings::{media_dir, canon_media_dir, thumbnails_dir, load_app_settings};
+    use crate::settings::get_settings::{
+        canon_media_dir, load_app_settings, media_dir, thumbnails_dir,
+    };
 
     #[test]
     fn test_new_ok() -> color_eyre::Result<()> {

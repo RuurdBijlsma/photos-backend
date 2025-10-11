@@ -100,8 +100,7 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
 ///
 /// * Returns an error if file system scanning, database queries, or job enqueuing fails.
 pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    let thumb_options = &settings()
-        .thumbnail_generation;
+    let thumb_options = &settings().thumbnail_generation;
     let allowed: HashSet<_> = thumb_options
         .photo_extensions
         .iter()

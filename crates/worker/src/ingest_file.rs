@@ -1,5 +1,6 @@
 use crate::db_helpers::write_to_db::store_media_item;
-use common_photos::{relative_path_no_exist, nice_id, thumbnails_dir, settings};
+use crate::utils::get_thumb_options;
+use common_photos::{nice_id, relative_path_no_exist, settings, thumbnails_dir};
 use media_analyzer::MediaAnalyzer;
 use ml_analysis::VisualAnalyzer;
 use pyo3::{PyErr, Python};
@@ -7,7 +8,6 @@ use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgTransaction;
 use std::path::Path;
 use std::time::Instant;
-use crate::utils::get_thumb_options;
 
 /// Processes a media file by generating thumbnails, analyzing its metadata, and storing the result.
 ///

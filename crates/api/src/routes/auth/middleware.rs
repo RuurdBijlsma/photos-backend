@@ -8,9 +8,9 @@ use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::Response;
 use color_eyre::eyre::eyre;
+use common_photos::settings;
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
-use common_photos::settings;
 
 impl<S> FromRequestParts<S> for User
 where

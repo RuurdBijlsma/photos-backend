@@ -3,7 +3,10 @@ use crate::routes::setup::helpers::{check_drive_info, list_folders};
 use crate::routes::setup::interfaces::{
     DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
-use common_photos::{relative_path_exists, is_media_file, is_photo_file, to_posix_string, media_dir, thumbnails_dir, settings};
+use common_photos::{
+    is_media_file, is_photo_file, media_dir, relative_path_exists, settings, thumbnails_dir,
+    to_posix_string,
+};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

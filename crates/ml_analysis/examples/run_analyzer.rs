@@ -16,7 +16,6 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     }
 }
 
-
 fn main() -> PyResult<()> {
     Python::attach(|py| {
         let analyzer = VisualAnalyzer::new(py)?;
@@ -60,7 +59,6 @@ fn main() -> PyResult<()> {
                 println!("\t- Score: {:.4}, Text: \"{}\"", score, text);
             }
             println!("Embedder took {:#?}.", now.elapsed());
-
 
             // === CAPTIONER ===
             let now = Instant::now();

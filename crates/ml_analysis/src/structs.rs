@@ -32,7 +32,6 @@ pub struct FaceBox {
     pub embedding: Vec<f32>,
 }
 
-
 #[derive(Debug, Deserialize)]
 pub struct ObjectBox {
     pub position: (f32, f32),
@@ -75,8 +74,6 @@ pub struct RGBChannels {
     pub green: Vec<i32>,
     pub blue: Vec<i32>,
 }
-
-
 
 #[derive(Debug, Deserialize)]
 #[allow(clippy::struct_excessive_bools)]

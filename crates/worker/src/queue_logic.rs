@@ -2,7 +2,7 @@ use crate::WorkResult;
 use crate::ingest_file::ingest_file;
 use crate::remove_file::remove_file;
 use color_eyre::{Report, Result};
-use common_photos::{settings};
+use common_photos::settings;
 use media_analyzer::MediaAnalyzer;
 use sqlx::{FromRow, PgPool, PgTransaction, Type};
 use std::path::Path;

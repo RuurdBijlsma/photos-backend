@@ -1,9 +1,9 @@
+use crate::{canon_media_dir, media_dir, settings};
 use sqlx::{PgPool, Pool, Postgres};
 use std::env;
 use std::fs::canonicalize;
-use std::path::absolute;
 use std::path::Path;
-use crate::{canon_media_dir, media_dir, settings};
+use std::path::absolute;
 
 #[must_use]
 pub fn to_posix_string(path: &Path) -> String {
@@ -74,9 +74,7 @@ pub fn is_media_file(file: &Path) -> bool {
 
 #[must_use]
 pub fn is_photo_file(file: &Path) -> bool {
-    let photo_extensions = &settings()
-        .thumbnail_generation
-        .photo_extensions;
+    let photo_extensions = &settings().thumbnail_generation.photo_extensions;
     let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_lowercase()) else {
         return false;
     };
@@ -85,9 +83,7 @@ pub fn is_photo_file(file: &Path) -> bool {
 
 #[must_use]
 pub fn is_video_file(file: &Path) -> bool {
-    let video_extensions = &settings()
-        .thumbnail_generation
-        .video_extensions;
+    let video_extensions = &settings().thumbnail_generation.video_extensions;
     let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_lowercase()) else {
         return false;
     };

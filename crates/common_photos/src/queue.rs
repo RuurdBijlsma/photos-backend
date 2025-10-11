@@ -1,8 +1,8 @@
+use crate::settings;
 use crate::utils::relative_path_no_exist;
 use sqlx::PgPool;
 use std::path::Path;
 use tracing::info;
-use crate::settings;
 
 /// Enqueues an 'INGEST' job for a given file.
 /// If an 'INGEST' job for the file already exists or has previously failed, it will not be re-enqueued.
