@@ -40,6 +40,13 @@ jobs:
           packages: libfontconfig1-dev pkg-config nasm
           version: 1.0
 
+      # Check if sqlx is prepared for offline
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli
+
+      - name: Check sqlx offline data
+        run: cargo sqlx prepare --check
+
       # Build the code
       - name: Build
         run: cargo build --all-targets --all-features
