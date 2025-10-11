@@ -1,3 +1,78 @@
-# To run the ml_analysis, make sure you put python (C:\Users\YourName\AppData\Local\Programs\Python\Python312) in PATH
+# Photos Backend
 
-It needs access to the dll on windows at least. Will need to see how it works on linux.
+Backend for **Ruurd Photos**, a self-hosted Google Photos alternative. Handles the API, media ingestion, classification,
+and search.
+
+## Features
+
+* Photo and video ingestion
+* ML-based analysis (tagging, embeddings, facial recognition)
+* REST API for frontend integration
+* Hybrid semantic/text search
+* File system watcher for new media
+
+## Prerequisites
+
+* **Python** installed and added to `PATH` (e.g., `C:\Users\YourName\AppData\Local\Programs\Python\Python312` on
+  Windows; Linux support needs testing)
+* **uv** installed for setting up the virtualenv in `ml_analysis`
+* **Rust** to compile the backend
+* **Postgres** database set up
+
+## Installation
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/RuurdBijlsma/photos-backend.git
+cd photos-backend
+```
+
+### 2. Set up `ml_analysis` environment
+
+```bash
+cd crates/ml_analysis/py_ml
+uv sync
+```
+
+### 3. Set environment variables
+
+```text
+APP__DATABASE__URL=postgres://user:pass@localhost/photos
+APP__AUTH__JWT_SECRET=your123secret
+```
+
+### 4. (Optional) Configure settings
+
+Edit `config/settings.yaml` to adjust backend settings.
+
+---
+
+## Usage
+
+### 1. Run the backend crates
+
+There are 4 crates required for full backend functionality:
+
+1. `crates/api` – Web API
+2. `crates/indexer` – Scans media directories, enqueues ingest/remove jobs
+3. `crates/watcher` – Watches media directories and enqueues jobs for created/deleted files
+4. `crates/worker` – Processes jobs (generates thumbnails, analyzes metadata, updates database)
+
+Run each crate in a separate terminal:
+
+```bash
+cargo run -p api
+cargo run -p indexer
+cargo run -p watcher
+cargo run -p worker
+```
+
+> Tip: You can run multiple workers simultaneously to speed up ingestion.
+
+### 2. Run the frontend
+
+1. Clone the
+   frontend: [https://github.com/RuurdBijlsma/photos-frontend](https://github.com/RuurdBijlsma/photos-frontend)
+2. Follow the frontend instructions to run it
+3. Access the application

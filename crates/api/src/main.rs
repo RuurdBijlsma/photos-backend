@@ -1,13 +1,13 @@
 #![allow(clippy::needless_for_each)]
 
+mod routes;
+
 use crate::routes::root::route::__path_root;
 use crate::routes::setup::interfaces;
 use utoipa::{
     Modify, OpenApi,
     openapi::security::{Http, HttpAuthScheme, SecurityScheme},
 };
-
-mod routes;
 
 use crate::routes::auth;
 use crate::routes::auth::UserRole;
