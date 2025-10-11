@@ -12,8 +12,7 @@ api:
     - "http://localhost:3000"
 
 auth:
-  #  todo get from env
-  jwt_secret: "a1b2c3d4e5"
+  jwt_secret: "overwrite-me-with-env"
   access_token_expiry_minutes: 60
   refresh_token_expiry_days: 7
 
@@ -21,8 +20,7 @@ setup:
   n_media_samples: 8
 
 database:
-  #  todo get from env
-  url: postgres://user:pass@localhost/photos
+  url: postgres://user:overwritemewithenv@localhost/photos
   pool_size: 10
   media_item_id_length: 10
 
