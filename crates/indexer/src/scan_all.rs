@@ -1,6 +1,6 @@
 use common_photos::{
-    enqueue_file_ingest, enqueue_file_remove, get_media_dir, get_relative_path_str,
-    get_thumbnail_options, get_thumbnails_dir,
+    enqueue_file_ingest, enqueue_file_remove, media_dir, relative_path_no_exist, settings,
+    thumbnails_dir,
 };
 use sqlx::{Pool, Postgres};
 use std::collections::HashSet;
@@ -31,14 +31,14 @@ fn get_media_files(folder: &Path, allowed_exts: &HashSet<&str>) -> Vec<std::path
     files
 }
 
-/// Reads the thumbnails directory and returns a set of all sub-directory names (media item IDs).
+/// Reads the thumbnails directory and returns a set of all subdirectory names (media item IDs).
 ///
 /// # Errors
 ///
 /// * Returns an I/O error if the thumbnails directory or its entries cannot be read.
 async fn get_thumbnail_folders() -> color_eyre::Result<HashSet<String>> {
     let mut set = HashSet::new();
-    let mut entries = fs::read_dir(get_thumbnails_dir()).await?;
+    let mut entries = fs::read_dir(thumbnails_dir()).await?;
     while let Some(entry) = entries.next_entry().await? {
         if entry.file_type().await?.is_dir()
             && let Some(name) = entry.file_name().to_str()
@@ -70,14 +70,14 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     })?;
 
     let to_delete: Vec<_> = thumb_ids.difference(&db_ids).cloned().collect();
-    let base = get_thumbnails_dir();
+    let base = thumbnails_dir();
     for id in to_delete {
         info!("Deleting thumbnail folder {}", id);
         fs::remove_dir_all(base.join(id)).await?;
     }
 
     let db_items_missing_thumbnails = db_ids.difference(&thumb_ids).cloned().collect::<Vec<_>>();
-    let media_dir = get_media_dir();
+    let media_dir = media_dir();
     for id in db_items_missing_thumbnails {
         let relative_path: String =
             sqlx::query_scalar!("SELECT relative_path FROM media_item WHERE id = $1", id)
@@ -100,18 +100,19 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
 ///
 /// * Returns an error if file system scanning, database queries, or job enqueuing fails.
 pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    let cfg = get_thumbnail_options();
-    let allowed: HashSet<_> = cfg
+    let thumb_options = &settings()
+        .thumbnail_generation;
+    let allowed: HashSet<_> = thumb_options
         .photo_extensions
         .iter()
-        .chain(cfg.video_extensions.iter())
+        .chain(thumb_options.video_extensions.iter())
         .map(String::as_str)
         .collect();
 
     let all_files = get_media_files(media_dir, &allowed);
     let fs_paths: HashSet<String> = all_files
         .into_iter()
-        .flat_map(|p| get_relative_path_str(&p))
+        .flat_map(|p| relative_path_no_exist(&p))
         .collect();
 
     let db_paths: HashSet<String> = sqlx::query_scalar("SELECT relative_path FROM media_item")

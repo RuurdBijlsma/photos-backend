@@ -1,5 +1,5 @@
 use crate::queue_logic::Job;
-use common_photos::get_thumbnails_dir;
+use common_photos::{ thumbnails_dir};
 use sqlx::PgTransaction;
 use std::path::Path;
 
@@ -17,7 +17,7 @@ pub async fn remove_file(
     .await?;
 
     // 2. Delete thumbnails from the filesystem
-    let thumb_dir = get_thumbnails_dir();
+    let thumb_dir = thumbnails_dir();
     let thumb_file_dir = thumb_dir.join(deleted_id);
     if thumb_file_dir.exists() {
         tokio::fs::remove_dir_all(thumb_file_dir).await?;

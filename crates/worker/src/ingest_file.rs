@@ -1,7 +1,5 @@
 use crate::db_helpers::write_to_db::store_media_item;
-use common_photos::{
-    get_config, get_relative_path_str, get_thumbnail_options, get_thumbnails_dir, nice_id,
-};
+use common_photos::{relative_path_no_exist, nice_id, thumbnails_dir, settings};
 use media_analyzer::MediaAnalyzer;
 use ml_analysis::VisualAnalyzer;
 use pyo3::{PyErr, Python};
@@ -9,6 +7,7 @@ use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgTransaction;
 use std::path::Path;
 use std::time::Instant;
+use crate::utils::get_thumb_options;
 
 /// Processes a media file by generating thumbnails, analyzing its metadata, and storing the result.
 ///
@@ -28,10 +27,10 @@ pub async fn ingest_file(
     analyzer: &mut MediaAnalyzer,
     tx: &mut PgTransaction<'_>,
 ) -> color_eyre::Result<()> {
-    let thumb_config = get_thumbnail_options();
-    let relative_path_str = get_relative_path_str(file)?;
-    let thumb_base_dir = get_thumbnails_dir();
-    let media_item_id = nice_id(get_config().database.media_item_id_length);
+    let thumb_config = get_thumb_options();
+    let relative_path_str = relative_path_no_exist(file)?;
+    let thumb_base_dir = thumbnails_dir();
+    let media_item_id = nice_id(settings().database.media_item_id_length);
     let thumbnail_out_dir = thumb_base_dir.join(&media_item_id);
     let smallest_thumb_size = thumb_config
         .heights
@@ -41,7 +40,7 @@ pub async fn ingest_file(
     let smallest_thumb_filename = format!("{smallest_thumb_size}p.avif");
     let tiny_thumb_path = thumbnail_out_dir.join(smallest_thumb_filename);
 
-    generate_thumbnails(file, &thumbnail_out_dir, thumb_config).await?;
+    generate_thumbnails(file, &thumbnail_out_dir, &thumb_config).await?;
 
     let media_info = analyzer.analyze_media(file, &tiny_thumb_path).await?;
 

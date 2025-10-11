@@ -1,8 +1,8 @@
-use crate::get_thumbnail_options;
-use crate::utils::get_relative_path_str;
+use crate::utils::relative_path_no_exist;
 use sqlx::PgPool;
 use std::path::Path;
 use tracing::info;
+use crate::settings;
 
 /// Enqueues an 'INGEST' job for a given file.
 /// If an 'INGEST' job for the file already exists or has previously failed, it will not be re-enqueued.
@@ -12,10 +12,9 @@ use tracing::info;
 /// * `color_eyre::Result` propagated from `get_relative_path_str`.
 /// * `sqlx::Error` for database-related issues, including transaction management.
 pub async fn enqueue_file_ingest(file: &Path, pool: &PgPool) -> color_eyre::Result<()> {
-    let relative_path_str = get_relative_path_str(file)?;
+    let relative_path_str = relative_path_no_exist(file)?;
 
-    let config = get_thumbnail_options();
-    let video_extensions = config.video_extensions.clone();
+    let video_extensions = settings().thumbnail_generation.video_extensions.clone();
     let priority = file
         .extension()
         .and_then(|s| s.to_str())
@@ -73,7 +72,7 @@ pub async fn enqueue_file_ingest(file: &Path, pool: &PgPool) -> color_eyre::Resu
 /// * `color_eyre::Result` propagated from `get_relative_path_str`.
 /// * `sqlx::Error` for database-related issues, including transaction management.
 pub async fn enqueue_file_remove(file: &Path, pool: &PgPool) -> color_eyre::Result<()> {
-    let relative_path = get_relative_path_str(file)?;
+    let relative_path = relative_path_no_exist(file)?;
     let mut tx = pool.begin().await?;
 
     info!("Enqueueing file removal: {:?}", file);

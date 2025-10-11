@@ -2,7 +2,7 @@ mod watcher;
 
 use crate::watcher::start_watching;
 use color_eyre::Result;
-use common_photos::{get_db_pool, get_media_dir, get_thumbnails_dir};
+use common_photos::{get_db_pool, media_dir, thumbnails_dir};
 use tokio::fs;
 use tracing::info;
 
@@ -12,12 +12,10 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     let pool = get_db_pool().await?;
-    let thumbnails_dir = get_thumbnails_dir();
-    let media_dir = get_media_dir();
-    fs::create_dir_all(&thumbnails_dir).await?;
+    fs::create_dir_all(&thumbnails_dir()).await?;
 
     info!("Start watching for file changes...");
-    start_watching(&media_dir, &pool);
+    start_watching(media_dir(), &pool);
 
     Ok(())
 }

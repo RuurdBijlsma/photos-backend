@@ -1,7 +1,7 @@
 pub mod scan_all;
 
 use color_eyre::Result;
-use common_photos::{get_db_pool, get_media_dir, get_thumbnails_dir};
+use common_photos::{get_db_pool, media_dir, thumbnails_dir};
 use scan_all::sync_files_to_db;
 use std::time::Duration;
 use tokio::{fs, time};
@@ -32,11 +32,10 @@ async fn main() -> Result<()> {
 
 async fn run_scan() -> Result<()> {
     let pool = get_db_pool().await?;
-    fs::create_dir_all(&get_thumbnails_dir()).await?;
-    let media_dir = get_media_dir();
-
+    fs::create_dir_all(&thumbnails_dir()).await?;
+    let media_dir = media_dir();
     info!("Scanning \"{}\" ...", &media_dir.display());
-    sync_files_to_db(&media_dir, &pool).await?;
+    sync_files_to_db(media_dir, &pool).await?;
     info!("Scan complete");
 
     Ok(())

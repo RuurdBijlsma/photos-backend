@@ -1,9 +1,9 @@
-use crate::{get_config, get_media_dir};
 use sqlx::{PgPool, Pool, Postgres};
 use std::env;
 use std::fs::canonicalize;
-use std::path::Path;
 use std::path::absolute;
+use std::path::Path;
+use crate::{canon_media_dir, media_dir, settings};
 
 #[must_use]
 pub fn to_posix_string(path: &Path) -> String {
@@ -16,9 +16,9 @@ pub fn to_posix_string(path: &Path) -> String {
 ///
 /// * `absolute` can return an error if the path cannot be resolved.
 /// * `strip_prefix` can return an error if the media directory is not a prefix of the file's absolute path.
-pub fn get_relative_path_str(file: impl AsRef<Path>) -> color_eyre::Result<String> {
+pub fn relative_path_no_exist(file: impl AsRef<Path>) -> color_eyre::Result<String> {
     let file_abs = absolute(file)?;
-    let relative_path = file_abs.strip_prefix(get_media_dir())?;
+    let relative_path = file_abs.strip_prefix(media_dir())?;
     let relative_path_str = to_posix_string(relative_path);
     Ok(relative_path_str)
 }
@@ -30,10 +30,9 @@ pub fn get_relative_path_str(file: impl AsRef<Path>) -> color_eyre::Result<Strin
 /// * `canonicalize` can return an error if the `file` cannot be resolved.
 /// * `canonicalize` can return an error if the `media_dir` cannot be resolved.
 /// * `strip_prefix` can return an error if the media directory is not a prefix of the file's canonicalized path.
-pub fn canon_relative_path(file: impl AsRef<Path>) -> color_eyre::Result<String> {
+pub fn relative_path_exists(file: impl AsRef<Path>) -> color_eyre::Result<String> {
     let file = canonicalize(file)?;
-    let media_dir = canonicalize(get_media_dir())?;
-    let relative_path = file.strip_prefix(media_dir)?;
+    let relative_path = file.strip_prefix(canon_media_dir())?;
     Ok(to_posix_string(relative_path))
 }
 
@@ -65,9 +64,8 @@ pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
 
 #[must_use]
 pub fn is_media_file(file: &Path) -> bool {
-    let config = &get_config().thumbnail_generation;
-    let photo_extensions = &config.photo_extensions;
-    let video_extensions = &config.video_extensions;
+    let photo_extensions = &settings().thumbnail_generation.photo_extensions;
+    let video_extensions = &settings().thumbnail_generation.video_extensions;
     let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_lowercase()) else {
         return false;
     };
@@ -76,7 +74,9 @@ pub fn is_media_file(file: &Path) -> bool {
 
 #[must_use]
 pub fn is_photo_file(file: &Path) -> bool {
-    let photo_extensions = &get_config().thumbnail_generation.photo_extensions;
+    let photo_extensions = &settings()
+        .thumbnail_generation
+        .photo_extensions;
     let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_lowercase()) else {
         return false;
     };
@@ -85,7 +85,9 @@ pub fn is_photo_file(file: &Path) -> bool {
 
 #[must_use]
 pub fn is_video_file(file: &Path) -> bool {
-    let video_extensions = &get_config().thumbnail_generation.video_extensions;
+    let video_extensions = &settings()
+        .thumbnail_generation
+        .video_extensions;
     let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_lowercase()) else {
         return false;
     };

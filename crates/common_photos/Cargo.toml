@@ -12,4 +12,4 @@ ruurd_photos_thumbnail_generation = "0.3.2"
 rand = "0.10.0-rc.0"
 tracing = "0.1.41"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_yaml = "0.9.34"
+config = "0.15.18"

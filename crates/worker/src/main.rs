@@ -1,6 +1,6 @@
 use crate::queue_logic::process_one_job;
 use color_eyre::Result;
-use common_photos::{get_config, get_db_pool, get_media_dir};
+use common_photos::{get_db_pool, media_dir, settings};
 use media_analyzer::MediaAnalyzer;
 use std::time::Duration;
 use tokio::time;
@@ -10,6 +10,7 @@ mod db_helpers;
 pub mod ingest_file;
 mod queue_logic;
 mod remove_file;
+mod utils;
 
 pub enum WorkResult {
     Processed,
@@ -23,13 +24,12 @@ async fn main() -> Result<()> {
 
     info!("[Worker PID: {}] Starting.", std::process::id());
     let mut analyzer = MediaAnalyzer::builder().build().await?;
-    let media_dir = get_media_dir();
-    let config = &get_config().worker;
+    let worker_config = &settings().worker;
     let pool = get_db_pool().await?;
     let mut last_check_was_work = true;
 
     loop {
-        let result = process_one_job(&media_dir, &mut analyzer, &pool).await;
+        let result = process_one_job(media_dir(), &mut analyzer, &pool).await;
 
         match result {
             Ok(WorkResult::Processed) => {
@@ -40,15 +40,15 @@ async fn main() -> Result<()> {
                     info!("No jobs, sleeping... 💤");
                 }
                 last_check_was_work = false;
-                time::sleep(Duration::from_secs(config.wait_after_empty_queue_s)).await;
+                time::sleep(Duration::from_secs(worker_config.wait_after_empty_queue_s)).await;
             }
             Err(e) => {
                 last_check_was_work = true;
                 warn!(
                     "Job failed: {}. Retrying in {}.",
-                    e, config.wait_after_error_s
+                    e, worker_config.wait_after_error_s
                 );
-                time::sleep(Duration::from_secs(config.wait_after_error_s)).await;
+                time::sleep(Duration::from_secs(worker_config.wait_after_error_s)).await;
             }
         }
     }

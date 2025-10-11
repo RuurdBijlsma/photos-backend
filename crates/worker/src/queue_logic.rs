@@ -2,7 +2,7 @@ use crate::WorkResult;
 use crate::ingest_file::ingest_file;
 use crate::remove_file::remove_file;
 use color_eyre::{Report, Result};
-use common_photos::get_config;
+use common_photos::{settings};
 use media_analyzer::MediaAnalyzer;
 use sqlx::{FromRow, PgPool, PgTransaction, Type};
 use std::path::Path;
@@ -89,10 +89,10 @@ async fn handle_job_success(job: &Job, tx: &mut PgTransaction<'_>) -> Result<()>
 /// Handles a failed job by either updating its retry count or moving it to the failures queue.
 /// Returns `true` if the error should be propagated for a retry, `false` otherwise.
 async fn handle_job_failure(job: &Job, e: &Report, tx: &mut PgTransaction<'_>) -> Result<bool> {
-    let config = &get_config().worker;
+    let worker_config = &settings().worker;
     let current_retries = job.retry_count.unwrap_or(0);
 
-    if current_retries >= config.max_retries - 1 {
+    if current_retries >= worker_config.max_retries - 1 {
         warn!("‼️ Moving to failures queue ‼️ {:?}", &job);
         sqlx::query(
             "INSERT INTO queue_failures (relative_path, job_type)

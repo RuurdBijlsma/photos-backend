@@ -8,10 +8,10 @@ use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
-use common_photos::get_config;
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
+use common_photos::settings;
 
 /// Authenticates a user based on email and password.
 ///
@@ -88,7 +88,7 @@ pub async fn store_refresh_token<'c, E>(
 where
     E: Executor<'c, Database = Postgres>,
 {
-    let exp = Utc::now() + Duration::days(get_config().auth.refresh_token_expiry_days);
+    let exp = Utc::now() + Duration::days(settings().auth.refresh_token_expiry_days);
     sqlx::query!(
         "INSERT INTO refresh_token (user_id, selector, verifier_hash, expires_at)
          VALUES ($1, $2, $3, $4)",
@@ -108,7 +108,7 @@ where
 ///
 /// * `jsonwebtoken::Error` if token encoding fails.
 pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, AuthError> {
-    let cfg = get_config();
+    let cfg = settings();
     let exp = (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp();
     let claims = Claims {
         sub: user_id,

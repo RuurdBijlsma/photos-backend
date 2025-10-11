@@ -8,9 +8,9 @@ use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::Response;
 use color_eyre::eyre::eyre;
-use common_photos::get_config;
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
+use common_photos::settings;
 
 impl<S> FromRequestParts<S> for User
 where
@@ -41,10 +41,10 @@ where
             .strip_prefix("Bearer ")
             .ok_or(AuthError::InvalidToken)?;
 
-        let cfg = get_config();
+        let jwt_secret = &settings().auth.jwt_secret;
         let token_data = decode::<Claims>(
             token,
-            &DecodingKey::from_secret(cfg.auth.jwt_secret.as_ref()),
+            &DecodingKey::from_secret(jwt_secret.as_ref()),
             &Validation::default(),
         )
         .map_err(|_| AuthError::InvalidToken)?;
