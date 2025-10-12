@@ -1,3 +1,4 @@
+use color_eyre::eyre::eyre;
 use common_photos::{
     enqueue_ingest_job, enqueue_remove_job, media_dir, relative_path_abs, settings, thumbnails_dir,
 };
@@ -54,15 +55,18 @@ async fn get_thumbnail_folders() -> color_eyre::Result<HashSet<String>> {
 ///
 /// * Returns an error for database query failures or file system I/O errors during deletion.
 async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    let job_count: i64 = sqlx::query_scalar("SELECT count(id) FROM job_queue")
+    let Some(job_count) = sqlx::query_scalar!("SELECT count(id) FROM jobs")
         .fetch_one(pool)
-        .await?;
+        .await?
+    else {
+        return Err(eyre!("Can't get job count"));
+    };
     if job_count > 0 {
         return Ok(()); // skip if ingest jobs are pending
     }
 
     let (thumb_ids, db_ids) = tokio::try_join!(get_thumbnail_folders(), async {
-        let rows: Vec<String> = sqlx::query_scalar("SELECT id FROM media_item")
+        let rows: Vec<String> = sqlx::query_scalar!("SELECT id FROM media_item")
             .fetch_all(pool)
             .await?;
         Ok::<HashSet<String>, color_eyre::Report>(rows.into_iter().collect())
@@ -113,7 +117,7 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
         .flat_map(|p| relative_path_abs(&p))
         .collect();
 
-    let db_paths: HashSet<String> = sqlx::query_scalar("SELECT relative_path FROM media_item")
+    let db_paths: HashSet<String> = sqlx::query_scalar!("SELECT relative_path FROM media_item")
         .fetch_all(pool)
         .await?
         .into_iter()

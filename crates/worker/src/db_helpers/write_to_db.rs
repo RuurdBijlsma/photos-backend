@@ -6,30 +6,31 @@ async fn get_or_create_location(
     tx: &mut PgTransaction<'_>,
     location_data: &LocationName,
 ) -> Result<i32, sqlx::Error> {
-    let existing_id: Option<i32> = sqlx::query_scalar(
+    let existing_id: Option<i32> = sqlx::query_scalar!(
         "SELECT id FROM location WHERE name = $1 AND admin1 = $2 AND country_code = $3",
+        &location_data.name,
+        &location_data.admin1,
+        &location_data.country_code,
     )
-    .bind(&location_data.name)
-    .bind(&location_data.admin1)
-    .bind(&location_data.country_code)
     .fetch_optional(&mut **tx)
     .await?;
 
     if let Some(id) = existing_id {
         Ok(id)
     } else {
-        let new_id: i32 = sqlx::query_scalar(
+        let country_name = location_data.country_name.as_ref().expect("Country name has to be set.");
+        let new_id: i32 = sqlx::query_scalar!(
             r"
             INSERT INTO location (name, admin1, admin2, country_code, country_name)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id
             ",
+            &location_data.name,
+            &location_data.admin1,
+            &location_data.admin2,
+            &location_data.country_code,
+            &country_name,
         )
-        .bind(&location_data.name)
-        .bind(&location_data.admin1)
-        .bind(&location_data.admin2)
-        .bind(&location_data.country_code)
-        .bind(&location_data.country_name)
         .fetch_one(&mut **tx)
         .await?;
         Ok(new_id)
