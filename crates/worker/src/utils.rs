@@ -1,15 +1,14 @@
-use common_photos::settings;
-use ruurd_photos_thumbnail_generation::ThumbOptions;
+use common_photos::nice_id;
+use std::sync::LazyLock;
 
-pub fn get_thumb_options() -> ThumbOptions {
-    let thumb_gen_config = &settings().thumbnail_generation;
-    ThumbOptions {
-        video_options: thumb_gen_config.video_options.clone(),
-        avif_options: thumb_gen_config.avif_options.clone(),
-        heights: thumb_gen_config.heights.clone(),
-        thumbnail_extension: thumb_gen_config.thumbnail_extension.clone(),
-        photo_extensions: thumb_gen_config.photo_extensions.clone(),
-        video_extensions: thumb_gen_config.video_extensions.clone(),
-        skip_if_exists: true,
-    }
+pub static WORKER_ID: LazyLock<String> = LazyLock::new(|| nice_id(8));
+pub fn worker_id() -> &'static String {
+    &WORKER_ID
+}
+
+// simple exponential backoff: 2^attempt * 10 seconds
+pub fn backoff_seconds(attempts: i32) -> i64 {
+    #[allow(clippy::cast_sign_loss)]
+    let secs = 10 * (2_i64.pow(attempts as u32));
+    secs.min(3600) // cap at 1h
 }

@@ -1,10 +1,13 @@
 use crate::settings::structs::AppSettings;
+use std::fs;
 use std::fs::canonicalize;
 use std::path::{Path, PathBuf, absolute};
 use std::sync::LazyLock;
 
 /// Load the app settings from YAML + environment variables
 pub fn load_app_settings() -> color_eyre::Result<AppSettings> {
+    // Need to load from dotenv to get it to overwrite the db url from env.
+    dotenv::from_path(".env").ok();
     let config_path = Path::new("config/settings.yaml").canonicalize()?;
 
     let builder = config::Config::builder()
@@ -27,7 +30,9 @@ pub static CANON_MEDIA_DIR: LazyLock<PathBuf> =
     LazyLock::new(|| canonicalize(&*MEDIA_DIR).expect("Cannot canonicalize media dir"));
 
 pub static THUMBNAILS_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
-    absolute(&SETTINGS.directories.thumbnails_folder).expect("Invalid thumbnails dir")
+    let dir = absolute(&SETTINGS.directories.thumbnails_folder).expect("Invalid thumbnails dir");
+    fs::create_dir_all(&dir).expect("Cannot create thumbnails folder");
+    dir
 });
 
 #[must_use]

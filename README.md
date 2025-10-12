@@ -42,7 +42,17 @@ APP__DATABASE__URL=postgres://user:pass@localhost/photos
 APP__AUTH__JWT_SECRET=your123secret
 ```
 
-### 4. (Optional) Configure settings
+### 4. Set up database
+
+*Make sure postgres is running and the env variables are set*
+
+To apply the migrations, setting up the database structure:
+
+```bash
+sqlx migrate run
+```
+
+### 5. (Optional) Configure settings
 
 Edit `config/settings.yaml` to adjust backend settings.
 

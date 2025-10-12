@@ -49,9 +49,16 @@ pub async fn authenticate_user(
 /// * `AuthError::UserAlreadyExists` if a user with the given email already exists.
 /// * `sqlx::Error` for other database-related issues.
 /// * `AuthError::Internal` for hashing errors.
+/// * `AuthError::InvalidUsername` when the username contains illegal characters.
 pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, AuthError> {
+    if !payload.name.chars().all(char::is_alphanumeric) {
+        return Err(AuthError::InvalidUsername);
+    }
     let hashed = hash_password(payload.password.as_ref())?;
-    info!("Creating user {:?}", payload);
+    info!(
+        "Creating user email={}, name={}",
+        payload.email, payload.name
+    );
     let result = sqlx::query_as!(
         User,
         r#"

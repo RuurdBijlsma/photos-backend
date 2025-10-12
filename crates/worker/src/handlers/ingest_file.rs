@@ -1,13 +1,12 @@
 use crate::db_helpers::write_to_db::store_media_item;
-use crate::utils::get_thumb_options;
-use common_photos::{nice_id, relative_path_no_exist, settings, thumbnails_dir};
+use crate::jobs::is_job_cancelled;
+use common_photos::{
+    Job, get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir,
+};
 use media_analyzer::MediaAnalyzer;
-use ml_analysis::VisualAnalyzer;
-use pyo3::{PyErr, Python};
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
-use sqlx::PgTransaction;
-use std::path::Path;
-use std::time::Instant;
+use sqlx::PgPool;
+use tracing::info;
 
 /// Processes a media file by generating thumbnails, analyzing its metadata, and storing the result.
 ///
@@ -23,12 +22,15 @@ use std::time::Instant;
 ///
 /// * Panics if the `thumbnail_generation.heights` configuration array is empty.
 pub async fn ingest_file(
-    file: &Path,
+    pool: &PgPool,
+    job: &Job,
     analyzer: &mut MediaAnalyzer,
-    tx: &mut PgTransaction<'_>,
 ) -> color_eyre::Result<()> {
+    info!("Running ingest file... {:?}", &job);
+    // Setup
+    let file = media_dir().join(&job.relative_path);
     let thumb_config = get_thumb_options();
-    let relative_path_str = relative_path_no_exist(file)?;
+    let relative_path_str = relative_path_abs(&file)?;
     let thumb_base_dir = thumbnails_dir();
     let media_item_id = nice_id(settings().database.media_item_id_length);
     let thumbnail_out_dir = thumb_base_dir.join(&media_item_id);
@@ -40,25 +42,22 @@ pub async fn ingest_file(
     let smallest_thumb_filename = format!("{smallest_thumb_size}p.avif");
     let tiny_thumb_path = thumbnail_out_dir.join(smallest_thumb_filename);
 
-    generate_thumbnails(file, &thumbnail_out_dir, &thumb_config).await?;
+    // Generate thumb -> get media info -> store in db
+    generate_thumbnails(&file, &thumbnail_out_dir, &thumb_config).await?;
+    let media_info = analyzer.analyze_media(&file, &tiny_thumb_path).await?;
 
-    let media_info = analyzer.analyze_media(file, &tiny_thumb_path).await?;
-
-    Python::attach(|py| -> Result<(), PyErr> {
-        let now = Instant::now();
-        let analyzer = VisualAnalyzer::new(py).unwrap();
-        let elapsed = now.elapsed();
-        println!("Make analyzer took {elapsed:?}");
-        let now = Instant::now();
-        let caption = analyzer.caption_image(file, None)?;
-        let elapsed = now.elapsed();
-        println!("caption_image took {elapsed:?}");
-        println!("Caption for {} is {caption}", file.display());
-
-        Ok(())
-    })?;
-
-    store_media_item(tx, &relative_path_str, &media_info, &media_item_id).await?;
+    let mut tx = pool.begin().await?;
+    if !is_job_cancelled(&mut tx, job.id).await? {
+        store_media_item(
+            &mut tx,
+            &relative_path_str,
+            &media_info,
+            &media_item_id,
+            job.user_id,
+        )
+        .await?;
+    }
+    tx.commit().await?;
 
     Ok(())
 }
