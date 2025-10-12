@@ -1,8 +1,11 @@
 use crate::{canon_media_dir, media_dir, settings};
-use sqlx::{PgPool, Pool, Postgres};
+use sqlx::postgres::PgPoolOptions;
+use sqlx::{Pool, Postgres};
 use std::fs::canonicalize;
 use std::path::Path;
 use std::path::absolute;
+use std::time::Duration;
+use tracing::info;
 
 #[must_use]
 pub fn to_posix_string(path: &Path) -> String {
@@ -54,9 +57,20 @@ pub fn nice_id(length: usize) -> String {
 /// * `PgPool::connect` can return an error if the database connection fails.
 /// * `sqlx::migrate` can return an error if migrations fail.
 pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
+    // Need to load from dotenv to get it to overwrite the db url from env.
     dotenv::from_path(".env").ok();
-    let database_url = &settings().database.url;
-    let pool = PgPool::connect(database_url).await?;
+    let db_settings = &settings().database;
+    let database_url = &db_settings.url;
+    info!("Connecting to database at: {}", database_url);
+    let pool = PgPoolOptions::new()
+        .max_connections(db_settings.max_connections)
+        .min_connections(db_settings.min_connection)
+        .max_lifetime(Duration::from_secs(db_settings.max_lifetime))
+        .idle_timeout(Duration::from_secs(db_settings.idle_timeout))
+        .acquire_timeout(Duration::from_secs(db_settings.acquire_timeout))
+        .test_before_acquire(true)
+        .connect(database_url)
+        .await?;
     sqlx::migrate!("../../migrations").run(&pool).await?;
     Ok(pool)
 }

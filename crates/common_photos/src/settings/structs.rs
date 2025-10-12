@@ -56,7 +56,11 @@ pub struct WorkerSettings {
 #[derive(Debug, Deserialize)]
 pub struct DatabaseSettings {
     pub url: String,
-    pub pool_size: u32,
+    pub max_connections: u32,
+    pub min_connection: u32,
+    pub max_lifetime: u64,
+    pub idle_timeout: u64,
+    pub acquire_timeout: u64,
     /// Length of generated `id` to use for media item in database.
     pub media_item_id_length: usize,
 }
