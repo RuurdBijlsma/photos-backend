@@ -12,7 +12,7 @@
   * ✅ clean refresh token table on schedule
   * clustering on schedule
 * ML Analysis:
-  * Make ML jobtype, give priority below videos (30?) so they are done last
+  * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
   * color data from python, make in rust
   * quality measure from python, make in rust
   * captioner logic in rust (all the questions like is_animal)
