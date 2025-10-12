@@ -4,7 +4,7 @@ use crate::routes::setup::interfaces::{
     DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
 use common_photos::{
-    is_media_file, is_photo_file, media_dir, relative_path_exists, settings, thumbnails_dir,
+    is_media_file, is_photo_file, media_dir, relative_path_canon, settings, thumbnails_dir,
     to_posix_string,
 };
 use sqlx::PgPool;
@@ -75,7 +75,7 @@ pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
     let folders = list_folders(&user_path).await?;
     folders
         .iter()
-        .map(relative_path_exists)
+        .map(relative_path_canon)
         .collect::<Result<Vec<_>, _>>()
         .map_err(Into::into)
 }
@@ -83,7 +83,7 @@ pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
 /// Provides a sample of media files from a given folder.
 pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, SetupError> {
     let media_folder_info = check_drive_info(user_folder)?;
-    let folder_relative = relative_path_exists(user_folder)?;
+    let folder_relative = relative_path_canon(user_folder)?;
 
     if !media_folder_info.read_access {
         return Ok(MediaSampleResponse::unreadable(folder_relative));
@@ -115,7 +115,7 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Setup
 
     let relative_samples = samples
         .iter()
-        .map(relative_path_exists)
+        .map(relative_path_canon)
         .collect::<Result<_, _>>()?;
 
     Ok(MediaSampleResponse {
@@ -132,7 +132,7 @@ pub fn get_folder_unsupported_files(
     user_folder: &Path,
 ) -> Result<UnsupportedFilesResponse, SetupError> {
     let media_folder_info = check_drive_info(user_folder)?;
-    let folder_relative = relative_path_exists(user_folder)?;
+    let folder_relative = relative_path_canon(user_folder)?;
 
     if !media_folder_info.read_access {
         return Ok(UnsupportedFilesResponse::unreadable(folder_relative));
@@ -147,7 +147,7 @@ pub fn get_folder_unsupported_files(
             Ok(entry) => entry,
             Err(e) => {
                 if let Some(path) = e.path() {
-                    inaccessible_entries.push(relative_path_exists(path)?);
+                    inaccessible_entries.push(relative_path_canon(path)?);
                 }
                 debug!("Skipping inaccessible entry: {}", e);
                 continue;
@@ -161,7 +161,7 @@ pub fn get_folder_unsupported_files(
                 .and_then(|s| s.to_str())
                 .unwrap_or("unknown")
                 .to_string();
-            let relative_path = relative_path_exists(entry.path())?;
+            let relative_path = relative_path_canon(entry.path())?;
             unsupported_files
                 .entry(ext)
                 .or_default()

@@ -1,19 +1,20 @@
-use crate::queue_logic::Job;
-use common_photos::thumbnails_dir;
-use sqlx::PgTransaction;
-use std::path::Path;
+use common_photos::{media_dir, thumbnails_dir, Job};
+use sqlx::{Executor, Postgres};
 
-pub async fn remove_file(
+pub async fn remove_file<'c, E>(
+    executor: E,
     job: &Job,
-    file: &Path,
-    tx: &mut PgTransaction<'_>,
-) -> color_eyre::Result<()> {
+) -> color_eyre::Result<()>
+where
+    E: Executor<'c, Database = Postgres>,
+{
+    let file = media_dir().join(&job.relative_path);
     // 1. Delete from main media items table (cascades should handle the rest)
     let deleted_id: String = sqlx::query_scalar!(
         "DELETE FROM media_item WHERE relative_path = $1 RETURNING id",
         &job.relative_path
     )
-    .fetch_one(&mut **tx)
+    .fetch_one(executor)
     .await?;
 
     // 2. Delete thumbnails from the filesystem

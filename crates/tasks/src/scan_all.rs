@@ -1,6 +1,5 @@
 use common_photos::{
-    enqueue_file_ingest, enqueue_file_remove, media_dir, relative_path_no_exist, settings,
-    thumbnails_dir,
+    enqueue_ingest_job, enqueue_remove_job, media_dir, relative_path_abs, settings, thumbnails_dir,
 };
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
@@ -87,7 +86,7 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
         if file.exists() {
             info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
             // Re-ingest files with missing thumbnails, as long as the fs file exists.
-            enqueue_file_ingest(&file, pool).await?;
+            enqueue_ingest_job(pool, &relative_path).await?;
         }
     }
 
@@ -111,7 +110,7 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
     let all_files = get_media_files(media_dir, &allowed);
     let fs_paths: HashSet<String> = all_files
         .into_iter()
-        .flat_map(|p| relative_path_no_exist(&p))
+        .flat_map(|p| relative_path_abs(&p))
         .collect();
 
     let db_paths: HashSet<String> = sqlx::query_scalar("SELECT relative_path FROM media_item")
@@ -123,13 +122,13 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
     let to_ingest: Vec<_> = fs_paths.difference(&db_paths).cloned().collect();
     let to_remove: Vec<_> = db_paths.difference(&fs_paths).cloned().collect();
 
-    for path in to_ingest {
-        if let Err(e) = enqueue_file_ingest(&media_dir.join(&path), pool).await {
+    for rel_path in to_ingest {
+        if let Err(e) = enqueue_ingest_job(pool, &rel_path).await {
             error!("Error enqueueing file ingest: {:?}", e.to_string());
         }
     }
-    for path in to_remove {
-        if let Err(e) = enqueue_file_remove(&media_dir.join(&path), pool).await {
+    for rel_path in to_remove {
+        if let Err(e) = enqueue_remove_job(pool, &rel_path).await {
             error!("Error enqueueing file remove: {:?}", e.to_string());
         }
     }

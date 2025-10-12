@@ -1,14 +1,17 @@
 use media_analyzer::MediaAnalyzer;
-use sqlx::PgTransaction;
+use sqlx::{Executor, PgTransaction, Postgres};
 use std::path::Path;
 use tracing::info;
+use common_photos::Job;
 
-pub async fn ml_analyze_file(
-    _file: &Path,
-    _analyzer: &mut MediaAnalyzer,
-    _tx: &mut PgTransaction<'_>,
-) -> color_eyre::Result<()> {
-    info!("Running ML analysis...");
+pub async fn analyze_file<'c, E>(
+    _executor: E,
+    job: &Job,
+) -> color_eyre::Result<()>
+where
+    E: Executor<'c, Database = Postgres>,
+{
+    info!("Running ML analysis... {:?}", &job);
 
     // todo check if prereqs are here:
     // * media item in db

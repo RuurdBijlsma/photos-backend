@@ -6896,6 +6896,7 @@ checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
 name = "worker"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "color-eyre",
  "common_photos",
  "media_analyzer",
@@ -6906,6 +6907,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

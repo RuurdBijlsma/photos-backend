@@ -44,6 +44,7 @@
 * hdbscan face & photo clustering
 * users have to be implemented in photos processing at some point (media item must have user id) (user folders)
 * ✅ als een crate de settings retrieved voordat dotenv geladen is gaat het stuk.
+* Add some kind of cli flag to specify that a worker can't work on ML type of job
 
 
 ## Kubernetes vs Docker compose

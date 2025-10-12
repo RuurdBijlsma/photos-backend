@@ -1,10 +1,10 @@
-use common_photos::{enqueue_file_ingest, enqueue_file_remove};
 use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::{Pool, Postgres};
 use std::path::Path;
 use tracing::{error, info, warn};
+use common_photos::{enqueue_ingest_job, relative_path_abs, enqueue_remove_job};
 
 /// Handles a file creation event by enqueueing the file for ingestion.
 ///
@@ -14,7 +14,7 @@ use tracing::{error, info, warn};
 async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     info!("File created {:?}", file);
 
-    enqueue_file_ingest(file, pool).await?;
+    enqueue_ingest_job(pool, &relative_path_abs(file)?).await?;
 
     Ok(())
 }
@@ -24,10 +24,10 @@ async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::R
 /// # Errors
 ///
 /// * Returns an error if `enqueue_file_remove` fails, typically due to a database issue.
-async fn handle_remove_file(path: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    info!("File removed {:?}", path);
+async fn handle_remove_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
+    info!("File removed {:?}", file);
 
-    enqueue_file_remove(path, pool).await?;
+    enqueue_remove_job(pool,&relative_path_abs(file)?).await?;
 
     Ok(())
 }
