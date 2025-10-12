@@ -4,11 +4,12 @@ use ruurd_photos_thumbnail_generation::ThumbOptions;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Executor, Pool, Postgres};
 use std::fs::canonicalize;
-use std::path::absolute;
 use std::path::Path;
+use std::path::absolute;
 use std::time::Duration;
-use tracing::{info, warn};
+use tracing::info;
 
+/// Converts a path to a POSIX-style string, replacing backslashes with forward slashes.
 #[must_use]
 pub fn to_posix_string(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
@@ -75,6 +76,7 @@ pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
     Ok(pool)
 }
 
+/// Checks if a file is a media file based on its extension.
 #[must_use]
 pub fn is_media_file(file: &Path) -> bool {
     let photo_extensions = &settings().thumbnail_generation.photo_extensions;
@@ -85,6 +87,7 @@ pub fn is_media_file(file: &Path) -> bool {
     photo_extensions.contains(&extension) || video_extensions.contains(&extension)
 }
 
+/// Checks if a file is a photo file based on its extension.
 #[must_use]
 pub fn is_photo_file(file: &Path) -> bool {
     let photo_extensions = &settings().thumbnail_generation.photo_extensions;
@@ -94,6 +97,7 @@ pub fn is_photo_file(file: &Path) -> bool {
     photo_extensions.contains(&extension)
 }
 
+/// Checks if a file is a video file based on its extension.
 #[must_use]
 pub fn is_video_file(file: &Path) -> bool {
     let video_extensions = &settings().thumbnail_generation.video_extensions;
@@ -103,6 +107,12 @@ pub fn is_video_file(file: &Path) -> bool {
     video_extensions.contains(&extension)
 }
 
+/// Derives the user ID from a given relative path by extracting the username and querying the database.
+/// # Errors
+///
+/// * If the username cannot be extracted from the path.
+/// * If the database query to find the user by username fails.
+/// * If no user is found for the extracted username.
 pub async fn user_id_from_relative_path<'c, E>(
     relative_path: &str,
     executor: E,
@@ -126,6 +136,7 @@ where
     Ok(user_id)
 }
 
+/// Extracts the username from the first component of a file's relative path.
 pub fn username_from_path(path: &Path) -> Option<String> {
     let relative_path = relative_path_abs(path).ok()?;
     relative_path
@@ -134,6 +145,10 @@ pub fn username_from_path(path: &Path) -> Option<String> {
         .map(std::string::ToString::to_string)
 }
 
+/// Retrieves a user's ID from the database based on their username.
+/// # Errors
+///
+/// * If the database query fails.
 pub async fn user_id_from_username<'c, E>(
     username: &str,
     executor: E,
@@ -147,6 +162,7 @@ where
     Ok(user_id)
 }
 
+/// Constructs thumbnail generation options from the application settings.
 #[must_use]
 pub fn get_thumb_options() -> ThumbOptions {
     let thumb_gen_config = &settings().thumbnail_generation;
@@ -161,6 +177,10 @@ pub fn get_thumb_options() -> ThumbOptions {
     }
 }
 
+/// Checks if a file has already been ingested by verifying its database record and thumbnail existence.
+/// # Errors
+///
+/// * Can return an error from `thumbs_exist` if checking for thumbnails fails.
 pub async fn file_is_ingested<'c, E>(file: &Path, executor: E) -> color_eyre::Result<bool>
 where
     E: Executor<'c, Database = Postgres>,
@@ -185,6 +205,10 @@ where
     thumbs_exist(file)
 }
 
+/// Verifies if all expected thumbnails for a given media file exist on disk.
+/// # Errors
+///
+/// This function's signature returns a Result, but the current implementation does not produce any errors.
 pub fn thumbs_exist(file: &Path) -> color_eyre::Result<bool> {
     let thumb_config = get_thumb_options();
     let is_photo = is_photo_file(file);
@@ -219,6 +243,7 @@ pub fn thumbs_exist(file: &Path) -> color_eyre::Result<bool> {
     Ok(true)
 }
 
+/// Logs a warning message with an 'ALERT:' prefix.
 #[macro_export]
 macro_rules! alert {
     ($($arg:tt)*) => {

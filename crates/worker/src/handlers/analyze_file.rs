@@ -1,5 +1,5 @@
 use color_eyre::eyre::eyre;
-use common_photos::{alert, file_is_ingested, media_dir, Job};
+use common_photos::{Job, alert, file_is_ingested, media_dir};
 use sqlx::{Executor, Postgres};
 use tracing::info;
 use tracing::warn;

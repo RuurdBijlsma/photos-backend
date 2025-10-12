@@ -1,9 +1,9 @@
-use crate::utils::worker_id;
 use crate::JobType;
+use crate::utils::worker_id;
 use chrono::Duration;
 use chrono::Utc;
 use color_eyre::Result;
-use common_photos::{alert, Job, JobStatus};
+use common_photos::{Job, JobStatus, alert};
 use sqlx::{PgPool, PgTransaction};
 use tracing::{info, warn};
 

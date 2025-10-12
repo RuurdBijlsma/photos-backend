@@ -1,10 +1,7 @@
-use common_photos::{media_dir, thumbnails_dir, Job};
+use common_photos::{Job, media_dir, thumbnails_dir};
 use sqlx::{Executor, Postgres};
 
-pub async fn remove_file<'c, E>(
-    executor: E,
-    job: &Job,
-) -> color_eyre::Result<()>
+pub async fn remove_file<'c, E>(executor: E, job: &Job) -> color_eyre::Result<()>
 where
     E: Executor<'c, Database = Postgres>,
 {

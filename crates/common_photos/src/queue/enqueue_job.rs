@@ -1,9 +1,13 @@
 use crate::user_id_from_relative_path;
-use crate::{is_video_file, media_dir, JobType};
+use crate::{JobType, is_video_file, media_dir};
 use color_eyre::eyre::Result;
 use sqlx::postgres::PgQueryResult;
 use sqlx::{PgConnection, PgPool};
 
+/// Enqueues a job to ingest a media file, setting a higher priority for video files.
+/// # Errors
+///
+/// * Returns an error if the database transaction fails.
 pub async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()> {
     let is_video = is_video_file(&media_dir().join(relative_path));
     let priority = if is_video { 20 } else { 10 };
@@ -15,6 +19,10 @@ pub async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()
     Ok(())
 }
 
+/// Enqueues a job to perform analysis on a media file.
+/// # Errors
+///
+/// * Returns an error if the database transaction fails.
 pub async fn enqueue_analysis_job(pool: &PgPool, relative_path: &str) -> Result<()> {
     let mut tx = pool.begin().await?;
     enqueue_job(&mut tx, relative_path, JobType::Analysis, 100).await?;
@@ -23,6 +31,10 @@ pub async fn enqueue_analysis_job(pool: &PgPool, relative_path: &str) -> Result<
     Ok(())
 }
 
+/// Cancels any queued ingest or analysis jobs for a file and enqueues a new job to remove it.
+/// # Errors
+///
+/// * Returns an error if the database transaction fails.
 pub async fn enqueue_remove_job(pool: &PgPool, relative_path: &str) -> Result<()> {
     let mut tx = pool.begin().await?;
 
@@ -47,6 +59,11 @@ pub async fn enqueue_remove_job(pool: &PgPool, relative_path: &str) -> Result<()
     Ok(())
 }
 
+/// Inserts a new job into the database within a given transaction.
+/// # Errors
+///
+/// * Returns an error if the user ID cannot be determined from the relative path.
+/// * Returns an error if the database INSERT query fails.
 async fn enqueue_job(
     tx: &mut PgConnection,
     relative_path: &str,

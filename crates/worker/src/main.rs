@@ -1,11 +1,11 @@
-use tracing::warn;
 use crate::utils::{backoff_seconds, worker_id};
 use color_eyre::Result;
-use common_photos::{alert, file_is_ingested, get_db_pool, media_dir, JobType};
+use common_photos::{JobType, alert, file_is_ingested, get_db_pool, media_dir};
 use media_analyzer::MediaAnalyzer;
 use sqlx::PgPool;
 use std::time::Duration;
-use tracing::{info};
+use tracing::info;
+use tracing::warn;
 
 use crate::handlers::analyze_file::analyze_file;
 use crate::handlers::ingest_file::ingest_file;
@@ -33,6 +33,12 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+/// The main loop for the worker process, continuously fetching and processing jobs.
+/// # Errors
+///
+/// * Returns an error if building the `MediaAnalyzer` fails.
+/// * Returns an error if there's a problem claiming a job from the database.
+/// * Propagates errors from job handlers or database updates that are unrecoverable.
 #[allow(clippy::cognitive_complexity)]
 pub async fn worker_loop(pool: &PgPool) -> Result<()> {
     let mut sleeping = false;

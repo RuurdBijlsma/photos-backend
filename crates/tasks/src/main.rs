@@ -1,7 +1,6 @@
 mod clean_db;
 pub mod scan_all;
 
-use tracing::warn;
 use crate::clean_db::clean_db;
 use crate::scan_all::run_scan;
 use color_eyre::Result;
@@ -9,6 +8,7 @@ use common_photos::{alert, get_db_pool};
 use std::time::Duration;
 use tokio::time;
 use tracing::error;
+use tracing::warn;
 
 #[tokio::main]
 async fn main() -> Result<()> {
