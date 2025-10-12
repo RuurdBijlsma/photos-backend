@@ -1,10 +1,10 @@
-use crate::JobType;
 use crate::utils::worker_id;
+use crate::JobType;
 use chrono::Duration;
 use chrono::Utc;
 use color_eyre::Result;
-use common_photos::Job;
-use sqlx::PgPool;
+use common_photos::{alert, Job, JobStatus};
+use sqlx::{PgPool, PgTransaction};
 use tracing::{info, warn};
 
 pub async fn claim_next_job(pool: &PgPool) -> Result<Option<Job>> {
@@ -54,6 +54,7 @@ pub async fn mark_job_done(pool: &PgPool, job_id: i64) -> Result<()> {
 
 pub async fn mark_job_failed(pool: &PgPool, job_id: i64, last_error: &str) -> Result<()> {
     warn!("Marking job {} as failed", job_id);
+    alert!("Marking job {} as failed: {}", job_id, last_error);
     sqlx::query!(
         r#"
         UPDATE jobs
@@ -101,7 +102,22 @@ pub async fn increment_dependency_attempts(pool: &PgPool, job_id: i64) -> Result
         "#,
         job_id
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
     Ok(())
+}
+
+pub async fn is_job_cancelled(tx: &mut PgTransaction<'_>, job_id: i64) -> Result<bool> {
+    let status: JobStatus = sqlx::query_scalar!(
+        r#"
+        SELECT status AS "status: JobStatus"
+        FROM jobs
+        WHERE id = $1
+        "#,
+        job_id
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+
+    Ok(status == JobStatus::Cancelled)
 }

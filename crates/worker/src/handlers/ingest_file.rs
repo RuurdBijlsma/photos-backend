@@ -1,11 +1,11 @@
 use crate::db_helpers::write_to_db::store_media_item;
+use crate::jobs::is_job_cancelled;
 use common_photos::{
     get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir, Job,
 };
 use media_analyzer::MediaAnalyzer;
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
-use sqlx::{Executor, PgTransaction, Postgres};
-use std::path::Path;
+use sqlx::PgPool;
 use tracing::info;
 
 /// Processes a media file by generating thumbnails, analyzing its metadata, and storing the result.
@@ -21,10 +21,11 @@ use tracing::info;
 /// # Panics
 ///
 /// * Panics if the `thumbnail_generation.heights` configuration array is empty.
-pub async fn ingest_file<'c, E>(_executor: E, job: &Job) -> color_eyre::Result<()>
-where
-    E: Executor<'c, Database = Postgres>,
-{
+pub async fn ingest_file(
+    pool: &PgPool,
+    job: &Job,
+    analyzer: &mut MediaAnalyzer,
+) -> color_eyre::Result<()> {
     info!("Running ingest file... {:?}", &job);
     // Setup
     let file = media_dir().join(&job.relative_path);
@@ -43,9 +44,20 @@ where
 
     // Generate thumb -> get media info -> store in db
     generate_thumbnails(&file, &thumbnail_out_dir, &thumb_config).await?;
-    // let media_info = analyzer.analyze_media(&file, &tiny_thumb_path).await?;
-    // todo: if job canceled dont commit
-    // store_media_item(tx, &relative_path_str, &media_info, &media_item_id, user_id).await?;
+    let media_info = analyzer.analyze_media(&file, &tiny_thumb_path).await?;
+
+    let mut tx = pool.begin().await?;
+    if !is_job_cancelled(&mut tx, job.id).await? {
+        store_media_item(
+            &mut tx,
+            &relative_path_str,
+            &media_info,
+            &media_item_id,
+            job.user_id,
+        )
+        .await?;
+    }
+    tx.commit().await?;
 
     Ok(())
 }

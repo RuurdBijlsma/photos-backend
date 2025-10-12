@@ -1,6 +1,7 @@
 mod clean_db;
 pub mod scan_all;
 
+use tracing::warn;
 use crate::clean_db::clean_db;
 use crate::scan_all::run_scan;
 use color_eyre::Result;
@@ -25,11 +26,11 @@ async fn main() -> Result<()> {
             let result: Result<()> = async {
                 let pool = get_db_pool().await?;
                 if let Err(e) = run_scan(&pool).await {
-                    alert(&format!("Scanning failed: {}", e.to_string()));
+                    alert!("Scanning failed: {e}");
                     error!("Scanning failed: {}", e);
                 }
                 if let Err(e) = clean_db(&pool).await {
-                    alert(&format!("Clean db failed: {}", e));
+                    alert!("Clean db failed: {e}");
                     error!("Clean db failed: {}", e);
                 }
 

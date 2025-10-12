@@ -7,7 +7,6 @@ pub struct AppSettings {
     pub directories: DirectoriesSettings,
     pub logging: LoggingSettings,
     pub database: DatabaseSettings,
-    pub worker: WorkerSettings,
     pub thumbnail_generation: ThumbnailGenerationSettings,
     pub api: ApiSettings,
     pub auth: AuthSettings,
@@ -42,14 +41,6 @@ pub struct DirectoriesSettings {
     pub media_folder: String,
     /// Folder where generated thumbnails will reside.
     pub thumbnails_folder: String,
-}
-
-/// Configuration for the background worker process.
-#[derive(Debug, Deserialize)]
-pub struct WorkerSettings {
-    pub wait_after_empty_queue_s: u64,
-    pub wait_after_error_s: u64,
-    pub max_retries: i32,
 }
 
 /// Database connection and related configuration.

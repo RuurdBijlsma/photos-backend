@@ -1,21 +1,19 @@
-use media_analyzer::MediaAnalyzer;
-use sqlx::{Executor, PgTransaction, Postgres};
-use std::path::Path;
+use color_eyre::eyre::eyre;
+use common_photos::{alert, file_is_ingested, media_dir, Job};
+use sqlx::{Executor, Postgres};
 use tracing::info;
-use common_photos::Job;
+use tracing::warn;
 
-pub async fn analyze_file<'c, E>(
-    _executor: E,
-    job: &Job,
-) -> color_eyre::Result<()>
+pub async fn analyze_file<'c, E>(executor: E, job: &Job) -> color_eyre::Result<()>
 where
     E: Executor<'c, Database = Postgres>,
 {
     info!("Running ML analysis... {:?}", &job);
-
-    // todo check if prereqs are here:
-    // * media item in db
-    // * thumbnails exist
+    let file = media_dir().join(&job.relative_path);
+    if !file_is_ingested(&file, executor).await? {
+        alert!("Analysis job picked up while file is not properly ingested");
+        return Err(eyre!("File is not properly ingested"));
+    }
 
     // Python::attach(|py| -> Result<(), PyErr> {
     //     let now = Instant::now();

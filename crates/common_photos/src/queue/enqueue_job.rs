@@ -9,7 +9,7 @@ pub async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()
     let priority = if is_video { 20 } else { 10 };
 
     let mut tx = pool.begin().await?;
-    enqueue_job(&mut tx, relative_path, JobType::Analysis, priority).await?;
+    enqueue_job(&mut tx, relative_path, JobType::Ingest, priority).await?;
     tx.commit().await?;
 
     Ok(())
@@ -53,6 +53,7 @@ async fn enqueue_job(
     job_type: JobType,
     priority: i32,
 ) -> Result<PgQueryResult> {
+    // todo: probably don't enqueue job if it's marked as failed?
     let user_id = user_id_from_relative_path(relative_path, &mut *tx).await?;
 
     sqlx::query!(

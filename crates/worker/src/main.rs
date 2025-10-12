@@ -1,10 +1,11 @@
+use tracing::warn;
 use crate::utils::{backoff_seconds, worker_id};
 use color_eyre::Result;
-use common_photos::{alert, file_is_ingested, get_db_pool, media_dir, settings, JobType};
+use common_photos::{alert, file_is_ingested, get_db_pool, media_dir, JobType};
 use media_analyzer::MediaAnalyzer;
 use sqlx::PgPool;
 use std::time::Duration;
-use tracing::{info, warn};
+use tracing::{info};
 
 use crate::handlers::analyze_file::analyze_file;
 use crate::handlers::ingest_file::ingest_file;
@@ -25,8 +26,6 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     info!("[Worker PID: {}] Starting.", worker_id());
-    let mut analyzer = MediaAnalyzer::builder().build().await?;
-    let worker_config = &settings().worker;
     let pool = get_db_pool().await?;
 
     worker_loop(&pool).await?;
@@ -34,11 +33,15 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn worker_loop(pool: &PgPool) -> Result<()> {
+    let mut sleeping = false;
+    let mut analyzer = MediaAnalyzer::builder().build().await?;
     loop {
         if let Some(job) = claim_next_job(pool).await? {
+            sleeping = false;
             let result = match job.job_type {
-                JobType::Ingest => ingest_file(pool, &job).await,
+                JobType::Ingest => ingest_file(pool, &job, &mut analyzer).await,
                 JobType::Remove => remove_file(pool, &job).await,
                 JobType::Analysis => {
                     let file_path = media_dir().join(&job.relative_path);
@@ -46,7 +49,7 @@ pub async fn worker_loop(pool: &PgPool) -> Result<()> {
                         // ingest not ready → reschedule job
                         increment_dependency_attempts(pool, job.id).await?;
                         if job.dependency_attempts > 10 {
-                            alert("Alarmingly many attempts to reschedule analysis job.");
+                            alert!("Alarmingly many attempts to reschedule analysis job.");
                         }
                         let delay = backoff_seconds(job.dependency_attempts);
                         reschedule_job(pool, job.id, delay).await?;
@@ -61,18 +64,19 @@ pub async fn worker_loop(pool: &PgPool) -> Result<()> {
                 Ok(()) => mark_job_done(pool, job.id).await?,
                 Err(err) => {
                     if job.attempts + 1 >= job.max_attempts {
-                        // give up
                         mark_job_failed(pool, job.id, &err.to_string()).await?;
                     } else {
-                        // reschedule with exponential backoff
                         let delay = backoff_seconds(job.attempts);
                         reschedule_job(pool, job.id, delay).await?;
                     }
                 }
             }
         } else {
-            // no jobs ready → short sleep
-            sleep(Duration::from_millis(500)).await;
+            if !sleeping {
+                sleeping = true;
+                info!("💤 No jobs, sleeping a bit...");
+            }
+            sleep(Duration::from_millis(3000)).await;
         }
     }
 }

@@ -1,9 +1,9 @@
 use crate::insert_query;
 use media_analyzer::{AnalyzeResult, LocationName};
-use sqlx::{PgTransaction, Postgres, Transaction};
+use sqlx::PgTransaction;
 
 async fn get_or_create_location(
-    tx: &mut Transaction<'_, Postgres>,
+    tx: &mut PgTransaction<'_>,
     location_data: &LocationName,
 ) -> Result<i32, sqlx::Error> {
     let existing_id: Option<i32> = sqlx::query_scalar(

@@ -219,7 +219,9 @@ pub fn thumbs_exist(file: &Path) -> color_eyre::Result<bool> {
     Ok(true)
 }
 
-pub fn alert(message: &str) {
-    //todo: implement alerting
-    warn!("ALERT: {}", message);
+#[macro_export]
+macro_rules! alert {
+    ($($arg:tt)*) => {
+        warn!("ALERT: {}", format_args!($($arg)*));
+    };
 }
