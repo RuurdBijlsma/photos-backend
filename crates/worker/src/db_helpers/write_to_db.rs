@@ -18,7 +18,10 @@ async fn get_or_create_location(
     if let Some(id) = existing_id {
         Ok(id)
     } else {
-        let country_name = location_data.country_name.as_ref().expect("Country name has to be set.");
+        let country_name = location_data
+            .country_name
+            .as_ref()
+            .expect("Country name has to be set.");
         let new_id: i32 = sqlx::query_scalar!(
             r"
             INSERT INTO location (name, admin1, admin2, country_code, country_name)
