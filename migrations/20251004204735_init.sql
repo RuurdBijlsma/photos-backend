@@ -1,47 +1,49 @@
--- Create the Location table first as GPS depends on it.
--- Many GPS entries can point to the same Location.
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+CREATE TYPE user_role AS ENUM ('ADMIN', 'USER');
+
+-- Create the Location table. Many GPS entries can point to one Location.
 CREATE TABLE location
 (
     id           SERIAL PRIMARY KEY,
     name         TEXT,
     admin1       TEXT,
     admin2       TEXT,
-    country_code TEXT,
-    country_name TEXT
+    country_code TEXT NOT NULL,
+    country_name TEXT NOT NULL
 );
 
-CREATE TYPE user_role AS ENUM ('ADMIN', 'USER');
-
+-- Create the User table.
 CREATE TABLE app_user
 (
     id           SERIAL PRIMARY KEY,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    email        TEXT        NOT NULL,
+    email        TEXT        NOT NULL UNIQUE,
     password     TEXT        NOT NULL,
-    name         TEXT        NOT NULL,
+    name         TEXT        NOT NULL UNIQUE,
     media_folder TEXT,
-    role         user_role   NOT NULL DEFAULT 'USER',
-    CONSTRAINT app_user_email_key UNIQUE (email)
+    role         user_role   NOT NULL DEFAULT 'USER'
 );
 
+-- Create the Refresh Token table for persistent user sessions.
 CREATE TABLE refresh_token
 (
     id            SERIAL PRIMARY KEY,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     user_id       INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    selector      TEXT        NOT NULL UNIQUE, -- The selector must be unique for lookups
-    verifier_hash TEXT        NOT NULL,        -- The hash of the verifier part
+    selector      TEXT        NOT NULL UNIQUE,
+    verifier_hash TEXT        NOT NULL,
     expires_at    TIMESTAMPTZ NOT NULL
 );
 
-CREATE UNIQUE INDEX idx_refresh_token_selector ON refresh_token (selector);
-
 -- Create the central MediaItem table.
+-- Other tables with specific metadata will link to this one.
 CREATE TABLE media_item
 (
     id                  VARCHAR(10) PRIMARY KEY,
-    relative_path       TEXT        NOT NULL,
+    relative_path       TEXT        NOT NULL UNIQUE,
+    user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     width               INT         NOT NULL,
@@ -49,27 +51,25 @@ CREATE TABLE media_item
     is_video            BOOLEAN     NOT NULL,
     data_url            TEXT        NOT NULL,
     duration_ms         BIGINT,
-    taken_at_naive      TIMESTAMP, -- Naive timestamp without timezone
+    taken_at_naive      TIMESTAMP, -- Naive timestamp without timezone information.
     use_panorama_viewer BOOLEAN,
-    deleted             BOOLEAN     NOT NULL DEFAULT false,
-    user_id             INT REFERENCES app_user (id) ON DELETE CASCADE,
-    CONSTRAINT media_item_relative_path_key UNIQUE (relative_path)
+    deleted             BOOLEAN     NOT NULL DEFAULT false
 );
 
--- Create the GPS table with a one-to-one relationship to MediaItem
--- and a many-to-one relationship to Location.
--- A MediaItem might not have GPS information, hence the nullable foreign key.
+-- The following tables store optional, detailed metadata for a MediaItem.
+-- They use a one-to-one relationship where the primary key is also a foreign key
+-- referencing media_item.id. This keeps the main media_item table clean.
+
 CREATE TABLE gps
 (
     media_item_id   VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    location_id     INT REFERENCES location (id),
+    location_id     INT REFERENCES location (id), -- A media item can exist without a resolved location.
     latitude        DOUBLE PRECISION NOT NULL,
     longitude       DOUBLE PRECISION NOT NULL,
     altitude        DOUBLE PRECISION,
     image_direction DOUBLE PRECISION
 );
 
--- Create the TimeDetails table with a one-to-one relationship to MediaItem.
 CREATE TABLE time_details
 (
     media_item_id           VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
@@ -81,8 +81,6 @@ CREATE TABLE time_details
     source_confidence       TEXT
 );
 
--- Create the Weather table with a one-to-one relationship to MediaItem.
--- A MediaItem might not have weather information.
 CREATE TABLE weather
 (
     media_item_id     VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
@@ -104,10 +102,11 @@ CREATE TABLE weather
     is_daytime        BOOLEAN
 );
 
--- Create the Details table with a one-to-one relationship to MediaItem.
 CREATE TABLE details
 (
     media_item_id                       VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
+    mime_type                           TEXT    NOT NULL,
+    size_bytes                          BIGINT  NOT NULL,
     is_motion_photo                     BOOLEAN NOT NULL,
     motion_photo_presentation_timestamp BIGINT,
     is_hdr                              BOOLEAN NOT NULL,
@@ -117,12 +116,9 @@ CREATE TABLE details
     video_fps                           REAL,
     is_nightsight                       BOOLEAN NOT NULL,
     is_timelapse                        BOOLEAN NOT NULL,
-    mime_type                           TEXT    NOT NULL,
-    size_bytes                          BIGINT  NOT NULL,
     exif                                JSONB
 );
 
--- Create the CaptureDetails table with a one-to-one relationship to MediaItem.
 CREATE TABLE capture_details
 (
     media_item_id VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
@@ -134,7 +130,6 @@ CREATE TABLE capture_details
     camera_model  TEXT
 );
 
--- Create the Panorama table with a one-to-one relationship to MediaItem.
 CREATE TABLE panorama
 (
     media_item_id      VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
@@ -146,11 +141,15 @@ CREATE TABLE panorama
     center_pitch_deg   REAL
 );
 
--- Add indices for foreign keys and frequently queried columns
+-- Create indices for foreign keys and frequently queried columns for performance.
+
+-- Index for the foreign key in the gps table.
 CREATE INDEX idx_gps_location_id ON gps (location_id);
+
+-- Indices for common sorting/filtering operations on media_item.
 CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_naive ON media_item (taken_at_naive);
+CREATE INDEX idx_media_item_user_id ON media_item (user_id);
 
--- Add PostGIS spatial index for latitude and longitude
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE INDEX idx_gps_location ON gps USING GIST (ST_MakePoint(longitude, latitude));
+-- A spatial index for efficient geographic queries (e.g., "find all photos within this area").
+CREATE INDEX idx_gps_location_spatial ON gps USING GIST (ST_MakePoint(longitude, latitude));

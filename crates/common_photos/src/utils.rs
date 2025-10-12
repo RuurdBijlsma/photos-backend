@@ -1,6 +1,6 @@
 use crate::{canon_media_dir, media_dir, settings};
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{Pool, Postgres};
+use sqlx::{Executor, Pool, Postgres};
 use std::fs::canonicalize;
 use std::path::Path;
 use std::path::absolute;
@@ -57,8 +57,6 @@ pub fn nice_id(length: usize) -> String {
 /// * `PgPool::connect` can return an error if the database connection fails.
 /// * `sqlx::migrate` can return an error if migrations fail.
 pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
-    // Need to load from dotenv to get it to overwrite the db url from env.
-    dotenv::from_path(".env").ok();
     let db_settings = &settings().database;
     let database_url = &db_settings.url;
     info!("Connecting to database at: {}", database_url);
@@ -101,4 +99,25 @@ pub fn is_video_file(file: &Path) -> bool {
         return false;
     };
     video_extensions.contains(&extension)
+}
+
+pub fn username_from_path(path: &Path) -> Option<String> {
+    let relative_path = relative_path_no_exist(path).ok()?;
+    relative_path
+        .split('/')
+        .next()
+        .map(std::string::ToString::to_string)
+}
+
+pub async fn user_id_from_username<'c, E>(
+    username: &str,
+    executor: E,
+) -> color_eyre::Result<Option<i32>>
+where
+    E: Executor<'c, Database = Postgres>,
+{
+    let user_id = sqlx::query_scalar!("SELECT id FROM app_user WHERE name = $1", username)
+        .fetch_optional(executor)
+        .await?;
+    Ok(user_id)
 }

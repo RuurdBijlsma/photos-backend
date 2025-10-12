@@ -48,6 +48,7 @@ pub async fn store_media_item(
     relative_path: &str,
     data: &AnalyzeResult,
     item_id: &str,
+    user_id: i32,
 ) -> Result<String, sqlx::Error> {
     // Overwrite if it already exists.
     sqlx::query_scalar!(
@@ -59,6 +60,7 @@ pub async fn store_media_item(
 
     insert_query!(tx, "media_item", {
         id: &item_id,
+        user_id: user_id,
         relative_path: relative_path,
         width: data.metadata.width as i32,
         height: data.metadata.height as i32,

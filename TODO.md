@@ -43,7 +43,7 @@
     14. try http://localhost:3567/auth/refresh -> should not work
 * hdbscan face & photo clustering
 * users have to be implemented in photos processing at some point (media item must have user id) (user folders)
-
+* ✅ als een crate de settings retrieved voordat dotenv geladen is gaat het stuk.
 
 
 ## Kubernetes vs Docker compose

@@ -8,6 +8,8 @@ use tracing::{info, warn};
 
 #[derive(Debug, Error)]
 pub enum AuthError {
+    #[error("invalid username")]
+    InvalidUsername,
     #[error("missing token")]
     MissingToken,
     #[error("invalid token")]
@@ -30,6 +32,7 @@ pub enum AuthError {
 #[allow(clippy::cognitive_complexity)]
 fn log_auth_failure(error: &AuthError) {
     match error {
+        AuthError::InvalidUsername => info!("Invalid username supplied."),
         AuthError::MissingToken => warn!("Authentication failed: Missing Authorization token."),
         AuthError::InvalidToken => warn!("Authentication failed: Invalid token provided."),
         AuthError::InvalidCredentials => {
@@ -54,6 +57,10 @@ impl IntoResponse for AuthError {
         log_auth_failure(&self);
 
         let (status, error_message) = match self {
+            Self::InvalidUsername => (
+                StatusCode::BAD_REQUEST,
+                "Username must only contain alphanumeric characters.",
+            ),
             Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
             Self::MissingToken
             | Self::InvalidToken

@@ -6,7 +6,7 @@ use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
-use tracing::info;
+use tracing::{error, info};
 use walkdir::WalkDir;
 
 /// Checks if a file path has an extension present in a given set of allowed extensions.
@@ -124,10 +124,14 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
     let to_remove: Vec<_> = db_paths.difference(&fs_paths).cloned().collect();
 
     for path in to_ingest {
-        enqueue_file_ingest(&media_dir.join(&path), pool).await?;
+        if let Err(e) = enqueue_file_ingest(&media_dir.join(&path), pool).await {
+            error!("Error enqueueing file ingest: {:?}", e.to_string());
+        }
     }
     for path in to_remove {
-        enqueue_file_remove(&media_dir.join(&path), pool).await?;
+        if let Err(e) = enqueue_file_remove(&media_dir.join(&path), pool).await {
+            error!("Error enqueueing file remove: {:?}", e.to_string());
+        }
     }
 
     sync_thumbnails(pool).await?;

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM job_queue WHERE relative_path = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0d0ba6d0518275eba2e09f9cbb313d0bca22e4fdd2dada73b866f672855a45a9"
+}

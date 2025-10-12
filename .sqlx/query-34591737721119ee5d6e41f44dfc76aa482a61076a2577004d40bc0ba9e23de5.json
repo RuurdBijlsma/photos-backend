@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO job_queue (relative_path, user_id, job_type, priority)\n        SELECT $1, $2, 'ANALYSIS', $3\n        WHERE NOT EXISTS (\n            SELECT 1 FROM queue_failures WHERE relative_path = $1 AND job_type = 'ANALYSIS'\n        )\n        ON CONFLICT (relative_path, job_type) DO UPDATE\n        SET\n            priority = $3,\n            retry_count = 0,\n            created_at = NOW()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "34591737721119ee5d6e41f44dfc76aa482a61076a2577004d40bc0ba9e23de5"
+}

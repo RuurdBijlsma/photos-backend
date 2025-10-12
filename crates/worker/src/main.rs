@@ -8,6 +8,7 @@ use tracing::{info, warn};
 
 mod db_helpers;
 pub mod ingest_file;
+mod ml_analyze_file;
 mod queue_logic;
 mod remove_file;
 mod utils;
