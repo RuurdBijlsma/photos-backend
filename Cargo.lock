@@ -2371,19 +2371,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "964de6e86d545b246d84badc0fef527924ace5134f30641c203ef52ba83f58d5"
 
 [[package]]
-name = "indexer"
-version = "0.1.0"
-dependencies = [
- "color-eyre",
- "common_photos",
- "sqlx",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "walkdir",
-]
-
-[[package]]
 name = "indexmap"
 version = "2.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5564,6 +5551,19 @@ name = "target-lexicon"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df7f62577c25e07834649fc3b39fafdc597c0a3527dc1c60129201ccfcbaa50c"
+
+[[package]]
+name = "tasks"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "common_photos",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "walkdir",
+]
 
 [[package]]
 name = "temp-dir"

@@ -6,9 +6,9 @@
 * ✅ in auth/model, split db models and api interfaces
 * ✅ I accidentally made this a new repo, original was photos-processing
 * ✅ look at rust config package
-* schedule runner
-  * make scanning a crate and call from schedule runner
-  * clean refresh token table on schedule
+* schedule runner -> might have to use ofelia or kubernetes+helm to get clean cronjobs. 
+  * ✅ indexing
+  * ✅ clean refresh token table on schedule
   * clustering on schedule
 * color data from python, make in rust
 * quality measure from python, make in rust
@@ -39,3 +39,20 @@
 * users have to be implemented in photos processing at some point (media item must have user id) (user folders)
 * only allow register if no user exists, or if a valid invite token is passed
 * add random image + theme endpoint
+
+
+
+## Kubernetes vs Docker compose
+
++ Met coole UI kan je dingen inzien
++ Cronjobs geintegreerd
++ Voelt professioneel
++ als chatgpt te geloven is, makkelijke setup (installs k3s -> edit values.yaml -> run)
++ service voor frontend, is ervoor gemaakt
++ kan op een hosting service makkelijker
+
+- Schrikt selfhosters af
+- complexe templates & charts
+- gebruikt meer resources dan docker compose
+- meer omslachtige mounting van schijven
+- meer complicated troubleshooting, logs enzo

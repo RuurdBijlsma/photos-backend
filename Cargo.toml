@@ -3,7 +3,7 @@ resolver = "3"
 members = [
     "crates/api",
     "crates/common_photos",
-    "crates/indexer",
+    "crates/tasks",
     "crates/watcher",
     "crates/ml_analysis",
     "crates/worker"

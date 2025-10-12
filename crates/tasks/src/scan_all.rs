@@ -1,8 +1,8 @@
 use common_photos::{
-    enqueue_file_ingest, enqueue_file_remove, media_dir, relative_path_no_exist, settings,
-    thumbnails_dir,
+    enqueue_file_ingest, enqueue_file_remove, media_dir, relative_path_no_exist,
+    settings, thumbnails_dir,
 };
-use sqlx::{Pool, Postgres};
+use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
@@ -131,5 +131,15 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
     }
 
     sync_thumbnails(pool).await?;
+    Ok(())
+}
+
+pub async fn run_scan(pool: &PgPool) -> color_eyre::Result<()> {
+    fs::create_dir_all(&thumbnails_dir()).await?;
+    let media_dir = media_dir();
+    info!("Scanning \"{}\" ...", &media_dir.display());
+    sync_files_to_db(media_dir, pool).await?;
+    info!("Scan complete");
+
     Ok(())
 }
