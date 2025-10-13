@@ -1,9 +1,10 @@
 use crate::caption_data::get_caption_data;
-use crate::color_data::analyze_colors;
+use crate::color_data::get_color_data;
 use crate::{PyInterop, Variant, VisualImageData};
 use pyo3::Python;
 use std::path::Path;
 use std::time::Instant;
+use crate::quality_data::get_quality_data;
 
 pub struct VisualAnalyzer {
     py_interop: PyInterop,
@@ -20,8 +21,12 @@ impl VisualAnalyzer {
     pub fn analyze_image(&self, file: &Path) -> color_eyre::Result<VisualImageData> {
         let now = Instant::now();
         // todo config variant & contrast level
-        let color_data = analyze_colors(&self.py_interop, file, &Variant::Vibrant, 3.)?;
-        println!("\tanalyze_colors {:?}", now.elapsed());
+        let color_data = get_color_data(&self.py_interop, file, &Variant::Vibrant, 3.)?;
+        println!("\tget_color_data {:?}", now.elapsed());
+        
+        let now = Instant::now();
+        let quality_data = get_quality_data(file)?;
+        println!("\tget_quality_data {:?}", now.elapsed());
 
         let now = Instant::now();
         let caption_data = get_caption_data(&self.py_interop, file)?;
@@ -48,6 +53,7 @@ impl VisualAnalyzer {
 
         Ok(VisualImageData {
             color_data,
+            quality_data,
             caption_data,
             embedding,
             faces,

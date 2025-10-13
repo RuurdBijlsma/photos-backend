@@ -4,6 +4,7 @@
 * ✅ fix errors in api, abstraction for it, probably.
 * ✅ Api docs swagger
 * ✅ in auth/model, split db models and api interfaces
+* ✅ users have to be implemented in photos processing at some point (media item must have user id) (user folders)
 * ✅ I accidentally made this a new repo, original was photos-processing
 * ✅ use db config when setting up db. (pool size etc.)
 * ✅ als een crate de settings retrieved voordat dotenv geladen is gaat het stuk.
@@ -14,9 +15,9 @@
   * clustering on schedule
 * ML Analysis:
   * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
-  * color data from python, make in rust
+  * ✅ color data from python, make in rust
+  * ✅ captioner logic in rust (all the questions like is_animal)
   * quality measure from python, make in rust
-  * captioner logic in rust (all the questions like is_animal)
   * make required sql migration tables for ML analysis
   * handle machine learning analysis job, put in db
 * api:
@@ -43,7 +44,6 @@
     13. http://localhost:3567/auth/logout
     14. try http://localhost:3567/auth/refresh -> should not work
 * hdbscan face & photo clustering
-* users have to be implemented in photos processing at some point (media item must have user id) (user folders)
 * Add some kind of cli flag to specify that a worker can't work on ML type of job
 * BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
 

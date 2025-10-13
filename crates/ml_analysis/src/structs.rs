@@ -73,14 +73,11 @@ pub struct ObjectBox {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct MeasuredQualityData {
-    pub measured_sharpness: f32,
-    pub measured_noise: i32,
-    pub measured_brightness: f32,
-    pub measured_contrast: f32,
-    pub measured_clipping: f32,
-    pub measured_dynamic_range: f32,
-    pub quality_score: f32,
+pub struct QualityData {
+    pub blurriness: f64,
+    pub noisiness: f64,
+    pub exposure: f64,
+    pub quality_score: f64,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -140,6 +137,7 @@ pub struct CaptionData {
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct VisualImageData {
     pub color_data: ColorData,
+    pub quality_data: QualityData,
     pub caption_data: CaptionData,
     pub embedding: Vec<f32>,
     pub faces: Vec<FaceBox>,
