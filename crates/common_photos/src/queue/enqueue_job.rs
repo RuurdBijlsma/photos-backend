@@ -1,5 +1,5 @@
 use crate::user_id_from_relative_path;
-use crate::{is_video_file, media_dir, JobType};
+use crate::{JobType, is_video_file, media_dir};
 use color_eyre::eyre::Result;
 use sqlx::{PgConnection, PgPool};
 use tracing::info;
@@ -19,7 +19,7 @@ pub async fn enqueue_full_ingest(pool: &PgPool, relative_path: &str) -> Result<(
 /// # Errors
 ///
 /// * Returns an error if the database transaction fails.
-pub async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()> {
+async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()> {
     let is_video = is_video_file(&media_dir().join(relative_path));
     let priority = if is_video { 20 } else { 10 };
 
@@ -34,7 +34,7 @@ pub async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()
 /// # Errors
 ///
 /// * Returns an error if the database transaction fails.
-pub async fn enqueue_analysis_job(pool: &PgPool, relative_path: &str) -> Result<()> {
+async fn enqueue_analysis_job(pool: &PgPool, relative_path: &str) -> Result<()> {
     let mut tx = pool.begin().await?;
     enqueue_job(&mut tx, relative_path, JobType::Analysis, 100).await?;
     tx.commit().await?;

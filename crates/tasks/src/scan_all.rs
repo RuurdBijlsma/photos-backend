@@ -1,6 +1,6 @@
 use color_eyre::eyre::eyre;
 use common_photos::{
-    enqueue_ingest_job, enqueue_remove_job, media_dir, relative_path_abs, settings, thumbnails_dir,
+    enqueue_full_ingest, enqueue_remove_job, media_dir, relative_path_abs, settings, thumbnails_dir,
 };
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
@@ -91,7 +91,7 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
         if file.exists() {
             info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
             // Re-ingest files with missing thumbnails, as long as the fs file exists.
-            enqueue_ingest_job(pool, &relative_path).await?;
+            enqueue_full_ingest(pool, &relative_path).await?;
         }
     }
 
@@ -128,7 +128,7 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
     let to_remove: Vec<_> = db_paths.difference(&fs_paths).cloned().collect();
 
     for rel_path in to_ingest {
-        if let Err(e) = enqueue_ingest_job(pool, &rel_path).await {
+        if let Err(e) = enqueue_full_ingest(pool, &rel_path).await {
             error!("Error enqueueing file ingest: {:?}", e.to_string());
         }
     }

@@ -5,7 +5,7 @@ use chrono::Utc;
 use color_eyre::Result;
 use common_photos::{Job, JobStatus, alert};
 use sqlx::{PgPool, PgTransaction};
-use tracing::{warn};
+use tracing::warn;
 
 pub async fn claim_next_job(pool: &PgPool) -> Result<Option<Job>> {
     let mut tx = pool.begin().await?;

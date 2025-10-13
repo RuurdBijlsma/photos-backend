@@ -1,7 +1,7 @@
 use crate::db_helpers::write_to_db::store_media_item;
 use crate::jobs::is_job_cancelled;
 use common_photos::{
-    get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir, Job,
+    Job, get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir,
 };
 use media_analyzer::MediaAnalyzer;
 use ruurd_photos_thumbnail_generation::generate_thumbnails;

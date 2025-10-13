@@ -1,4 +1,4 @@
-use common_photos::{enqueue_ingest_job, enqueue_remove_job, relative_path_abs};
+use common_photos::{enqueue_full_ingest, enqueue_remove_job, relative_path_abs};
 use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -14,7 +14,7 @@ use tracing::{error, info, warn};
 async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     info!("File created {:?}", file);
 
-    enqueue_ingest_job(pool, &relative_path_abs(file)?).await?;
+    enqueue_full_ingest(pool, &relative_path_abs(file)?).await?;
 
     Ok(())
 }

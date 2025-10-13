@@ -1,6 +1,6 @@
 use crate::utils::{backoff_seconds, worker_id};
 use color_eyre::Result;
-use common_photos::{alert, file_is_ingested, get_db_pool, media_dir, JobType};
+use common_photos::{JobType, alert, file_is_ingested, get_db_pool, media_dir};
 use media_analyzer::MediaAnalyzer;
 use sqlx::PgPool;
 use std::time::Duration;
