@@ -1,6 +1,6 @@
 use crate::QualityData;
 use color_eyre::eyre::Result;
-use image::{imageops, GrayImage, DynamicImage};
+use image::{DynamicImage, GrayImage, imageops};
 use imageproc::filter::{laplacian_filter, median_filter};
 use std::path::Path;
 
@@ -33,10 +33,18 @@ fn resize_if_large(img: DynamicImage, max_dim: u32) -> DynamicImage {
 
 fn calculate_contrast(gray_img: &GrayImage) -> f64 {
     let n = (gray_img.width() * gray_img.height()) as f64;
-    if n == 0.0 { return 0.0; }
+    if n == 0.0 {
+        return 0.0;
+    }
 
     let mean = gray_img.pixels().map(|p| p[0] as f64).sum::<f64>() / n;
-    ((gray_img.pixels().map(|p| (p[0] as f64 - mean).powi(2)).sum::<f64>() / n).sqrt()) / 255.0
+    ((gray_img
+        .pixels()
+        .map(|p| (p[0] as f64 - mean).powi(2))
+        .sum::<f64>()
+        / n)
+        .sqrt())
+        / 255.0
 }
 
 fn calculate_texture(gray_img: &GrayImage) -> f64 {
@@ -72,7 +80,9 @@ fn calculate_texture(gray_img: &GrayImage) -> f64 {
             let n = (window * window) as f64;
 
             let sum_w = sum[idx(x1, y1)] + sum[idx(x0, y0)] - sum[idx(x1, y0)] - sum[idx(x0, y1)];
-            let sum_sq_w = sum_sq[idx(x1, y1)] + sum_sq[idx(x0, y0)] - sum_sq[idx(x1, y0)] - sum_sq[idx(x0, y1)];
+            let sum_sq_w = sum_sq[idx(x1, y1)] + sum_sq[idx(x0, y0)]
+                - sum_sq[idx(x1, y0)]
+                - sum_sq[idx(x0, y1)];
 
             let mean = sum_w / n;
             total_sd += ((sum_sq_w / n) - mean * mean).max(0.0).sqrt();
@@ -83,17 +93,22 @@ fn calculate_texture(gray_img: &GrayImage) -> f64 {
     (total_sd / count) / 128.0
 }
 
-
 fn calculate_blurriness(gray_img: &GrayImage, texture: f64) -> f64 {
     let lap = laplacian_filter(gray_img);
     let n = (lap.width() * lap.height()) as f64;
-    if n < 2.0 { return 0.0; }
+    if n < 2.0 {
+        return 0.0;
+    }
 
     let mean = lap.pixels().map(|p| p[0] as f64).sum::<f64>() / n;
-    let variance = lap.pixels().map(|p| {
-        let v = p[0] as f64 - mean;
-        v * v
-    }).sum::<f64>() / (n - 1.0);
+    let variance = lap
+        .pixels()
+        .map(|p| {
+            let v = p[0] as f64 - mean;
+            v * v
+        })
+        .sum::<f64>()
+        / (n - 1.0);
 
     let adjusted_var = variance * calculate_contrast(gray_img) * (1.0 - 0.5 * texture);
 
@@ -104,10 +119,12 @@ fn calculate_noise(gray_img: &GrayImage, texture: f64) -> f64 {
     let denoised = median_filter(gray_img, 5, 5);
     let n = (gray_img.width() * gray_img.height()) as f64;
 
-    let mean_diff = gray_img.pixels()
+    let mean_diff = gray_img
+        .pixels()
         .zip(denoised.pixels())
         .map(|(p, d)| (p[0] as f64 - d[0] as f64).abs())
-        .sum::<f64>() / n;
+        .sum::<f64>()
+        / n;
 
     let raw_noise = (1.0 - ((mean_diff - 2.0) / 13.0)).clamp(0.0, 1.0);
     raw_noise * (1.0 - 0.5 * texture)
@@ -115,7 +132,8 @@ fn calculate_noise(gray_img: &GrayImage, texture: f64) -> f64 {
 
 fn calculate_exposure(gray_img: &GrayImage) -> f64 {
     let n = (gray_img.width() * gray_img.height()) as f64;
-    let clipped = gray_img.pixels()
+    let clipped = gray_img
+        .pixels()
         .filter(|p| p[0] < 40 || p[0] > 215)
         .count() as f64;
 

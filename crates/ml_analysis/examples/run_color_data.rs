@@ -1,4 +1,4 @@
-use ml_analysis::{get_color_data, PyInterop, Variant};
+use ml_analysis::{PyInterop, Variant, get_color_data};
 use pyo3::Python;
 use std::path::Path;
 use std::time::Instant;

@@ -35,7 +35,9 @@ pub fn get_color_data(
         hist_g[*g as usize] += 1;
         hist_b[*b as usize] += 1;
 
-        let hsv = Hsv::from_color(Srgb::new(*r as f32 / 255.0, *g as f32 / 255.0, *b as f32 / 255.0).into_linear());
+        let hsv = Hsv::from_color(
+            Srgb::new(*r as f32 / 255.0, *g as f32 / 255.0, *b as f32 / 255.0).into_linear(),
+        );
         let rad = hsv.hue.into_radians();
         x_sum += rad.cos();
         y_sum += rad.sin();
