@@ -1,12 +1,11 @@
 use crate::db_helpers::write_to_db::store_media_item;
 use crate::jobs::is_job_cancelled;
 use common_photos::{
-    Job, get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir,
+    get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir, Job,
 };
 use media_analyzer::MediaAnalyzer;
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgPool;
-use tracing::info;
 
 /// Processes a media file by generating thumbnails, analyzing its metadata, and storing the result.
 ///
@@ -26,7 +25,6 @@ pub async fn ingest_file(
     job: &Job,
     analyzer: &mut MediaAnalyzer,
 ) -> color_eyre::Result<()> {
-    info!("Running ingest file... {:?}", &job);
     // Setup
     let file = media_dir().join(&job.relative_path);
     let thumb_config = get_thumb_options();

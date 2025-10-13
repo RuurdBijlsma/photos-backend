@@ -1,14 +1,12 @@
 use color_eyre::eyre::eyre;
 use common_photos::{Job, alert, file_is_ingested, media_dir};
 use sqlx::{Executor, Postgres};
-use tracing::info;
 use tracing::warn;
 
 pub async fn analyze_file<'c, E>(executor: E, job: &Job) -> color_eyre::Result<()>
 where
     E: Executor<'c, Database = Postgres>,
 {
-    info!("Running ML analysis... {:?}", &job);
     let file = media_dir().join(&job.relative_path);
     if !file_is_ingested(&file, executor).await? {
         alert!("Analysis job picked up while file is not properly ingested");

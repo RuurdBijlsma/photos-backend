@@ -1,6 +1,6 @@
 use crate::utils::{backoff_seconds, worker_id};
 use color_eyre::Result;
-use common_photos::{JobType, alert, file_is_ingested, get_db_pool, media_dir};
+use common_photos::{alert, file_is_ingested, get_db_pool, media_dir, JobType};
 use media_analyzer::MediaAnalyzer;
 use sqlx::PgPool;
 use std::time::Duration;
@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
 
-    info!("[Worker PID: {}] Starting.", worker_id());
+    info!("[Worker ID: {}] Starting.", worker_id());
     let pool = get_db_pool().await?;
 
     worker_loop(&pool).await?;
@@ -46,6 +46,7 @@ pub async fn worker_loop(pool: &PgPool) -> Result<()> {
     loop {
         if let Some(job) = claim_next_job(pool).await? {
             sleeping = false;
+            info!("🐜 Picked up {:?} job: {}", job.job_type, job.relative_path);
             let result = match job.job_type {
                 JobType::Ingest => ingest_file(pool, &job, &mut analyzer).await,
                 JobType::Remove => remove_file(pool, &job).await,

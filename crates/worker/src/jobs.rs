@@ -5,7 +5,7 @@ use chrono::Utc;
 use color_eyre::Result;
 use common_photos::{Job, JobStatus, alert};
 use sqlx::{PgPool, PgTransaction};
-use tracing::{info, warn};
+use tracing::{warn};
 
 pub async fn claim_next_job(pool: &PgPool) -> Result<Option<Job>> {
     let mut tx = pool.begin().await?;
@@ -38,7 +38,6 @@ pub async fn claim_next_job(pool: &PgPool) -> Result<Option<Job>> {
 }
 
 pub async fn mark_job_done(pool: &PgPool, job_id: i64) -> Result<()> {
-    info!("Marking job {} done", job_id);
     sqlx::query!(
         r#"
         UPDATE jobs
@@ -53,7 +52,6 @@ pub async fn mark_job_done(pool: &PgPool, job_id: i64) -> Result<()> {
 }
 
 pub async fn mark_job_failed(pool: &PgPool, job_id: i64, last_error: &str) -> Result<()> {
-    warn!("Marking job {} as failed", job_id);
     alert!("Marking job {} as failed: {}", job_id, last_error);
     sqlx::query!(
         r#"
@@ -73,6 +71,7 @@ pub async fn mark_job_failed(pool: &PgPool, job_id: i64, last_error: &str) -> Re
 }
 
 pub async fn reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64) -> Result<()> {
+    warn!("Rescheduling job. Backoff: {:?}", backoff_secs);
     let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
         r#"

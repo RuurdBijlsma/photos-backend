@@ -55,9 +55,10 @@ async fn get_thumbnail_folders() -> color_eyre::Result<HashSet<String>> {
 ///
 /// * Returns an error for database query failures or file system I/O errors during deletion.
 async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    let Some(job_count) = sqlx::query_scalar!("SELECT count(id) FROM jobs")
-        .fetch_one(pool)
-        .await?
+    let Some(job_count) =
+        sqlx::query_scalar!("SELECT count(id) FROM jobs WHERE status IN ('running', 'queued')")
+            .fetch_one(pool)
+            .await?
     else {
         return Err(eyre!("Can't get job count"));
     };
