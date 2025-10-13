@@ -9,17 +9,17 @@
 * ✅ use db config when setting up db. (pool size etc.)
 * ✅ als een crate de settings retrieved voordat dotenv geladen is gaat het stuk.
 * ✅ look at rust config package
-* schedule runner -> might have to use ofelia or kubernetes+helm to get clean cronjobs. 
-  * ✅ indexing
-  * ✅ clean refresh token table on schedule
-  * clustering on schedule
-* ML Analysis:
+* ✅ ML Analysis:
   * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
   * ✅ color data from python, make in rust
   * ✅ captioner logic in rust (all the questions like is_animal)
   * ✅ quality measure from python, make in rust
-  * make required sql migration tables for ML analysis
-  * handle machine learning analysis job, put in db
+  * ✅ make required sql migration tables for ML analysis
+  * ✅ handle machine learning analysis job, put in db
+* schedule runner -> might have to use ofelia or kubernetes+helm to get clean cronjobs. 
+  * ✅ indexing
+  * ✅ clean refresh token table on schedule
+  * clustering on schedule
 * api:
     * Show photos in ui
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
