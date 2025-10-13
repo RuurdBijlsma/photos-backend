@@ -1,6 +1,6 @@
 use crate::utils::{backoff_seconds, worker_id};
 use color_eyre::Result;
-use common_photos::{JobType, alert, file_is_ingested, get_db_pool, media_dir};
+use common_photos::{alert, file_is_ingested, get_db_pool, media_dir, JobType};
 use media_analyzer::MediaAnalyzer;
 use sqlx::PgPool;
 use std::time::Duration;
@@ -13,6 +13,7 @@ use crate::handlers::remove_file::remove_file;
 use crate::jobs::{
     claim_next_job, dependency_reschedule_job, mark_job_done, mark_job_failed, reschedule_job,
 };
+use ml_analysis::VisualAnalyzer;
 use tokio::time::sleep;
 
 mod db_helpers;
@@ -42,13 +43,14 @@ async fn main() -> Result<()> {
 #[allow(clippy::cognitive_complexity)]
 pub async fn worker_loop(pool: &PgPool) -> Result<()> {
     let mut sleeping = false;
-    let mut analyzer = MediaAnalyzer::builder().build().await?;
+    let mut media_analyzer = MediaAnalyzer::builder().build().await?;
+    let visual_analyzer = VisualAnalyzer::new()?;
     loop {
         if let Some(job) = claim_next_job(pool).await? {
             sleeping = false;
             info!("🐜 Picked up {:?} job: {}", job.job_type, job.relative_path);
             let result = match job.job_type {
-                JobType::Ingest => ingest_file(pool, &job, &mut analyzer).await,
+                JobType::Ingest => ingest_file(pool, &job, &mut media_analyzer).await,
                 JobType::Remove => remove_file(pool, &job).await,
                 JobType::Analysis => {
                     let file_path = media_dir().join(&job.relative_path);
@@ -62,7 +64,7 @@ pub async fn worker_loop(pool: &PgPool) -> Result<()> {
                         dependency_reschedule_job(pool, job.id, delay).await?;
                         continue;
                     }
-                    analyze_file(pool, &job).await
+                    analyze_file(pool, &job, &visual_analyzer).await
                 }
             };
 
@@ -74,7 +76,7 @@ pub async fn worker_loop(pool: &PgPool) -> Result<()> {
                         mark_job_failed(pool, job.id, &err.to_string()).await?;
                     } else {
                         let delay = backoff_seconds(job.attempts);
-                        reschedule_job(pool, job.id, delay).await?;
+                        reschedule_job(pool, job.id, delay, &err.to_string()).await?;
                     }
                 }
             }

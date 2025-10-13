@@ -7062,6 +7062,7 @@ dependencies = [
  "ml_analysis",
  "pyo3",
  "ruurd_photos_thumbnail_generation",
+ "serde_json",
  "sqlx",
  "tokio",
  "tracing",

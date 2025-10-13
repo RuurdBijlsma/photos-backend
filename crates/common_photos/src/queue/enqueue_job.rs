@@ -35,8 +35,11 @@ async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()> {
 ///
 /// * Returns an error if the database transaction fails.
 async fn enqueue_analysis_job(pool: &PgPool, relative_path: &str) -> Result<()> {
+    let is_video = is_video_file(&media_dir().join(relative_path));
+    let priority = if is_video { 100 } else { 90 };
+
     let mut tx = pool.begin().await?;
-    enqueue_job(&mut tx, relative_path, JobType::Analysis, 100).await?;
+    enqueue_job(&mut tx, relative_path, JobType::Analysis, priority).await?;
     tx.commit().await?;
 
     Ok(())

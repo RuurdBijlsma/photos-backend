@@ -17,7 +17,7 @@
   * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
   * ✅ color data from python, make in rust
   * ✅ captioner logic in rust (all the questions like is_animal)
-  * quality measure from python, make in rust
+  * ✅ quality measure from python, make in rust
   * make required sql migration tables for ML analysis
   * handle machine learning analysis job, put in db
 * api:

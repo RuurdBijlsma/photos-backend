@@ -11,12 +11,7 @@ fn main() -> color_eyre::Result<()> {
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
 
     let images = vec![
-        Path::new("media_dir/rutenl/tree.jpg"),
-        Path::new("media_dir/rutenl/road.jpg"),
-        Path::new("media_dir/rutenl/cat-pet.jpg"),
-        Path::new("media_dir/rutenl/sunset.jpg"),
-        Path::new("media_dir/rutenl/pics/PICT0017.JPG"),
-        Path::new("media_dir/rutenl/pizza.jpg"),
+        Path::new("media_dir/av-test.avif"),
     ];
 
     for image in images {
