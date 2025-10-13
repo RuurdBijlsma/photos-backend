@@ -1,6 +1,8 @@
+use crate::Variant;
 use crate::structs::{FaceBox, OCRData, ObjectBox};
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
+use serde_json::Value;
 use std::path::Path;
 
 pub struct PyInterop {
@@ -13,6 +15,8 @@ pub struct PyInterop {
     text_embed_func: Py<PyAny>,
     images_embed_func: Py<PyAny>,
     texts_embed_func: Py<PyAny>,
+    get_image_prominent_colors_func: Py<PyAny>,
+    get_theme_from_color_func: Py<PyAny>,
 }
 
 impl PyInterop {
@@ -20,7 +24,9 @@ impl PyInterop {
     ///
     /// # Errors
     ///
-    /// This function will return an error if the Python interpreter cannot be initialized, required Python modules (`sys`, `os`, `json`, `py_analyze`) cannot be imported, or necessary functions cannot be found within the `py_analyze` module.
+    /// This function will return an error if the Python interpreter cannot be initialized,
+    /// required Python modules (`sys`, `os`, `json`, `py_analyze`) cannot be imported, or
+    /// necessary functions cannot be found within the `py_analyze` module.
     pub fn new(py: Python<'_>) -> PyResult<Self> {
         let sys = py.import("sys")?;
         let sys_path = sys.getattr("path")?;
@@ -49,6 +55,11 @@ impl PyInterop {
         let text_embed_func = module.getattr("embed_text")?.into_pyobject(py)?;
         let multi_image_embed_func = module.getattr("embed_images")?.into_pyobject(py)?;
         let multi_text_embed_func = module.getattr("embed_texts")?.into_pyobject(py)?;
+        let get_image_prominent_colors_func = module
+            .getattr("get_image_prominent_colors")?
+            .into_pyobject(py)?;
+        let get_theme_from_color_func =
+            module.getattr("get_theme_from_color")?.into_pyobject(py)?;
 
         let json = py.import("json")?;
         let dumps = json.getattr("dumps")?.into_pyobject(py)?;
@@ -63,6 +74,47 @@ impl PyInterop {
             facial_recognition_func: facial_recognition_func.into(),
             captioner_func: captioner_func.into(),
             json_dumps: dumps.into(),
+            // Add these two lines to initialize the struct fields
+            get_image_prominent_colors_func: get_image_prominent_colors_func.into(),
+            get_theme_from_color_func: get_theme_from_color_func.into(),
+        })
+    }
+
+    /// Extracts a list of the most prominent colors from an image.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the Python call fails or if the result
+    /// cannot be converted to a `Vec<String>`.
+    pub fn get_image_prominent_colors(&self, image_path: &Path) -> Result<Vec<String>, PyErr> {
+        Python::attach(|py| {
+            let func = self.get_image_prominent_colors_func.bind(py);
+            let result = func.call1((image_path,))?;
+            result.extract()
+        })
+    }
+
+    /// Generates a color theme from a single color.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the Python call fails or if the result
+    /// cannot be serialized to a JSON string and then parsed into a `serde_json::Value`.
+    pub fn get_theme_from_color(
+        &self,
+        color: &str,
+        variant: &Variant,
+        contrast_level: f32,
+    ) -> Result<Value, PyErr> {
+        Python::attach(|py| {
+            let func = self.get_theme_from_color_func.bind(py);
+            let dumps = self.json_dumps.bind(py);
+            let result_dict = func.call1((color, variant.as_str(), contrast_level))?;
+            let json_str: String = dumps.call1((result_dict,))?.extract()?;
+            let theme: Value = serde_json::from_str(&json_str)
+                .expect("Failed to deserialize theme JSON from Python");
+
+            Ok(theme)
         })
     }
 

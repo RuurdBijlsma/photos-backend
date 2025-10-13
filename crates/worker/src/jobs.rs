@@ -87,12 +87,16 @@ pub async fn reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64) -> Re
         job_id,
         scheduled_at
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
-pub async fn dependency_reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64) -> Result<()> {
+pub async fn dependency_reschedule_job(
+    pool: &PgPool,
+    job_id: i64,
+    backoff_secs: i64,
+) -> Result<()> {
     warn!("Rescheduling job. Backoff: {:?}", backoff_secs);
     let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
@@ -109,8 +113,8 @@ pub async fn dependency_reschedule_job(pool: &PgPool, job_id: i64, backoff_secs:
         job_id,
         scheduled_at
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
     Ok(())
 }
 

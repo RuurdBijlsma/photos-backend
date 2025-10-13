@@ -13,6 +13,7 @@ fn main() -> color_eyre::Result<()> {
     let images = vec![
         Path::new("media_dir/rutenl/tree.jpg"),
         Path::new("media_dir/rutenl/sunset.jpg"),
+        Path::new("media_dir/rutenl/pics/PICT0017.JPG"),
     ];
 
     for image in images {

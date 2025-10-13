@@ -1,26 +1,7 @@
-use crate::{ColorData, ColorHistogram, RGBChannels};
-use image::{DynamicImage, Rgb};
+use crate::{ColorData, ColorHistogram, PyInterop, RGBChannels, Variant};
+use image::Rgb;
 use palette::{FromColor, Hsv, Srgb};
-use serde_json::json;
-
-/// placeholder for theme generation logic
-fn generate_themes(
-    prominent_colors: &[String],
-    variant: &str,
-    contrast: f32,
-) -> Vec<serde_json::Value> {
-    // todo user mateiral cololr utlis
-    prominent_colors
-        .iter()
-        .map(|color| {
-            json!({
-                "base_color": color,
-                "variant": variant,
-                "contrast": contrast
-            })
-        })
-        .collect()
-}
+use std::path::Path;
 
 fn average_hue(hues: &[f32]) -> f32 {
     let n = hues.len() as f32;
@@ -42,10 +23,12 @@ fn average_hue(hues: &[f32]) -> f32 {
 }
 
 pub fn analyze_colors(
-    image: &DynamicImage,
-    theme_color_variant: &str,
+    py_interop: &PyInterop,
+    file: &Path,
+    theme_variant: &Variant,
     theme_contrast_level: f32,
-) -> ColorData {
+) -> color_eyre::Result<ColorData> {
+    let image = image::open(file)?;
     let rgb_image = image.to_rgb8();
     let (width, height) = rgb_image.dimensions();
 
@@ -75,13 +58,12 @@ pub fn analyze_colors(
     let average_saturation = sats.iter().sum::<f32>() / sats.len() as f32 * 100.0;
     let average_lightness = vals.iter().sum::<f32>() / vals.len() as f32 * 100.0;
 
-    let prominent_colors = vec![
-        "#ff0000".to_string(),
-        "#00ff00".to_string(),
-        "#0000ff".to_string(),
-    ];
+    let prominent_colors = py_interop.get_image_prominent_colors(file)?;
 
-    let themes = generate_themes(&prominent_colors, theme_color_variant, theme_contrast_level);
+    let themes = prominent_colors
+        .iter()
+        .map(|c| py_interop.get_theme_from_color(c, theme_variant, theme_contrast_level))
+        .collect::<Result<Vec<_>, _>>()?;
 
     let histogram = ColorHistogram {
         bins: 256,
@@ -92,12 +74,12 @@ pub fn analyze_colors(
         },
     };
 
-    ColorData {
+    Ok(ColorData {
         themes,
         prominent_colors,
         average_hue,
         average_saturation,
         average_lightness,
         histogram,
-    }
+    })
 }

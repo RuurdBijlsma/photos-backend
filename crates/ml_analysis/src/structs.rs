@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct OCRData {
@@ -14,6 +15,36 @@ pub struct OCRBox {
     pub width: f32,
     pub height: f32,
     pub confidence: f32,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub enum Variant {
+    Monochrome,
+    Neutral,
+    TonalSpot,
+    Vibrant,
+    Expressive,
+    Fidelity,
+    Content,
+    Rainbow,
+    FruitSalad,
+}
+
+impl Variant {
+    /// Converts the enum variant to its uppercase string representation.
+    pub(crate) const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Monochrome => "MONOCHROME",
+            Self::Neutral => "NEUTRAL",
+            Self::TonalSpot => "TONAL_SPOT",
+            Self::Vibrant => "VIBRANT",
+            Self::Expressive => "EXPRESSIVE",
+            Self::Fidelity => "FIDELITY",
+            Self::Content => "CONTENT",
+            Self::Rainbow => "RAINBOW",
+            Self::FruitSalad => "FRUIT_SALAD",
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -54,7 +85,7 @@ pub struct MeasuredQualityData {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct ColorData {
-    pub themes: Vec<serde_json::Value>,
+    pub themes: Vec<Value>,
     pub prominent_colors: Vec<String>,
     pub average_hue: f32,
     pub average_saturation: f32,

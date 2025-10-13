@@ -10,7 +10,9 @@ use tracing::warn;
 use crate::handlers::analyze_file::analyze_file;
 use crate::handlers::ingest_file::ingest_file;
 use crate::handlers::remove_file::remove_file;
-use crate::jobs::{claim_next_job, dependency_reschedule_job, mark_job_done, mark_job_failed, reschedule_job};
+use crate::jobs::{
+    claim_next_job, dependency_reschedule_job, mark_job_done, mark_job_failed, reschedule_job,
+};
 use tokio::time::sleep;
 
 mod db_helpers;

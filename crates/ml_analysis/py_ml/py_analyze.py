@@ -5,6 +5,10 @@ from typing import Any
 
 import numpy as np
 from PIL import Image
+from material_color_utilities import (
+    prominent_colors_from_image,
+    theme_from_color, Variant,
+)
 from numpy.typing import NDArray
 from ruurd_photos_ml import (
     get_captioner,
@@ -24,6 +28,31 @@ embedder_instance = get_embedder()
 @lru_cache(maxsize=256)
 def load_image(path: Path) -> Image.Image:
     return Image.open(path)
+
+
+def get_image_prominent_colors(image_path: Path) -> list[str]:
+    loaded_image = load_image(image_path)
+    return prominent_colors_from_image(loaded_image)[0:3]
+
+
+def get_theme_from_color(
+    color: str, variant: str, contrast_level: float
+) -> dict[str, Any]:
+    return theme_from_color(
+        color,
+        variant={
+            "monochrome":Variant.MONOCHROME,
+            "neutral":Variant.NEUTRAL,
+            "tonalspot":Variant.TONALSPOT,
+            "vibrant":Variant.VIBRANT,
+            "expressive":Variant.EXPRESSIVE,
+            "fidelity":Variant.FIDELITY,
+            "content":Variant.CONTENT,
+            "rainbow":Variant.RAINBOW,
+            "fruitsalad":Variant.FRUITSALAD,
+        }[variant.lower()],
+        contrast_level=contrast_level,
+    ).dict()
 
 
 def embed_image(image_path: Path) -> NDArray[np.float32]:
@@ -48,11 +77,16 @@ def caption(image_path: Path, instruction: str | None = None) -> str:
 
 
 def recognize_faces(image_path: Path) -> list[dict[str, Any]]:
-    return [asdict(x) for x in facial_recognition_instance.get_faces(load_image(image_path))]
+    return [
+        asdict(x) for x in facial_recognition_instance.get_faces(load_image(image_path))
+    ]
 
 
 def detect_objects(image_path: Path) -> list[dict[str, Any]]:
-    return [asdict(x) for x in object_detection_instance.detect_objects(load_image(image_path))]
+    return [
+        asdict(x)
+        for x in object_detection_instance.detect_objects(load_image(image_path))
+    ]
 
 
 def ocr(image_path: Path, languages: tuple[str, ...]) -> dict[str, Any]:

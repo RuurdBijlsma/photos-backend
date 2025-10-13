@@ -1,6 +1,6 @@
 use crate::caption_data::get_caption_data;
 use crate::color_data::analyze_colors;
-use crate::{PyInterop, VisualImageData};
+use crate::{PyInterop, Variant, VisualImageData};
 use pyo3::Python;
 use std::path::Path;
 use std::time::Instant;
@@ -19,11 +19,8 @@ impl VisualAnalyzer {
 
     pub fn analyze_image(&self, file: &Path) -> color_eyre::Result<VisualImageData> {
         let now = Instant::now();
-        let dynamic_image = image::open(file)?;
-        println!("\timage::open {:?}", now.elapsed());
-
-        let now = Instant::now();
-        let color_data = analyze_colors(&dynamic_image, "VIBRANT", 3.);
+        // todo config variant & contrast level
+        let color_data = analyze_colors(&self.py_interop, file, &Variant::Vibrant, 3.)?;
         println!("\tanalyze_colors {:?}", now.elapsed());
 
         let now = Instant::now();
@@ -43,6 +40,7 @@ impl VisualAnalyzer {
         println!("\tobject_detection {:?}", now.elapsed());
 
         let now = Instant::now();
+        // todo config languages
         let ocr = self
             .py_interop
             .ocr(file, vec!["nld".to_string(), "eng".to_string()])?;
