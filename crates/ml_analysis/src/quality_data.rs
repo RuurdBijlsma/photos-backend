@@ -4,6 +4,11 @@ use image::{imageops, DynamicImage, GrayImage};
 use imageproc::filter::{laplacian_filter, median_filter};
 use std::path::Path;
 
+/// Analyzes an image to determine its overall quality score based on blurriness, noisiness, and exposure.
+///
+/// # Errors
+///
+/// This function will return an error if the image path is invalid or the image cannot be decoded.
 pub fn get_quality_data(image_path: &Path) -> Result<QualityData> {
     let img = image::ImageReader::open(image_path)?.decode()?;
     let gray_img = resize_if_large(img, 1800).to_luma8();
@@ -32,15 +37,15 @@ fn resize_if_large(img: DynamicImage, max_dim: u32) -> DynamicImage {
 }
 
 fn calculate_contrast(gray_img: &GrayImage) -> f64 {
-    let n = (gray_img.width() * gray_img.height()) as f64;
+    let n = f64::from(gray_img.width() * gray_img.height());
     if n == 0.0 {
         return 0.0;
     }
 
-    let mean = gray_img.pixels().map(|p| p[0] as f64).sum::<f64>() / n;
+    let mean = gray_img.pixels().map(|p| f64::from(p[0])).sum::<f64>() / n;
     ((gray_img
         .pixels()
-        .map(|p| (p[0] as f64 - mean).powi(2))
+        .map(|p| (f64::from(p[0]) - mean).powi(2))
         .sum::<f64>()
         / n)
         .sqrt())
@@ -61,7 +66,7 @@ fn calculate_texture(gray_img: &GrayImage) -> f64 {
         let mut row_sum = 0.0;
         let mut row_sum_sq = 0.0;
         for x in 0..w {
-            let val = gray_img.get_pixel(x as u32, y as u32)[0] as f64;
+            let val = f64::from(gray_img.get_pixel(x as u32, y as u32)[0]);
             row_sum += val;
             row_sum_sq += val * val;
 
@@ -85,7 +90,8 @@ fn calculate_texture(gray_img: &GrayImage) -> f64 {
                 - sum_sq[idx(x0, y1)];
 
             let mean = sum_w / n;
-            total_sd += ((sum_sq_w / n) - mean * mean).max(0.0).sqrt();
+
+            total_sd += mean.mul_add(-mean, sum_sq_w / n).max(0.0).sqrt();
             count += 1.0;
         }
     }
@@ -95,43 +101,43 @@ fn calculate_texture(gray_img: &GrayImage) -> f64 {
 
 fn calculate_blurriness(gray_img: &GrayImage, texture: f64) -> f64 {
     let lap = laplacian_filter(gray_img);
-    let n = (lap.width() * lap.height()) as f64;
+    let n = f64::from(lap.width() * lap.height());
     if n < 2.0 {
         return 0.0;
     }
 
-    let mean = lap.pixels().map(|p| p[0] as f64).sum::<f64>() / n;
+    let mean = lap.pixels().map(|p| f64::from(p[0])).sum::<f64>() / n;
     let variance = lap
         .pixels()
         .map(|p| {
-            let v = p[0] as f64 - mean;
+            let v = f64::from(p[0]) - mean;
             v * v
         })
         .sum::<f64>()
         / (n - 1.0);
 
-    let adjusted_var = variance * calculate_contrast(gray_img) * (1.0 - 0.5 * texture);
+    let adjusted_var = variance * calculate_contrast(gray_img) * 0.5f64.mul_add(-texture, 1.0);
 
     ((adjusted_var - 50.0) / 950.0).clamp(0.0, 1.0)
 }
 
 fn calculate_noise(gray_img: &GrayImage, texture: f64) -> f64 {
     let denoised = median_filter(gray_img, 5, 5);
-    let n = (gray_img.width() * gray_img.height()) as f64;
+    let n = f64::from(gray_img.width() * gray_img.height());
 
     let mean_diff = gray_img
         .pixels()
         .zip(denoised.pixels())
-        .map(|(p, d)| (p[0] as f64 - d[0] as f64).abs())
+        .map(|(p, d)| (f64::from(p[0]) - f64::from(d[0])).abs())
         .sum::<f64>()
         / n;
 
     let raw_noise = (1.0 - ((mean_diff - 2.0) / 13.0)).clamp(0.0, 1.0);
-    raw_noise * (1.0 - 0.5 * texture)
+    raw_noise * 0.5f64.mul_add(-texture, 1.0)
 }
 
 fn calculate_exposure(gray_img: &GrayImage) -> f64 {
-    let n = (gray_img.width() * gray_img.height()) as f64;
+    let n = f64::from(gray_img.width() * gray_img.height());
     let clipped = gray_img
         .pixels()
         .filter(|p| p[0] < 40 || p[0] > 215)

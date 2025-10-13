@@ -1,9 +1,10 @@
-use crate::Variant;
 use crate::structs::{FaceBox, OCRData, ObjectBox};
+use color_eyre::eyre::Context;
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use serde_json::Value;
 use std::path::Path;
+use common_photos::Variant;
 
 pub struct PyInterop {
     json_dumps: Py<PyAny>,
@@ -105,14 +106,14 @@ impl PyInterop {
         color: &str,
         variant: &Variant,
         contrast_level: f32,
-    ) -> Result<Value, PyErr> {
+    ) -> color_eyre::Result<Value> {
         Python::attach(|py| {
             let func = self.get_theme_from_color_func.bind(py);
             let dumps = self.json_dumps.bind(py);
             let result_dict = func.call1((color, variant.as_str(), contrast_level))?;
             let json_str: String = dumps.call1((result_dict,))?.extract()?;
-            let theme: Value = serde_json::from_str(&json_str)
-                .expect("Failed to deserialize theme JSON from Python");
+            let theme =
+                serde_json::from_str(&json_str).context("Could not parse json from Python.")?;
 
             Ok(theme)
         })

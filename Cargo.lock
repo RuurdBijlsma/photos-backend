@@ -2943,6 +2943,7 @@ name = "ml_analysis"
 version = "0.1.0"
 dependencies = [
  "color-eyre",
+ "common_photos",
  "image",
  "imageproc",
  "numpy",
@@ -2950,6 +2951,8 @@ dependencies = [
  "pyo3",
  "serde",
  "serde_json",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

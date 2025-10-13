@@ -1,5 +1,5 @@
 use ruurd_photos_thumbnail_generation::{AvifOptions, VideoThumbOptions};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Overall application configuration structure.
 #[derive(Debug, Deserialize)]
@@ -11,6 +11,24 @@ pub struct AppSettings {
     pub api: ApiSettings,
     pub auth: AuthSettings,
     pub setup: SetupSettings,
+    pub analyzer: AnalyzerSettings,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AnalyzerSettings {
+    pub theme_generation: ThemeGenerationSettings,
+    pub ocr: OCRSettings,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ThemeGenerationSettings {
+    pub variant: Variant,
+    pub contrast_level: f64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OCRSettings {
+    pub languages: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -77,4 +95,35 @@ pub struct ThumbnailGenerationSettings {
     pub photo_extensions: Vec<String>,
     pub avif_options: AvifOptions,
     pub video_options: VideoThumbOptions,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+pub enum Variant {
+    Monochrome,
+    Neutral,
+    TonalSpot,
+    Vibrant,
+    Expressive,
+    Fidelity,
+    Content,
+    Rainbow,
+    FruitSalad,
+}
+
+impl Variant {
+    /// Converts the enum variant to its uppercase string representation.
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Monochrome => "MONOCHROME",
+            Self::Neutral => "NEUTRAL",
+            Self::TonalSpot => "TONAL_SPOT",
+            Self::Vibrant => "VIBRANT",
+            Self::Expressive => "EXPRESSIVE",
+            Self::Fidelity => "FIDELITY",
+            Self::Content => "CONTENT",
+            Self::Rainbow => "RAINBOW",
+            Self::FruitSalad => "FRUIT_SALAD",
+        }
+    }
 }

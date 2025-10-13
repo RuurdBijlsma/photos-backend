@@ -13,15 +13,12 @@ pub async fn analyze_file(
     job: &Job,
     visual_analyzer: &VisualAnalyzer,
 ) -> color_eyre::Result<()> {
-    println!("\tAnalyzing file");
     let mut tx = pool.begin().await?;
     let file = media_dir().join(&job.relative_path);
-    println!("\tfile {:?}", file);
     if !file_is_ingested(&file, &mut *tx).await? {
         alert!("Analysis job picked up while file is not properly ingested");
         return Err(eyre!("File is not properly ingested"));
     }
-    println!("\tfile_is_ingested true");
     let media_item_id = sqlx::query_scalar!(
         r"
         SELECT id
@@ -32,9 +29,7 @@ pub async fn analyze_file(
     )
     .fetch_one(&mut *tx)
     .await?;
-    println!("\tmedia_item_id {}", media_item_id);
     let thumb_dir = thumbnails_dir().join(media_item_id);
-    println!("\tthumbnails_dir {:?}", thumb_dir);
     let to_analyze = if is_photo_file(&file) {
         let Some(biggest_thumb) = settings().thumbnail_generation.heights.iter().max() else {
             Err(eyre!("Can't retrieve max size of thumbnail."))?
@@ -49,11 +44,9 @@ pub async fn analyze_file(
             .map(|p| thumb_dir.join(format!("{p}_percent.avif")))
             .collect::<Vec<_>>()
     };
-    println!("\tto_analyze {:?}", to_analyze);
     let mut analyses = vec![];
     for image in to_analyze {
-        println!("\tanalyzing image {:?}", image);
-        let res = visual_analyzer.analyze_image(&image)?;
+        let res = visual_analyzer.analyze_image(&image).await?;
         analyses.push(res);
     }
 

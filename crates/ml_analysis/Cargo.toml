@@ -12,3 +12,6 @@ image = { version = "0.25.8" }
 palette = "0.7.6"
 color-eyre = "0.6.5"
 imageproc = { version = "0.25.0" }
+tempfile = "3.23.0"
+tokio = { version = "1.47.1", features = ["full"]}
+common_photos = { path = "../common_photos" }

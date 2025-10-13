@@ -18,36 +18,6 @@ pub struct OCRBox {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub enum Variant {
-    Monochrome,
-    Neutral,
-    TonalSpot,
-    Vibrant,
-    Expressive,
-    Fidelity,
-    Content,
-    Rainbow,
-    FruitSalad,
-}
-
-impl Variant {
-    /// Converts the enum variant to its uppercase string representation.
-    pub(crate) const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Monochrome => "MONOCHROME",
-            Self::Neutral => "NEUTRAL",
-            Self::TonalSpot => "TONAL_SPOT",
-            Self::Vibrant => "VIBRANT",
-            Self::Expressive => "EXPRESSIVE",
-            Self::Fidelity => "FIDELITY",
-            Self::Content => "CONTENT",
-            Self::Rainbow => "RAINBOW",
-            Self::FruitSalad => "FRUIT_SALAD",
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct FaceBox {
     pub position: (f32, f32),
     pub width: f32,

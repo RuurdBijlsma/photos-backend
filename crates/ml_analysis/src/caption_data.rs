@@ -172,6 +172,7 @@ pub fn get_caption_data(analyzer: &PyInterop, file: &Path) -> PyResult<CaptionDa
 
     let mut people_count = None;
     let mut people_mood = None;
+    #[allow(clippy::useless_let_if_seq)]
     let mut photo_type = None;
 
     if contains_people {
