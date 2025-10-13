@@ -10,9 +10,7 @@ use tracing::warn;
 use crate::handlers::analyze_file::analyze_file;
 use crate::handlers::ingest_file::ingest_file;
 use crate::handlers::remove_file::remove_file;
-use crate::jobs::{
-    claim_next_job, increment_dependency_attempts, mark_job_done, mark_job_failed, reschedule_job,
-};
+use crate::jobs::{claim_next_job, dependency_reschedule_job, mark_job_done, mark_job_failed, reschedule_job};
 use tokio::time::sleep;
 
 mod db_helpers;
@@ -53,13 +51,13 @@ pub async fn worker_loop(pool: &PgPool) -> Result<()> {
                 JobType::Analysis => {
                     let file_path = media_dir().join(&job.relative_path);
                     if !file_is_ingested(&file_path, pool).await? {
+                        info!("file {} is not ingested properly", &file_path.display());
                         // ingest not ready → reschedule job
-                        increment_dependency_attempts(pool, job.id).await?;
                         if job.dependency_attempts > 10 {
                             alert!("Alarmingly many attempts to reschedule analysis job.");
                         }
                         let delay = backoff_seconds(job.dependency_attempts);
-                        reschedule_job(pool, job.id, delay).await?;
+                        dependency_reschedule_job(pool, job.id, delay).await?;
                         continue;
                     }
                     analyze_file(pool, &job).await

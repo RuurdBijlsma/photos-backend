@@ -45,6 +45,7 @@
 * users have to be implemented in photos processing at some point (media item must have user id) (user folders)
 * ✅ als een crate de settings retrieved voordat dotenv geladen is gaat het stuk.
 * Add some kind of cli flag to specify that a worker can't work on ML type of job
+* als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
 
 
 ## Kubernetes vs Docker compose

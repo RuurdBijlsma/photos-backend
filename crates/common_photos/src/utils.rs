@@ -4,8 +4,8 @@ use ruurd_photos_thumbnail_generation::ThumbOptions;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Executor, Pool, Postgres};
 use std::fs::canonicalize;
-use std::path::Path;
 use std::path::absolute;
+use std::path::Path;
 use std::time::Duration;
 use tracing::info;
 
@@ -118,7 +118,7 @@ pub async fn user_id_from_relative_path<'c, E>(
     executor: E,
 ) -> color_eyre::Result<i32>
 where
-    E: Executor<'c, Database = Postgres>,
+    E: Executor<'c, Database=Postgres>,
 {
     let file = media_dir().join(relative_path);
     let Some(username) = username_from_path(&file) else {
@@ -154,7 +154,7 @@ pub async fn user_id_from_username<'c, E>(
     executor: E,
 ) -> color_eyre::Result<Option<i32>>
 where
-    E: Executor<'c, Database = Postgres>,
+    E: Executor<'c, Database=Postgres>,
 {
     let user_id = sqlx::query_scalar!("SELECT id FROM app_user WHERE name = $1", username)
         .fetch_optional(executor)
@@ -183,7 +183,7 @@ pub fn get_thumb_options() -> ThumbOptions {
 /// * Can return an error from `thumbs_exist` if checking for thumbnails fails.
 pub async fn file_is_ingested<'c, E>(file: &Path, executor: E) -> color_eyre::Result<bool>
 where
-    E: Executor<'c, Database = Postgres>,
+    E: Executor<'c, Database=Postgres>,
 {
     // Media item existence check:
     let Ok(relative_path_str) = relative_path_abs(file) else {
@@ -193,8 +193,8 @@ where
         "SELECT id FROM media_item WHERE relative_path = $1",
         relative_path_str
     )
-    .fetch_optional(executor)
-    .await
+        .fetch_optional(executor)
+        .await
     else {
         return Ok(false);
     };
@@ -202,14 +202,15 @@ where
         return Ok(false);
     }
     // media item exists, check thumbnails existence
-    thumbs_exist(file)
+    let exist = thumbs_exist(file, &media_item_id.unwrap())?;
+    Ok(exist)
 }
 
 /// Verifies if all expected thumbnails for a given media file exist on disk.
 /// # Errors
 ///
 /// This function's signature returns a Result, but the current implementation does not produce any errors.
-pub fn thumbs_exist(file: &Path) -> color_eyre::Result<bool> {
+pub fn thumbs_exist(file: &Path, media_item_id: &str) -> color_eyre::Result<bool> {
     let thumb_config = get_thumb_options();
     let is_photo = is_photo_file(file);
     let is_video = is_video_file(file);
@@ -234,8 +235,10 @@ pub fn thumbs_exist(file: &Path) -> color_eyre::Result<bool> {
         }
     }
 
+    let thumb_dir = thumbnails_dir().join(media_item_id);
     for thumb_filename in should_exist {
-        if !thumbnails_dir().join(thumb_filename.clone()).exists() {
+        let thumb_file_path = thumb_dir.join(thumb_filename.clone());
+        if !thumb_file_path.exists() {
             return Ok(false);
         }
     }

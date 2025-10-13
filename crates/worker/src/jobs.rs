@@ -87,22 +87,30 @@ pub async fn reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64) -> Re
         job_id,
         scheduled_at
     )
-    .execute(pool)
-    .await?;
+        .execute(pool)
+        .await?;
     Ok(())
 }
 
-pub async fn increment_dependency_attempts(pool: &PgPool, job_id: i64) -> Result<()> {
+pub async fn dependency_reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64) -> Result<()> {
+    warn!("Rescheduling job. Backoff: {:?}", backoff_secs);
+    let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
         r#"
         UPDATE jobs
-        SET dependency_attempts = dependency_attempts + 1
+        SET status = 'queued',
+            scheduled_at = $2,
+            dependency_attempts = dependency_attempts + 1,
+            owner = NULL,
+            started_at = NULL,
+            last_error = NULL
         WHERE id = $1
         "#,
-        job_id
+        job_id,
+        scheduled_at
     )
-    .execute(pool)
-    .await?;
+        .execute(pool)
+        .await?;
     Ok(())
 }
 
