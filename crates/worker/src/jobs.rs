@@ -70,8 +70,16 @@ pub async fn mark_job_failed(pool: &PgPool, job_id: i64, last_error: &str) -> Re
     Ok(())
 }
 
-pub async fn reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64, last_error: &str) -> Result<()> {
-    warn!("⚠️ Rescheduling job. Backoff: {:?}, last_err: {last_error}", backoff_secs);
+pub async fn reschedule_job(
+    pool: &PgPool,
+    job_id: i64,
+    backoff_secs: i64,
+    last_error: &str,
+) -> Result<()> {
+    warn!(
+        "⚠️ Rescheduling job. Backoff: {:?}, last_err: {last_error}",
+        backoff_secs
+    );
     let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
         r#"
@@ -98,7 +106,10 @@ pub async fn dependency_reschedule_job(
     job_id: i64,
     backoff_secs: i64,
 ) -> Result<()> {
-    warn!("Dependency check failed, reschedule job. Backoff: {:?}", backoff_secs);
+    warn!(
+        "Dependency check failed, reschedule job. Backoff: {:?}",
+        backoff_secs
+    );
     let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
         r#"

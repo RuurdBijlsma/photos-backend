@@ -26,6 +26,8 @@ CREATE INDEX jobs_active_relative_path_idx
     WHERE status IN ('queued', 'running');
 CREATE INDEX jobs_relative_path_idx ON jobs (relative_path);
 
+CREATE INDEX idx_jobs_user_id ON jobs (user_id);
+
 ALTER TABLE jobs
     ADD CONSTRAINT chk_attempts_nonneg CHECK (attempts >= 0),
     ADD CONSTRAINT chk_priority_positive CHECK (priority >= 0);

@@ -29,7 +29,6 @@ pub enum AuthError {
 }
 
 /// Helper function to log authentication failures with appropriate tracing levels.
-#[allow(clippy::cognitive_complexity)]
 fn log_auth_failure(error: &AuthError) {
     match error {
         AuthError::InvalidUsername => info!("Invalid username supplied."),

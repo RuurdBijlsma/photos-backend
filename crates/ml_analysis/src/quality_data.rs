@@ -1,6 +1,6 @@
 use crate::QualityData;
 use color_eyre::eyre::Result;
-use image::{imageops, DynamicImage, GrayImage};
+use image::{DynamicImage, GrayImage, imageops};
 use imageproc::filter::{laplacian_filter, median_filter};
 use std::path::Path;
 

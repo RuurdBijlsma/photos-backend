@@ -1,8 +1,8 @@
 use crate::{ColorData, ColorHistogram, PyInterop, RGBChannels};
+use common_photos::Variant;
 use image::Rgb;
 use palette::{FromColor, Hsv, Srgb};
 use std::path::Path;
-use common_photos::Variant;
 
 fn average_hue_from_sums(x_sum: f32, y_sum: f32) -> f32 {
     let mut avg = y_sum.atan2(x_sum).to_degrees();
@@ -42,7 +42,12 @@ pub fn get_color_data(
         hist_b[*b as usize] += 1;
 
         let hsv = Hsv::from_color(
-            Srgb::new(f32::from(*r) / 255.0, f32::from(*g) / 255.0, f32::from(*b) / 255.0).into_linear(),
+            Srgb::new(
+                f32::from(*r) / 255.0,
+                f32::from(*g) / 255.0,
+                f32::from(*b) / 255.0,
+            )
+            .into_linear(),
         );
         let rad = hsv.hue.into_radians();
         x_sum += rad.cos();

@@ -1,10 +1,10 @@
 use crate::structs::{FaceBox, OCRData, ObjectBox};
 use color_eyre::eyre::Context;
+use common_photos::Variant;
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use serde_json::Value;
 use std::path::Path;
-use common_photos::Variant;
 
 pub struct PyInterop {
     json_dumps: Py<PyAny>,

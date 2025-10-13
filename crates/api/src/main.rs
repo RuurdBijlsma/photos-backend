@@ -1,4 +1,4 @@
-#![allow(clippy::needless_for_each)]
+#![allow(clippy::needless_for_each, clippy::cognitive_complexity)]
 
 mod routes;
 

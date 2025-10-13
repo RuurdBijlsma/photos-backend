@@ -28,7 +28,6 @@ pub enum SetupError {
     Internal(#[from] eyre::Report),
 }
 
-#[allow(clippy::cognitive_complexity)]
 fn log_setup_failure(error: &SetupError) {
     match error {
         SetupError::InvalidPath(path) => warn!("Invalid path provided: {}", path),

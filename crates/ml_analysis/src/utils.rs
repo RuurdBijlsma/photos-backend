@@ -15,8 +15,6 @@ pub async fn convert_media_file(input_path: &Path, output_path: &Path) -> io::Re
     if output.status.success() {
         Ok(())
     } else {
-        Err(io::Error::other(
-            String::from_utf8_lossy(&output.stderr),
-        ))
+        Err(io::Error::other(String::from_utf8_lossy(&output.stderr)))
     }
 }
