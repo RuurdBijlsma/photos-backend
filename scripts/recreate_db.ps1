@@ -9,6 +9,6 @@ Push-Location (Join-Path $PSScriptRoot "..")
 sqlx database drop -y
 sqlx database create
 
-# Running the program will run migrations, so not needed here.
+sqlx migrate run
 
 Pop-Location
