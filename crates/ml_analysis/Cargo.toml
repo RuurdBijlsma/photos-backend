@@ -6,5 +6,13 @@ edition = "2024"
 [dependencies]
 pyo3 = { version = "0.26.0", features = ["auto-initialize"] }
 serde_json = "1.0"
-serde = { version = "1.0.228", features = ["derive"]}
+serde = { version = "1.0.228", features = ["derive"] }
 numpy = "0.26.0"
+image = { version = "0.25.8" }
+palette = "0.7.6"
+color-eyre = "0.6.5"
+imageproc = { version = "0.25.0" }
+tempfile = "3.23.0"
+tokio = { version = "1.47.1", features = ["full"]}
+common_photos = { path = "../common_photos" }
+sqlx = "0.8.6"

@@ -1,4 +1,4 @@
-use ml_analysis::VisualAnalyzer;
+use ml_analysis::PyInterop;
 use pyo3::prelude::*;
 use std::path::Path;
 use std::time::Instant;
@@ -18,7 +18,7 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
 
 fn main() -> PyResult<()> {
     Python::attach(|py| {
-        let analyzer = VisualAnalyzer::new(py)?;
+        let py_interop = PyInterop::new(py)?;
         println!("Python analyzer initialized.");
 
         let files = vec![
@@ -32,7 +32,7 @@ fn main() -> PyResult<()> {
 
             // === EMBEDDER ===
             let now = Instant::now();
-            let image_embedding = analyzer.embed_image(file)?;
+            let image_embedding = py_interop.embed_image(file)?;
 
             // Define the texts and embed them all in a single batch
             let texts_to_compare = vec![
@@ -41,7 +41,7 @@ fn main() -> PyResult<()> {
                 "This is a sunset.",
                 "Photo of a sunset taken from a boat. A crane is in the foreground.",
             ];
-            let text_embeddings = analyzer.embed_texts(texts_to_compare.clone())?;
+            let text_embeddings = py_interop.embed_texts(texts_to_compare.clone())?;
 
             // Calculate similarity score for each text against the image
             let mut similarities: Vec<(&str, f32)> = Vec::new();
@@ -62,15 +62,15 @@ fn main() -> PyResult<()> {
 
             // === CAPTIONER ===
             let now = Instant::now();
-            let caption = analyzer.caption_image(file, None)?;
+            let caption = py_interop.caption_image(file, None)?;
             println!("\tcaption: {}", caption);
-            let has_animal = analyzer.caption_image(
+            let has_animal = py_interop.caption_image(
                 file,
                 Some("Question: Is there an animal in the photo? yes or no. Answer:"),
             )?;
             println!("\thas animal: {:#?}", has_animal);
             if has_animal.to_lowercase().contains("yes") {
-                let animal_type = analyzer.caption_image(
+                let animal_type = py_interop.caption_image(
                     file,
                     Some("Question: What kind of animal is shown in the photo? Answer:"),
                 )?;
@@ -80,7 +80,7 @@ fn main() -> PyResult<()> {
 
             // === FACIAL RECOGNITION ===
             let now = Instant::now();
-            let faces = analyzer.facial_recognition(file)?;
+            let faces = py_interop.facial_recognition(file)?;
             println!("\tFound {:?} faces.", faces.len());
             for face in faces {
                 println!("\t=== Found Face ===");
@@ -91,7 +91,7 @@ fn main() -> PyResult<()> {
 
             // === OBJECT DETECTION ===
             let now = Instant::now();
-            let objects = analyzer.object_detection(file)?;
+            let objects = py_interop.object_detection(file)?;
             println!("\tFound {:?} objects.", objects.len());
             for object in objects {
                 println!("\t- Found object, label: {:?}", &object.label);
@@ -100,7 +100,7 @@ fn main() -> PyResult<()> {
 
             // === OCR ===
             let now = Instant::now();
-            let ocr_data = analyzer.ocr(file, vec!["nld".to_string(), "eng".to_string()])?;
+            let ocr_data = py_interop.ocr(file, vec!["nld".to_string(), "eng".to_string()])?;
             println!("\tHas text: {}", ocr_data.has_legible_text);
             if ocr_data.has_legible_text
                 && let Some(ocr_text) = ocr_data.ocr_text

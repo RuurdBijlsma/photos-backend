@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS postgis;
-
 CREATE TYPE user_role AS ENUM ('ADMIN', 'USER');
 
 -- Create the Location table. Many GPS entries can point to one Location.
@@ -12,6 +10,7 @@ CREATE TABLE location
     country_code TEXT NOT NULL,
     country_name TEXT NOT NULL
 );
+CREATE INDEX idx_location_lookup ON location (name, admin1, country_code);
 
 -- Create the User table.
 CREATE TABLE app_user
@@ -150,6 +149,3 @@ CREATE INDEX idx_gps_location_id ON gps (location_id);
 CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_naive ON media_item (taken_at_naive);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
-
--- A spatial index for efficient geographic queries (e.g., "find all photos within this area").
-CREATE INDEX idx_gps_location_spatial ON gps USING GIST (ST_MakePoint(longitude, latitude));

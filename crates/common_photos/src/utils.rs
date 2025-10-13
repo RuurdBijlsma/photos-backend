@@ -198,18 +198,19 @@ where
     else {
         return Ok(false);
     };
-    if media_item_id.is_none() {
+    let Some(media_item_id) = media_item_id else {
         return Ok(false);
-    }
+    };
     // media item exists, check thumbnails existence
-    thumbs_exist(file)
+    let exist = thumbs_exist(file, &media_item_id)?;
+    Ok(exist)
 }
 
 /// Verifies if all expected thumbnails for a given media file exist on disk.
 /// # Errors
 ///
 /// This function's signature returns a Result, but the current implementation does not produce any errors.
-pub fn thumbs_exist(file: &Path) -> color_eyre::Result<bool> {
+pub fn thumbs_exist(file: &Path, media_item_id: &str) -> color_eyre::Result<bool> {
     let thumb_config = get_thumb_options();
     let is_photo = is_photo_file(file);
     let is_video = is_video_file(file);
@@ -234,8 +235,10 @@ pub fn thumbs_exist(file: &Path) -> color_eyre::Result<bool> {
         }
     }
 
+    let thumb_dir = thumbnails_dir().join(media_item_id);
     for thumb_filename in should_exist {
-        if !thumbnails_dir().join(thumb_filename.clone()).exists() {
+        let thumb_file_path = thumb_dir.join(thumb_filename.clone());
+        if !thumb_file_path.exists() {
             return Ok(false);
         }
     }

@@ -5,7 +5,7 @@ use chrono::Utc;
 use color_eyre::Result;
 use common_photos::{Job, JobStatus, alert};
 use sqlx::{PgPool, PgTransaction};
-use tracing::{info, warn};
+use tracing::warn;
 
 pub async fn claim_next_job(pool: &PgPool) -> Result<Option<Job>> {
     let mut tx = pool.begin().await?;
@@ -38,7 +38,6 @@ pub async fn claim_next_job(pool: &PgPool) -> Result<Option<Job>> {
 }
 
 pub async fn mark_job_done(pool: &PgPool, job_id: i64) -> Result<()> {
-    info!("Marking job {} done", job_id);
     sqlx::query!(
         r#"
         UPDATE jobs
@@ -53,8 +52,7 @@ pub async fn mark_job_done(pool: &PgPool, job_id: i64) -> Result<()> {
 }
 
 pub async fn mark_job_failed(pool: &PgPool, job_id: i64, last_error: &str) -> Result<()> {
-    warn!("Marking job {} as failed", job_id);
-    alert!("Marking job {} as failed: {}", job_id, last_error);
+    alert!("‼️ Marking job {} as failed: {}", job_id, last_error);
     sqlx::query!(
         r#"
         UPDATE jobs
@@ -72,7 +70,16 @@ pub async fn mark_job_failed(pool: &PgPool, job_id: i64, last_error: &str) -> Re
     Ok(())
 }
 
-pub async fn reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64) -> Result<()> {
+pub async fn reschedule_job(
+    pool: &PgPool,
+    job_id: i64,
+    backoff_secs: i64,
+    last_error: &str,
+) -> Result<()> {
+    warn!(
+        "⚠️ Rescheduling job. Backoff: {:?}, last_err: {last_error}",
+        backoff_secs
+    );
     let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
         r#"
@@ -82,25 +89,41 @@ pub async fn reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64) -> Re
             attempts = attempts + 1,
             owner = NULL,
             started_at = NULL,
-            last_error = NULL
+            last_error = $3
         WHERE id = $1
         "#,
         job_id,
-        scheduled_at
+        scheduled_at,
+        last_error
     )
     .execute(pool)
     .await?;
     Ok(())
 }
 
-pub async fn increment_dependency_attempts(pool: &PgPool, job_id: i64) -> Result<()> {
+pub async fn dependency_reschedule_job(
+    pool: &PgPool,
+    job_id: i64,
+    backoff_secs: i64,
+) -> Result<()> {
+    warn!(
+        "Dependency check failed, reschedule job. Backoff: {:?}",
+        backoff_secs
+    );
+    let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
         r#"
         UPDATE jobs
-        SET dependency_attempts = dependency_attempts + 1
+        SET status = 'queued',
+            scheduled_at = $2,
+            dependency_attempts = dependency_attempts + 1,
+            owner = NULL,
+            started_at = NULL,
+            last_error = NULL
         WHERE id = $1
         "#,
-        job_id
+        job_id,
+        scheduled_at
     )
     .execute(pool)
     .await?;

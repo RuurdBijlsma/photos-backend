@@ -1,14 +1,25 @@
 use crate::user_id_from_relative_path;
 use crate::{JobType, is_video_file, media_dir};
 use color_eyre::eyre::Result;
-use sqlx::postgres::PgQueryResult;
 use sqlx::{PgConnection, PgPool};
+use tracing::info;
 
-/// Enqueues a job to ingest a media file, setting a higher priority for video files.
+/// Enqueues two jobs, one to ingest a media file, and the other to analyze it with ML.
+/// # Errors
+///
+/// * Returns an error if the database transaction in either enqueue function fails.
+pub async fn enqueue_full_ingest(pool: &PgPool, relative_path: &str) -> Result<()> {
+    enqueue_ingest_job(pool, relative_path).await?;
+    enqueue_analysis_job(pool, relative_path).await?;
+
+    Ok(())
+}
+
+/// Enqueues a job to ingest a media file.
 /// # Errors
 ///
 /// * Returns an error if the database transaction fails.
-pub async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()> {
+async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()> {
     let is_video = is_video_file(&media_dir().join(relative_path));
     let priority = if is_video { 20 } else { 10 };
 
@@ -19,13 +30,16 @@ pub async fn enqueue_ingest_job(pool: &PgPool, relative_path: &str) -> Result<()
     Ok(())
 }
 
-/// Enqueues a job to perform analysis on a media file.
+/// Enqueues a job to perform machine learning analysis on a media file.
 /// # Errors
 ///
 /// * Returns an error if the database transaction fails.
-pub async fn enqueue_analysis_job(pool: &PgPool, relative_path: &str) -> Result<()> {
+async fn enqueue_analysis_job(pool: &PgPool, relative_path: &str) -> Result<()> {
+    let is_video = is_video_file(&media_dir().join(relative_path));
+    let priority = if is_video { 100 } else { 90 };
+
     let mut tx = pool.begin().await?;
-    enqueue_job(&mut tx, relative_path, JobType::Analysis, 100).await?;
+    enqueue_job(&mut tx, relative_path, JobType::Analysis, priority).await?;
     tx.commit().await?;
 
     Ok(())
@@ -69,9 +83,31 @@ async fn enqueue_job(
     relative_path: &str,
     job_type: JobType,
     priority: i32,
-) -> Result<PgQueryResult> {
+) -> Result<()> {
     // todo: probably don't enqueue job if it's marked as failed?
     let user_id = user_id_from_relative_path(relative_path, &mut *tx).await?;
+
+    let job_exists = sqlx::query_scalar!(
+        r#"
+        SELECT id
+        FROM jobs
+        WHERE relative_path = $1 AND job_type = $2
+        LIMIT 1
+        "#,
+        relative_path,
+        job_type as JobType
+    )
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    if job_exists.is_some() {
+        info!(
+            "Not enqueueing {:?} job {}, it already exists.",
+            job_type, relative_path
+        );
+        return Ok(());
+    }
+    info!("Enqueueing {:?} job {}", job_type, relative_path);
 
     sqlx::query!(
         r#"
@@ -84,7 +120,8 @@ async fn enqueue_job(
         priority,
         user_id
     )
-    .execute(tx)
-    .await
-    .map_err(Into::into)
+    .execute(&mut *tx)
+    .await?;
+
+    Ok(())
 }

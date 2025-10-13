@@ -6,7 +6,6 @@ use common_photos::{
 use media_analyzer::MediaAnalyzer;
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
 use sqlx::PgPool;
-use tracing::info;
 
 /// Processes a media file by generating thumbnails, analyzing its metadata, and storing the result.
 ///
@@ -26,7 +25,6 @@ pub async fn ingest_file(
     job: &Job,
     analyzer: &mut MediaAnalyzer,
 ) -> color_eyre::Result<()> {
-    info!("Running ingest file... {:?}", &job);
     // Setup
     let file = media_dir().join(&job.relative_path);
     let thumb_config = get_thumb_options();

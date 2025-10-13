@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id\n        FROM jobs\n        WHERE relative_path = $1 AND job_type = $2\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "job_type",
+            "kind": {
+              "Enum": [
+                "ingest",
+                "remove",
+                "analysis"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ee0b56d4a2b573d38ae193829026f4ba3ac19d0a9ab411cafb3f4e9e1651221b"
+}

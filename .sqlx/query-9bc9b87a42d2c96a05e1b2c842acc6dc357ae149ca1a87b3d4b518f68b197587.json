@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE jobs\n        SET status = 'queued',\n            scheduled_at = $2,\n            dependency_attempts = dependency_attempts + 1,\n            owner = NULL,\n            started_at = NULL,\n            last_error = NULL\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9bc9b87a42d2c96a05e1b2c842acc6dc357ae149ca1a87b3d4b518f68b197587"
+}
