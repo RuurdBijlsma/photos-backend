@@ -46,6 +46,7 @@
 * hdbscan face & photo clustering
 * Add some kind of cli flag to specify that a worker can't work on ML type of job
 * BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
+* avif not supported by visual analyzer
 
 
 ## Kubernetes vs Docker compose
