@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -20,13 +21,17 @@ ocr_instance = get_ocr()
 embedder_instance = get_embedder()
 
 
+@lru_cache(maxsize=256)
+def load_image(path: Path) -> Image.Image:
+    return Image.open(path)
+
+
 def embed_image(image_path: Path) -> NDArray[np.float32]:
-    loaded_image = Image.open(image_path)
-    return embedder_instance.embed_image(loaded_image)
+    return embedder_instance.embed_image(load_image(image_path))
 
 
 def embed_images(image_paths: list[Path]) -> NDArray[np.float32]:
-    loaded_images = [Image.open(image_path) for image_path in image_paths]
+    loaded_images = [load_image(image_path) for image_path in image_paths]
     return embedder_instance.embed_images(loaded_images)
 
 
@@ -39,22 +44,19 @@ def embed_texts(texts: list[str]) -> NDArray[np.float32]:
 
 
 def caption(image_path: Path, instruction: str | None = None) -> str:
-    loaded_image = Image.open(image_path)
-    return captioner_instance.caption(loaded_image, instruction)
+    return captioner_instance.caption(load_image(image_path), instruction)
 
 
 def recognize_faces(image_path: Path) -> list[dict[str, Any]]:
-    loaded_image = Image.open(image_path)
-    return [asdict(x) for x in facial_recognition_instance.get_faces(loaded_image)]
+    return [asdict(x) for x in facial_recognition_instance.get_faces(load_image(image_path))]
 
 
 def detect_objects(image_path: Path) -> list[dict[str, Any]]:
-    loaded_image = Image.open(image_path)
-    return [asdict(x) for x in object_detection_instance.detect_objects(loaded_image)]
+    return [asdict(x) for x in object_detection_instance.detect_objects(load_image(image_path))]
 
 
 def ocr(image_path: Path, languages: tuple[str, ...]) -> dict[str, Any]:
-    loaded_image = Image.open(image_path)
+    loaded_image = load_image(image_path)
     has_text = ocr_instance.has_legible_text(loaded_image)
     if not has_text:
         return {

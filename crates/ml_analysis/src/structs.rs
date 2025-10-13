@@ -1,13 +1,13 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct OCRData {
     pub has_legible_text: bool,
     pub ocr_text: Option<String>,
     pub ocr_boxes: Option<Vec<OCRBox>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct OCRBox {
     pub text: String,
     pub position: (f32, f32),
@@ -16,7 +16,7 @@ pub struct OCRBox {
     pub confidence: f32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct FaceBox {
     pub position: (f32, f32),
     pub width: f32,
@@ -32,7 +32,7 @@ pub struct FaceBox {
     pub embedding: Vec<f32>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct ObjectBox {
     pub position: (f32, f32),
     pub width: f32,
@@ -41,7 +41,7 @@ pub struct ObjectBox {
     pub label: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct MeasuredQualityData {
     pub measured_sharpness: f32,
     pub measured_noise: i32,
@@ -52,7 +52,7 @@ pub struct MeasuredQualityData {
     pub quality_score: f32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct ColorData {
     pub themes: Vec<serde_json::Value>,
     pub prominent_colors: Vec<String>,
@@ -62,20 +62,20 @@ pub struct ColorData {
     pub histogram: ColorHistogram,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct ColorHistogram {
     pub bins: i32,
     pub channels: RGBChannels,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct RGBChannels {
     pub red: Vec<i32>,
     pub green: Vec<i32>,
     pub blue: Vec<i32>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct CaptionData {
     pub default_caption: String,
@@ -104,4 +104,14 @@ pub struct CaptionData {
     pub people_mood: Option<String>,
     pub photo_type: Option<String>,
     pub activity_description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct VisualImageData {
+    pub color_data: ColorData,
+    pub caption_data: CaptionData,
+    pub embedding: Vec<f32>,
+    pub faces: Vec<FaceBox>,
+    pub objects: Vec<ObjectBox>,
+    pub ocr: OCRData,
 }

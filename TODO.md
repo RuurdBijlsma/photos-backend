@@ -6,6 +6,7 @@
 * ✅ in auth/model, split db models and api interfaces
 * ✅ I accidentally made this a new repo, original was photos-processing
 * ✅ use db config when setting up db. (pool size etc.)
+* ✅ als een crate de settings retrieved voordat dotenv geladen is gaat het stuk.
 * ✅ look at rust config package
 * schedule runner -> might have to use ofelia or kubernetes+helm to get clean cronjobs. 
   * ✅ indexing
@@ -43,9 +44,8 @@
     14. try http://localhost:3567/auth/refresh -> should not work
 * hdbscan face & photo clustering
 * users have to be implemented in photos processing at some point (media item must have user id) (user folders)
-* ✅ als een crate de settings retrieved voordat dotenv geladen is gaat het stuk.
 * Add some kind of cli flag to specify that a worker can't work on ML type of job
-* als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
+* BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
 
 
 ## Kubernetes vs Docker compose

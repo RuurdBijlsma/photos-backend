@@ -198,11 +198,11 @@ where
     else {
         return Ok(false);
     };
-    if media_item_id.is_none() {
+    let Some(media_item_id) = media_item_id else {
         return Ok(false);
-    }
+    };
     // media item exists, check thumbnails existence
-    let exist = thumbs_exist(file, &media_item_id.unwrap())?;
+    let exist = thumbs_exist(file, &media_item_id)?;
     Ok(exist)
 }
 
