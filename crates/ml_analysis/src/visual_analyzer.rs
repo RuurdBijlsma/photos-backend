@@ -7,7 +7,6 @@ use color_eyre::eyre::eyre;
 use common_photos::settings;
 use pyo3::Python;
 use std::path::Path;
-use std::time::Instant;
 use tempfile::Builder;
 
 pub struct VisualAnalyzer {
@@ -47,41 +46,26 @@ impl VisualAnalyzer {
         }
         let analyzer_settings = &settings().analyzer;
 
-        let now = Instant::now();
-        // todo config variant & contrast level
         let color_data = get_color_data(
             &self.py_interop,
             &analysis_file,
             &analyzer_settings.theme_generation.variant,
             analyzer_settings.theme_generation.contrast_level as f32,
         )?;
-        println!("\tget_color_data {:?}", now.elapsed());
 
-        let now = Instant::now();
         let quality_data = get_quality_data(&analysis_file)?;
-        println!("\tget_quality_data {:?}", now.elapsed());
 
-        let now = Instant::now();
         let caption_data = get_caption_data(&self.py_interop, &analysis_file)?;
-        println!("\tget_caption_data {:?}", now.elapsed());
 
-        let now = Instant::now();
         let embedding = self.py_interop.embed_image(&analysis_file)?;
-        println!("\tembed_image {:?}", now.elapsed());
 
-        let now = Instant::now();
         let faces = self.py_interop.facial_recognition(&analysis_file)?;
-        println!("\tfacial_recognition {:?}", now.elapsed());
 
-        let now = Instant::now();
         let objects = self.py_interop.object_detection(&analysis_file)?;
-        println!("\tobject_detection {:?}", now.elapsed());
 
-        let now = Instant::now();
         let ocr = self
             .py_interop
             .ocr(file, analyzer_settings.ocr.languages.clone())?;
-        println!("\tocr {:?}", now.elapsed());
 
         // delete the tempfile
         tokio::fs::remove_file(&analysis_file).await?;

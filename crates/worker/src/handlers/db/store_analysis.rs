@@ -2,7 +2,7 @@ use ml_analysis::VisualImageData;
 use pgvector::Vector;
 use sqlx::PgTransaction;
 
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub async fn store_visual_analysis(
     tx: &mut PgTransaction<'_>,
     media_item_id: &str,
@@ -37,7 +37,7 @@ pub async fn store_visual_analysis(
         .fetch_one(&mut **tx)
         .await?;
 
-        // --- OCR Box Data (Simplified) ---
+        // --- OCR Box Data ---
         if let Some(ocr_boxes) = &analysis.ocr.ocr_boxes {
             for ocr_box in ocr_boxes {
                 sqlx::query!(
@@ -47,8 +47,8 @@ pub async fn store_visual_analysis(
                     "#,
                     ocr_data_id,
                     ocr_box.text,
-                    ocr_box.position.0, // Directly use .0
-                    ocr_box.position.1, // Directly use .1
+                    ocr_box.position.0,
+                    ocr_box.position.1,
                     ocr_box.width,
                     ocr_box.height,
                     ocr_box.confidence,
@@ -60,24 +60,6 @@ pub async fn store_visual_analysis(
 
         for face in &analysis.faces {
             let face_vector = Vector::from(face.embedding.clone());
-
-            // This pattern cleanly handles the Option<tuple> for nullable columns
-            let (mouth_left_x, mouth_left_y) = face
-                .mouth_left
-                .map_or((None, None), |p| (Some(p.0), Some(p.1)));
-            let (mouth_right_x, mouth_right_y) = face
-                .mouth_right
-                .map_or((None, None), |p| (Some(p.0), Some(p.1)));
-            let (nose_tip_x, nose_tip_y) = face
-                .nose_tip
-                .map_or((None, None), |p| (Some(p.0), Some(p.1)));
-            let (eye_left_x, eye_left_y) = face
-                .eye_left
-                .map_or((None, None), |p| (Some(p.0), Some(p.1)));
-            let (eye_right_x, eye_right_y) = face
-                .eye_right
-                .map_or((None, None), |p| (Some(p.0), Some(p.1)));
-
             sqlx::query!(
                 r#"
                 INSERT INTO face (
@@ -96,23 +78,23 @@ pub async fn store_visual_analysis(
                 face.confidence,
                 face.age,
                 &face.sex,
-                mouth_left_x,
-                mouth_left_y,
-                mouth_right_x,
-                mouth_right_y,
-                nose_tip_x,
-                nose_tip_y,
-                eye_left_x,
-                eye_left_y,
-                eye_right_x,
-                eye_right_y,
+                face.mouth_left.0,
+                face.mouth_left.1,
+                face.mouth_left.0,
+                face.mouth_left.1,
+                face.nose_tip.0,
+                face.nose_tip.1,
+                face.eye_left.0,
+                face.eye_left.1,
+                face.eye_right.0,
+                face.eye_right.1,
                 face_vector as _,
             )
                 .execute(&mut **tx)
                 .await?;
         }
 
-        // --- Detected Objects (Simplified) ---
+        // --- Detected Objects ---
         for object in &analysis.objects {
             sqlx::query!(
                 r#"
@@ -120,8 +102,8 @@ pub async fn store_visual_analysis(
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 "#,
                 visual_analysis_id,
-                object.position.0, // Directly use .0
-                object.position.1, // Directly use .1
+                object.position.0,
+                object.position.1,
                 object.width,
                 object.height,
                 object.confidence,
