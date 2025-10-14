@@ -3,7 +3,7 @@ use crate::handlers::JobResult;
 use crate::macros::backoff_seconds;
 use chrono::{Duration, Utc};
 use color_eyre::Result;
-use common_photos::{alert, Job};
+use common_photos::{Job, alert};
 use common_photos::{JobStatus, JobType};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing::{info, warn};
@@ -81,12 +81,9 @@ async fn mark_job_done(pool: &PgPool, job_id: i64) -> Result<()> {
 }
 
 async fn mark_job_cancelled(pool: &PgPool, job_id: i64) -> Result<()> {
-    sqlx::query!(
-        "UPDATE jobs SET status = 'cancelled' WHERE id = $1",
-        job_id
-    )
-    .execute(pool)
-    .await?;
+    sqlx::query!("UPDATE jobs SET status = 'cancelled' WHERE id = $1", job_id)
+        .execute(pool)
+        .await?;
     Ok(())
 }
 

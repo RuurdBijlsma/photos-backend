@@ -1,10 +1,10 @@
 use crate::context::WorkerContext;
-use crate::handlers::db::store_media::store_media_item;
 use crate::handlers::JobResult;
+use crate::handlers::db::store_media::store_media_item;
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::Result;
 use common_photos::{
-    get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir, Job,
+    Job, get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir,
 };
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
 
@@ -46,7 +46,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             &media_item_id,
             job.user_id,
         )
-            .await?;
+        .await?;
 
         JobResult::Done
     };
