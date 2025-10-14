@@ -16,6 +16,7 @@ CREATE TABLE jobs
     finished_at         TIMESTAMPTZ,
     created_at          TIMESTAMPTZ         DEFAULT now(),
     scheduled_at        TIMESTAMPTZ         DEFAULT now(),
+    last_heartbeat      TIMESTAMPTZ         DEFAULT now(),
     last_error          TEXT,
     user_id             INT        NOT NULL REFERENCES app_user (id) ON DELETE CASCADE
 );

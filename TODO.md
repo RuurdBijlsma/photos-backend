@@ -20,6 +20,7 @@
   * ✅ indexing
   * ✅ clean refresh token table on schedule
   * clustering on schedule
+* ✅ BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
 * api:
     * Show photos in ui
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
@@ -45,7 +46,6 @@
     14. try http://localhost:3567/auth/refresh -> should not work
 * hdbscan face & photo clustering
 * Add some kind of cli flag to specify that a worker can't work on ML type of job
-* BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
 * avif not supported by visual analyzer
 
 

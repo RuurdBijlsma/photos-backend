@@ -1,5 +1,5 @@
 use crate::user_id_from_relative_path;
-use crate::{JobType, is_video_file, media_dir};
+use crate::{is_video_file, media_dir, JobType};
 use color_eyre::eyre::Result;
 use sqlx::{PgConnection, PgPool};
 use tracing::info;
@@ -74,6 +74,7 @@ pub async fn enqueue_remove_job(pool: &PgPool, relative_path: &str) -> Result<()
 }
 
 /// Inserts a new job into the database within a given transaction.
+/// Returns true if a new job was inserted, false otherwise.
 /// # Errors
 ///
 /// * Returns an error if the user ID cannot be determined from the relative path.
@@ -83,8 +84,7 @@ async fn enqueue_job(
     relative_path: &str,
     job_type: JobType,
     priority: i32,
-) -> Result<()> {
-    // todo: probably don't enqueue job if it's marked as failed?
+) -> Result<bool> {
     let user_id = user_id_from_relative_path(relative_path, &mut *tx).await?;
 
     let job_exists = sqlx::query_scalar!(
@@ -105,11 +105,11 @@ async fn enqueue_job(
             "Not enqueueing {:?} job {}, it already exists.",
             job_type, relative_path
         );
-        return Ok(());
+        return Ok(false);
     }
     info!("Enqueueing {:?} job {}", job_type, relative_path);
 
-    sqlx::query!(
+    let result = sqlx::query!(
         r#"
         INSERT INTO jobs (relative_path, job_type, priority, user_id)
         VALUES ($1, $2, $3, $4)
@@ -123,5 +123,5 @@ async fn enqueue_job(
     .execute(&mut *tx)
     .await?;
 
-    Ok(())
+    Ok(result.rows_affected() > 0)
 }

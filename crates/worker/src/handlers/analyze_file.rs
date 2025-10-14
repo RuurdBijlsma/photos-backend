@@ -5,9 +5,8 @@ use common_photos::{
 };
 use ml_analysis::VisualAnalyzer;
 use sqlx::PgPool;
-use std::fs::File;
-use std::path::Path;
 use tracing::warn;
+use crate::jobs::is_job_cancelled;
 
 pub async fn analyze_file(
     pool: &PgPool,
@@ -56,17 +55,10 @@ pub async fn analyze_file(
         analyses.push(res);
     }
 
-    // This section for writing to a JSON file can be kept for debugging or removed.
-    let file_filename = file.file_name().unwrap().to_string_lossy().to_string();
-    let json_filename = format!("out-{file_filename}.json");
-    let json_file = File::create(Path::new(&json_filename))?;
-    serde_json::to_writer_pretty(json_file, &analyses)?;
+    if !is_job_cancelled(&mut tx, job.id).await? {
+        store_visual_analysis(&mut tx, &media_item_id, &analyses).await?;
+    }
 
-    // Insert the collected analysis data into the database.
-    store_visual_analysis(&mut tx, &media_item_id, &analyses).await?;
-
-    // Commit the transaction to save all changes.
     tx.commit().await?;
-
     Ok(())
 }

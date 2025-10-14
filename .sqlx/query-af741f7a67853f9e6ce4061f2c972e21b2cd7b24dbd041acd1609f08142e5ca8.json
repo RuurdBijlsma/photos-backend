@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        WITH candidate AS (\n            SELECT id\n            FROM jobs\n            WHERE status = 'queued' AND scheduled_at <= now()\n            ORDER BY priority, scheduled_at, created_at\n            FOR UPDATE SKIP LOCKED\n            LIMIT 1\n        )\n        UPDATE jobs\n        SET status = 'running',\n            owner = $1,\n            started_at = now()\n        WHERE id = (SELECT id FROM candidate)\n        RETURNING id, relative_path, job_type AS \"job_type!: JobType\", priority, user_id, attempts, max_attempts, dependency_attempts\n        ",
+  "query": "\n        WITH candidate AS (\n            SELECT id\n            FROM jobs\n            WHERE\n                -- Standard case: a job is ready to be run\n                (status = 'queued' AND scheduled_at <= now())\n                OR\n                -- Recovery case: a job was running but the worker missed its heartbeat\n                (status = 'running' AND last_heartbeat < now() - interval '1 second' * $2)\n            ORDER BY priority, scheduled_at, created_at\n            FOR UPDATE SKIP LOCKED\n            LIMIT 1\n        )\n        UPDATE jobs\n        SET status = 'running',\n            owner = $1,\n            started_at = now(),\n            last_heartbeat = now(),\n            -- Increment attempts for jobs that are being retried after a heartbeat timeout\n            attempts = CASE\n                WHEN status = 'running' THEN attempts + 1\n                ELSE attempts\n            END\n        WHERE id = (SELECT id FROM candidate)\n        RETURNING id, relative_path, job_type AS \"job_type!: JobType\", priority, user_id, attempts, max_attempts, dependency_attempts\n        ",
   "describe": {
     "columns": [
       {
@@ -57,7 +57,8 @@
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Text",
+        "Float8"
       ]
     },
     "nullable": [
@@ -71,5 +72,5 @@
       false
     ]
   },
-  "hash": "df68deaac424268f5bb49b83ec2f8e06908f143658095884d4b501f8d60b0cd9"
+  "hash": "af741f7a67853f9e6ce4061f2c972e21b2cd7b24dbd041acd1609f08142e5ca8"
 }
