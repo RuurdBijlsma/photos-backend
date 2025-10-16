@@ -187,30 +187,12 @@ async fn start_server() -> color_eyre::Result<()> {
         .layer(cors)
         .layer(
             TraceLayer::new_for_http()
-                // Do NOT use .on_request() or keep it at a very high level (e.g., Level::TRACE)
-                // if you want to completely suppress start logs.
-                // By default, TraceLayer::new_for_http() uses DefaultOnRequest at Level::DEBUG.
-                // To remove it, you can explicitly set it to a no-op or a very high level:
-                // .on_request(DefaultOnRequest::new().level(Level::TRACE)) // Almost never logs
-                // Or you can configure on_response to log what you want.
-                // This configures what happens when the response is sent.
                 .on_response(
                     DefaultOnResponse::new()
-                        .level(Level::INFO) // Log the finished request at INFO level
-                        .latency_unit(LatencyUnit::Millis), // Show latency in milliseconds
+                        .level(Level::INFO)
+                        .latency_unit(LatencyUnit::Micros),
                 )
-                // You can optionally add .make_span_with() to control the span creation itself
-                // If you remove DefaultOnRequest and only use DefaultOnResponse, the span still starts.
-                // To completely control it, you might need to create a custom MakeSpan.
-                // However, simply overriding .on_request with a higher level effectively hides it.
-                .on_request(|request: &axum::extract::Request, _span: &tracing::Span| {
-                    // This closure is called when the request starts.
-                    // If you return `()` (unit), it does nothing.
-                    // You could also log specific things here if needed,
-                    // but for "finished only", just leave it as a no-op or set a very high level.
-                    // For example:
-                    // tracing::event!(Level::TRACE, "Request starting (but we mostly ignore this)");
-                }),
+                .on_request(|_request: &axum::extract::Request, _span: &tracing::Span| {}),
         );
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3567").await?;
