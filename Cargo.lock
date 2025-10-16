@@ -173,7 +173,6 @@ dependencies = [
  "fs2",
  "jsonwebtoken",
  "rand 0.10.0-rc.0",
- "regex",
  "serde",
  "serde_json",
  "sqlx",

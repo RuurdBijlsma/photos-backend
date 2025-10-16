@@ -5,16 +5,16 @@ mod routes;
 use crate::routes::root::route::__path_root;
 use crate::routes::setup::interfaces;
 use utoipa::{
-    openapi::security::{Http, HttpAuthScheme, SecurityScheme}, Modify,
-    OpenApi,
+    Modify, OpenApi,
+    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
 };
 
 use crate::routes::auth;
+use crate::routes::auth::UserRole;
 use crate::routes::auth::handlers::{
     check_admin, get_me, login, logout, refresh_session, register,
 };
 use crate::routes::auth::middleware::require_role;
-use crate::routes::auth::UserRole;
 use crate::routes::root::route::root;
 use crate::routes::scalar_config::get_custom_html;
 use crate::routes::setup;
@@ -25,15 +25,15 @@ use crate::routes::setup::handlers::{
 use auth::db_model::User;
 use axum::http::{HeaderValue, Method};
 use axum::{
-    middleware, routing::{get, post},
-    Router,
+    Router, middleware,
+    routing::{get, post},
 };
 use common_photos::{get_db_pool, settings};
 use sqlx::PgPool;
-use tower_http::cors::{Any, CorsLayer};
 use tower_http::LatencyUnit;
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::{DefaultOnResponse, TraceLayer};
-use tracing::{error, info, Level};
+use tracing::{Level, error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use utoipa_scalar::{Scalar, Servable};
@@ -193,12 +193,11 @@ async fn start_server() -> color_eyre::Result<()> {
                 // To remove it, you can explicitly set it to a no-op or a very high level:
                 // .on_request(DefaultOnRequest::new().level(Level::TRACE)) // Almost never logs
                 // Or you can configure on_response to log what you want.
-
                 // This configures what happens when the response is sent.
                 .on_response(
                     DefaultOnResponse::new()
                         .level(Level::INFO) // Log the finished request at INFO level
-                        .latency_unit(LatencyUnit::Millis) // Show latency in milliseconds
+                        .latency_unit(LatencyUnit::Millis), // Show latency in milliseconds
                 )
                 // You can optionally add .make_span_with() to control the span creation itself
                 // If you remove DefaultOnRequest and only use DefaultOnResponse, the span still starts.
@@ -211,7 +210,7 @@ async fn start_server() -> color_eyre::Result<()> {
                     // but for "finished only", just leave it as a no-op or set a very high level.
                     // For example:
                     // tracing::event!(Level::TRACE, "Request starting (but we mostly ignore this)");
-                })
+                }),
         );
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3567").await?;

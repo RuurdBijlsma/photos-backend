@@ -23,10 +23,10 @@ pub async fn is_welcome_needed(pool: &PgPool) -> Result<bool, SetupError> {
         return Ok(false);
     }
 
-    let user_option =
-        sqlx::query_scalar!(r"SELECT 1 FROM app_user LIMIT 1")
-            .fetch_optional(pool)
-            .await?.flatten();
+    let user_option = sqlx::query_scalar!(r"SELECT 1 FROM app_user LIMIT 1")
+        .fetch_optional(pool)
+        .await?
+        .flatten();
 
     if user_option.is_some() {
         WELCOME_NEEDED.store(false, Ordering::Relaxed);

@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use sqlx::PgPool;
 
 use crate::auth::{
@@ -9,11 +9,9 @@ use crate::auth::{
     token::generate_refresh_token_parts,
 };
 
-use crate::routes::auth::error::AuthError;
-use crate::routes::auth::interfaces::{
-    CreateUser, LoginUser, RefreshTokenPayload, Tokens,
-};
 use crate::routes::auth::User;
+use crate::routes::auth::error::AuthError;
+use crate::routes::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
 
 /// Login to get a new session.
 #[utoipa::path(
