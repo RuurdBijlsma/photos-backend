@@ -96,16 +96,16 @@ pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCod
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Check if the initial setup is required (i.e., if any admin user exists).
+/// Check if the welcome page should be shown (i.e., if no user exists).
 #[utoipa::path(
     get,
-    path = "/setup/needed",
+    path = "/setup/welcome-needed",
     responses(
-        (status = 200, description = "Setup status retrieved successfully", body = bool),
+        (status = 200, description = "Welcome status retrieved successfully", body = bool),
         (status = 500, description = "Database error"),
     )
 )]
-pub async fn setup_needed(State(pool): State<PgPool>) -> Result<Json<bool>, SetupError> {
-    let needed = service::is_setup_needed(&pool).await?;
+pub async fn welcome_needed(State(pool): State<PgPool>) -> Result<Json<bool>, SetupError> {
+    let needed = service::is_welcome_needed(&pool).await?;
     Ok(Json(needed))
 }

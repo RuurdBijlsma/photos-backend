@@ -15,23 +15,24 @@ use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
 
-static SETUP_DONE: AtomicBool = AtomicBool::new(false);
+static WELCOME_NEEDED: AtomicBool = AtomicBool::new(true);
 
 /// Checks if the initial setup is required by checking for any admin users.
-pub async fn is_setup_needed(pool: &PgPool) -> Result<bool, SetupError> {
-    if SETUP_DONE.load(Ordering::Relaxed) {
+pub async fn is_welcome_needed(pool: &PgPool) -> Result<bool, SetupError> {
+    if !WELCOME_NEEDED.load(Ordering::Relaxed) {
         return Ok(false);
     }
 
-    let count: Option<i64> = sqlx::query_scalar!("SELECT count(id) FROM app_user")
-        .fetch_one(pool)
-        .await?;
+    let user_option =
+        sqlx::query_scalar!(r"SELECT 1 FROM app_user LIMIT 1")
+            .fetch_optional(pool)
+            .await?.flatten();
 
-    let user_exists = count.unwrap_or(0) > 0;
-    if user_exists {
-        SETUP_DONE.store(true, Ordering::Relaxed);
+    if user_option.is_some() {
+        WELCOME_NEEDED.store(false, Ordering::Relaxed);
+        return Ok(false);
     }
-    Ok(!user_exists)
+    Ok(true)
 }
 
 /// Gathers information about the media and thumbnail directories.

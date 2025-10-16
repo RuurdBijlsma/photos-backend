@@ -1,4 +1,4 @@
-CREATE TYPE user_role AS ENUM ('ADMIN', 'USER');
+CREATE TYPE user_role AS ENUM ('admin', 'user');
 
 -- Create the Location table. Many GPS entries can point to one Location.
 CREATE TABLE location
@@ -22,7 +22,7 @@ CREATE TABLE app_user
     password     TEXT        NOT NULL,
     name         TEXT        NOT NULL UNIQUE,
     media_folder TEXT,
-    role         user_role   NOT NULL DEFAULT 'USER'
+    role         user_role   NOT NULL DEFAULT 'user'
 );
 
 -- Create the Refresh Token table for persistent user sessions.

@@ -18,8 +18,8 @@ pub struct User {
 
 /// Maps to the `user_role` Postgres enum.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq, Eq, ToSchema)]
-#[sqlx(type_name = "user_role", rename_all = "UPPERCASE")]
-#[serde(rename_all = "UPPERCASE")]
+#[sqlx(type_name = "user_role", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum UserRole {
     Admin,
     User,

@@ -11,8 +11,8 @@
             "name": "user_role",
             "kind": {
               "Enum": [
-                "ADMIN",
-                "USER"
+                "admin",
+                "user"
               ]
             }
           }
