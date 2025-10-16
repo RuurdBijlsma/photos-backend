@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        WITH candidate AS (\n            SELECT id FROM jobs\n            WHERE (status = 'queued' AND scheduled_at <= now())\n               OR (status = 'running' AND last_heartbeat < now() - interval '1 second' * $2)\n            ORDER BY priority, scheduled_at, created_at\n            FOR UPDATE SKIP LOCKED\n            LIMIT 1\n        )\n        UPDATE jobs\n        SET status = 'running',\n            owner = $1,\n            started_at = now(),\n            last_heartbeat = now(),\n            attempts = CASE WHEN status = 'running' THEN attempts + 1 ELSE attempts END\n        WHERE id = (SELECT id FROM candidate)\n        RETURNING id, relative_path, job_type AS \"job_type!: JobType\", priority, user_id, attempts, max_attempts, dependency_attempts\n        ",
+  "query": "\n        WITH candidate AS (\n            SELECT id FROM jobs\n            WHERE ((status = 'queued' AND scheduled_at <= now())\n               OR (status = 'running' AND last_heartbeat < now() - interval '1 second' * $2))\n              AND ($3 OR job_type != 'analysis')\n            ORDER BY priority, scheduled_at, created_at\n            FOR UPDATE SKIP LOCKED\n            LIMIT 1\n        )\n        UPDATE jobs\n        SET status = 'running',\n            owner = $1,\n            started_at = now(),\n            last_heartbeat = now(),\n            attempts = CASE WHEN status = 'running' THEN attempts + 1 ELSE attempts END\n        WHERE id = (SELECT id FROM candidate)\n        RETURNING id, relative_path, job_type AS \"job_type!: JobType\", priority, user_id, attempts, max_attempts, dependency_attempts\n        ",
   "describe": {
     "columns": [
       {
@@ -58,7 +58,8 @@
     "parameters": {
       "Left": [
         "Text",
-        "Float8"
+        "Float8",
+        "Bool"
       ]
     },
     "nullable": [
@@ -72,5 +73,5 @@
       false
     ]
   },
-  "hash": "04d7a51846936d54de614ff7db58b94bdc3883ccb643ca6b1f901dc39e47a509"
+  "hash": "34e238f05f29f1ed505cb0d6fef3a26e1ffbb0731fbf8f27c2a691d240c51bd4"
 }

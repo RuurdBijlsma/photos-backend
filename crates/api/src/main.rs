@@ -61,8 +61,6 @@ use utoipa_scalar::{Scalar, Servable};
             auth::interfaces::LoginUser,
             auth::interfaces::RefreshTokenPayload,
             auth::interfaces::Tokens,
-            auth::interfaces::GetMeResponse,
-            auth::interfaces::AdminResponse,
             // Setup schemas
             interfaces::FolderQuery,
             interfaces::MakeFolderBody,

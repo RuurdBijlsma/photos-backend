@@ -9,6 +9,9 @@
 * ✅ use db config when setting up db. (pool size etc.)
 * ✅ als een crate de settings retrieved voordat dotenv geladen is gaat het stuk.
 * ✅ look at rust config package
+* ✅ avif not supported by visual analyzer
+* ✅ Add some kind of cli flag to specify that a worker can't work on ML type of job
+* ✅ BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
 * ✅ ML Analysis:
   * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
   * ✅ color data from python, make in rust
@@ -20,7 +23,6 @@
   * ✅ indexing
   * ✅ clean refresh token table on schedule
   * clustering on schedule
-* ✅ BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
 * api:
     * Show photos in ui
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
@@ -29,24 +31,8 @@
     * add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * only allow register if no user exists, or if a valid invite token is passed
     * add random image + theme endpoint
-* auth integration test:
-    1. clear db
-    2. http://localhost:3567/auth/register
-    3. http://localhost:3567/auth/login
-    4. use access_token on http://localhost:3567/auth/me -> verify
-    5. set user role to USER
-    6. http://localhost:3567/auth/admin-check -> should be forbidden
-    7. set user role to ADMIN
-    8. http://localhost:3567/auth/admin-check -> should work
-    9. http://localhost:3567/auth/refresh -> should work, store refresh_token output
-    10. re-run with old refresh_token -> should not work, token is rotated
-    11. re-run with stored refresh_token -> should work, store access_token
-    12. try access token on get_me
-    13. http://localhost:3567/auth/logout
-    14. try http://localhost:3567/auth/refresh -> should not work
-* hdbscan face & photo clustering
-* Add some kind of cli flag to specify that a worker can't work on ML type of job
-* avif not supported by visual analyzer
+* integration test
+* check of readme uitleg klopt met verse windows installatie & linux
 
 
 ## Kubernetes vs Docker compose

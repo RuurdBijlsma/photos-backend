@@ -1,4 +1,4 @@
-use axum::{Extension, Json, extract::State, http::StatusCode};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use sqlx::PgPool;
 
 use crate::auth::{
@@ -9,11 +9,11 @@ use crate::auth::{
     token::generate_refresh_token_parts,
 };
 
-use crate::routes::auth::User;
 use crate::routes::auth::error::AuthError;
 use crate::routes::auth::interfaces::{
-    AdminResponse, CreateUser, GetMeResponse, LoginUser, RefreshTokenPayload, Tokens,
+    CreateUser, LoginUser, RefreshTokenPayload, Tokens,
 };
+use crate::routes::auth::User;
 
 /// Login to get a new session.
 #[utoipa::path(
@@ -97,19 +97,15 @@ pub async fn logout(
     get,
     path = "/auth/me",
     responses(
-        (status = 200, description = "Current user data", body = GetMeResponse),
+        (status = 200, description = "Current user data", body = User),
         (status = 401, description = "Authentication required"),
     ),
     security(
         ("bearer_auth" = [])
     )
 )]
-pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<GetMeResponse>, StatusCode> {
-    Ok(Json(GetMeResponse {
-        message: "You are accessing a protected route!".into(),
-        user_email: user.email,
-        user_id: user.id,
-    }))
+pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<User>, StatusCode> {
+    Ok(Json(user))
 }
 
 /// Check if the current user is an admin.
@@ -117,7 +113,7 @@ pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<GetMeRespon
     get,
     path = "/auth/admin-check",
     responses(
-        (status = 200, description = "Admin check successful", body = AdminResponse),
+        (status = 200, description = "Admin check successful", body = User),
         (status = 401, description = "Authentication required"),
         (status = 403, description = "Admin privileges required"),
     ),
@@ -125,13 +121,6 @@ pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<GetMeRespon
         ("bearer_auth" = [])
     )
 )]
-pub async fn check_admin(
-    Extension(user): Extension<User>,
-) -> Result<Json<AdminResponse>, StatusCode> {
-    Ok(Json(AdminResponse {
-        message: "You are an admin!".into(),
-        user_email: user.email,
-        user_id: user.id,
-        user_role: user.role,
-    }))
+pub async fn check_admin(Extension(user): Extension<User>) -> Result<Json<User>, StatusCode> {
+    Ok(Json(user))
 }
