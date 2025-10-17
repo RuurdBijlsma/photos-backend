@@ -1,17 +1,11 @@
-use axum::{Extension, Json, extract::State, http::StatusCode};
+
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use sqlx::PgPool;
-
-use crate::auth::{
-    service::{
-        authenticate_user, create_access_token, create_user, logout_user, refresh_tokens,
-        store_refresh_token,
-    },
-    token::generate_refresh_token_parts,
-};
-
-use crate::routes::auth::User;
-use crate::routes::auth::error::AuthError;
-use crate::routes::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
+use crate::auth::db_model::User;
+use crate::auth::error::AuthError;
+use crate::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
+use crate::auth::service::{authenticate_user, create_access_token, create_user, logout_user, refresh_tokens, store_refresh_token};
+use crate::auth::token::generate_refresh_token_parts;
 
 /// Login to get a new session.
 #[utoipa::path(
@@ -66,10 +60,7 @@ pub async fn register(
         (status = 401, description = "Invalid or expired refresh token"),
     )
 )]
-pub async fn refresh_session(
-    State(pool): State<PgPool>,
-    Json(payload): Json<RefreshTokenPayload>,
-) -> Result<Json<Tokens>, AuthError> {
+pub async fn refresh_session(State(pool): State<PgPool>, Json(payload): Json<RefreshTokenPayload>,) -> Result<Json<Tokens>, AuthError> {
     refresh_tokens(&pool, &payload.refresh_token).await
 }
 
@@ -103,22 +94,5 @@ pub async fn logout(
     )
 )]
 pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<User>, StatusCode> {
-    Ok(Json(user))
-}
-
-/// Check if the current user is an admin.
-#[utoipa::path(
-    get,
-    path = "/auth/admin-check",
-    responses(
-        (status = 200, description = "Admin check successful", body = User),
-        (status = 401, description = "Authentication required"),
-        (status = 403, description = "Admin privileges required"),
-    ),
-    security(
-        ("bearer_auth" = [])
-    )
-)]
-pub async fn check_admin(Extension(user): Extension<User>) -> Result<Json<User>, StatusCode> {
     Ok(Json(user))
 }

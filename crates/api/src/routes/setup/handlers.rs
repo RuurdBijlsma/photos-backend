@@ -1,12 +1,11 @@
-use crate::routes::setup::error::SetupError;
-use crate::routes::setup::interfaces::{
-    DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse,
-};
-use crate::routes::setup::service;
-use axum::Json;
+
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
+use axum::Json;
 use sqlx::PgPool;
+use crate::setup::error::SetupError;
+use crate::setup::interfaces::{DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse};
+use crate::setup::service::{create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders, is_welcome_needed, validate_user_folder};
 
 /// Get information about the configured media and thumbnail disks.
 #[utoipa::path(
@@ -18,7 +17,7 @@ use sqlx::PgPool;
     )
 )]
 pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
-    let disk_info = service::get_disk_info()?;
+    let disk_info = get_disk_info()?;
     Ok(Json(disk_info))
 }
 
@@ -37,8 +36,8 @@ pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
 pub async fn get_folder_media_sample(
     Query(query): Query<FolderQuery>,
 ) -> Result<Json<MediaSampleResponse>, SetupError> {
-    let user_path = service::validate_user_folder(&query.folder).await?;
-    let response = service::get_media_sample(&user_path)?;
+    let user_path = validate_user_folder(&query.folder).await?;
+    let response = get_media_sample(&user_path)?;
     Ok(Json(response))
 }
 
@@ -57,8 +56,8 @@ pub async fn get_folder_media_sample(
 pub async fn get_folder_unsupported(
     Query(query): Query<FolderQuery>,
 ) -> Result<Json<UnsupportedFilesResponse>, SetupError> {
-    let user_path = service::validate_user_folder(&query.folder).await?;
-    let response = service::get_folder_unsupported_files(&user_path)?;
+    let user_path = validate_user_folder(&query.folder).await?;
+    let response = get_folder_unsupported_files(&user_path)?;
     Ok(Json(response))
 }
 
@@ -77,7 +76,7 @@ pub async fn get_folder_unsupported(
 pub async fn get_folders(
     Query(query): Query<FolderQuery>,
 ) -> Result<Json<Vec<String>>, SetupError> {
-    let folders = service::get_subfolders(&query.folder).await?;
+    let folders = get_subfolders(&query.folder).await?;
     Ok(Json(folders))
 }
 
@@ -92,7 +91,7 @@ pub async fn get_folders(
     )
 )]
 pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCode, SetupError> {
-    service::create_folder(&params.base_folder, &params.new_name).await?;
+    create_folder(&params.base_folder, &params.new_name).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -106,6 +105,6 @@ pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCod
     )
 )]
 pub async fn welcome_needed(State(pool): State<PgPool>) -> Result<Json<bool>, SetupError> {
-    let needed = service::is_welcome_needed(&pool).await?;
+    let needed = is_welcome_needed(&pool).await?;
     Ok(Json(needed))
 }

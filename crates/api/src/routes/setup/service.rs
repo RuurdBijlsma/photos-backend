@@ -1,3 +1,4 @@
+
 use crate::routes::setup::error::SetupError;
 use crate::routes::setup::helpers::{check_drive_info, list_folders};
 use crate::routes::setup::interfaces::{
@@ -14,7 +15,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
-
 static WELCOME_NEEDED: AtomicBool = AtomicBool::new(true);
 
 /// Checks if the initial setup is required by checking for any admin users.
