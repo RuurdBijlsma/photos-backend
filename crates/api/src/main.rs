@@ -4,10 +4,10 @@ pub mod routes;
 pub use routes::*;
 
 use color_eyre::Result;
+use common_photos::{get_db_pool, settings};
 use http::HeaderValue;
 use tower_http::cors;
-use common_photos::{get_db_pool, settings};
-use tower_http::cors::{CorsLayer};
+use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;

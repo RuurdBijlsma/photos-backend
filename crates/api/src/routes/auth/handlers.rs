@@ -1,13 +1,23 @@
+//! This module defines the HTTP handlers for authentication-related routes.
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use sqlx::PgPool;
+
 use crate::auth::db_model::User;
 use crate::auth::error::AuthError;
 use crate::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
-use crate::auth::service::{authenticate_user, create_access_token, create_user, logout_user, refresh_tokens, store_refresh_token};
+use crate::auth::service::{
+    authenticate_user, create_access_token, create_user, logout_user, refresh_tokens,
+    store_refresh_token,
+};
 use crate::auth::token::generate_refresh_token_parts;
 
-/// Login to get a new session.
+/// Handles user login and returns a new set of tokens.
+///
+/// # Errors
+///
+/// Returns `AuthError` if the user credentials are invalid or if there's a
+/// problem creating or storing the tokens.
 #[utoipa::path(
     post,
     path = "/auth/login",
@@ -32,7 +42,12 @@ pub async fn login(
     }))
 }
 
-/// Register a new user.
+/// Handles the registration of a new user.
+///
+/// # Errors
+///
+/// Returns `AuthError` if a user with the provided email already exists or
+/// if a database error occurs during user creation.
 #[utoipa::path(
     post,
     path = "/auth/register",
@@ -50,7 +65,11 @@ pub async fn register(
     Ok(Json(user))
 }
 
-/// Refresh the session using a refresh token.
+/// Handles refreshing the session using a valid refresh token.
+///
+/// # Errors
+///
+/// Returns `AuthError` if the refresh token is invalid, expired, or not found in the database.
 #[utoipa::path(
     post,
     path = "/auth/refresh",
@@ -60,11 +79,18 @@ pub async fn register(
         (status = 401, description = "Invalid or expired refresh token"),
     )
 )]
-pub async fn refresh_session(State(pool): State<PgPool>, Json(payload): Json<RefreshTokenPayload>,) -> Result<Json<Tokens>, AuthError> {
+pub async fn refresh_session(
+    State(pool): State<PgPool>,
+    Json(payload): Json<RefreshTokenPayload>,
+) -> Result<Json<Tokens>, AuthError> {
     refresh_tokens(&pool, &payload.refresh_token).await
 }
 
-/// Logout and invalidate the refresh token.
+/// Handles user logout by invalidating the provided refresh token.
+///
+/// # Errors
+///
+/// Returns `AuthError` if the refresh token is invalid or could not be found.
 #[utoipa::path(
     post,
     path = "/auth/logout",
@@ -81,7 +107,11 @@ pub async fn logout(
     logout_user(&pool, &payload.refresh_token).await
 }
 
-/// Get the current user's details.
+/// Get current user info.
+///
+/// # Errors
+///
+/// Returns `AuthError` if the refresh token is invalid or could not be found.
 #[utoipa::path(
     get,
     path = "/auth/me",

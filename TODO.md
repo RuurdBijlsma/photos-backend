@@ -33,6 +33,7 @@
     * add random image + theme endpoint
 * integration test
 * check of readme uitleg klopt met verse windows installatie & linux
+* update sqlx
 
 
 ## Kubernetes vs Docker compose

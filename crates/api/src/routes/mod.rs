@@ -4,23 +4,26 @@ pub mod root;
 pub mod scalar_config;
 pub mod setup;
 
-use crate::root::handlers::root;
-use crate::scalar_config::get_custom_html;
-use axum::middleware::{from_extractor_with_state, from_fn_with_state};
-use axum::{
-    routing::{get, post},
-    Router,
-};
-use sqlx::PgPool;
-use tower_http::{trace::TraceLayer, LatencyUnit};
-use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
-use utoipa::{Modify, OpenApi};
-use utoipa_scalar::{Scalar, Servable};
 use crate::auth::db_model::{User, UserRole};
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::setup::handlers::{get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder, welcome_needed};
+use crate::root::handlers::root;
+use crate::scalar_config::get_custom_html;
+use crate::setup::handlers::{
+    get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
+    welcome_needed,
+};
+use axum::middleware::{from_extractor_with_state, from_fn_with_state};
+use axum::{
+    Router,
+    routing::{get, post},
+};
+use sqlx::PgPool;
+use tower_http::{LatencyUnit, trace::TraceLayer};
+use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
+use utoipa::{Modify, OpenApi};
+use utoipa_scalar::{Scalar, Servable};
 
 // --- API Documentation ---
 #[derive(OpenApi)]

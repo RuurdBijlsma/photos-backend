@@ -1,19 +1,27 @@
+//! This module provides the core logic for handling media file downloads.
+
 use axum::{
     body::Body,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
 };
 use color_eyre::Report;
-use common_photos::{
-    is_media_file, media_dir, relative_path_canon,
-};
+use common_photos::{is_media_file, media_dir, relative_path_canon};
 use http::Response;
 use std::path::Path;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
+
 use crate::auth::db_model::{User, UserRole};
 use crate::download::error::DownloadError;
 
+/// Securely streams a validated media file to the client after performing authorization checks.
+///
+/// # Errors
+///
+/// Returns a `DownloadError` if path validation fails, the user is not authorized,
+/// the file is not found, the media type is unsupported, or if any file system
+/// or response building error occurs.
 pub async fn download_media_file(user: &User, path: &str) -> Result<Response<Body>, DownloadError> {
     debug!("download_full_file called for path: {}", path);
 
@@ -29,7 +37,11 @@ pub async fn download_media_file(user: &User, path: &str) -> Result<Response<Bod
             debug!("File not found at path: {}", file_path.display());
             return Err(DownloadError::NotFound);
         }
-        Err(e) => return Err(Report::new(e).wrap_err("Failed to canonicalize path").into()),
+        Err(e) => {
+            return Err(Report::new(e)
+                .wrap_err("Failed to canonicalize path")
+                .into());
+        }
     };
 
     if !file_canon.starts_with(&media_dir_canon) {
@@ -41,11 +53,17 @@ pub async fn download_media_file(user: &User, path: &str) -> Result<Response<Bod
     let relative_path = relative_path_canon(&file_canon)?;
     if user.role != UserRole::Admin {
         let Some(user_media_folder) = &user.media_folder else {
-            warn!("Access denied for user {}: No media folder assigned.", user.id);
+            warn!(
+                "Access denied for user {}: No media folder assigned.",
+                user.id
+            );
             return Err(DownloadError::AccessDenied);
         };
         if !relative_path.starts_with(user_media_folder) {
-            warn!("Access denied for user {}: Attempted to access path outside their media folder.", user.id);
+            warn!(
+                "Access denied for user {}: Attempted to access path outside their media folder.",
+                user.id
+            );
             return Err(DownloadError::AccessDenied);
         }
     }
@@ -70,9 +88,13 @@ pub async fn download_media_file(user: &User, path: &str) -> Result<Response<Bod
     let stream = FramedRead::new(file, BytesCodec::new());
     let body = Body::from_stream(stream);
     let mime_type = mime_guess::from_path(&file_canon).first_or_octet_stream();
-    let filename = Path::new(path).file_name().and_then(|n| n.to_str()).unwrap_or("mediafile");
+    let filename = Path::new(path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("mediafile");
     let disposition = format!("inline; filename=\"{filename}\"");
-    let disposition_header = header::HeaderValue::from_str(&disposition).unwrap_or(header::HeaderValue::from_static("inline"));
+    let disposition_header = header::HeaderValue::from_str(&disposition)
+        .unwrap_or(header::HeaderValue::from_static("inline"));
 
     Ok(Response::builder()
         .status(StatusCode::OK)

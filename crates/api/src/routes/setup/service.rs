@@ -1,23 +1,29 @@
+//! This module provides the core service logic for the setup process.
 
-use crate::routes::setup::error::SetupError;
-use crate::routes::setup::helpers::{check_drive_info, list_folders};
-use crate::routes::setup::interfaces::{
-    DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
-};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use common_photos::{
     is_media_file, is_photo_file, media_dir, relative_path_canon, settings, thumbnails_dir,
     to_posix_string,
 };
 use sqlx::PgPool;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
+
+use crate::setup::error::SetupError;
+use crate::setup::helpers::{check_drive_info, list_folders};
+use crate::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
+
 static WELCOME_NEEDED: AtomicBool = AtomicBool::new(true);
 
 /// Checks if the initial setup is required by checking for any admin users.
+///
+/// # Errors
+///
+/// Returns `SetupError` if there is a problem querying the database.
 pub async fn is_welcome_needed(pool: &PgPool) -> Result<bool, SetupError> {
     if !WELCOME_NEEDED.load(Ordering::Relaxed) {
         return Ok(false);
@@ -36,6 +42,10 @@ pub async fn is_welcome_needed(pool: &PgPool) -> Result<bool, SetupError> {
 }
 
 /// Gathers information about the media and thumbnail directories.
+///
+/// # Errors
+///
+/// Returns `SetupError` if the configured media or thumbnail paths are not valid directories.
 pub fn get_disk_info() -> Result<DiskResponse, SetupError> {
     let media_path = media_dir();
     if !media_path.is_dir() {
@@ -57,6 +67,10 @@ pub fn get_disk_info() -> Result<DiskResponse, SetupError> {
 }
 
 /// Creates a new folder within a specified base directory.
+///
+/// # Errors
+///
+/// Returns `SetupError` if the folder name contains invalid characters or if an I/O error occurs.
 pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), SetupError> {
     if !new_name
         .chars()
@@ -71,6 +85,10 @@ pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), Setu
 }
 
 /// Lists subfolders within a given user-provided folder.
+///
+/// # Errors
+///
+/// Returns `SetupError` if path validation or canonicalization fails.
 pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
     let user_path = validate_user_folder(folder).await?;
     let folders = list_folders(&user_path).await?;
@@ -82,6 +100,10 @@ pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
 }
 
 /// Provides a sample of media files from a given folder.
+///
+/// # Errors
+///
+/// Returns `SetupError` if there's an I/O error reading the directory or its files.
 pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, SetupError> {
     let media_folder_info = check_drive_info(user_folder)?;
     let folder_relative = relative_path_canon(user_folder)?;
@@ -129,6 +151,10 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Setup
 }
 
 /// Finds all unsupported files in a given folder.
+///
+/// # Errors
+///
+/// Returns `SetupError` if there is an issue reading the directory or canonicalizing file paths.
 pub fn get_folder_unsupported_files(
     user_folder: &Path,
 ) -> Result<UnsupportedFilesResponse, SetupError> {
@@ -180,8 +206,11 @@ pub fn get_folder_unsupported_files(
     })
 }
 
-/// Validates that a user-provided folder path is a valid, existing directory
-/// within the configured media directory to prevent path traversal attacks.
+/// Validates that a user-provided folder path is a valid, existing directory.
+///
+/// # Errors
+///
+/// Returns `SetupError` if the path is invalid, not a directory, or outside the media root.
 pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, SetupError> {
     let media_path = media_dir();
     let user_path = media_path.join(user_folder);

@@ -1,6 +1,9 @@
+//! This module provides the HTTP handler for downloading media files.
+
 use axum::Extension;
 use axum::extract::Query;
 use axum::response::IntoResponse;
+
 use crate::auth::db_model::User;
 use crate::download::error::DownloadError;
 use crate::download::interfaces::DownloadMediaQuery;
@@ -10,6 +13,11 @@ use crate::download::service::download_media_file;
 ///
 /// This endpoint streams a specific media file to the client. The path to the media
 /// file must be a valid and secure path within the configured media directory.
+///
+/// # Errors
+///
+/// This function returns a `DownloadError` if the path is invalid, the file
+/// isn't found, the user lacks permissions, or an internal server error occurs.
 #[utoipa::path(
     get,
     path = "/download/full-file",
@@ -28,7 +36,7 @@ use crate::download::service::download_media_file;
 pub async fn download_full_file(
     Extension(user): Extension<User>,
     Query(query): Query<DownloadMediaQuery>,
-)->Result<impl IntoResponse, DownloadError>{
+) -> Result<impl IntoResponse, DownloadError> {
     let response = download_media_file(&user, &query.path).await?;
     Ok(response)
 }

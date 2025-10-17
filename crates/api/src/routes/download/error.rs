@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    http::{StatusCode, Response},
+    http::{Response, StatusCode},
     response::IntoResponse,
 };
 use color_eyre::eyre;
@@ -35,7 +35,10 @@ impl IntoResponse for DownloadError {
             Self::Internal(ref e) => {
                 // Log the full error for debugging purposes
                 error!("Internal media error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "An internal server error occurred.".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "An internal server error occurred.".to_string(),
+                )
             }
         };
 

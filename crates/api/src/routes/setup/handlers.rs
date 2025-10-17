@@ -1,13 +1,24 @@
+//! This module defines the HTTP handlers for the initial application setup process.
 
+use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use axum::Json;
 use sqlx::PgPool;
-use crate::setup::error::SetupError;
-use crate::setup::interfaces::{DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse};
-use crate::setup::service::{create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders, is_welcome_needed, validate_user_folder};
 
-/// Get information about the configured media and thumbnail disks.
+use crate::setup::error::SetupError;
+use crate::setup::interfaces::{
+    DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse,
+};
+use crate::setup::service::{
+    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
+    is_welcome_needed, validate_user_folder,
+};
+
+/// Retrieves information about the configured media and thumbnail disks.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if a configured media or thumbnail path is not a valid directory.
 #[utoipa::path(
     get,
     path = "/setup/disks",
@@ -21,7 +32,11 @@ pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
     Ok(Json(disk_info))
 }
 
-/// Get a sample of media files from a specific folder.
+/// Retrieves a sample of media files from a specified folder.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if the provided folder path is invalid or cannot be accessed.
 #[utoipa::path(
     get,
     path = "/setup/media-sample",
@@ -41,7 +56,11 @@ pub async fn get_folder_media_sample(
     Ok(Json(response))
 }
 
-/// Get a list of unsupported files in a specific folder.
+/// Scans a folder and returns a list of unsupported file types.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if the folder path is invalid or if an I/O error occurs during the scan.
 #[utoipa::path(
     get,
     path = "/setup/unsupported-files",
@@ -61,7 +80,11 @@ pub async fn get_folder_unsupported(
     Ok(Json(response))
 }
 
-/// List the subfolders within a given folder.
+/// Lists the subfolders within a given directory.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if the base folder path is invalid or inaccessible.
 #[utoipa::path(
     get,
     path = "/setup/folders",
@@ -80,7 +103,11 @@ pub async fn get_folders(
     Ok(Json(folders))
 }
 
-/// Create a new folder.
+/// Creates a new folder within a specified base directory.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if the folder name or path is invalid, or if an I/O error occurs.
 #[utoipa::path(
     post,
     path = "/setup/make-folder",
@@ -95,7 +122,11 @@ pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCod
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Check if the welcome page should be shown (i.e., if no user exists).
+/// Checks if any users exist in the database to determine if the setup process is needed.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if a database connection cannot be established or the query fails.
 #[utoipa::path(
     get,
     path = "/setup/welcome-needed",

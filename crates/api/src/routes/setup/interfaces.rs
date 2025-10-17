@@ -33,7 +33,7 @@ pub struct MediaSampleResponse {
 }
 
 impl MediaSampleResponse {
-    #[must_use] 
+    #[must_use]
     pub const fn unreadable(folder: String) -> Self {
         Self {
             read_access: false,
@@ -55,7 +55,7 @@ pub struct UnsupportedFilesResponse {
 }
 
 impl UnsupportedFilesResponse {
-    #[must_use] 
+    #[must_use]
     pub fn unreadable(folder: String) -> Self {
         Self {
             read_access: false,
