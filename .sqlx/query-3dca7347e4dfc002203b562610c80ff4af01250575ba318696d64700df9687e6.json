@@ -19,7 +19,9 @@
               "Enum": [
                 "ingest",
                 "remove",
-                "analysis"
+                "analysis",
+                "scan",
+                "cleandb"
               ]
             }
           }

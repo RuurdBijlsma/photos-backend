@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, email, name, password, role as \"role: UserRole\", created_at, updated_at\n           FROM app_user WHERE email = $1",
+  "query": "SELECT id, email, name, password, role as \"role: UserRole\", created_at, updated_at, media_folder\n           FROM app_user WHERE email = $1",
   "describe": {
     "columns": [
       {
@@ -47,6 +47,11 @@
         "ordinal": 6,
         "name": "updated_at",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "media_folder",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -61,8 +66,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "0d8b89a1a1c80c49faa13f3628335ca0758d774d8abf28181e45a05548c8a636"
+  "hash": "a918622df02e60c872b33ee570cdfa010ae63eb742883c5884e7e5046d401d70"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(id) FROM jobs WHERE status IN ('running', 'queued')",
+  "query": "SELECT COUNT(*) FROM media_item WHERE user_id = $1 AND deleted = false",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,13 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int4"
+      ]
     },
     "nullable": [
       null
     ]
   },
-  "hash": "a9821f6ec31f9eb4d81f6f3bc74720e3882df9a52890586dbd0fc02a0004184b"
+  "hash": "e7336e31995277998effaf1f67b2a89143c18b87ec34837f59bc9114d7fbc2b5"
 }
