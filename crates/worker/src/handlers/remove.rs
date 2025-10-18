@@ -1,10 +1,14 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
+use color_eyre::eyre::eyre;
 use color_eyre::Result;
-use common_photos::{Job, media_dir, thumbnails_dir};
+use common_photos::{media_dir, thumbnails_dir, Job};
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
-    let file_path = media_dir().join(&job.relative_path);
+    let Some(relative_path) = &job.relative_path else {
+        return Err(eyre!("Remove job has no associated relative_path"));
+    };
+    let file_path = media_dir().join(relative_path);
 
     // 1. Begin a transaction
     let mut tx = context.pool.begin().await?;
@@ -13,7 +17,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     // Use the transaction object `tx` here.
     let deleted_id: Option<String> = sqlx::query_scalar!(
         "DELETE FROM media_item WHERE relative_path = $1 RETURNING id",
-        &job.relative_path
+        &relative_path
     )
     .fetch_optional(&mut *tx)
     .await?;

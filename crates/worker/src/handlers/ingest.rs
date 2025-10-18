@@ -1,3 +1,4 @@
+use color_eyre::eyre::eyre;
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::db::store_media::store_media_item;
@@ -9,7 +10,13 @@ use common_photos::{
 use ruurd_photos_thumbnail_generation::generate_thumbnails;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
-    let file_path = media_dir().join(&job.relative_path);
+    let Some(relative_path) = &job.relative_path else {
+        return Err(eyre!("Ingest job has no associated relative_path"));
+    };
+    let Some(user_id) = job.user_id else {
+        return Err(eyre!("Ingest job has no associated user_id"));
+    };
+    let file_path = media_dir().join(relative_path);
     let thumb_config = get_thumb_options();
     let thumb_base_dir = thumbnails_dir();
     let media_item_id = nice_id(settings().database.media_item_id_length);
@@ -44,7 +51,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             &relative_path_abs(&file_path)?,
             &media_info,
             &media_item_id,
-            job.user_id,
+            user_id,
         )
         .await?;
 

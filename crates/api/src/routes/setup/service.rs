@@ -4,18 +4,18 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use crate::auth::db_model::User;
+use crate::setup::error::SetupError;
+use crate::setup::helpers::{check_drive_info, list_folders};
+use crate::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
 use common_photos::{
-    is_media_file, is_photo_file, media_dir, relative_path_canon, settings, thumbnails_dir,
-    to_posix_string,
+    enqueue_system_job, is_media_file, is_photo_file, media_dir, relative_path_canon, settings,
+    thumbnails_dir, to_posix_string, JobType,
 };
 use sqlx::PgPool;
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
-
-use crate::setup::error::SetupError;
-use crate::setup::helpers::{check_drive_info, list_folders};
-use crate::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
 
 static WELCOME_NEEDED: AtomicBool = AtomicBool::new(true);
 
@@ -102,7 +102,7 @@ pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
             Path::new(&path)
                 .file_name()
                 .and_then(|name| name.to_str())
-                .map(|s| s.to_owned())
+                .map(ToOwned::to_owned)
                 .ok_or_else(|| SetupError::InvalidPath(path))
         })
         .collect()
@@ -250,4 +250,24 @@ pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, SetupErr
     }
 
     Ok(canonical_user_path)
+}
+
+pub async fn start_processing(
+    user: &User,
+    pool: &PgPool,
+    user_folder: String,
+) -> Result<(), SetupError> {
+    let user_folder = validate_user_folder(&user_folder).await?;
+    let relative_user_folder = relative_path_canon(&user_folder)?;
+    sqlx::query!(
+        "UPDATE app_user SET media_folder = $1 WHERE id = $2",
+        relative_user_folder,
+        user.id
+    )
+    .execute(pool)
+    .await?;
+
+    enqueue_system_job(pool, JobType::Scan).await?;
+
+    Ok(())
 }

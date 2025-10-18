@@ -2,7 +2,6 @@
 
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use sqlx::PgPool;
-
 use crate::auth::db_model::User;
 use crate::auth::error::AuthError;
 use crate::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};

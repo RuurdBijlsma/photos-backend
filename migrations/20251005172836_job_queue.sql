@@ -1,10 +1,11 @@
-CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis');
+CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'clean_db');
 CREATE TYPE job_status AS ENUM ('queued', 'running', 'failed', 'done', 'cancelled');
 
 CREATE TABLE jobs
 (
     id                  BIGSERIAL PRIMARY KEY,
-    relative_path       TEXT       NOT NULL,                  -- references files table
+    relative_path       TEXT,                                 -- references files table
+    user_id             INT REFERENCES app_user (id) ON DELETE CASCADE,
     job_type            job_type   NOT NULL,
     priority            INT        NOT NULL DEFAULT 100,      -- lower = higher priority
     status              job_status NOT NULL DEFAULT 'queued', -- queued, running, failed, done, cancelled
@@ -17,8 +18,7 @@ CREATE TABLE jobs
     created_at          TIMESTAMPTZ         DEFAULT now(),
     scheduled_at        TIMESTAMPTZ         DEFAULT now(),
     last_heartbeat      TIMESTAMPTZ         DEFAULT now(),
-    last_error          TEXT,
-    user_id             INT        NOT NULL REFERENCES app_user (id) ON DELETE CASCADE
+    last_error          TEXT
 );
 
 CREATE INDEX jobs_status_priority_idx ON jobs (status, priority, scheduled_at, created_at);

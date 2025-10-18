@@ -1,18 +1,16 @@
 //! This module defines the HTTP handlers for the initial application setup process.
 
-use axum::Json;
-use axum::extract::{Query, State};
-use axum::http::StatusCode;
-use sqlx::PgPool;
-
 use crate::setup::error::SetupError;
 use crate::setup::interfaces::{
-    DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse,
+    DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
+    UnsupportedFilesResponse,
 };
-use crate::setup::service::{
-    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
-    is_welcome_needed, validate_user_folder,
-};
+use crate::setup::service::{create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders, is_welcome_needed, start_processing, validate_user_folder};
+use axum::extract::{Query, State};
+use axum::http::StatusCode;
+use axum::{Extension, Json};
+use sqlx::PgPool;
+use crate::auth::db_model::User;
 
 /// Retrieves information about the configured media and thumbnail disks.
 ///
@@ -138,4 +136,13 @@ pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCod
 pub async fn welcome_needed(State(pool): State<PgPool>) -> Result<Json<bool>, SetupError> {
     let needed = is_welcome_needed(&pool).await?;
     Ok(Json(needed))
+}
+
+pub async fn post_start_processing(
+    Json(params): Json<StartProcessingBody>,
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+) -> Result<Json<()>, SetupError> {
+    start_processing(&user, &pool, params.user_folder).await?;
+    Ok(Json(()))
 }

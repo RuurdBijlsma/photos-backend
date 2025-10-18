@@ -861,6 +861,7 @@ dependencies = [
  "serde",
  "sqlx",
  "tracing",
+ "utoipa",
 ]
 
 [[package]]
@@ -7094,11 +7095,13 @@ dependencies = [
  "ml_analysis",
  "pgvector",
  "ruurd_photos_thumbnail_generation",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "walkdir",
 ]
 
 [[package]]

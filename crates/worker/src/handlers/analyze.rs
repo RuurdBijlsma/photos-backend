@@ -8,18 +8,21 @@ use common_photos::{Job, file_is_ingested, is_photo_file, media_dir, settings, t
 use tracing::info;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
-    let file_path = media_dir().join(&job.relative_path);
+    let Some(relative_path) = &job.relative_path else {
+        return Err(eyre!("Ingest job has no associated relative_path"));
+    };
+    let file_path = media_dir().join(relative_path);
 
     if !file_is_ingested(&file_path, &context.pool).await? {
         info!(
             "File {} is not ingested yet, rescheduling analysis.",
-            &job.relative_path
+            &relative_path
         );
         return Ok(JobResult::DependencyReschedule);
     }
 
     let mut tx = context.pool.begin().await?;
-    let media_item_id = get_media_item_id(&mut tx, &job.relative_path).await?;
+    let media_item_id = get_media_item_id(&mut tx, relative_path).await?;
     let thumb_dir = thumbnails_dir().join(&media_item_id);
 
     let images_to_analyze = if is_photo_file(&file_path) {

@@ -1,14 +1,8 @@
-mod clean_db;
-pub mod scan_all;
-
-use crate::clean_db::clean_db;
-use crate::scan_all::run_scan;
 use color_eyre::Result;
-use common_photos::{alert, get_db_pool};
+use common_photos::{enqueue_system_job, get_db_pool, JobType};
 use std::time::Duration;
 use tokio::time;
 use tracing::error;
-use tracing::warn;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -25,15 +19,8 @@ async fn main() -> Result<()> {
         tokio::spawn(async {
             let result: Result<()> = async {
                 let pool = get_db_pool().await?;
-                if let Err(e) = run_scan(&pool).await {
-                    alert!("Scanning failed: {e}");
-                    error!("Scanning failed: {}", e);
-                }
-                if let Err(e) = clean_db(&pool).await {
-                    alert!("Clean db failed: {e}");
-                    error!("Clean db failed: {}", e);
-                }
-
+                enqueue_system_job(&pool, JobType::Scan).await?;
+                enqueue_system_job(&pool, JobType::CleanDB).await?;
                 Ok(())
             }
             .await;

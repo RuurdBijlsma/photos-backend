@@ -72,3 +72,8 @@ pub struct DiskResponse {
     pub media_folder: PathInfoResponse,
     pub thumbnails_folder: PathInfoResponse,
 }
+
+#[derive(Serialize, ToSchema)]
+pub struct StartProcessingBody{
+    pub user_folder: String,
+}

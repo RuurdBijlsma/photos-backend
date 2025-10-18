@@ -1,6 +1,10 @@
+use crate::context::WorkerContext;
+use crate::handlers::JobResult;
 use color_eyre::eyre::eyre;
+use color_eyre::eyre::Result;
 use common_photos::{
-    enqueue_full_ingest, enqueue_remove_job, media_dir, relative_path_abs, settings, thumbnails_dir,
+    enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs, settings, thumbnails_dir, Job,
+    JobType,
 };
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
@@ -36,7 +40,7 @@ fn get_media_files(folder: &Path, allowed_exts: &HashSet<&str>) -> Vec<std::path
 /// # Errors
 ///
 /// * Returns an I/O error if the thumbnails directory or its entries cannot be read.
-async fn get_thumbnail_folders() -> color_eyre::Result<HashSet<String>> {
+async fn get_thumbnail_folders() -> Result<HashSet<String>> {
     let mut set = HashSet::new();
     let mut entries = fs::read_dir(thumbnails_dir()).await?;
     while let Some(entry) = entries.next_entry().await? {
@@ -54,7 +58,7 @@ async fn get_thumbnail_folders() -> color_eyre::Result<HashSet<String>> {
 /// # Errors
 ///
 /// * Returns an error for database query failures or file system I/O errors during deletion.
-async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
+async fn sync_thumbnails(pool: &Pool<Postgres>, user_id: i32) -> Result<()> {
     let Some(job_count) =
         sqlx::query_scalar!("SELECT count(id) FROM jobs WHERE status IN ('running', 'queued')")
             .fetch_one(pool)
@@ -91,7 +95,7 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
         if file.exists() {
             info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
             // Re-ingest files with missing thumbnails, as long as the fs file exists.
-            enqueue_full_ingest(pool, &relative_path).await?;
+            enqueue_full_ingest(pool, &relative_path, user_id).await?;
         }
     }
 
@@ -103,7 +107,11 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> color_eyre::Result<()> {
 /// # Errors
 ///
 /// * Returns an error if file system scanning, database queries, or job enqueuing fails.
-pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
+pub async fn sync_files_to_db(
+    user_folder: &Path,
+    user_id: i32,
+    pool: &Pool<Postgres>,
+) -> Result<()> {
     let thumb_options = &settings().thumbnail_generation;
     let allowed: HashSet<_> = thumb_options
         .photo_extensions
@@ -112,34 +120,42 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
         .map(String::as_str)
         .collect();
 
-    let all_files = get_media_files(media_dir, &allowed);
+    let all_files = get_media_files(user_folder, &allowed);
     let fs_paths: HashSet<String> = all_files
         .into_iter()
         .flat_map(|p| relative_path_abs(&p))
         .collect();
 
-    let db_paths: HashSet<String> = sqlx::query_scalar!("SELECT relative_path FROM media_item")
-        .fetch_all(pool)
-        .await?
-        .into_iter()
-        .collect();
+    let db_paths: HashSet<String> = sqlx::query_scalar!(
+        "SELECT relative_path FROM media_item WHERE user_id = $1",
+        user_id
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .collect();
 
     let to_ingest: Vec<_> = fs_paths.difference(&db_paths).cloned().collect();
     let to_remove: Vec<_> = db_paths.difference(&fs_paths).cloned().collect();
 
     for rel_path in to_ingest {
-        if let Err(e) = enqueue_full_ingest(pool, &rel_path).await {
+        if let Err(e) = enqueue_full_ingest(pool, &rel_path, user_id).await {
             error!("Error enqueueing file ingest: {:?}", e.to_string());
         }
     }
     for rel_path in to_remove {
-        if let Err(e) = enqueue_remove_job(pool, &rel_path).await {
+        if let Err(e) = enqueue_file_job(pool, JobType::Remove, &rel_path, user_id).await {
             error!("Error enqueueing file remove: {:?}", e.to_string());
         }
     }
 
-    sync_thumbnails(pool).await?;
+    sync_thumbnails(pool, user_id).await?;
     Ok(())
+}
+
+struct ScanUser {
+    pub id: i32,
+    pub media_folder: Option<String>,
 }
 
 /// Run the indexing scan.
@@ -147,11 +163,28 @@ pub async fn sync_files_to_db(media_dir: &Path, pool: &Pool<Postgres>) -> color_
 /// # Errors
 ///
 /// Error if creating thumbnails dir doesn't work out
-pub async fn run_scan(pool: &PgPool) -> color_eyre::Result<()> {
+pub async fn run_scan(pool: &PgPool) -> Result<()> {
+    let users = sqlx::query_as!(
+        ScanUser,
+        r#"SELECT id, media_folder FROM app_user WHERE media_folder IS NOT NULL"#
+    )
+    .fetch_all(pool)
+    .await?;
     let media_dir = media_dir();
     info!("Scanning \"{}\" ...", &media_dir.display());
-    sync_files_to_db(media_dir, pool).await?;
+    for user in users {
+        let Some(media_folder) = user.media_folder else {
+            continue;
+        };
+        sync_files_to_db(&media_dir.join(media_folder), user.id, pool).await?;
+    }
     info!("Scan complete");
 
     Ok(())
+}
+
+pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
+    run_scan(&context.pool).await?;
+
+    Ok(JobResult::Done)
 }

@@ -4,7 +4,7 @@ pub mod root;
 pub mod scalar_config;
 pub mod setup;
 
-use crate::auth::db_model::{User, UserRole};
+use crate::auth::db_model::{User};
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
@@ -24,6 +24,7 @@ use tower_http::{LatencyUnit, trace::TraceLayer};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
+use common_photos::UserRole;
 
 // --- API Documentation ---
 #[derive(OpenApi)]
@@ -50,7 +51,7 @@ use utoipa_scalar::{Scalar, Servable};
         schemas(
             // Auth schemas
             auth::db_model::User,
-            auth::db_model::UserRole,
+            common_photos::UserRole,
             auth::interfaces::CreateUser,
             auth::interfaces::LoginUser,
             auth::interfaces::RefreshTokenPayload,

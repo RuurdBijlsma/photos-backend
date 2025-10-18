@@ -1,6 +1,6 @@
-use crate::auth::db_model::UserRole;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use common_photos::UserRole;
 
 /// Represents the data required to create a new user.
 #[derive(Deserialize, Debug, ToSchema)]
