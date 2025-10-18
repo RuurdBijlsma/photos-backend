@@ -1,9 +1,9 @@
-use color_eyre::eyre::eyre;
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::db::store_media::store_media_item;
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use common_photos::{
     Job, get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir,
 };

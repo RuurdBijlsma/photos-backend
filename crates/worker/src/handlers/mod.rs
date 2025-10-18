@@ -4,10 +4,10 @@ use color_eyre::Result;
 use common_photos::{Job, JobType};
 
 mod analyze;
+mod clean_db;
 mod ingest;
 mod remove;
 mod scan;
-mod clean_db;
 
 pub mod db;
 
@@ -27,8 +27,8 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::Ingest => ingest::handle(context, job).await,
         JobType::Analysis => analyze::handle(context, job).await,
         JobType::Remove => remove::handle(context, job).await,
-        JobType::Scan=>scan::handle(context,job).await,
-        JobType::CleanDB=>clean_db::handle(context, job).await,
+        JobType::Scan => scan::handle(context, job).await,
+        JobType::CleanDB => clean_db::handle(context, job).await,
     };
 
     heartbeat_handle.abort();

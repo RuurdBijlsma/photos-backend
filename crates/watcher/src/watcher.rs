@@ -1,8 +1,7 @@
 use common_photos::{
-    enqueue_file_job, enqueue_full_ingest, relative_path_abs, user_id_from_relative_path,
-    JobType,
+    JobType, enqueue_file_job, enqueue_full_ingest, relative_path_abs, user_id_from_relative_path,
 };
-use futures::channel::mpsc::{channel, Receiver};
+use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::{Pool, Postgres};

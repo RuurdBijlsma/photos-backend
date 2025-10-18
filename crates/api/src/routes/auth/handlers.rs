@@ -1,7 +1,5 @@
 //! This module defines the HTTP handlers for authentication-related routes.
 
-use axum::{Extension, Json, extract::State, http::StatusCode};
-use sqlx::PgPool;
 use crate::auth::db_model::User;
 use crate::auth::error::AuthError;
 use crate::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
@@ -10,6 +8,8 @@ use crate::auth::service::{
     store_refresh_token,
 };
 use crate::auth::token::generate_refresh_token_parts;
+use axum::{Extension, Json, extract::State, http::StatusCode};
+use sqlx::PgPool;
 
 /// Handles user login and returns a new set of tokens.
 ///

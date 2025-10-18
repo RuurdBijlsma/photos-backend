@@ -5,14 +5,14 @@ use axum::{
     http::{StatusCode, header},
 };
 use color_eyre::Report;
-use common_photos::{is_media_file, media_dir, relative_path_canon, UserRole};
+use common_photos::{UserRole, is_media_file, media_dir, relative_path_canon};
 use http::Response;
 use std::path::Path;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
 
-use crate::auth::db_model::{User};
+use crate::auth::db_model::User;
 use crate::download::error::DownloadError;
 
 /// Securely streams a validated media file to the client after performing authorization checks.

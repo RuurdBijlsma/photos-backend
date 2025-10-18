@@ -74,6 +74,6 @@ pub struct DiskResponse {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct StartProcessingBody{
+pub struct StartProcessingBody {
     pub user_folder: String,
 }

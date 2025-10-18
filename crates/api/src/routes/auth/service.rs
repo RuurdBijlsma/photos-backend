@@ -1,4 +1,4 @@
-use common_photos::UserRole;
+use crate::auth::db_model::User;
 use crate::auth::token::{
     RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
@@ -8,11 +8,11 @@ use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
-use common_photos::{settings, UserWithPassword};
+use common_photos::UserRole;
+use common_photos::{UserWithPassword, settings};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
-use crate::auth::db_model::User;
 
 /// Authenticates a user based on email and password.
 ///

@@ -15,7 +15,10 @@ pub async fn run_worker_loop(context: &WorkerContext) -> Result<()> {
 
         if let Some(job) = maybe_job {
             sleeping = false;
-            info!("🐜 Picked up {:?} job: {:?}", job.job_type, job.relative_path);
+            info!(
+                "🐜 Picked up {:?} job: {:?}",
+                job.job_type, job.relative_path
+            );
 
             let job_result = handle_job(context, &job).await;
 

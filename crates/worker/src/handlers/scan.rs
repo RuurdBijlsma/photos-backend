@@ -1,10 +1,10 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use color_eyre::eyre::eyre;
 use color_eyre::eyre::Result;
+use color_eyre::eyre::eyre;
 use common_photos::{
-    enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs, settings, thumbnails_dir, Job,
-    JobType,
+    Job, JobType, enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs, settings,
+    thumbnails_dir,
 };
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;

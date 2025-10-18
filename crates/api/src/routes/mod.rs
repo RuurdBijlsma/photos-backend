@@ -4,7 +4,7 @@ pub mod root;
 pub mod scalar_config;
 pub mod setup;
 
-use crate::auth::db_model::{User};
+use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
@@ -19,12 +19,12 @@ use axum::{
     Router,
     routing::{get, post},
 };
+use common_photos::UserRole;
 use sqlx::PgPool;
 use tower_http::{LatencyUnit, trace::TraceLayer};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
-use common_photos::UserRole;
 
 // --- API Documentation ---
 #[derive(OpenApi)]

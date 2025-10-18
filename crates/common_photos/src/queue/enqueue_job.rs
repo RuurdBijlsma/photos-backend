@@ -1,4 +1,4 @@
-use crate::{is_video_file, media_dir, JobType};
+use crate::{JobType, is_video_file, media_dir};
 use color_eyre::eyre::Result;
 use sqlx::{PgConnection, PgPool, PgTransaction};
 use tracing::info;
@@ -37,7 +37,12 @@ pub async fn enqueue_system_job(pool: &PgPool, job_type: JobType) -> Result<()> 
     Ok(())
 }
 
-pub async fn enqueue_file_job(pool: &PgPool, job_type: JobType, relative_path: &str, user_id: i32) -> Result<()> {
+pub async fn enqueue_file_job(
+    pool: &PgPool,
+    job_type: JobType,
+    relative_path: &str,
+    user_id: i32,
+) -> Result<()> {
     let is_video = is_video_file(&media_dir().join(relative_path));
     let priority = job_type.get_priority(is_video);
 

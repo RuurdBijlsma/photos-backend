@@ -1,16 +1,19 @@
 //! This module defines the HTTP handlers for the initial application setup process.
 
+use crate::auth::db_model::User;
 use crate::setup::error::SetupError;
 use crate::setup::interfaces::{
     DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
     UnsupportedFilesResponse,
 };
-use crate::setup::service::{create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders, is_welcome_needed, start_processing, validate_user_folder};
+use crate::setup::service::{
+    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
+    is_welcome_needed, start_processing, validate_user_folder,
+};
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use sqlx::PgPool;
-use crate::auth::db_model::User;
 
 /// Retrieves information about the configured media and thumbnail disks.
 ///
