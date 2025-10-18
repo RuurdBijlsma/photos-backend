@@ -117,6 +117,7 @@ fn public_routes() -> Router<PgPool> {
 fn protected_routes(pool: PgPool) -> Router<PgPool> {
     Router::new()
         .route("/auth/me", get(get_me))
+        .route("/download/full-file", get(download_full_file))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 
@@ -127,7 +128,6 @@ fn admin_routes(pool: PgPool) -> Router<PgPool> {
         .route("/setup/unsupported-files", get(get_folder_unsupported))
         .route("/setup/folders", get(get_folders))
         .route("/setup/make-folder", post(make_folder))
-        .route("/download/full-file", get(download_full_file))
         .route_layer(from_fn_with_state(UserRole::Admin, require_role))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }

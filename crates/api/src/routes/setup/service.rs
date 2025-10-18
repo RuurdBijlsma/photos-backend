@@ -84,7 +84,7 @@ pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), Setu
     Ok(())
 }
 
-/// Lists subfolders within a given user-provided folder.
+/// Lists subfolders within a given user-provided folder, returning only the folder names.
 ///
 /// # Errors
 ///
@@ -92,11 +92,20 @@ pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), Setu
 pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
     let user_path = validate_user_folder(folder).await?;
     let folders = list_folders(&user_path).await?;
+
     folders
         .iter()
         .map(relative_path_canon)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(Into::into)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .map(|path| {
+            Path::new(&path)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(|s| s.to_owned())
+                .ok_or_else(|| SetupError::InvalidPath(path))
+        })
+        .collect()
 }
 
 /// Provides a sample of media files from a given folder.

@@ -1,5 +1,5 @@
 directories:
-  media_folder: media_dir
+  media_folder: C:\Users\Ruurd\Pictures\photos
   thumbnails_folder: thumbnails
 
 logging:
@@ -7,7 +7,7 @@ logging:
 
 api:
   host: "0.0.0.0"
-  port: 8080
+  port: 9475
   allowed_origins:
     - "http://localhost:5173"
 

@@ -23,8 +23,6 @@ use crate::download::error::DownloadError;
 /// the file is not found, the media type is unsupported, or if any file system
 /// or response building error occurs.
 pub async fn download_media_file(user: &User, path: &str) -> Result<Response<Body>, DownloadError> {
-    debug!("download_full_file called for path: {}", path);
-
     // --- 1. Security & Path Validation ---
     let media_dir_canon = media_dir()
         .canonicalize()
