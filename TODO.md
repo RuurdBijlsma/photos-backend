@@ -35,6 +35,9 @@
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
+* user_id from relative path is broken (it looks for username in first path of path, but we use media folder now in the
+  db, so we'll somehow have to get this. I think only way is loop over all media_folders in db and see if file path
+  starts_with each media_folder)
 
 ## Kubernetes vs Docker compose
 

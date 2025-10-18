@@ -1,4 +1,4 @@
-CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'clean_db');
+CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'cleandb');
 CREATE TYPE job_status AS ENUM ('queued', 'running', 'failed', 'done', 'cancelled');
 
 CREATE TABLE jobs
@@ -21,14 +21,13 @@ CREATE TABLE jobs
     last_error          TEXT
 );
 
-CREATE INDEX jobs_status_priority_idx ON jobs (status, priority, scheduled_at, created_at);
-CREATE INDEX jobs_active_relative_path_idx
-    ON jobs (relative_path)
-    WHERE status IN ('queued', 'running');
-CREATE INDEX jobs_relative_path_idx ON jobs (relative_path);
+-- For the job claiming worker
+CREATE INDEX idx_jobs_claim_queued ON jobs (priority, relative_path, scheduled_at, created_at);
+CREATE INDEX idx_jobs_claim_running ON jobs (priority, relative_path, last_heartbeat);
 
+-- For general application queries
+CREATE INDEX jobs_active_relative_path_idx ON jobs (relative_path);
 CREATE INDEX idx_jobs_user_id ON jobs (user_id);
 
-ALTER TABLE jobs
-    ADD CONSTRAINT chk_attempts_nonneg CHECK (attempts >= 0),
-    ADD CONSTRAINT chk_priority_positive CHECK (priority >= 0);
+-- For monitoring/dashboarding that doesn't exist yet
+CREATE INDEX jobs_status_priority_idx ON jobs (status, priority, scheduled_at, created_at);
