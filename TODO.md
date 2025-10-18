@@ -26,7 +26,7 @@
 * api:
     * Show photos in ui
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
-    * cors met tower-http::cors
+    * ✅ cors met tower-http::cors
     * password reset flow (email) (make mail optional)
     * add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * only allow register if no user exists, or if a valid invite token is passed

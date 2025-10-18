@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod download;
+pub mod photos;
 pub mod root;
 pub mod scalar_config;
 pub mod setup;
@@ -8,9 +9,13 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
+use crate::photos::handlers::random_photo;
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
-use crate::setup::handlers::{get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder, post_start_processing, welcome_needed};
+use crate::setup::handlers::{
+    get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
+    post_start_processing, welcome_needed,
+};
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use axum::{
     routing::{get, post},
@@ -116,6 +121,7 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
     Router::new()
         .route("/auth/me", get(get_me))
         .route("/download/full-file", get(download_full_file))
+        .route("/photos/random", get(random_photo))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 

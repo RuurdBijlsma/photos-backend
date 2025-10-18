@@ -1,13 +1,17 @@
 #![allow(clippy::needless_for_each, clippy::cognitive_complexity)]
 
 pub mod routes;
+
+use axum::routing::get_service;
 pub use routes::*;
 
 use color_eyre::Result;
 use common_photos::{get_db_pool, settings};
-use http::{HeaderValue, header};
+use http::{header, HeaderValue};
 use tower_http::cors;
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
 use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -55,8 +59,19 @@ async fn main() -> Result<()> {
             header::PRAGMA,
         ]);
 
+    // Static file serving
+    let serve_dir = ServeDir::new("thumbnails");
+
+    // Create a middleware layer to add the Cache-Control header.
+    let cache_layer = SetResponseHeaderLayer::if_not_present(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=31536000, immutable"),
+    );
+
     // --- Create Router & Start Server ---
-    let app = create_router(pool).layer(cors);
+    let app = create_router(pool)
+        .layer(cors)
+        .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
     let listen_address = format!("{}:{}", api_settings.host, api_settings.port);
     let listener = tokio::net::TcpListener::bind(&listen_address).await?;
 
