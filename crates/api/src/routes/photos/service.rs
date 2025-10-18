@@ -3,7 +3,7 @@
 use crate::auth::db_model::User;
 use crate::photos::interfaces::RandomPhotoResponse;
 use crate::setup::error::SetupError;
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 use sqlx::PgPool;
 use tracing::warn;
 

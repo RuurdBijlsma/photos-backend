@@ -7,7 +7,7 @@ pub use routes::*;
 
 use color_eyre::Result;
 use common_photos::{get_db_pool, settings};
-use http::{header, HeaderValue};
+use http::{HeaderValue, header};
 use tower_http::cors;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
