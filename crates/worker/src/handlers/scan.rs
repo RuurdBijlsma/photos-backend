@@ -1,11 +1,8 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use color_eyre::eyre::Result;
 use color_eyre::eyre::eyre;
-use common_photos::{
-    Job, JobType, enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs, settings,
-    thumbnails_dir,
-};
+use color_eyre::eyre::Result;
+use common_photos::{enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs, settings, thumbnails_dir, user_id_from_relative_path, Job, JobType};
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
 use std::path::Path;
@@ -35,79 +32,12 @@ fn get_media_files(folder: &Path, allowed_exts: &HashSet<&str>) -> Vec<std::path
     files
 }
 
-/// Reads the thumbnails directory and returns a set of all subdirectory names (media item IDs).
-///
-/// # Errors
-///
-/// * Returns an I/O error if the thumbnails directory or its entries cannot be read.
-async fn get_thumbnail_folders() -> Result<HashSet<String>> {
-    let mut set = HashSet::new();
-    let mut entries = fs::read_dir(thumbnails_dir()).await?;
-    while let Some(entry) = entries.next_entry().await? {
-        if entry.file_type().await?.is_dir()
-            && let Some(name) = entry.file_name().to_str()
-        {
-            set.insert(name.to_owned());
-        }
-    }
-    Ok(set)
-}
-
-/// Synchronizes thumbnail folders with the database, deleting orphans and re-ingesting items with missing thumbnails.
-///
-/// # Errors
-///
-/// * Returns an error for database query failures or file system I/O errors during deletion.
-async fn sync_thumbnails(pool: &Pool<Postgres>, user_id: i32) -> Result<()> {
-    let Some(job_count) =
-        sqlx::query_scalar!("SELECT count(id) FROM jobs WHERE status IN ('running', 'queued')")
-            .fetch_one(pool)
-            .await?
-    else {
-        return Err(eyre!("Can't get job count"));
-    };
-    if job_count > 0 {
-        return Ok(()); // skip if ingest jobs are pending
-    }
-
-    let (thumb_ids, db_ids) = tokio::try_join!(get_thumbnail_folders(), async {
-        let rows: Vec<String> = sqlx::query_scalar!("SELECT id FROM media_item")
-            .fetch_all(pool)
-            .await?;
-        Ok::<HashSet<String>, color_eyre::Report>(rows.into_iter().collect())
-    })?;
-
-    let to_delete: Vec<_> = thumb_ids.difference(&db_ids).cloned().collect();
-    let base = thumbnails_dir();
-    for id in to_delete {
-        info!("Deleting thumbnail folder {}", id);
-        fs::remove_dir_all(base.join(id)).await?;
-    }
-
-    let db_items_missing_thumbnails = db_ids.difference(&thumb_ids).cloned().collect::<Vec<_>>();
-    let media_dir = media_dir();
-    for id in db_items_missing_thumbnails {
-        let relative_path: String =
-            sqlx::query_scalar!("SELECT relative_path FROM media_item WHERE id = $1", id)
-                .fetch_one(pool)
-                .await?;
-        let file = media_dir.join(&relative_path);
-        if file.exists() {
-            info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
-            // Re-ingest files with missing thumbnails, as long as the fs file exists.
-            enqueue_full_ingest(pool, &relative_path, user_id).await?;
-        }
-    }
-
-    Ok(())
-}
-
 /// Synchronizes the filesystem state with the database by enqueuing new files for ingest and old files for removal.
 ///
 /// # Errors
 ///
 /// * Returns an error if file system scanning, database queries, or job enqueuing fails.
-pub async fn sync_files_to_db(
+pub async fn sync_user_files_to_db(
     user_folder: &Path,
     user_id: i32,
     pool: &Pool<Postgres>,
@@ -148,8 +78,75 @@ pub async fn sync_files_to_db(
             error!("Error enqueueing file remove: {:?}", e.to_string());
         }
     }
+    Ok(())
+}
 
-    sync_thumbnails(pool, user_id).await?;
+/// Reads the thumbnails directory and returns a set of all subdirectory names (media item IDs).
+///
+/// # Errors
+///
+/// * Returns an I/O error if the thumbnails directory or its entries cannot be read.
+async fn get_thumbnail_folders() -> Result<HashSet<String>> {
+    let mut set = HashSet::new();
+    let mut entries = fs::read_dir(thumbnails_dir()).await?;
+    while let Some(entry) = entries.next_entry().await? {
+        if entry.file_type().await?.is_dir()
+            && let Some(name) = entry.file_name().to_str()
+        {
+            set.insert(name.to_owned());
+        }
+    }
+    Ok(set)
+}
+
+/// Synchronizes thumbnail folders with the database, deleting orphans and re-ingesting items with missing thumbnails.
+///
+/// # Errors
+///
+/// * Returns an error for database query failures or file system I/O errors during deletion.
+async fn sync_thumbnails(pool: &Pool<Postgres>) -> Result<()> {
+    let Some(job_count) = sqlx::query_scalar!(
+        "SELECT count(id) FROM jobs WHERE status IN ('running', 'queued') AND job_type in ('ingest', 'remove')"
+    )
+        .fetch_one(pool)
+        .await?
+    else {
+        return Err(eyre!("Can't get job count"));
+    };
+    if job_count > 0 {
+        return Ok(()); // skip if ingest jobs are pending
+    }
+
+    let (thumb_ids, db_ids) = tokio::try_join!(get_thumbnail_folders(), async {
+        let rows: Vec<String> = sqlx::query_scalar!("SELECT id FROM media_item")
+            .fetch_all(pool)
+            .await?;
+        Ok::<HashSet<String>, color_eyre::Report>(rows.into_iter().collect())
+    })?;
+
+    let to_delete: Vec<_> = thumb_ids.difference(&db_ids).cloned().collect();
+    let base = thumbnails_dir();
+    for id in to_delete {
+        info!("Deleting thumbnail folder {}", id);
+        fs::remove_dir_all(base.join(id)).await?;
+    }
+
+    let db_items_missing_thumbnails = db_ids.difference(&thumb_ids).cloned().collect::<Vec<_>>();
+    let media_dir = media_dir();
+    for id in db_items_missing_thumbnails {
+        let relative_path: String =
+            sqlx::query_scalar!("SELECT relative_path FROM media_item WHERE id = $1", id)
+                .fetch_one(pool)
+                .await?;
+        let file = media_dir.join(&relative_path);
+        if file.exists() {
+            info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
+            // Re-ingest files with missing thumbnails, as long as the fs file exists.
+            let user_id = user_id_from_relative_path(&relative_path, pool).await?;
+            enqueue_full_ingest(pool, &relative_path, user_id).await?;
+        }
+    }
+
     Ok(())
 }
 
@@ -176,9 +173,11 @@ pub async fn run_scan(pool: &PgPool) -> Result<()> {
         let Some(media_folder) = user.media_folder else {
             continue;
         };
-        sync_files_to_db(&media_dir.join(media_folder), user.id, pool).await?;
+        sync_user_files_to_db(&media_dir.join(media_folder), user.id, pool).await?;
     }
-    info!("Scan complete");
+    info!("User scan complete");
+    sync_thumbnails(pool).await?;
+    info!("Thumbnail sync complete.");
 
     Ok(())
 }

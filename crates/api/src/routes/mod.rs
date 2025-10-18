@@ -10,18 +10,15 @@ use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
-use crate::setup::handlers::{
-    get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
-    welcome_needed,
-};
+use crate::setup::handlers::{get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder, post_start_processing, welcome_needed};
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 use common_photos::UserRole;
 use sqlx::PgPool;
-use tower_http::{LatencyUnit, trace::TraceLayer};
+use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
@@ -129,6 +126,7 @@ fn admin_routes(pool: PgPool) -> Router<PgPool> {
         .route("/setup/unsupported-files", get(get_folder_unsupported))
         .route("/setup/folders", get(get_folders))
         .route("/setup/make-folder", post(make_folder))
+        .route("/setup/start-processing", post(post_start_processing))
         .route_layer(from_fn_with_state(UserRole::Admin, require_role))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }

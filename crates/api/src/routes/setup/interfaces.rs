@@ -7,12 +7,6 @@ pub struct FolderQuery {
     pub folder: String,
 }
 
-#[derive(Deserialize, ToSchema)]
-pub struct MakeFolderBody {
-    pub base_folder: String,
-    pub new_name: String,
-}
-
 #[derive(Serialize, ToSchema)]
 pub struct PathInfoResponse {
     pub folder: String,
@@ -73,7 +67,13 @@ pub struct DiskResponse {
     pub thumbnails_folder: PathInfoResponse,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Deserialize, ToSchema)]
+pub struct MakeFolderBody {
+    pub base_folder: String,
+    pub new_name: String,
+}
+
+#[derive(Deserialize, ToSchema)]
 pub struct StartProcessingBody {
     pub user_folder: String,
 }

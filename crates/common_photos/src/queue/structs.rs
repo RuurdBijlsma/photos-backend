@@ -29,21 +29,21 @@ impl JobType {
         match self {
             Self::Ingest => {
                 if is_video {
-                    20
+                    55
                 } else {
-                    10
+                    50
                 }
             }
             Self::Analysis => {
                 if is_video {
-                    100
+                    95
                 } else {
                     90
                 }
             }
             Self::Remove => 0,
-            Self::Scan => 4,
-            Self::CleanDB => 8,
+            Self::Scan => 10,
+            Self::CleanDB => 20,
         }
     }
 }

@@ -141,11 +141,24 @@ pub async fn welcome_needed(State(pool): State<PgPool>) -> Result<Json<bool>, Se
     Ok(Json(needed))
 }
 
+/// Start scanning the user folder and process the photos and videos.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if a database connection cannot be established or the query fails.
+#[utoipa::path(
+    get,
+    path = "/setup/start-processing",
+    responses(
+        (status = 200, description = "Processing job enqueued successfully.", body = bool),
+        (status = 500, description = "Database error"),
+    )
+)]
 pub async fn post_start_processing(
-    Json(params): Json<StartProcessingBody>,
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,
-) -> Result<Json<()>, SetupError> {
-    start_processing(&user, &pool, params.user_folder).await?;
-    Ok(Json(()))
+    Json(payload): Json<StartProcessingBody>,
+) -> Result<Json<bool>, SetupError> {
+    start_processing(&user, &pool, payload.user_folder).await?;
+    Ok(Json(true))
 }

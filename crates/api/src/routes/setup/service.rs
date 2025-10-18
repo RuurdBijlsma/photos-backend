@@ -14,7 +14,7 @@ use common_photos::{
 };
 use sqlx::PgPool;
 use tokio::fs as tokio_fs;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
 static WELCOME_NEEDED: AtomicBool = AtomicBool::new(true);

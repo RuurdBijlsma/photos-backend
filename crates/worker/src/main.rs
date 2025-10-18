@@ -1,3 +1,5 @@
+#![allow(clippy::cognitive_complexity)]
+
 use crate::context::WorkerContext;
 use crate::worker::run_worker_loop;
 use clap::Parser;
