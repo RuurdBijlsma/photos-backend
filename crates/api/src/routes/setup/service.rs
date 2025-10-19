@@ -252,6 +252,11 @@ pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, SetupErr
     Ok(canonical_user_path)
 }
 
+/// Updates the user's media folder and triggers a system-wide media scan.
+///
+/// # Errors
+///
+/// Returns `SetupError` if folder validation fails, the database update fails, or the scan job cannot be enqueued.
 pub async fn start_processing(
     user: &User,
     pool: &PgPool,

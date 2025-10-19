@@ -3,10 +3,15 @@
 use crate::auth::db_model::User;
 use crate::photos::interfaces::RandomPhotoResponse;
 use crate::setup::error::SetupError;
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 use sqlx::PgPool;
 use tracing::warn;
 
+/// Fetches a random photo with its color theme data for a specific user.
+///
+/// # Errors
+///
+/// Returns an error if either of the database queries fail.
 pub async fn get_random_photo(
     user: &User,
     pool: &PgPool,

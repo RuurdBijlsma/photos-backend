@@ -29,6 +29,11 @@ async fn prepare_remove_job(tx: &mut PgTransaction<'_>, relative_path: &str) -> 
     Ok(())
 }
 
+/// Enqueues a system-level job that isn't associated with a specific file.
+///
+/// # Errors
+///
+/// Returns an error if the database transaction fails.
 pub async fn enqueue_system_job(pool: &PgPool, job_type: JobType) -> Result<()> {
     let priority = job_type.get_priority(false);
     let mut tx = pool.begin().await?;
@@ -37,6 +42,11 @@ pub async fn enqueue_system_job(pool: &PgPool, job_type: JobType) -> Result<()> 
     Ok(())
 }
 
+/// Enqueues a job for a specific file, such as ingestion or removal.
+///
+/// # Errors
+///
+/// Returns an error if the database transaction fails.
 pub async fn enqueue_file_job(
     pool: &PgPool,
     job_type: JobType,
@@ -62,6 +72,11 @@ pub async fn enqueue_file_job(
     Ok(())
 }
 
+/// Handles the core logic of inserting a new job into the database if a similar one isn't already active.
+///
+/// # Errors
+///
+/// Returns an error if any of the database queries fail.
 async fn base_enqueue(
     tx: &mut PgConnection,
     job_type: JobType,
