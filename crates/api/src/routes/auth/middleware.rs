@@ -1,5 +1,4 @@
-use crate::auth::UserRole;
-use crate::routes::auth::User;
+use crate::auth::db_model::User;
 use crate::routes::auth::error::AuthError;
 use crate::routes::auth::interfaces::Claims;
 use axum::body::Body;
@@ -8,7 +7,7 @@ use axum::http::Request;
 use axum::middleware::Next;
 use axum::response::Response;
 use color_eyre::eyre::eyre;
-use common_photos::settings;
+use common_photos::{UserRole, settings};
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
 
@@ -28,7 +27,7 @@ where
     /// * `sqlx::Error` if there's a database error.
     /// * `AuthError::UserNotFound` if the user ID from the token does not correspond to an existing user.
     async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
+        parts: &mut http::request::Parts,
         state: &S,
     ) -> Result<Self, Self::Rejection> {
         let auth_header = parts

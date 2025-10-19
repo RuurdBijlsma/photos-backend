@@ -1,168 +1,83 @@
 #![allow(clippy::needless_for_each, clippy::cognitive_complexity)]
 
-mod routes;
+pub mod routes;
 
-use crate::routes::root::route::__path_root;
-use crate::routes::setup::interfaces;
-use utoipa::{
-    Modify, OpenApi,
-    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
-};
+use axum::routing::get_service;
+pub use routes::*;
 
-use crate::routes::auth;
-use crate::routes::auth::UserRole;
-use crate::routes::auth::handlers::{
-    check_admin, get_me, login, logout, refresh_session, register,
-};
-use crate::routes::auth::middleware::require_role;
-use crate::routes::root::route::root;
-use crate::routes::scalar_config::get_custom_html;
-use crate::routes::setup;
-use crate::routes::setup::handlers::{
-    get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
-    setup_needed,
-};
-use auth::db_model::User;
-use axum::{
-    Router, middleware,
-    routing::{get, post},
-};
-use common_photos::get_db_pool;
-use sqlx::PgPool;
-use tracing::info;
-use tracing_subscriber::fmt;
-use utoipa_scalar::{Scalar, Servable};
+use color_eyre::Result;
+use common_photos::{get_db_pool, settings};
+use http::{HeaderValue, header};
+use tower_http::cors;
+use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
+use tower_http::set_header::SetResponseHeaderLayer;
+use tracing::{error, info};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
-#[derive(OpenApi)]
-#[openapi(
-    paths(
-        root,
-        // Auth handlers
-        auth::handlers::login,
-        auth::handlers::register,
-        auth::handlers::refresh_session,
-        auth::handlers::logout,
-        auth::handlers::get_me,
-        auth::handlers::check_admin,
-        // Setup handlers
-        setup::handlers::setup_needed,
-        setup::handlers::get_disk_response,
-        setup::handlers::get_folder_media_sample,
-        setup::handlers::get_folder_unsupported,
-        setup::handlers::get_folders,
-        setup::handlers::make_folder,
-    ),
-    components(
-        schemas(
-            // Auth schemas
-            auth::db_model::User,
-            auth::db_model::UserRole,
-            auth::interfaces::CreateUser,
-            auth::interfaces::LoginUser,
-            auth::interfaces::RefreshTokenPayload,
-            auth::interfaces::Tokens,
-            auth::interfaces::GetMeResponse,
-            auth::interfaces::AdminResponse,
-            // Setup schemas
-            interfaces::FolderQuery,
-            interfaces::MakeFolderBody,
-            interfaces::PathInfoResponse,
-            interfaces::MediaSampleResponse,
-            interfaces::UnsupportedFilesResponse,
-            interfaces::DiskResponse,
-        )
-    ),
-    modifiers(&SecurityAddon),
-    tags(
-        (name = "Ruurd Photos", description = "Ruurd Photos' API")
-    )
-)]
-struct ApiDoc;
-
-/// A modifier to add bearer token security to the `OpenAPI` specification.
-struct SecurityAddon;
-
-impl Modify for SecurityAddon {
-    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-        let components = openapi.components.get_or_insert_with(Default::default);
-        components.add_security_scheme(
-            "bearer_auth",
-            SecurityScheme::Http(Http::new(HttpAuthScheme::Bearer)),
-        );
-    }
-}
-
-/// The main entry point for the application.
-///
-/// # Errors
-///
-/// * Returns an error if `color_eyre` fails to install or if `start_server` fails.
 #[tokio::main]
-async fn main() -> color_eyre::Result<()> {
-    fmt::Subscriber::builder().with_ansi(true).init();
+async fn main() -> Result<()> {
+    // --- Tracing & Error Handling Setup (unchanged) ---
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "api=info,tower_http=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
     color_eyre::install()?;
 
-    start_server().await?;
-    Ok(())
-}
-
-/// Initializes and runs the Axum web server.
-///
-/// # Errors
-///
-/// * Returns an error if the database pool cannot be created or the server fails to bind or start.
-async fn start_server() -> color_eyre::Result<()> {
+    // --- Server Startup ---
+    info!("🚀 Initializing server...");
     let pool = get_db_pool().await?;
+    let api_settings = &settings().api;
 
-    let public_routes = Router::new()
-        // ======== [ ROOT ] =========
-        .route("/", get(root))
-        // ======== [ /setup/ ] =========
-        .route("/setup/needed", get(setup_needed))
-        // ======== [ /auth/ ] =========
-        .route("/auth/refresh", post(refresh_session))
-        .route("/auth/register", post(register))
-        .route("/auth/login", post(login))
-        .route("/auth/logout", post(logout));
+    // --- CORS Configuration ---
+    let allowed_origins: Vec<HeaderValue> = api_settings
+        .allowed_origins
+        .iter()
+        .filter_map(|s| match s.parse() {
+            Ok(hv) => Some(hv),
+            Err(e) => {
+                error!("Invalid CORS origin configured: {} - Error: {}", s, e);
+                None
+            }
+        })
+        .collect();
 
-    let protected_routes = Router::new()
-        // ======== [ /auth/ ] =========
-        .route("/auth/me", get(get_me))
-        // ======== [ MIDDLEWARES ] =========
-        .route_layer(middleware::from_extractor_with_state::<User, PgPool>(
-            pool.clone(),
-        ));
+    let cors = CorsLayer::new()
+        .allow_methods(cors::Any)
+        .allow_origin(allowed_origins)
+        .allow_headers([
+            header::AUTHORIZATION,
+            header::CONTENT_TYPE,
+            header::ACCEPT,
+            header::ORIGIN,
+            header::USER_AGENT,
+            header::CACHE_CONTROL,
+            header::PRAGMA,
+        ]);
 
-    let admin_routes = Router::new()
-        // ======== [ /auth/ ] =========
-        .route("/auth/admin-check", get(check_admin))
-        // ======== [ /setup/ ] =========
-        .route("/setup/disk-info", get(get_disk_response))
-        .route("/setup/media-sample", get(get_folder_media_sample))
-        .route("/setup/unsupported-files", get(get_folder_unsupported))
-        .route("/setup/folders", get(get_folders))
-        .route("/setup/make-folder", post(make_folder))
-        // ======== [ MIDDLEWARES ] =========
-        .route_layer(middleware::from_fn_with_state(
-            UserRole::Admin,
-            require_role,
-        ))
-        .route_layer(middleware::from_extractor_with_state::<User, PgPool>(
-            pool.clone(),
-        ));
+    // Static file serving
+    let serve_dir = ServeDir::new("thumbnails");
 
-    let openapi = ApiDoc::openapi();
+    // Create a middleware layer to add the Cache-Control header.
+    let cache_layer = SetResponseHeaderLayer::if_not_present(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=31536000, immutable"),
+    );
 
-    let app = Router::new()
-        .merge(Scalar::with_url("/docs", openapi.clone()).custom_html(get_custom_html(&openapi)))
-        .merge(public_routes)
-        .merge(protected_routes)
-        .merge(admin_routes)
-        .with_state(pool);
+    // --- Create Router & Start Server ---
+    let app = create_router(pool)
+        .layer(cors)
+        .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
+    let listen_address = format!("{}:{}", api_settings.host, api_settings.port);
+    let listener = tokio::net::TcpListener::bind(&listen_address).await?;
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3567").await?;
-    info!("🚀 Server listening on http://0.0.0.0:3567");
-    info!("📚 Docs available at http://0.0.0.0:3567/docs");
+    info!("📚 Docs available at http://{listen_address}/docs");
+    info!("✅ Server listening on http://{listen_address}");
+
     axum::serve(listener, app).await?;
     Ok(())
 }

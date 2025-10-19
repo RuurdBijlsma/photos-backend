@@ -1,4 +1,4 @@
-use crate::auth::db_model::{User, UserRecord, UserRole};
+use crate::auth::db_model::User;
 use crate::auth::token::{
     RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
@@ -8,7 +8,8 @@ use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
-use common_photos::settings;
+use common_photos::UserRole;
+use common_photos::{UserWithPassword, settings};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
@@ -23,10 +24,10 @@ pub async fn authenticate_user(
     pool: &PgPool,
     email: &str,
     password: &str,
-) -> Result<UserRecord, AuthError> {
+) -> Result<UserWithPassword, AuthError> {
     let user = sqlx::query_as!(
-        UserRecord,
-        r#"SELECT id, email, name, password, role as "role: UserRole", created_at, updated_at
+        UserWithPassword,
+        r#"SELECT id, email, name, password, role as "role: UserRole", created_at, updated_at, media_folder
            FROM app_user WHERE email = $1"#,
         email
     )
@@ -59,11 +60,19 @@ pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, Au
         "Creating user email={}, name={}",
         payload.email, payload.name
     );
+
     let result = sqlx::query_as!(
         User,
         r#"
-        INSERT INTO app_user (email, name, password)
-        VALUES ($1, $2, $3)
+        INSERT INTO app_user (email, name, password, role)
+        SELECT
+            $1, -- payload.email
+            $2, -- payload.name
+            $3, -- hashed password
+            CASE
+                WHEN NOT EXISTS (SELECT 1 FROM app_user) THEN 'admin'::user_role
+                ELSE 'user'::user_role
+            END
         RETURNING id, email, name, media_folder, role as "role: UserRole", created_at, updated_at
         "#,
         payload.email,

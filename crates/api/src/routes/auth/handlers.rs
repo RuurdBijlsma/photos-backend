@@ -1,21 +1,22 @@
+//! This module defines the HTTP handlers for authentication-related routes.
+
+use crate::auth::db_model::User;
+use crate::auth::error::AuthError;
+use crate::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
+use crate::auth::service::{
+    authenticate_user, create_access_token, create_user, logout_user, refresh_tokens,
+    store_refresh_token,
+};
+use crate::auth::token::generate_refresh_token_parts;
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use sqlx::PgPool;
 
-use crate::auth::{
-    service::{
-        authenticate_user, create_access_token, create_user, logout_user, refresh_tokens,
-        store_refresh_token,
-    },
-    token::generate_refresh_token_parts,
-};
-
-use crate::routes::auth::User;
-use crate::routes::auth::error::AuthError;
-use crate::routes::auth::interfaces::{
-    AdminResponse, CreateUser, GetMeResponse, LoginUser, RefreshTokenPayload, Tokens,
-};
-
-/// Login to get a new session.
+/// Handles user login and returns a new set of tokens.
+///
+/// # Errors
+///
+/// Returns `AuthError` if the user credentials are invalid or if there's a
+/// problem creating or storing the tokens.
 #[utoipa::path(
     post,
     path = "/auth/login",
@@ -40,7 +41,12 @@ pub async fn login(
     }))
 }
 
-/// Register a new user.
+/// Handles the registration of a new user.
+///
+/// # Errors
+///
+/// Returns `AuthError` if a user with the provided email already exists or
+/// if a database error occurs during user creation.
 #[utoipa::path(
     post,
     path = "/auth/register",
@@ -58,7 +64,11 @@ pub async fn register(
     Ok(Json(user))
 }
 
-/// Refresh the session using a refresh token.
+/// Handles refreshing the session using a valid refresh token.
+///
+/// # Errors
+///
+/// Returns `AuthError` if the refresh token is invalid, expired, or not found in the database.
 #[utoipa::path(
     post,
     path = "/auth/refresh",
@@ -75,7 +85,11 @@ pub async fn refresh_session(
     refresh_tokens(&pool, &payload.refresh_token).await
 }
 
-/// Logout and invalidate the refresh token.
+/// Handles user logout by invalidating the provided refresh token.
+///
+/// # Errors
+///
+/// Returns `AuthError` if the refresh token is invalid or could not be found.
 #[utoipa::path(
     post,
     path = "/auth/logout",
@@ -92,46 +106,22 @@ pub async fn logout(
     logout_user(&pool, &payload.refresh_token).await
 }
 
-/// Get the current user's details.
+/// Get current user info.
+///
+/// # Errors
+///
+/// Returns `AuthError` if the refresh token is invalid or could not be found.
 #[utoipa::path(
     get,
     path = "/auth/me",
     responses(
-        (status = 200, description = "Current user data", body = GetMeResponse),
+        (status = 200, description = "Current user data", body = User),
         (status = 401, description = "Authentication required"),
     ),
     security(
         ("bearer_auth" = [])
     )
 )]
-pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<GetMeResponse>, StatusCode> {
-    Ok(Json(GetMeResponse {
-        message: "You are accessing a protected route!".into(),
-        user_email: user.email,
-        user_id: user.id,
-    }))
-}
-
-/// Check if the current user is an admin.
-#[utoipa::path(
-    get,
-    path = "/auth/admin-check",
-    responses(
-        (status = 200, description = "Admin check successful", body = AdminResponse),
-        (status = 401, description = "Authentication required"),
-        (status = 403, description = "Admin privileges required"),
-    ),
-    security(
-        ("bearer_auth" = [])
-    )
-)]
-pub async fn check_admin(
-    Extension(user): Extension<User>,
-) -> Result<Json<AdminResponse>, StatusCode> {
-    Ok(Json(AdminResponse {
-        message: "You are an admin!".into(),
-        user_email: user.email,
-        user_id: user.id,
-        user_role: user.role,
-    }))
+pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<User>, StatusCode> {
+    Ok(Json(user))
 }

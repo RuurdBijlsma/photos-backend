@@ -11,7 +11,7 @@ use std::path::Path;
 /// This function will return an error if the image path is invalid or the image cannot be decoded.
 pub fn get_quality_data(image_path: &Path) -> Result<QualityData> {
     let img = image::ImageReader::open(image_path)?.decode()?;
-    let gray_img = resize_if_large(img, 1800).to_luma8();
+    let gray_img = resize_if_large(img, 2000).to_luma8();
 
     let texture = calculate_texture(&gray_img);
     let blurriness = calculate_blurriness(&gray_img, texture);

@@ -1,5 +1,5 @@
 directories:
-  media_folder: media_dir
+  media_folder: C:\Users\Ruurd\Pictures\deleteme2
   thumbnails_folder: thumbnails
 
 logging:
@@ -7,9 +7,9 @@ logging:
 
 api:
   host: "0.0.0.0"
-  port: 8080
+  port: 9475
   allowed_origins:
-    - "http://localhost:3000"
+    - "http://localhost:5173"
 
 auth:
   jwt_secret: "overwrite-me-with-env"
@@ -31,7 +31,7 @@ database:
 analyzer:
   theme_generation:
     variant: Vibrant
-    contrast_level: 2
+    contrast_level: 0.5
   ocr:
     languages:
       - nld

@@ -137,7 +137,7 @@ where
 }
 
 /// Extracts the username from the first component of a file's relative path.
-pub fn username_from_path(path: &Path) -> Option<String> {
+fn username_from_path(path: &Path) -> Option<String> {
     let relative_path = relative_path_abs(path).ok()?;
     relative_path
         .split('/')
@@ -149,7 +149,7 @@ pub fn username_from_path(path: &Path) -> Option<String> {
 /// # Errors
 ///
 /// * If the database query fails.
-pub async fn user_id_from_username<'c, E>(
+async fn user_id_from_username<'c, E>(
     username: &str,
     executor: E,
 ) -> color_eyre::Result<Option<i32>>

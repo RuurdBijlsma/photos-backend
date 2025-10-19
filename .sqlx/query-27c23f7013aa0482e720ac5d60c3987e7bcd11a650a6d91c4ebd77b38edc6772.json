@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH candidate AS (\n            SELECT id FROM jobs\n            WHERE ((status = 'queued' AND scheduled_at <= now())\n               OR (status = 'running' AND last_heartbeat < now() - interval '1 second' * $2))\n              AND ($3 OR job_type != 'analysis')\n            ORDER BY priority, relative_path DESC, scheduled_at, created_at\n            FOR UPDATE SKIP LOCKED\n            LIMIT 1\n        )\n        UPDATE jobs\n        SET status = 'running',\n            owner = $1,\n            started_at = now(),\n            last_heartbeat = now(),\n            attempts = CASE WHEN status = 'running' THEN attempts + 1 ELSE attempts END\n        WHERE id = (SELECT id FROM candidate)\n        RETURNING id, relative_path, job_type AS \"job_type!: JobType\", priority, user_id, attempts, max_attempts, dependency_attempts\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "relative_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "job_type!: JobType",
+        "type_info": {
+          "Custom": {
+            "name": "job_type",
+            "kind": {
+              "Enum": [
+                "ingest",
+                "remove",
+                "analysis",
+                "scan",
+                "cleandb"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "attempts",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "max_attempts",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "dependency_attempts",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Float8",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "27c23f7013aa0482e720ac5d60c3987e7bcd11a650a6d91c4ebd77b38edc6772"
+}

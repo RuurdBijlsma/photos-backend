@@ -1,14 +1,25 @@
-use crate::routes::setup::error::SetupError;
-use crate::routes::setup::interfaces::{
-    DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse,
+//! This module defines the HTTP handlers for the initial application setup process.
+
+use crate::auth::db_model::User;
+use crate::setup::error::SetupError;
+use crate::setup::interfaces::{
+    DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
+    UnsupportedFilesResponse,
 };
-use crate::routes::setup::service;
-use axum::Json;
+use crate::setup::service::{
+    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
+    is_welcome_needed, start_processing, validate_user_folder,
+};
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
+use axum::{Extension, Json};
 use sqlx::PgPool;
 
-/// Get information about the configured media and thumbnail disks.
+/// Retrieves information about the configured media and thumbnail disks.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if a configured media or thumbnail path is not a valid directory.
 #[utoipa::path(
     get,
     path = "/setup/disks",
@@ -18,11 +29,15 @@ use sqlx::PgPool;
     )
 )]
 pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
-    let disk_info = service::get_disk_info()?;
+    let disk_info = get_disk_info()?;
     Ok(Json(disk_info))
 }
 
-/// Get a sample of media files from a specific folder.
+/// Retrieves a sample of media files from a specified folder.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if the provided folder path is invalid or cannot be accessed.
 #[utoipa::path(
     get,
     path = "/setup/media-sample",
@@ -37,12 +52,16 @@ pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
 pub async fn get_folder_media_sample(
     Query(query): Query<FolderQuery>,
 ) -> Result<Json<MediaSampleResponse>, SetupError> {
-    let user_path = service::validate_user_folder(&query.folder).await?;
-    let response = service::get_media_sample(&user_path)?;
+    let user_path = validate_user_folder(&query.folder).await?;
+    let response = get_media_sample(&user_path)?;
     Ok(Json(response))
 }
 
-/// Get a list of unsupported files in a specific folder.
+/// Scans a folder and returns a list of unsupported file types.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if the folder path is invalid or if an I/O error occurs during the scan.
 #[utoipa::path(
     get,
     path = "/setup/unsupported-files",
@@ -57,12 +76,16 @@ pub async fn get_folder_media_sample(
 pub async fn get_folder_unsupported(
     Query(query): Query<FolderQuery>,
 ) -> Result<Json<UnsupportedFilesResponse>, SetupError> {
-    let user_path = service::validate_user_folder(&query.folder).await?;
-    let response = service::get_folder_unsupported_files(&user_path)?;
+    let user_path = validate_user_folder(&query.folder).await?;
+    let response = get_folder_unsupported_files(&user_path)?;
     Ok(Json(response))
 }
 
-/// List the subfolders within a given folder.
+/// Lists the subfolders within a given directory.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if the base folder path is invalid or inaccessible.
 #[utoipa::path(
     get,
     path = "/setup/folders",
@@ -77,11 +100,15 @@ pub async fn get_folder_unsupported(
 pub async fn get_folders(
     Query(query): Query<FolderQuery>,
 ) -> Result<Json<Vec<String>>, SetupError> {
-    let folders = service::get_subfolders(&query.folder).await?;
+    let folders = get_subfolders(&query.folder).await?;
     Ok(Json(folders))
 }
 
-/// Create a new folder.
+/// Creates a new folder within a specified base directory.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if the folder name or path is invalid, or if an I/O error occurs.
 #[utoipa::path(
     post,
     path = "/setup/make-folder",
@@ -92,20 +119,46 @@ pub async fn get_folders(
     )
 )]
 pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCode, SetupError> {
-    service::create_folder(&params.base_folder, &params.new_name).await?;
+    create_folder(&params.base_folder, &params.new_name).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Check if the initial setup is required (i.e., if any admin user exists).
+/// Checks if any users exist in the database to determine if the setup process is needed.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if a database connection cannot be established or the query fails.
 #[utoipa::path(
     get,
-    path = "/setup/needed",
+    path = "/setup/welcome-needed",
     responses(
-        (status = 200, description = "Setup status retrieved successfully", body = bool),
+        (status = 200, description = "Welcome status retrieved successfully", body = bool),
         (status = 500, description = "Database error"),
     )
 )]
-pub async fn setup_needed(State(pool): State<PgPool>) -> Result<Json<bool>, SetupError> {
-    let needed = service::is_setup_needed(&pool).await?;
+pub async fn welcome_needed(State(pool): State<PgPool>) -> Result<Json<bool>, SetupError> {
+    let needed = is_welcome_needed(&pool).await?;
     Ok(Json(needed))
+}
+
+/// Start scanning the user folder and process the photos and videos.
+///
+/// # Errors
+///
+/// Returns a `SetupError` if a database connection cannot be established or the query fails.
+#[utoipa::path(
+    get,
+    path = "/setup/start-processing",
+    responses(
+        (status = 200, description = "Processing job enqueued successfully.", body = bool),
+        (status = 500, description = "Database error"),
+    )
+)]
+pub async fn post_start_processing(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<StartProcessingBody>,
+) -> Result<Json<bool>, SetupError> {
+    start_processing(&user, &pool, payload.user_folder).await?;
+    Ok(Json(true))
 }

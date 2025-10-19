@@ -1,4 +1,6 @@
-use common_photos::{enqueue_full_ingest, enqueue_remove_job, relative_path_abs};
+use common_photos::{
+    JobType, enqueue_file_job, enqueue_full_ingest, relative_path_abs, user_id_from_relative_path,
+};
 use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -14,7 +16,9 @@ use tracing::{error, info, warn};
 async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     info!("File created {:?}", file);
 
-    enqueue_full_ingest(pool, &relative_path_abs(file)?).await?;
+    let rel_path = relative_path_abs(file)?;
+    let user_id = user_id_from_relative_path(&rel_path, pool).await?;
+    enqueue_full_ingest(pool, &rel_path, user_id).await?;
 
     Ok(())
 }
@@ -27,7 +31,9 @@ async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::R
 async fn handle_remove_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
     info!("File removed {:?}", file);
 
-    enqueue_remove_job(pool, &relative_path_abs(file)?).await?;
+    let rel_path = relative_path_abs(file)?;
+    let user_id = user_id_from_relative_path(&rel_path, pool).await?;
+    enqueue_file_job(pool, JobType::Remove, &rel_path, user_id).await?;
 
     Ok(())
 }

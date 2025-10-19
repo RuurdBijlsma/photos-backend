@@ -171,15 +171,18 @@ dependencies = [
  "common_photos",
  "fastrand",
  "fs2",
+ "http",
  "jsonwebtoken",
+ "mime_guess",
  "rand 0.10.0-rc.0",
- "regex",
  "serde",
  "serde_json",
  "sqlx",
  "tempfile",
  "thiserror 2.0.17",
  "tokio",
+ "tokio-util",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
  "utoipa",
@@ -858,6 +861,7 @@ dependencies = [
  "serde",
  "sqlx",
  "tracing",
+ "utoipa",
 ]
 
 [[package]]
@@ -2123,6 +2127,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-range-header"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9171a2ea8a68358193d15dd5d70c1c10a2afc3e7e4c5bc92bc9f025cebd7359c"
+
+[[package]]
 name = "httparse"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2780,6 +2790,15 @@ checksum = "6bd8c0d6c6ed0cd30b3652886bb8711dc4bb01d637a68105a3d5158039b418e6"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "matchers"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
+dependencies = [
+ "regex-automata",
 ]
 
 [[package]]
@@ -6054,14 +6073,24 @@ checksum = "adc82fd73de2a9722ac5da747f12383d2bfdb93591ee6c58486e0097890f05f2"
 dependencies = [
  "bitflags 2.9.4",
  "bytes",
+ "futures-core",
  "futures-util",
  "http",
  "http-body",
+ "http-body-util",
+ "http-range-header",
+ "httpdate",
  "iri-string",
+ "mime",
+ "mime_guess",
+ "percent-encoding",
  "pin-project-lite",
+ "tokio",
+ "tokio-util",
  "tower",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]
@@ -6136,10 +6165,14 @@ version = "0.3.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2054a14f5307d601f88daf0553e1cbf472acc4f2c51afab632431cdcd72124d5"
 dependencies = [
+ "matchers",
  "nu-ansi-term",
+ "once_cell",
+ "regex-automata",
  "sharded-slab",
  "smallvec",
  "thread_local",
+ "tracing",
  "tracing-core",
  "tracing-log",
 ]
@@ -7069,17 +7102,20 @@ name = "worker"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "clap",
  "color-eyre",
  "common_photos",
  "media_analyzer",
  "ml_analysis",
  "pgvector",
  "ruurd_photos_thumbnail_generation",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "walkdir",
 ]
 
 [[package]]

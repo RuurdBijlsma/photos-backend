@@ -27,11 +27,11 @@ pub struct FaceBox {
     pub confidence: f32,
     pub age: i32,
     pub sex: String,
-    pub mouth_left: Option<(f32, f32)>,  // Was (f32, f32)
-    pub mouth_right: Option<(f32, f32)>, // Was (f32, f32)
-    pub nose_tip: Option<(f32, f32)>,    // Was (f32, f32)
-    pub eye_left: Option<(f32, f32)>,    // Was (f32, f32)
-    pub eye_right: Option<(f32, f32)>,   // Was (f32, f32)
+    pub mouth_left: (f32, f32),
+    pub mouth_right: (f32, f32),
+    pub nose_tip: (f32, f32),
+    pub eye_left: (f32, f32),
+    pub eye_right: (f32, f32),
     pub embedding: Vec<f32>,
 }
 

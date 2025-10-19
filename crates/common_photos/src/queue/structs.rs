@@ -4,10 +4,10 @@ use sqlx::{FromRow, Type};
 #[allow(clippy::struct_field_names)]
 pub struct Job {
     pub id: i64,
-    pub relative_path: String,
+    pub relative_path: Option<String>,
+    pub user_id: Option<i32>,
     pub job_type: JobType,
     pub priority: i32,
-    pub user_id: i32,
     pub attempts: i32,
     pub max_attempts: i32,
     pub dependency_attempts: i32,
@@ -19,6 +19,33 @@ pub enum JobType {
     Ingest,
     Remove,
     Analysis,
+    Scan,
+    CleanDB,
+}
+
+impl JobType {
+    #[must_use]
+    pub const fn get_priority(&self, is_video: bool) -> i32 {
+        match self {
+            Self::Ingest => {
+                if is_video {
+                    55
+                } else {
+                    50
+                }
+            }
+            Self::Analysis => {
+                if is_video {
+                    95
+                } else {
+                    90
+                }
+            }
+            Self::Remove => 0,
+            Self::Scan => 10,
+            Self::CleanDB => 20,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Type)]

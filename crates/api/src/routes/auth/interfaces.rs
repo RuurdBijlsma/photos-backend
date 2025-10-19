@@ -1,4 +1,4 @@
-use crate::routes::auth::UserRole;
+use common_photos::UserRole;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -38,21 +38,4 @@ pub struct Claims {
     pub sub: i32, // Subject (user ID)
     pub exp: i64, // Expiration time
     pub role: UserRole,
-}
-
-/// Represents the response for a protected route, containing user details.
-#[derive(Serialize, Debug, ToSchema)]
-pub struct GetMeResponse {
-    pub message: String,
-    pub user_email: String,
-    pub user_id: i32,
-}
-
-/// Represents the response for an admin-protected route.
-#[derive(Serialize, Debug, ToSchema)]
-pub struct AdminResponse {
-    pub message: String,
-    pub user_email: String,
-    pub user_id: i32,
-    pub user_role: UserRole,
 }
