@@ -31,7 +31,7 @@ database:
 analyzer:
   theme_generation:
     variant: Vibrant
-    contrast_level: 2
+    contrast_level: 0.5
   ocr:
     languages:
       - nld
