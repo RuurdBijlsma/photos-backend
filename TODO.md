@@ -40,6 +40,9 @@
   starts_with each media_folder)
 * Improve last_error field in jobs, just put entire report in there?
 * a lotta failed jobs
+* data_url veld in db is useless denk ik (ook in alle analyzers)
+* nieuwe dag is niet altijd newline in de photos grid, misschien toch weer over gaan naar maanden requesten. verder is geminis photos endpoints wel ok.
+* moet nog een photo density endpoint hebben om de scrollbar density te laten zien.
 
 ## Kubernetes vs Docker compose
 

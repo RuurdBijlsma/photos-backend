@@ -35,9 +35,9 @@ pub async fn random_photo(
         "#,
         user.id
     )
-        .fetch_one(pool)
-        .await?
-        .unwrap_or(0); // Default to 0 if count is NULL
+    .fetch_one(pool)
+    .await?
+    .unwrap_or(0); // Default to 0 if count is NULL
 
     if count == 0 {
         warn!("No photos with color data for user {}", user.id);
@@ -66,8 +66,8 @@ pub async fn random_photo(
         user.id,
         random_offset
     )
-        .fetch_optional(pool)
-        .await?;
+    .fetch_optional(pool)
+    .await?;
 
     if random_data.is_none() {
         // This can happen in a race condition if photos are deleted between the COUNT and this query.
@@ -111,14 +111,14 @@ pub async fn media_paginated(
 ) -> Result<PaginatedMediaResponse, PhotosError> {
     let limit = params.limit.unwrap_or(DEFAULT_PAGINATION_LIMIT);
     // "Fetch one more" pattern to determine if there are more pages.
-    let query_limit = limit as i64 + 1;
+    let query_limit = i64::from(limit) + 1;
 
     let mut has_more_after = false;
     let mut has_more_before = false;
 
     // Determine query based on `before` (scrolling down) or `after` (scrolling up)
     let mut media_items: Vec<MediaItemDto> = if let Some(before_ts) = params.before {
-        let naive_dt=before_ts.naive_utc();
+        let naive_dt = before_ts.naive_utc();
         // Scrolling down (fetching older photos)
         has_more_before = true; // We know there are newer photos
         sqlx::query_as!(
@@ -134,8 +134,8 @@ pub async fn media_paginated(
             naive_dt,
             query_limit
         )
-            .fetch_all(pool)
-            .await?
+        .fetch_all(pool)
+        .await?
     } else if let Some(after_ts) = params.after {
         // Scrolling up (fetching newer photos)
         has_more_after = true; // We know there are older photos
@@ -152,8 +152,8 @@ pub async fn media_paginated(
             after_ts.naive_utc(),
             query_limit
         )
-            .fetch_all(pool)
-            .await?
+        .fetch_all(pool)
+        .await?
     } else {
         // Initial load (fetching the most recent photos)
         sqlx::query_as!(
@@ -168,8 +168,8 @@ pub async fn media_paginated(
             user.id,
             query_limit
         )
-            .fetch_all(pool)
-            .await?
+        .fetch_all(pool)
+        .await?
     };
 
     // Check if we fetched an extra item and adjust flags accordingly
@@ -182,13 +182,11 @@ pub async fn media_paginated(
         }
         // Reverse to return in descending chronological order, which is more natural for the frontend
         media_items.reverse();
+    } else if media_items.len() > limit as usize {
+        has_more_after = true;
+        media_items.pop(); // Remove the extra item
     } else {
-        if media_items.len() > limit as usize {
-            has_more_after = true;
-            media_items.pop(); // Remove the extra item
-        } else {
-            has_more_after = false;
-        }
+        has_more_after = false;
     }
 
     Ok(PaginatedMediaResponse {
@@ -204,8 +202,8 @@ pub async fn media_by_date(
     pool: &PgPool,
     params: GetMediaByDateParams,
 ) -> Result<PaginatedMediaResponse, PhotosError> {
-    let before_limit = params.before_limit.unwrap_or(DEFAULT_DATE_JUMP_LIMIT) as i64;
-    let after_limit = params.after_limit.unwrap_or(DEFAULT_DATE_JUMP_LIMIT) as i64;
+    let before_limit = i64::from(params.before_limit.unwrap_or(DEFAULT_DATE_JUMP_LIMIT));
+    let after_limit = i64::from(params.after_limit.unwrap_or(DEFAULT_DATE_JUMP_LIMIT));
     let target_date = params.date.and_hms_opt(0, 0, 0).unwrap(); // Start of the target day
 
     debug!(
@@ -218,7 +216,7 @@ pub async fn media_by_date(
     let media_items = sqlx::query_as!(
         MediaItemDto,
         r#"
-        -- CORRECTED LINE: Assert that each column is NOT NULL using the '!' syntax.
+        -- Assert that each column is NOT NULL using the '!' syntax because sqlx is dumb.
         SELECT
             id as "id!",
             width as "width!",
@@ -251,17 +249,17 @@ pub async fn media_by_date(
         before_limit,
         after_limit
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     // A simple check to see if there are more photos outside our window.
     // This isn't perfectly accurate but is a good, performant heuristic.
     let has_more_before = media_items
         .first()
-        .map_or(false, |item| item.taken_at_naive < target_date);
+        .is_some_and(|item| item.taken_at_naive < target_date);
     let has_more_after = media_items
         .last()
-        .map_or(false, |item| item.taken_at_naive >= target_date);
+        .is_some_and(|item| item.taken_at_naive >= target_date);
 
     Ok(PaginatedMediaResponse {
         days: group_media_by_day(media_items),
