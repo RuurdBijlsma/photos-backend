@@ -50,8 +50,8 @@ CREATE TABLE media_item
     is_video            BOOLEAN     NOT NULL,
     data_url            TEXT        NOT NULL,
     duration_ms         BIGINT,
-    taken_at_naive      TIMESTAMP, -- Naive timestamp without timezone information.
-    use_panorama_viewer BOOLEAN,
+    taken_at_naive      TIMESTAMP   NOT NULL, -- Naive timestamp without timezone information.
+    use_panorama_viewer BOOLEAN     NOT NULL,
     deleted             BOOLEAN     NOT NULL DEFAULT false
 );
 

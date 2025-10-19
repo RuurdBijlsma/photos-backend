@@ -30,7 +30,7 @@
     * password reset flow (email) (make mail optional)
     * add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * only allow register if no user exists, or if a valid invite token is passed
-    * add random image + theme endpoint
+    * ✅ add random image + theme endpoint
 * integration test
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx

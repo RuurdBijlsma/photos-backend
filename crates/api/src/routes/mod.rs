@@ -1,3 +1,5 @@
+// crates/api/src/routes/mod.rs
+
 pub mod auth;
 pub mod download;
 pub mod photos;
@@ -9,7 +11,7 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::random_photo;
+use crate::photos::handlers::{get_media, get_media_by_date, get_random_photo};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
@@ -18,12 +20,12 @@ use crate::setup::handlers::{
 };
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 use common_photos::UserRole;
 use sqlx::PgPool;
-use tower_http::{LatencyUnit, trace::TraceLayer};
+use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
@@ -48,6 +50,10 @@ use utoipa_scalar::{Scalar, Servable};
         setup::handlers::make_folder,
         // Download handlers
         download::handlers::download_full_file,
+        // --- Add new photo handlers ---
+        photos::handlers::get_random_photo,
+        photos::handlers::get_media,
+        photos::handlers::get_media_by_date,
     ),
     components(
         schemas(
@@ -67,14 +73,24 @@ use utoipa_scalar::{Scalar, Servable};
             setup::interfaces::DiskResponse,
             // Download schemas
             download::interfaces::DownloadMediaQuery,
-        )
+            // --- Add new photos schemas ---
+            photos::interfaces::RandomPhotoResponse,
+            photos::interfaces::MediaItemDto,
+            photos::interfaces::DayGroup,
+            photos::interfaces::PaginatedMediaResponse,
+            photos::interfaces::GetMediaParams,
+            photos::interfaces::GetMediaByDateParams
+        ),
     ),
     modifiers(&SecurityAddon),
     tags(
-(name = "Ruurd Photos", description = "Ruurd Photos' API")
+        (name = "Ruurd Photos", description = "Ruurd Photos' API"),
+        // --- Add a new tag for better organization ---
+        (name = "Photos", description = "Endpoints for browsing and managing media items")
     )
 )]
 struct ApiDoc;
+
 /// A modifier to add bearer token security to the `OpenAPI` specification.
 struct SecurityAddon;
 
@@ -121,7 +137,9 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
     Router::new()
         .route("/auth/me", get(get_me))
         .route("/download/full-file", get(download_full_file))
-        .route("/photos/random", get(random_photo))
+        .route("/photos/random", get(get_random_photo))
+        .route("/photos/media", get(get_media))
+        .route("/photos/media-by-date", get(get_media_by_date))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 
