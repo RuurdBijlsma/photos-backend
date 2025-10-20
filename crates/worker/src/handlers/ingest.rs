@@ -29,15 +29,10 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         return Ok(JobResult::Cancelled);
     }
 
-    let smallest_thumb_path = thumbnail_out_dir.join(format!(
-        "{}p.avif",
-        thumb_config.heights.iter().min().unwrap()
-    ));
-
     let media_info = {
         let mut analyzer = context.media_analyzer.lock().await;
         analyzer
-            .analyze_media(&file_path, &smallest_thumb_path)
+            .analyze_media(&file_path)
             .await?
     };
 

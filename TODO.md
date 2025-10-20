@@ -12,6 +12,8 @@
 * ✅ avif not supported by visual analyzer
 * ✅ Add some kind of cli flag to specify that a worker can't work on ML type of job
 * ✅ BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
+* ✅ add time_utc to media_item table
+* ✅ rename taken_at_local to taken_at_local
 * ✅ ML Analysis:
     * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
     * ✅ color data from python, make in rust
@@ -23,41 +25,46 @@
     * ✅ indexing
     * ✅ clean refresh token table on schedule
     * clustering on schedule
-    * refrehs materialized view of amount of photos per month
+    * ? refrehs materialized view of amount of photos per month
 * Show photos in ui:
-  * ✅ make endpoint: get photos by month, ui handles which month to fetch
-  * ✅ make endpoint: get timeline summary -> get list of every month with amount of photos for that month. (per user)
-  * ✅ moet nog een photo density endpoint hebben om de scrollbar density te laten zien.
-  * ✅ nieuwe dag is niet altijd newline in de photos grid, misschien toch weer over gaan naar maanden requesten. verder is geminis photos endpoints wel ok.
-  * make postgres materialized view for amount of photos per month. Refresh on schedule (maybe start without materiazlied view, if the view is fast enough)
-  * ✅ data_url veld in db is useless denk ik (ook in alle analyzers)
-  * virtual scroll waar elke maand 1 virtual scroll item is? of elke row is 1 virtual item??
+    * ✅ make endpoint: get photos by month, ui handles which month to fetch
+    * ✅ make endpoint: get timeline summary -> get list of every month with amount of photos for that month. (per user)
+    * ✅ moet nog een photo density endpoint hebben om de scrollbar density te laten zien.
+    * ✅ nieuwe dag is niet altijd newline in de photos grid, misschien toch weer over gaan naar maanden requesten.
+    * ✅ data_url veld in db is useless denk ik (ook in alle analyzers)
+    * ? make postgres materialized view for amount of photos per month. Refresh on schedule (maybe start without
+      materiazlied view, if the view is fast enough)
+    * virtual scroll waar elke maand 1 virtual scroll item is? of elke row is 1 virtual item??
 * api:
+    * ✅ add random image + theme endpoint
+    * ✅ cors met tower-http::cors
     * Show photos in ui
     * change the json output of vec<photo> to have small field names (is like 50% smaller)
-      * {i: "3d_8yhfd9", "w":1200, "h":1000, "t": "2018-08-30", "v": false}
-      * {id: "3d_8yhfd9", "width":1200, "height":1000, "taken_at_local": "2018-08-30", "is_video": false}
+        * {i: "3d_8yhfd9", "w":1200, "h":1000, "t": "2018-08-30", "v": false}
+        * {id: "3d_8yhfd9", "width":1200, "height":1000, "taken_at_local": "2018-08-30", "is_video": false}
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
-    * ✅ cors met tower-http::cors
     * password reset flow (email) (make mail optional)
     * add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * only allow register if no user exists, or if a valid invite token is passed
     * frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
-    * ✅ add random image + theme endpoint
 * integration test
+  * auth
+  * "setup"
+  * ingest
+  * retrieve
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
-* user_id from relative path is broken (it looks for username in first path of path, but we use media folder now in the
+* !BUG user_id from relative path is broken (it looks for username in first path of path, but we use media folder now in the
   db, so we'll somehow have to get this. I think only way is loop over all media_folders in db and see if file path
   starts_with each media_folder)
 * Improve last_error field in jobs, just put entire report in there?
 * a lotta failed jobs
-* add time_utc to media_item table, use it for sorting with COALESCE.
-* ✅ rename taken_at_local to taken_at_local
+* use time_utc for sorting with COALESCE (don't use it for binning into months and such, and don't return the utc time
+  to user)
 * camelCase elke interfaces.rs struct
 
-## Kubernetes vs Docker compose
+## Kubernetes vs Docker compose (of beide? in eigen repos?)
 
 + Met coole UI kan je dingen inzien
 + Cronjobs geintegreerd

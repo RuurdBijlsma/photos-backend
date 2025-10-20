@@ -71,6 +71,7 @@ pub async fn store_media_item(
         is_video: data.tags.is_video,
         duration_ms: data.metadata.duration.map(|d| (d * 1000.0) as i64),
         taken_at_local: data.time_info.datetime_local,
+        taken_at_utc: data.time_info.datetime_utc,
         use_panorama_viewer: data.pano_info.use_panorama_viewer,
     })
     .await?;
@@ -90,7 +91,6 @@ pub async fn store_media_item(
 
     insert_query!(tx, "time_details", {
         media_item_id: &item_id,
-        datetime_utc: data.time_info.datetime_utc,
         timezone_name: data.time_info.timezone.as_ref().map(|tz| &tz.name),
         timezone_offset_seconds: data.time_info.timezone.as_ref().map(|tz| tz.offset_seconds),
         source: data.time_info.timezone.as_ref().map(|tz| &tz.source),

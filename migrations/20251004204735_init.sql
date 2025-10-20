@@ -49,7 +49,8 @@ CREATE TABLE media_item
     height              INT         NOT NULL,
     is_video            BOOLEAN     NOT NULL,
     duration_ms         BIGINT,
-    taken_at_local      TIMESTAMP   NOT NULL, -- Naive timestamp without timezone information.
+    taken_at_local      TIMESTAMP   NOT NULL,
+    taken_at_utc        TIMESTAMPTZ,
     use_panorama_viewer BOOLEAN     NOT NULL,
     deleted             BOOLEAN     NOT NULL DEFAULT false
 );
@@ -71,7 +72,6 @@ CREATE TABLE gps
 CREATE TABLE time_details
 (
     media_item_id           VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    datetime_utc            TIMESTAMPTZ,
     timezone_name           TEXT,
     timezone_offset_seconds INT,
     source                  TEXT,

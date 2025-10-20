@@ -40,13 +40,13 @@ analyzer:
 
 thumbnail_generation:
   heights:
-    - 8
     - 144
     - 240
     - 360
     - 480
     - 720
     - 1080
+    - 1440
   thumbnail_extension: "avif"
   avif_options:
     quality: 80
