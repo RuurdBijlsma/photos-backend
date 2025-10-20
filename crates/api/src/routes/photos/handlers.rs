@@ -1,13 +1,7 @@
-// crates/api/src/routes/photos/handlers.rs
-
-//! This module defines the HTTP handlers for general photos endpoints.
-
 use crate::auth::db_model::User;
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{
-    GetMediaByDateParams, GetMediaParams, PaginatedMediaResponse, RandomPhotoResponse,
-};
-use crate::photos::service::{media_by_date, media_paginated, random_photo};
+use crate::photos::interfaces::{GetMediaByMonthParams, PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary};
+use crate::photos::service::{get_media_by_months, get_timeline_summary, random_photo};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use sqlx::PgPool;
@@ -30,52 +24,44 @@ pub async fn get_random_photo(
     let result = random_photo(&user, &pool).await?;
     Ok(Json(result))
 }
-
-/// Get a paginated list of media items.
-///
-/// Use `before` timestamp to get older items (scrolling down).
-/// Use `after` timestamp to get newer items (scrolling up).
-/// If neither is provided, returns the latest items.
+/// Get a summary of media counts by month and year.
 #[utoipa::path(
     get,
-    path = "/photos/media",
+    path = "/photos/timeline",
     tag = "Photos",
-    params(GetMediaParams),
     responses(
-        (status = 200, description = "Successfully retrieved media items.", body = PaginatedMediaResponse),
+        (status = 200, description = "Get a summary of media counts by month and year.", body = Vec<TimelineSummary>),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
 )]
-pub async fn get_media(
+pub async fn get_timeline_summary_handler(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,
-    Query(params): Query<GetMediaParams>,
-) -> Result<Json<PaginatedMediaResponse>, PhotosError> {
-    let result = media_paginated(&user, &pool, params).await?;
-    Ok(Json(result))
+) -> Result<Json<Vec<TimelineSummary>>, PhotosError> {
+    let summary = get_timeline_summary(&user, &pool).await?;
+    Ok(Json(summary))
 }
 
-/// Jump to a specific date in the media timeline.
-///
-/// Fetches a 'window' of media items centered around the provided date,
-/// allowing the client to scroll up and down from that point.
+/// Get media items for a given set of months, grouped by day.
 #[utoipa::path(
     get,
-    path = "/photos/media-by-date",
+    path = "/photos/by-month",
     tag = "Photos",
-    params(GetMediaByDateParams),
+    params(
+        GetMediaByMonthParams
+    ),
     responses(
-        (status = 200, description = "Successfully retrieved media items around the specified date.", body = PaginatedMediaResponse),
+        (status = 200, description = "Get media items for the requested months.", body = PaginatedMediaResponse),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
 )]
-pub async fn get_media_by_date(
+pub async fn get_media_by_month_handler(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,
-    Query(params): Query<GetMediaByDateParams>,
+    Query(params): Query<GetMediaByMonthParams>,
 ) -> Result<Json<PaginatedMediaResponse>, PhotosError> {
-    let result = media_by_date(&user, &pool, params).await?;
-    Ok(Json(result))
+    let media = get_media_by_months(&params, &user, &pool).await?;
+    Ok(Json(media))
 }

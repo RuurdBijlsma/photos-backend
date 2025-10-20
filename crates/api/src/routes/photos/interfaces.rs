@@ -1,9 +1,8 @@
 // crates/api/src/routes/photos/interfaces.rs
 
-use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Serialize, ToSchema)]
@@ -12,54 +11,58 @@ pub struct RandomPhotoResponse {
     pub themes: Option<Vec<Value>>,
 }
 
-/// Represents a single media item in the API response.
-/// This is a lightweight DTO (Data Transfer Object) for the frontend.
-#[derive(Serialize, ToSchema, FromRow, Debug)]
+// --- Structs for Media Grid ---
+
+/// Represents a summary of media items for a given month and year.
+#[derive(Serialize, ToSchema, sqlx::FromRow)]
+pub struct TimelineSummary {
+    pub year: i32,
+    pub month: i32,
+    pub media_count: i64,
+}
+
+/// Defines the query parameters for requesting media by month(s).
+#[derive(Deserialize, IntoParams, ToSchema)]
+pub struct GetMediaByMonthParams {
+    /// A comma-separated list of "YYYY-MM" strings.
+    pub months: String,
+}
+
+/// A data transfer object representing a single media item in the grid.
+#[derive(Serialize, sqlx::FromRow, ToSchema)]
 pub struct MediaItemDto {
+    #[serde(rename = "i")]
     pub id: String,
+    #[serde(rename = "w")]
     pub width: i32,
+    #[serde(rename = "h")]
     pub height: i32,
+    #[serde(rename = "v")]
     pub is_video: bool,
+    #[serde(rename = "d")]
+    pub duration_ms: Option<i64>,
+    #[serde(rename = "p")]
+    pub use_panorama_viewer: bool,
+    #[serde(rename = "t")]
     pub taken_at_naive: NaiveDateTime,
 }
 
 /// Represents a group of media items that were taken on the same day.
-#[derive(Serialize, ToSchema, Debug)]
+#[derive(Serialize, ToSchema)]
 pub struct DayGroup {
-    /// The date in "YYYY-MM-DD" format.
     pub date: String,
     pub media_items: Vec<MediaItemDto>,
 }
 
-/// The main response body for paginated media requests.
-#[derive(Serialize, ToSchema, Debug)]
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MonthGroup {
+    pub month: String,
+    pub day_groups: Vec<DayGroup>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct PaginatedMediaResponse {
-    /// A list of day-grouped media items.
-    pub days: Vec<DayGroup>,
-    /// Indicates if there are more older photos to fetch.
-    pub has_more_after: bool,
-    /// Indicates if there are more recent photos to fetch.
-    pub has_more_before: bool,
-}
-
-/// Query parameters for standard, cursor-based pagination.
-#[derive(Deserialize, IntoParams, ToSchema)]
-pub struct GetMediaParams {
-    /// Fetch media items taken strictly before this UTC timestamp.
-    pub before: Option<DateTime<Utc>>,
-    /// Fetch media items taken strictly after this UTC timestamp.
-    pub after: Option<DateTime<Utc>>,
-    /// The maximum number of media items to return. Defaults to 100.
-    pub limit: Option<u32>,
-}
-
-/// Query parameters for jumping to a specific date.
-#[derive(Deserialize, IntoParams, ToSchema)]
-pub struct GetMediaByDateParams {
-    /// The target date to jump to in "YYYY-MM-DD" format.
-    pub date: NaiveDate,
-    /// The number of items to fetch before the target date. Defaults to 50.
-    pub before_limit: Option<u32>,
-    /// The number of items to fetch from the target date onwards. Defaults to 50.
-    pub after_limit: Option<u32>,
+    pub months: Vec<MonthGroup>,
 }

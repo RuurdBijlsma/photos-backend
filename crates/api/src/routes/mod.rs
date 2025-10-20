@@ -11,7 +11,9 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::{get_media, get_media_by_date, get_random_photo};
+use crate::photos::handlers::{
+    get_media_by_month_handler, get_random_photo, get_timeline_summary_handler,
+};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
@@ -52,8 +54,8 @@ use utoipa_scalar::{Scalar, Servable};
         download::handlers::download_full_file,
         // --- Add new photo handlers ---
         photos::handlers::get_random_photo,
-        photos::handlers::get_media,
-        photos::handlers::get_media_by_date,
+        photos::handlers::get_timeline_summary_handler,
+        photos::handlers::get_media_by_month_handler,
     ),
     components(
         schemas(
@@ -78,8 +80,8 @@ use utoipa_scalar::{Scalar, Servable};
             photos::interfaces::MediaItemDto,
             photos::interfaces::DayGroup,
             photos::interfaces::PaginatedMediaResponse,
-            photos::interfaces::GetMediaParams,
-            photos::interfaces::GetMediaByDateParams
+            photos::interfaces::TimelineSummary,
+            photos::interfaces::GetMediaByMonthParams,
         ),
     ),
     modifiers(&SecurityAddon),
@@ -138,8 +140,8 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
         .route("/auth/me", get(get_me))
         .route("/download/full-file", get(download_full_file))
         .route("/photos/random", get(get_random_photo))
-        .route("/photos/media", get(get_media))
-        .route("/photos/media-by-date", get(get_media_by_date))
+        .route("/photos/timeline", get(get_timeline_summary_handler))
+        .route("/photos/by-month", get(get_media_by_month_handler))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 

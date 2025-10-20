@@ -2,17 +2,10 @@
 
 use crate::auth::db_model::User;
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{
-    DayGroup, GetMediaByDateParams, GetMediaParams, MediaItemDto, PaginatedMediaResponse,
-    RandomPhotoResponse,
-};
+use crate::photos::interfaces::{DayGroup, GetMediaByMonthParams, MediaItemDto, PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary};
 use rand::Rng;
 use sqlx::PgPool;
-use tracing::{debug, warn};
-
-// --- Constants for Pagination ---
-const DEFAULT_PAGINATION_LIMIT: u32 = 100;
-const DEFAULT_DATE_JUMP_LIMIT: u32 = 50;
+use tracing::{warn};
 
 // --- Existing Function (modified for clarity) ---
 /// Fetches a random photo with its color theme data for a specific user.
@@ -80,7 +73,79 @@ pub async fn random_photo(
     Ok(random_data)
 }
 
-// --- New Service Functions for Media Grid ---
+/// Fetches the timeline summary for a given user.
+pub async fn get_timeline_summary(
+    user: &User,
+    pool: &PgPool,
+) -> Result<Vec<TimelineSummary>, PhotosError> {
+    let summary = sqlx::query_as!(
+        TimelineSummary,
+        r#"
+        SELECT
+            year as "year!",
+            month as "month!",
+            media_count as "media_count!"
+        FROM timeline_summary
+        WHERE user_id = $1
+        ORDER BY year DESC, month DESC
+        "#,
+        user.id
+    )
+        .fetch_all(pool)
+        .await?;
+
+    Ok(summary)
+}
+
+/// Fetches media items for the given months and groups them by day.
+pub async fn get_media_by_months(
+    params: &GetMediaByMonthParams,
+    user: &User,
+    pool: &PgPool,
+) -> Result<PaginatedMediaResponse, PhotosError> {
+    let month_tuples: Vec<(i32, i32)> = params
+        .months
+        .split(',')
+        .filter_map(|s| {
+            let parts: Vec<&str> = s.split('-').collect();
+            if parts.len() == 2 {
+                let year = parts[0].parse::<i32>().ok();
+                let month = parts[1].parse::<i32>().ok();
+                year.and_then(|y| month.map(|m| (y, m)))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if month_tuples.is_empty() {
+        return Ok(PaginatedMediaResponse {
+            day_groups: vec![],
+        });
+    }
+
+    let media_items = sqlx::query_as!(
+        MediaItemDto,
+        r#"
+        SELECT id, width, height, is_video, taken_at_naive, duration_ms, use_panorama_viewer
+        FROM media_item
+        WHERE user_id = $1 AND deleted = false AND
+              (EXTRACT(YEAR FROM taken_at_naive), EXTRACT(MONTH FROM taken_at_naive)) IN
+              (SELECT * FROM UNNEST($2::integer[], $3::integer[]))
+        ORDER BY taken_at_naive DESC
+        "#,
+        user.id,
+        &month_tuples.iter().map(|(y, _)| *y).collect::<Vec<i32>>(),
+        &month_tuples.iter().map(|(_, m)| *m).collect::<Vec<i32>>(),
+    )
+        .fetch_all(pool)
+        .await?;
+
+    let day_groups = group_media_by_day(media_items);
+
+    Ok(PaginatedMediaResponse { day_groups })
+}
+
 
 /// Groups a flat, sorted list of `MediaItemDto`s into a `Vec<DayGroup>`.
 fn group_media_by_day(media_items: Vec<MediaItemDto>) -> Vec<DayGroup> {
@@ -101,169 +166,4 @@ fn group_media_by_day(media_items: Vec<MediaItemDto>) -> Vec<DayGroup> {
         }
     }
     day_groups
-}
-
-/// Fetches a paginated list of media items for a user, based on a time cursor.
-pub async fn media_paginated(
-    user: &User,
-    pool: &PgPool,
-    params: GetMediaParams,
-) -> Result<PaginatedMediaResponse, PhotosError> {
-    let limit = params.limit.unwrap_or(DEFAULT_PAGINATION_LIMIT);
-    // "Fetch one more" pattern to determine if there are more pages.
-    let query_limit = i64::from(limit) + 1;
-
-    let mut has_more_after = false;
-    let mut has_more_before = false;
-
-    // Determine query based on `before` (scrolling down) or `after` (scrolling up)
-    let mut media_items: Vec<MediaItemDto> = if let Some(before_ts) = params.before {
-        let naive_dt = before_ts.naive_utc();
-        // Scrolling down (fetching older photos)
-        has_more_before = true; // We know there are newer photos
-        sqlx::query_as!(
-            MediaItemDto,
-            r#"
-            SELECT id, width, height, is_video, taken_at_naive
-            FROM media_item
-            WHERE user_id = $1 AND taken_at_naive < $2 AND deleted = FALSE
-            ORDER BY taken_at_naive DESC
-            LIMIT $3
-            "#,
-            user.id,
-            naive_dt,
-            query_limit
-        )
-        .fetch_all(pool)
-        .await?
-    } else if let Some(after_ts) = params.after {
-        // Scrolling up (fetching newer photos)
-        has_more_after = true; // We know there are older photos
-        sqlx::query_as!(
-            MediaItemDto,
-            r#"
-            SELECT id, width, height, is_video, taken_at_naive
-            FROM media_item
-            WHERE user_id = $1 AND taken_at_naive > $2 AND deleted = FALSE
-            ORDER BY taken_at_naive
-            LIMIT $3
-            "#,
-            user.id,
-            after_ts.naive_utc(),
-            query_limit
-        )
-        .fetch_all(pool)
-        .await?
-    } else {
-        // Initial load (fetching the most recent photos)
-        sqlx::query_as!(
-            MediaItemDto,
-            r#"
-            SELECT id, width, height, is_video, taken_at_naive
-            FROM media_item
-            WHERE user_id = $1 AND deleted = FALSE
-            ORDER BY taken_at_naive DESC
-            LIMIT $2
-            "#,
-            user.id,
-            query_limit
-        )
-        .fetch_all(pool)
-        .await?
-    };
-
-    // Check if we fetched an extra item and adjust flags accordingly
-    if params.after.is_some() {
-        if media_items.len() > limit as usize {
-            has_more_before = true;
-            media_items.pop(); // Remove the extra item
-        } else {
-            has_more_before = false;
-        }
-        // Reverse to return in descending chronological order, which is more natural for the frontend
-        media_items.reverse();
-    } else if media_items.len() > limit as usize {
-        has_more_after = true;
-        media_items.pop(); // Remove the extra item
-    } else {
-        has_more_after = false;
-    }
-
-    Ok(PaginatedMediaResponse {
-        days: group_media_by_day(media_items),
-        has_more_after,
-        has_more_before,
-    })
-}
-
-/// Fetches a "window" of media items centered around a specific date.
-pub async fn media_by_date(
-    user: &User,
-    pool: &PgPool,
-    params: GetMediaByDateParams,
-) -> Result<PaginatedMediaResponse, PhotosError> {
-    let before_limit = i64::from(params.before_limit.unwrap_or(DEFAULT_DATE_JUMP_LIMIT));
-    let after_limit = i64::from(params.after_limit.unwrap_or(DEFAULT_DATE_JUMP_LIMIT));
-    let target_date = params.date.and_hms_opt(0, 0, 0).unwrap(); // Start of the target day
-
-    debug!(
-        "Fetching media by date: {} for user {}",
-        params.date, user.id
-    );
-
-    // This robust UNION ALL query fetches items before and after the target date in a single go.
-    // The outer SELECT ensures the final result set is correctly ordered.
-    let media_items = sqlx::query_as!(
-        MediaItemDto,
-        r#"
-        -- Assert that each column is NOT NULL using the '!' syntax because sqlx is dumb.
-        SELECT
-            id as "id!",
-            width as "width!",
-            height as "height!",
-            is_video as "is_video!",
-            taken_at_naive as "taken_at_naive!"
-        FROM (
-            -- Subquery to get photos BEFORE the target date
-            (
-                SELECT id, width, height, is_video, taken_at_naive
-                FROM media_item
-                WHERE user_id = $1 AND taken_at_naive < $2 AND deleted = FALSE
-                ORDER BY taken_at_naive DESC
-                LIMIT $3
-            )
-            UNION ALL
-            -- Subquery to get photos ON or AFTER the target date
-            (
-                SELECT id, width, height, is_video, taken_at_naive
-                FROM media_item
-                WHERE user_id = $1 AND taken_at_naive >= $2 AND deleted = FALSE
-                ORDER BY taken_at_naive
-                LIMIT $4
-            )
-        ) AS media_window
-        ORDER BY taken_at_naive;
-        "#,
-        user.id,
-        target_date,
-        before_limit,
-        after_limit
-    )
-    .fetch_all(pool)
-    .await?;
-
-    // A simple check to see if there are more photos outside our window.
-    // This isn't perfectly accurate but is a good, performant heuristic.
-    let has_more_before = media_items
-        .first()
-        .is_some_and(|item| item.taken_at_naive < target_date);
-    let has_more_after = media_items
-        .last()
-        .is_some_and(|item| item.taken_at_naive >= target_date);
-
-    Ok(PaginatedMediaResponse {
-        days: group_media_by_day(media_items),
-        has_more_after,
-        has_more_before,
-    })
 }
