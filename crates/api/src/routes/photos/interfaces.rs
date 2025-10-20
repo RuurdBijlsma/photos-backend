@@ -58,7 +58,7 @@ pub struct DayGroup {
 #[serde(rename_all = "camelCase")]
 pub struct MonthGroup {
     pub month: String,
-    pub day_groups: Vec<DayGroup>,
+    pub days: Vec<DayGroup>,
 }
 
 #[derive(Serialize, ToSchema)]

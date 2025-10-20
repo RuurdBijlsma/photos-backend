@@ -160,7 +160,7 @@ fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGrou
         match month_groups.last_mut() {
             // Check if the item belongs to the most recent month group
             Some(last_month) if last_month.month == item_month => {
-                match last_month.day_groups.last_mut() {
+                match last_month.days.last_mut() {
                     // Check if the item belongs to the most recent day group in that month
                     Some(last_day) if last_day.date == item_date => {
                         last_day.media_items.push(item);
@@ -171,7 +171,7 @@ fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGrou
                             date: item_date,
                             media_items: vec![item],
                         };
-                        last_month.day_groups.push(new_day_group);
+                        last_month.days.push(new_day_group);
                     }
                 }
             }
@@ -179,7 +179,7 @@ fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGrou
             _ => {
                 let new_month_group = MonthGroup {
                     month: item_month,
-                    day_groups: vec![DayGroup {
+                    days: vec![DayGroup {
                         date: item_date,
                         media_items: vec![item],
                     }],
