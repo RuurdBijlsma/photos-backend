@@ -48,9 +48,8 @@ CREATE TABLE media_item
     width               INT         NOT NULL,
     height              INT         NOT NULL,
     is_video            BOOLEAN     NOT NULL,
-    data_url            TEXT        NOT NULL,
     duration_ms         BIGINT,
-    taken_at_naive      TIMESTAMP   NOT NULL, -- Naive timestamp without timezone information.
+    taken_at_local      TIMESTAMP   NOT NULL, -- Naive timestamp without timezone information.
     use_panorama_viewer BOOLEAN     NOT NULL,
     deleted             BOOLEAN     NOT NULL DEFAULT false
 );
@@ -147,5 +146,5 @@ CREATE INDEX idx_gps_location_id ON gps (location_id);
 
 -- Indices for common sorting/filtering operations on media_item.
 CREATE INDEX idx_media_item_created_at ON media_item (created_at);
-CREATE INDEX idx_media_item_taken_at_naive ON media_item (taken_at_naive);
+CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);

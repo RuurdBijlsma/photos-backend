@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT id, width, height, is_video, data_url, taken_at_naive\n        FROM media_item\n        WHERE user_id = $1 AND deleted = false AND\n              (EXTRACT(YEAR FROM taken_at_naive), EXTRACT(MONTH FROM taken_at_naive)) IN\n              (SELECT * FROM UNNEST($2::integer[], $3::integer[]))\n        ORDER BY taken_at_naive DESC\n        ",
+  "query": "\n        SELECT id, width, height, is_video, taken_at_local, duration_ms, use_panorama_viewer\n        FROM media_item\n        WHERE user_id = $1 AND deleted = false AND\n              (EXTRACT(YEAR FROM taken_at_local), EXTRACT(MONTH FROM taken_at_local)) IN\n              (SELECT * FROM UNNEST($2::integer[], $3::integer[]))\n        ORDER BY taken_at_local DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -25,13 +25,18 @@
       },
       {
         "ordinal": 4,
-        "name": "data_url",
-        "type_info": "Text"
+        "name": "taken_at_local",
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 5,
-        "name": "taken_at_naive",
-        "type_info": "Timestamp"
+        "name": "duration_ms",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "use_panorama_viewer",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -47,8 +52,9 @@
       false,
       false,
       false,
+      true,
       false
     ]
   },
-  "hash": "2a3bece01c94bfd672bbc792be68272990e81e9a7657ce703a070588845de446"
+  "hash": "923c03c82a09059dc71313086ee05aad35e4a1de01ea03215dabbd175eb03508"
 }

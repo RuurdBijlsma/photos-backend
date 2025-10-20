@@ -1,10 +1,10 @@
 use crate::settings::structs::AppSettings;
+use chrono_tz::Tz;
 use std::fs;
 use std::fs::canonicalize;
-use std::path::{Path, PathBuf, absolute};
+use std::path::{absolute, Path, PathBuf};
 use std::sync::LazyLock;
 
-/// Load the app settings from YAML + environment variables
 pub fn load_app_settings() -> color_eyre::Result<AppSettings> {
     // Need to load from dotenv to get it to overwrite the db url from env.
     dotenv::from_path(".env").ok();
@@ -35,6 +35,15 @@ pub static THUMBNAILS_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
     dir
 });
 
+pub static FALLBACK_TIMEZONE: LazyLock<Option<Tz>> = LazyLock::new(|| {
+    let tz_string = &SETTINGS.analyzer.fallback_timezone;
+    if tz_string.is_empty() {
+        return None;
+    }
+    let parsed_tz = settings().analyzer.fallback_timezone.parse::<Tz>();
+    parsed_tz.ok()
+});
+
 #[must_use]
 pub fn settings() -> &'static AppSettings {
     &SETTINGS
@@ -53,4 +62,9 @@ pub fn canon_media_dir() -> &'static Path {
 #[must_use]
 pub fn thumbnails_dir() -> &'static Path {
     &THUMBNAILS_DIR
+}
+
+#[must_use]
+pub fn fallback_timezone() -> &'static Option<Tz> {
+    &FALLBACK_TIMEZONE
 }

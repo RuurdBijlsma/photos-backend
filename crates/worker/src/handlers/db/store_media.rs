@@ -69,9 +69,8 @@ pub async fn store_media_item(
         width: data.metadata.width as i32,
         height: data.metadata.height as i32,
         is_video: data.tags.is_video,
-        data_url: &data.data_url,
         duration_ms: data.metadata.duration.map(|d| (d * 1000.0) as i64),
-        taken_at_naive: data.time_info.datetime_naive,
+        taken_at_local: data.time_info.datetime_local,
         use_panorama_viewer: data.pano_info.use_panorama_viewer,
     })
     .await?;

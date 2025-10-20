@@ -130,12 +130,12 @@ pub async fn get_media_by_months(
     let media_items = sqlx::query_as!(
         MediaItemDto,
         r#"
-        SELECT id, width, height, is_video, taken_at_naive, duration_ms, use_panorama_viewer
+        SELECT id, width, height, is_video, taken_at_local, duration_ms, use_panorama_viewer
         FROM media_item
         WHERE user_id = $1 AND deleted = false AND
-              (EXTRACT(YEAR FROM taken_at_naive), EXTRACT(MONTH FROM taken_at_naive)) IN
+              (EXTRACT(YEAR FROM taken_at_local), EXTRACT(MONTH FROM taken_at_local)) IN
               (SELECT * FROM UNNEST($2::integer[], $3::integer[]))
-        ORDER BY taken_at_naive DESC
+        ORDER BY taken_at_local DESC
         "#,
         user.id,
         &month_tuples.iter().map(|(y, _)| *y).collect::<Vec<i32>>(),
@@ -154,8 +154,8 @@ fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGrou
     let mut month_groups: Vec<MonthGroup> = Vec::new();
 
     for item in media_items {
-        let item_month = item.taken_at_naive.format("%Y-%m").to_string();
-        let item_date = item.taken_at_naive.date().to_string();
+        let item_month = item.taken_at_local.format("%Y-%m").to_string();
+        let item_date = item.taken_at_local.date().to_string();
 
         match month_groups.last_mut() {
             // Check if the item belongs to the most recent month group

@@ -18,6 +18,7 @@ pub struct AppSettings {
 pub struct AnalyzerSettings {
     pub theme_generation: ThemeGenerationSettings,
     pub ocr: OCRSettings,
+    pub fallback_timezone: String
 }
 
 #[derive(Debug, Deserialize)]

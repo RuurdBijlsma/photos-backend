@@ -2,8 +2,8 @@
 CREATE OR REPLACE VIEW timeline_summary AS
 SELECT
     user_id,
-    EXTRACT(YEAR FROM taken_at_naive)::INT AS year,
-    EXTRACT(MONTH FROM taken_at_naive)::INT AS month,
+    EXTRACT(YEAR FROM taken_at_local)::INT AS year,
+    EXTRACT(MONTH FROM taken_at_local)::INT AS month,
     COUNT(*)::BIGINT AS media_count
 FROM
     media_item

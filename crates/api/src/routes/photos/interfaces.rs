@@ -44,7 +44,7 @@ pub struct MediaItemDto {
     #[serde(rename = "p")]
     pub use_panorama_viewer: bool,
     #[serde(rename = "t")]
-    pub taken_at_naive: NaiveDateTime,
+    pub taken_at_local: NaiveDateTime,
 }
 
 /// Represents a group of media items that were taken on the same day.
