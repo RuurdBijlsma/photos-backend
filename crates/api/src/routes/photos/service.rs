@@ -2,10 +2,13 @@
 
 use crate::auth::db_model::User;
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{DayGroup, GetMediaByMonthParams, MediaItemDto, PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary};
+use crate::photos::interfaces::{
+    DayGroup, GetMediaByMonthParams, MediaItemDto, MonthGroup, PaginatedMediaResponse,
+    RandomPhotoResponse, TimelineSummary,
+};
 use rand::Rng;
 use sqlx::PgPool;
-use tracing::{warn};
+use tracing::warn;
 
 // --- Existing Function (modified for clarity) ---
 /// Fetches a random photo with its color theme data for a specific user.
@@ -28,9 +31,9 @@ pub async fn random_photo(
         "#,
         user.id
     )
-    .fetch_one(pool)
-    .await?
-    .unwrap_or(0); // Default to 0 if count is NULL
+        .fetch_one(pool)
+        .await?
+        .unwrap_or(0); // Default to 0 if count is NULL
 
     if count == 0 {
         warn!("No photos with color data for user {}", user.id);
@@ -59,8 +62,8 @@ pub async fn random_photo(
         user.id,
         random_offset
     )
-    .fetch_optional(pool)
-    .await?;
+        .fetch_optional(pool)
+        .await?;
 
     if random_data.is_none() {
         // This can happen in a race condition if photos are deleted between the COUNT and this query.
@@ -97,7 +100,7 @@ pub async fn get_timeline_summary(
     Ok(summary)
 }
 
-/// Fetches media items for the given months and groups them by day.
+/// Fetches media items for the given months and groups them by month, then by day.
 pub async fn get_media_by_months(
     params: &GetMediaByMonthParams,
     user: &User,
@@ -120,7 +123,7 @@ pub async fn get_media_by_months(
 
     if month_tuples.is_empty() {
         return Ok(PaginatedMediaResponse {
-            day_groups: vec![],
+            months: vec![],
         });
     }
 
@@ -141,29 +144,49 @@ pub async fn get_media_by_months(
         .fetch_all(pool)
         .await?;
 
-    let day_groups = group_media_by_day(media_items);
+    let months = group_media_by_month_and_day(media_items);
 
-    Ok(PaginatedMediaResponse { day_groups })
+    Ok(PaginatedMediaResponse { months })
 }
 
-
-/// Groups a flat, sorted list of `MediaItemDto`s into a `Vec<DayGroup>`.
-fn group_media_by_day(media_items: Vec<MediaItemDto>) -> Vec<DayGroup> {
-    let mut day_groups: Vec<DayGroup> = Vec::new();
+/// Groups a flat, sorted list of `MediaItemDto`s into a `Vec<MonthGroup>`.
+fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGroup> {
+    let mut month_groups: Vec<MonthGroup> = Vec::new();
 
     for item in media_items {
-        let item_date = item.taken_at_naive.date();
-        match day_groups.last_mut() {
-            Some(last_group) if last_group.date == item_date.to_string() => {
-                last_group.media_items.push(item);
+        let item_month = item.taken_at_naive.format("%Y-%m").to_string();
+        let item_date = item.taken_at_naive.date().to_string();
+
+        match month_groups.last_mut() {
+            // Check if the item belongs to the most recent month group
+            Some(last_month) if last_month.month == item_month => {
+                match last_month.day_groups.last_mut() {
+                    // Check if the item belongs to the most recent day group in that month
+                    Some(last_day) if last_day.date == item_date => {
+                        last_day.media_items.push(item);
+                    }
+                    // Otherwise, create a new day group in the current month
+                    _ => {
+                        let new_day_group = DayGroup {
+                            date: item_date,
+                            media_items: vec![item],
+                        };
+                        last_month.day_groups.push(new_day_group);
+                    }
+                }
             }
+            // Otherwise, create a new month group (which also contains a new day group)
             _ => {
-                day_groups.push(DayGroup {
-                    date: item_date.to_string(),
-                    media_items: vec![item],
-                });
+                let new_month_group = MonthGroup {
+                    month: item_month,
+                    day_groups: vec![DayGroup {
+                        date: item_date,
+                        media_items: vec![item],
+                    }],
+                };
+                month_groups.push(new_month_group);
             }
         }
     }
-    day_groups
+    month_groups
 }
