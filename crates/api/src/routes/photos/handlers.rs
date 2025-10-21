@@ -1,6 +1,8 @@
 use crate::auth::db_model::User;
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{GetMediaByMonthParams, PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary};
+use crate::photos::interfaces::{
+    GetMediaByMonthParams, PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary,
+};
 use crate::photos::service::{get_media_by_months, get_timeline_summary, random_photo};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};

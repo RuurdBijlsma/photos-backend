@@ -38,24 +38,26 @@
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
+    * ✅ change the json output of vec<photo> to have small field names (is like 50% smaller)
     * Show photos in ui
-    * change the json output of vec<photo> to have small field names (is like 50% smaller)
-        * {i: "3d_8yhfd9", "w":1200, "h":1000, "t": "2018-08-30", "v": false}
-        * {id: "3d_8yhfd9", "width":1200, "height":1000, "taken_at_local": "2018-08-30", "is_video": false}
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
     * password reset flow (email) (make mail optional)
     * add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
-    * only allow register if no user exists, or if a valid invite token is passed
+    * ✅ only allow register if no user exists
+    * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
+      db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
+      user account)
     * frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
 * integration test
-  * auth
-  * "setup"
-  * ingest
-  * retrieve
+    * auth
+    * "setup"
+    * ingest
+    * retrieve
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
-* !BUG user_id from relative path is broken (it looks for username in first path of path, but we use media folder now in the
+* !BUG user_id from relative path is broken (it looks for username in first path of path, but we use media folder now in
+  the
   db, so we'll somehow have to get this. I think only way is loop over all media_folders in db and see if file path
   starts_with each media_folder)
 * Improve last_error field in jobs, just put entire report in there?

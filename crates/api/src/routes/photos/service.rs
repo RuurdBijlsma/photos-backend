@@ -31,9 +31,9 @@ pub async fn random_photo(
         "#,
         user.id
     )
-        .fetch_one(pool)
-        .await?
-        .unwrap_or(0); // Default to 0 if count is NULL
+    .fetch_one(pool)
+    .await?
+    .unwrap_or(0); // Default to 0 if count is NULL
 
     if count == 0 {
         warn!("No photos with color data for user {}", user.id);
@@ -62,8 +62,8 @@ pub async fn random_photo(
         user.id,
         random_offset
     )
-        .fetch_optional(pool)
-        .await?;
+    .fetch_optional(pool)
+    .await?;
 
     if random_data.is_none() {
         // This can happen in a race condition if photos are deleted between the COUNT and this query.
@@ -94,8 +94,8 @@ pub async fn get_timeline_summary(
         "#,
         user.id
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     Ok(summary)
 }
@@ -122,15 +122,13 @@ pub async fn get_media_by_months(
         .collect();
 
     if month_tuples.is_empty() {
-        return Ok(PaginatedMediaResponse {
-            months: vec![],
-        });
+        return Ok(PaginatedMediaResponse { months: vec![] });
     }
 
     let media_items = sqlx::query_as!(
         MediaItemDto,
         r#"
-        SELECT id, width, height, is_video, taken_at_local, duration_ms, use_panorama_viewer
+        SELECT id, hash, width, height, is_video, taken_at_local, duration_ms, use_panorama_viewer
         FROM media_item
         WHERE user_id = $1 AND deleted = false AND
               (EXTRACT(YEAR FROM taken_at_local), EXTRACT(MONTH FROM taken_at_local)) IN
@@ -141,8 +139,8 @@ pub async fn get_media_by_months(
         &month_tuples.iter().map(|(y, _)| *y).collect::<Vec<i32>>(),
         &month_tuples.iter().map(|(_, m)| *m).collect::<Vec<i32>>(),
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     let months = group_media_by_month_and_day(media_items);
 

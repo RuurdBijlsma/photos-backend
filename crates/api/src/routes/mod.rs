@@ -22,12 +22,12 @@ use crate::setup::handlers::{
 };
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use common_photos::UserRole;
 use sqlx::PgPool;
-use tower_http::{trace::TraceLayer, LatencyUnit};
+use tower_http::{LatencyUnit, trace::TraceLayer};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};

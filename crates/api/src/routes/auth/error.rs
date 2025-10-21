@@ -58,7 +58,7 @@ impl IntoResponse for AuthError {
         let (status, error_message) = match self {
             Self::InvalidUsername => (
                 StatusCode::BAD_REQUEST,
-                "Username must only contain alphanumeric characters.",
+                "Username may only contain alphanumeric characters and spaces.",
             ),
             Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
             Self::MissingToken

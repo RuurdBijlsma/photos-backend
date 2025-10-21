@@ -1,16 +1,16 @@
 use crate::auth::db_model::User;
 use crate::auth::token::{
-    generate_refresh_token_parts, split_refresh_token, verify_token, RefreshTokenParts,
+    RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
 use crate::routes::auth::error::AuthError;
 use crate::routes::auth::hashing::{hash_password, verify_password};
 use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
-use axum::http::StatusCode;
 use axum::Json;
+use axum::http::StatusCode;
 use chrono::{Duration, Utc};
 use common_photos::UserRole;
-use common_photos::{settings, UserWithPassword};
-use jsonwebtoken::{encode, EncodingKey, Header};
+use common_photos::{UserWithPassword, settings};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
 
@@ -52,7 +52,11 @@ pub async fn authenticate_user(
 /// * `AuthError::Internal` for hashing errors.
 /// * `AuthError::InvalidUsername` when the username contains illegal characters.
 pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, AuthError> {
-    if !payload.name.chars().all(char::is_alphanumeric) {
+    let username = &payload.name;
+    if !username.chars().all(|c| c.is_alphanumeric() || c == ' ')
+        || username.starts_with(' ')
+        || username.ends_with(' ')
+    {
         return Err(AuthError::InvalidUsername);
     }
     let hashed = hash_password(payload.password.as_ref())?;

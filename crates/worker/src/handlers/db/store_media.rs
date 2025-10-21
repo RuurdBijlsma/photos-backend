@@ -65,6 +65,7 @@ pub async fn store_media_item(
     insert_query!(tx, "media_item", {
         id: &item_id,
         user_id: user_id,
+        hash: &data.hash,
         relative_path: relative_path,
         width: data.metadata.width as i32,
         height: data.metadata.height as i32,

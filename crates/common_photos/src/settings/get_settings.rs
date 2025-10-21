@@ -2,7 +2,7 @@ use crate::settings::structs::AppSettings;
 use chrono_tz::Tz;
 use std::fs;
 use std::fs::canonicalize;
-use std::path::{absolute, Path, PathBuf};
+use std::path::{Path, PathBuf, absolute};
 use std::sync::LazyLock;
 
 pub fn load_app_settings() -> color_eyre::Result<AppSettings> {

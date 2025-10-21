@@ -41,6 +41,7 @@ CREATE TABLE refresh_token
 CREATE TABLE media_item
 (
     id                  VARCHAR(10) PRIMARY KEY,
+    hash                TEXT        NOT NULL,
     relative_path       TEXT        NOT NULL UNIQUE,
     user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -148,3 +149,4 @@ CREATE INDEX idx_gps_location_id ON gps (location_id);
 CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
+CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);

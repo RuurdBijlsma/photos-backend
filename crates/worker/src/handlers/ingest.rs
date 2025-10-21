@@ -31,9 +31,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
 
     let media_info = {
         let mut analyzer = context.media_analyzer.lock().await;
-        analyzer
-            .analyze_media(&file_path)
-            .await?
+        analyzer.analyze_media(&file_path).await?
     };
 
     let mut tx = context.pool.begin().await?;
