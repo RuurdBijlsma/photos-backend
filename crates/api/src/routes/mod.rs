@@ -120,7 +120,7 @@ pub fn create_router(pool: PgPool) -> Router {
             TraceLayer::new_for_http().on_response(
                 tower_http::trace::DefaultOnResponse::new()
                     .level(tracing::Level::INFO)
-                    .latency_unit(LatencyUnit::Micros),
+                    .latency_unit(LatencyUnit::Millis),
             ),
         )
 }

@@ -20,7 +20,7 @@ CREATE TABLE app_user
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     email        TEXT        NOT NULL UNIQUE,
     password     TEXT        NOT NULL,
-    name         TEXT        NOT NULL UNIQUE,
+    name         TEXT        NOT NULL,
     media_folder TEXT,
     role         user_role   NOT NULL DEFAULT 'user'
 );
