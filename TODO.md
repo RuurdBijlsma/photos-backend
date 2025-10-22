@@ -65,6 +65,11 @@
 * use time_utc for sorting with COALESCE (don't use it for binning into months and such, and don't return the utc time
   to user)
 * camelCase elke interfaces.rs struct
+* monitoring/alerting
+  * prometheus
+  * grafana
+  * alertmanager
+  * loki? denk t niet
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

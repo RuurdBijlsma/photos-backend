@@ -128,7 +128,7 @@ pub async fn get_media_by_months(
     let media_items = sqlx::query_as!(
         MediaItemDto,
         r#"
-        SELECT id, hash, width, height, is_video, taken_at_local, duration_ms, use_panorama_viewer
+        SELECT id, width, height, is_video, taken_at_local, duration_ms, use_panorama_viewer
         FROM media_item
         WHERE user_id = $1 AND deleted = false AND
               (EXTRACT(YEAR FROM taken_at_local), EXTRACT(MONTH FROM taken_at_local)) IN

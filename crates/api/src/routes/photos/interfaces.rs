@@ -33,8 +33,6 @@ pub struct GetMediaByMonthParams {
 pub struct MediaItemDto {
     #[serde(rename = "i")]
     pub id: String,
-    #[serde(rename = "h")]
-    pub hash: String,
     #[serde(rename = "w")]
     pub width: i32,
     #[serde(rename = "h")]
