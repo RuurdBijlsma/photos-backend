@@ -6,6 +6,7 @@ use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct RandomPhotoResponse {
     pub media_id: String,
     pub themes: Option<Vec<Value>>,
@@ -15,6 +16,7 @@ pub struct RandomPhotoResponse {
 
 /// Represents a summary of media items for a given month and year.
 #[derive(Serialize, ToSchema, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct TimelineSummary {
     pub year: i32,
     pub month: i32,
@@ -23,6 +25,7 @@ pub struct TimelineSummary {
 
 /// Defines the query parameters for requesting media by month(s).
 #[derive(Deserialize, IntoParams, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct GetMediaByMonthParams {
     /// A comma-separated list of "YYYY-MM" strings.
     pub months: String,
@@ -30,6 +33,7 @@ pub struct GetMediaByMonthParams {
 
 /// A data transfer object representing a single media item in the grid.
 #[derive(Serialize, sqlx::FromRow, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct MediaItemDto {
     #[serde(rename = "i")]
     pub id: String,
@@ -47,18 +51,11 @@ pub struct MediaItemDto {
     pub taken_at_local: NaiveDateTime,
 }
 
-/// Represents a group of media items that were taken on the same day.
-#[derive(Serialize, ToSchema)]
-pub struct DayGroup {
-    pub date: String,
-    pub media_items: Vec<MediaItemDto>,
-}
-
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MonthGroup {
     pub month: String,
-    pub days: Vec<DayGroup>,
+    pub media_items: Vec<MediaItemDto>,
 }
 
 #[derive(Serialize, ToSchema)]

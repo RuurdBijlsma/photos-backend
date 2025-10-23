@@ -78,7 +78,6 @@ use utoipa_scalar::{Scalar, Servable};
             // --- Add new photos schemas ---
             photos::interfaces::RandomPhotoResponse,
             photos::interfaces::MediaItemDto,
-            photos::interfaces::DayGroup,
             photos::interfaces::PaginatedMediaResponse,
             photos::interfaces::TimelineSummary,
             photos::interfaces::GetMediaByMonthParams,

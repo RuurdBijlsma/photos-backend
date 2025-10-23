@@ -3,8 +3,8 @@
 use crate::auth::db_model::User;
 use crate::photos::error::PhotosError;
 use crate::photos::interfaces::{
-    DayGroup, GetMediaByMonthParams, MediaItemDto, MonthGroup, PaginatedMediaResponse,
-    RandomPhotoResponse, TimelineSummary,
+    GetMediaByMonthParams, MediaItemDto, MonthGroup, PaginatedMediaResponse, RandomPhotoResponse,
+    TimelineSummary,
 };
 use rand::Rng;
 use sqlx::PgPool;
@@ -150,41 +150,32 @@ pub async fn get_media_by_months(
 /// Groups a flat, sorted list of `MediaItemDto`s into a `Vec<MonthGroup>`.
 fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGroup> {
     let mut month_groups: Vec<MonthGroup> = Vec::new();
+    let mut current_month_group: Option<MonthGroup> = None;
 
     for item in media_items {
         let item_month = item.taken_at_local.format("%Y-%m").to_string();
-        let item_date = item.taken_at_local.date().to_string();
-
-        match month_groups.last_mut() {
-            // Check if the item belongs to the most recent month group
-            Some(last_month) if last_month.month == item_month => {
-                match last_month.days.last_mut() {
-                    // Check if the item belongs to the most recent day group in that month
-                    Some(last_day) if last_day.date == item_date => {
-                        last_day.media_items.push(item);
-                    }
-                    // Otherwise, create a new day group in the current month
-                    _ => {
-                        let new_day_group = DayGroup {
-                            date: item_date,
-                            media_items: vec![item],
-                        };
-                        last_month.days.push(new_day_group);
-                    }
-                }
+        if let Some(current) = &mut current_month_group
+            && current.month == item_month
+        {
+            // Same month as previous media item, push item to month struct.
+            current.media_items.push(item);
+        } else {
+            // Different month, or first month
+            if let Some(current) = current_month_group {
+                // Different month, push previous month to month_groups
+                month_groups.push(current);
             }
-            // Otherwise, create a new month group (which also contains a new day group)
-            _ => {
-                let new_month_group = MonthGroup {
-                    month: item_month,
-                    days: vec![DayGroup {
-                        date: item_date,
-                        media_items: vec![item],
-                    }],
-                };
-                month_groups.push(new_month_group);
-            }
+            current_month_group = Some(MonthGroup {
+                month: item_month,
+                media_items: vec![item],
+            });
         }
     }
+
+    if let Some(current) = current_month_group {
+        // Push last month to month_groups
+        month_groups.push(current);
+    }
+
     month_groups
 }
