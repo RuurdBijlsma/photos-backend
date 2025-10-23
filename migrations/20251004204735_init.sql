@@ -152,6 +152,7 @@ CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
 CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);
-CREATE INDEX idx_media_item_user_date_desc_partial
-    ON media_item (user_id, taken_at_local DESC)
+CREATE INDEX idx_media_item_covering_for_ratios ON media_item (user_id, (DATE_TRUNC('month', taken_at_local)) DESC,
+                                                               taken_at_local DESC)
+    INCLUDE (width, height)
     WHERE deleted = false;

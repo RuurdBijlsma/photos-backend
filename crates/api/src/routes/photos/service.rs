@@ -199,27 +199,18 @@ pub async fn get_all_photo_ratios(
     user: &User,
     pool: &PgPool,
 ) -> Result<Vec<Vec<f32>>, PhotosError> {
-    // This query returns a single column `ratios` for each row.
-    // Each `ratios` column is a PostgreSQL array of `real` numbers (float[]),
-    // which sqlx maps directly to a `Vec<f32>`.
-    // The query_scalar! macro is perfect for this, as it collects the single
-    // column from each row into a Vec.
+    // This query now reads pre-aggregated data from the summary table.
+    // It's much faster as it avoids on-the-fly calculations and grouping.
     let ratios_by_month = sqlx::query_scalar!(
         r#"
         SELECT
-            -- Aggregate ratios into an array for each group.
-            array_agg((width::float / height)::real ORDER BY taken_at_local DESC) as "ratios!"
+            ratios as "ratios!"
         FROM
-            media_item
+            monthly_photo_ratios
         WHERE
             user_id = $1
-            AND deleted = false
-        GROUP BY
-            -- Group by the start of the month.
-            DATE_TRUNC('month', taken_at_local)
         ORDER BY
-            -- Order the months from newest to oldest.
-            DATE_TRUNC('month', taken_at_local) DESC
+            month_start DESC
         "#,
         user.id
     )

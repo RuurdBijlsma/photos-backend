@@ -149,7 +149,7 @@ async fn seed_mock_photos_in_tx(
             .await
             .expect("Failed to store media item");
 
-        if (i + 1) % 5000 == 0 {
+        if (i + 1) % 1000 == 0 {
             info!("... inserted {}/{} photos", i + 1, num_items);
         }
     }
