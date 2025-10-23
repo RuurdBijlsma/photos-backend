@@ -53,7 +53,9 @@ CREATE TABLE media_item
     taken_at_local      TIMESTAMP   NOT NULL,
     taken_at_utc        TIMESTAMPTZ,
     use_panorama_viewer BOOLEAN     NOT NULL,
-    deleted             BOOLEAN     NOT NULL DEFAULT false
+    deleted             BOOLEAN     NOT NULL DEFAULT false,
+    CONSTRAINT width_positive CHECK (width > 0),
+    CONSTRAINT height_positive CHECK (height > 0)
 );
 
 -- The following tables store optional, detailed metadata for a MediaItem.
@@ -150,3 +152,6 @@ CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
 CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);
+CREATE INDEX idx_media_item_user_date_desc_partial
+    ON media_item (user_id, taken_at_local DESC)
+    WHERE deleted = false;

@@ -37,16 +37,14 @@ pub struct GetMediaByMonthParams {
 pub struct MediaItemDto {
     #[serde(rename = "i")]
     pub id: String,
-    #[serde(rename = "w")]
-    pub width: i32,
-    #[serde(rename = "h")]
-    pub height: i32,
+    #[serde(rename = "r")]
+    pub ratio: f64,
     #[serde(rename = "v")]
-    pub is_video: bool,
+    pub is_video: i32,
     #[serde(rename = "d")]
     pub duration_ms: Option<i64>,
     #[serde(rename = "p")]
-    pub use_panorama_viewer: bool,
+    pub use_panorama_viewer: i32,
     #[serde(rename = "t")]
     pub taken_at_local: NaiveDateTime,
 }

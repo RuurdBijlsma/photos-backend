@@ -3,11 +3,11 @@ use crate::jobs::heartbeat::start_heartbeat_loop;
 use color_eyre::Result;
 use common_photos::{Job, JobType};
 
-mod analyze;
-mod clean_db;
-mod ingest;
-mod remove;
-mod scan;
+pub mod analyze;
+pub mod clean_db;
+pub mod ingest;
+pub mod remove;
+pub mod scan;
 
 pub mod db;
 

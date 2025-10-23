@@ -128,10 +128,16 @@ pub async fn get_media_by_months(
     let media_items = sqlx::query_as!(
         MediaItemDto,
         r#"
-        SELECT id, width, height, is_video, taken_at_local, duration_ms, use_panorama_viewer
+        SELECT id,
+               width::float / height as "ratio!",
+               is_video::int as "is_video!",
+               taken_at_local,
+               duration_ms,
+               use_panorama_viewer::int as "use_panorama_viewer!"
         FROM media_item
-        WHERE user_id = $1 AND deleted = false AND
-              (EXTRACT(YEAR FROM taken_at_local), EXTRACT(MONTH FROM taken_at_local)) IN
+        WHERE user_id = $1
+          AND deleted = false
+          AND (EXTRACT(YEAR FROM taken_at_local), EXTRACT(MONTH FROM taken_at_local)) IN
               (SELECT * FROM UNNEST($2::integer[], $3::integer[]))
         ORDER BY taken_at_local DESC
         "#,
@@ -178,4 +184,47 @@ fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGrou
     }
 
     month_groups
+}
+
+/// Fetches all photo ratios for a user, grouped by month.
+///
+/// The query groups all media items by month, calculates the ratio for each,
+/// and aggregates these ratios into an array for each month. The result is a
+/// list of these monthly ratio arrays, ordered from newest to oldest month.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
+pub async fn get_all_photo_ratios(
+    user: &User,
+    pool: &PgPool,
+) -> Result<Vec<Vec<f32>>, PhotosError> {
+    // This query returns a single column `ratios` for each row.
+    // Each `ratios` column is a PostgreSQL array of `real` numbers (float[]),
+    // which sqlx maps directly to a `Vec<f32>`.
+    // The query_scalar! macro is perfect for this, as it collects the single
+    // column from each row into a Vec.
+    let ratios_by_month = sqlx::query_scalar!(
+        r#"
+        SELECT
+            -- Aggregate ratios into an array for each group.
+            array_agg((width::float / height)::real ORDER BY taken_at_local DESC) as "ratios!"
+        FROM
+            media_item
+        WHERE
+            user_id = $1
+            AND deleted = false
+        GROUP BY
+            -- Group by the start of the month.
+            DATE_TRUNC('month', taken_at_local)
+        ORDER BY
+            -- Order the months from newest to oldest.
+            DATE_TRUNC('month', taken_at_local) DESC
+        "#,
+        user.id
+    )
+        .fetch_all(pool)
+        .await?;
+
+    Ok(ratios_by_month)
 }

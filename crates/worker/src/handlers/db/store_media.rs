@@ -40,7 +40,7 @@ async fn get_or_create_location(
     }
 }
 
-/// Inserts a full media item using your `AnalyzeResult` struct within a single transaction.
+/// Inserts a full media item using `AnalyzeResult` struct within a single transaction.
 #[allow(
     clippy::too_many_lines,
     clippy::cast_possible_truncation,
