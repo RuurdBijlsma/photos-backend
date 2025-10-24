@@ -1,11 +1,13 @@
 // crates/api/src/routes/photos/service.rs
 
 use crate::auth::db_model::User;
+use crate::pb::api::{MediaItem, MonthGroup};
 use crate::photos::error::PhotosError;
 use crate::photos::interfaces::{
-    GetMediaByMonthParams, MediaItemDto, MonthGroup, PaginatedMediaResponse, RandomPhotoResponse,
-    TimelineSummary,
+    GetMediaByMonthParams, MediaItemDto, MonthGroupDto, MonthlyRatiosDto, PaginatedMediaResponse,
+    RandomPhotoResponse, TimelineSummary,
 };
+use chrono::{Datelike, NaiveDate, NaiveTime};
 use rand::Rng;
 use sqlx::PgPool;
 use tracing::warn;
@@ -129,7 +131,6 @@ pub async fn get_media_by_months(
         MediaItemDto,
         r#"
         SELECT id,
-               width::float / height as "ratio!",
                is_video::int as "is_video!",
                taken_at_local,
                duration_ms,
@@ -148,15 +149,69 @@ pub async fn get_media_by_months(
     .fetch_all(pool)
     .await?;
 
-    let months = group_media_by_month_and_day(media_items);
+    let months = group_media_by_month(media_items);
 
     Ok(PaginatedMediaResponse { months })
 }
 
+pub async fn get_media_by_month(
+    month_str: &str, // e.g., "2024-10"
+    user: &User,
+    pool: &PgPool,
+) -> Result<MonthGroup, PhotosError> {
+    // 1. Parse the year and month from the input string
+    let parts: Vec<&str> = month_str.split('-').collect();
+    if parts.len() != 2 {
+        return Err(PhotosError::InvalidMonthFormat(month_str.to_string()));
+    }
+
+    let year: i32 = parts[0]
+        .parse()
+        .map_err(|_| PhotosError::InvalidMonthFormat(month_str.to_string()))?;
+    let month: i32 = parts[1]
+        .parse()
+        .map_err(|_| PhotosError::InvalidMonthFormat(month_str.to_string()))?;
+
+    // 2. Query the database, mapping directly to the generated MediaItem struct
+    let media_items_proto: Vec<MediaItem> = sqlx::query_as!(
+        MediaItem,
+        r#"
+        SELECT
+            id AS "i!",
+            is_video::INT AS "v!",
+            duration_ms AS d,
+            use_panorama_viewer::INT AS "p!",
+            taken_at_local::TEXT AS "t!"
+        FROM
+            media_item
+        WHERE
+            user_id = $1
+            AND EXTRACT(YEAR FROM taken_at_local)::INT = $2
+            AND EXTRACT(MONTH FROM taken_at_local)::INT = $3
+            AND deleted = false
+        ORDER BY
+            taken_at_local
+        "#,
+        user.id,
+        year,
+        month
+    )
+        .fetch_all(pool)
+        .await?;
+
+    // 3. Construct the final MonthGroup (no intermediate mapping step!)
+    let month_group = MonthGroup {
+        month: month_str.to_string(),
+        media_items: media_items_proto,
+    };
+
+    Ok(month_group)
+}
+
 /// Groups a flat, sorted list of `MediaItemDto`s into a `Vec<MonthGroup>`.
-fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGroup> {
-    let mut month_groups: Vec<MonthGroup> = Vec::new();
-    let mut current_month_group: Option<MonthGroup> = None;
+fn group_media_by_month(media_items: Vec<MediaItemDto>) -> Vec<MonthGroupDto> {
+    let mut month_groups: Vec<MonthGroupDto> = Vec::new();
+    let mut current_month_group: Option<MonthGroupDto> = None;
 
     for item in media_items {
         let item_month = item.taken_at_local.format("%Y-%m").to_string();
@@ -171,7 +226,7 @@ fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGrou
                 // Different month, push previous month to month_groups
                 month_groups.push(current);
             }
-            current_month_group = Some(MonthGroup {
+            current_month_group = Some(MonthGroupDto {
                 month: item_month,
                 media_items: vec![item],
             });
@@ -186,16 +241,7 @@ fn group_media_by_month_and_day(media_items: Vec<MediaItemDto>) -> Vec<MonthGrou
     month_groups
 }
 
-/// Fetches all photo ratios for a user, grouped by month.
-///
-/// The query groups all media items by month, calculates the ratio for each,
-/// and aggregates these ratios into an array for each month. The result is a
-/// list of these monthly ratio arrays, ordered from newest to oldest month.
-///
-/// # Errors
-///
-/// Returns an error if the database query fails.
-pub async fn get_all_photo_ratios(
+pub async fn get_all_photo_ratios1(
     user: &User,
     pool: &PgPool,
 ) -> Result<Vec<Vec<f32>>, PhotosError> {
@@ -214,8 +260,34 @@ pub async fn get_all_photo_ratios(
         "#,
         user.id
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     Ok(ratios_by_month)
+}
+
+pub async fn get_all_photo_ratios2(
+    user: &User,
+    pool: &PgPool,
+) -> Result<Vec<MonthlyRatiosDto>, PhotosError> {
+    let results = sqlx::query_as!(
+        MonthlyRatiosDto,
+        r#"
+        SELECT
+            TO_CHAR(DATE_TRUNC('month', taken_at_local), 'YYYY-MM')               as "month!",
+            array_agg((width::float / height)::real ORDER BY taken_at_local DESC) as "ratios!"
+        FROM media_item
+        WHERE user_id = $1
+          AND deleted = false
+        GROUP BY
+            DATE_TRUNC('month', taken_at_local)
+        ORDER BY
+            DATE_TRUNC('month', taken_at_local) DESC
+        "#,
+        user.id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(results)
 }

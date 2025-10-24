@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            ratios as \"ratios!\"\n        FROM\n            monthly_photo_ratios\n        WHERE\n            user_id = $1\n        ORDER BY\n            month_start DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ratios!",
+        "type_info": "Float4Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "162f145c6597458cb0c4c2c5120aefdb7cb300423a1617f2d2e8011bd95e3a51"
+}

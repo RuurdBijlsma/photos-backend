@@ -11,7 +11,7 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::{get_media_by_month_handler, get_photo_ratios_json_handler, get_photo_ratios_pb_handler, get_random_photo, get_timeline_summary_handler};
+use crate::photos::handlers::{get_media_by_month_handler, get_media_by_month_protobuf_handler, get_photo_ratios_json_handler, get_photo_ratios_pb_handler, get_random_photo, get_timeline_summary_handler};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
@@ -54,7 +54,6 @@ use utoipa_scalar::{Scalar, Servable};
         photos::handlers::get_random_photo,
         photos::handlers::get_timeline_summary_handler,
         photos::handlers::get_media_by_month_handler,
-        photos::handlers::get_photo_ratios_pb_handler,
         photos::handlers::get_photo_ratios_json_handler,
     ),
     components(
@@ -141,8 +140,9 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
         .route("/photos/random", get(get_random_photo))
         .route("/photos/timeline", get(get_timeline_summary_handler))
         .route("/photos/by-month", get(get_media_by_month_handler))
-        .route("/photos/ratios.pb", get(get_photo_ratios_pb_handler))
+        .route("/photos/by-month.pb", get(get_media_by_month_protobuf_handler))
         .route("/photos/ratios", get(get_photo_ratios_json_handler))
+        .route("/photos/ratios.pb", get(get_photo_ratios_pb_handler))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 

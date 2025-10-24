@@ -1,17 +1,28 @@
 syntax = "proto3";
 
-// Define a package to prevent name collisions
 package api;
-
-// Contains a list of ratios for a single month.
-// This corresponds to the inner Vec<f32>.
-message MonthlyPhotoRatios {
-  // `repeated` indicates a list/array. The `= 1` is the field number.
-  repeated float ratios = 1;
+//todo suffix all these with Pb or something to differentiate them
+message MonthlyRatios {
+  // The month identifier as a string, e.g., "2024-02".
+  string month = 1;
+  // A list of media item aspect ratios calculated for that month.
+  repeated float ratios = 2;
 }
 
-// The top-level response message.
-// This corresponds to the outer Vec<...>.
-message AllPhotoRatiosResponse {
-  repeated MonthlyPhotoRatios months = 1;
+message GetMonthlyRatiosResponse {
+  repeated MonthlyRatios results = 1;
+}
+
+//Todo there's no point in the short names if i use protobuf
+message MediaItem {
+  string i = 1;
+  int32 v = 2;
+  optional int64 d = 3;
+  int32 p = 4;
+  string t = 5;
+}
+
+message MonthGroup {
+  string month = 1;
+  repeated MediaItem media_items = 2;
 }

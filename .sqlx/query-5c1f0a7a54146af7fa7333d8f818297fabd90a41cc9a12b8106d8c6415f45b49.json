@@ -1,0 +1,48 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id,\n               is_video::int as \"is_video!\",\n               taken_at_local,\n               duration_ms,\n               use_panorama_viewer::int as \"use_panorama_viewer!\"\n        FROM media_item\n        WHERE user_id = $1\n          AND deleted = false\n          AND (EXTRACT(YEAR FROM taken_at_local), EXTRACT(MONTH FROM taken_at_local)) IN\n              (SELECT * FROM UNNEST($2::integer[], $3::integer[]))\n        ORDER BY taken_at_local DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "is_video!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "taken_at_local",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 3,
+        "name": "duration_ms",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "use_panorama_viewer!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "5c1f0a7a54146af7fa7333d8f818297fabd90a41cc9a12b8106d8c6415f45b49"
+}

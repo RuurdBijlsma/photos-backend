@@ -1,19 +1,23 @@
-use std::time::Instant;
 use crate::auth::db_model::User;
-use crate::pb::api::{AllPhotoRatiosResponse, MonthlyPhotoRatios};
+use crate::pb::api::{GetMonthlyRatiosResponse, MonthlyRatios};
+use crate::pb::api::MonthGroup;
 use crate::photos::error::PhotosError;
 use crate::photos::interfaces::{
-    GetMediaByMonthParams, PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary,
+    GetByMonthParam, GetMediaByMonthParams, MonthlyRatiosDto,
+    PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary,
 };
 use crate::photos::service::{
-    get_all_photo_ratios, get_media_by_months, get_timeline_summary, random_photo,
+    get_all_photo_ratios2, get_media_by_month, get_media_by_months, get_timeline_summary,
+    random_photo,
 };
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
 use axum::{Extension, Json};
+use axum_extra::protobuf::Protobuf;
 use http::{header, HeaderMap};
 use prost::Message;
 use sqlx::PgPool;
+use std::time::Instant;
 
 /// Get random photo and associated theme.
 #[utoipa::path(
@@ -75,10 +79,34 @@ pub async fn get_media_by_month_handler(
     Ok(Json(media))
 }
 
+#[utoipa::path(
+    get,
+    path = "/photos/by-month.pb",
+    tag = "Photos",
+    params(
+        GetByMonthParam
+    ),
+    responses(
+        (status = 200, description = "Get media items for the requested months.", body = MonthGroup),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+#[axum::debug_handler]
+pub async fn get_media_by_month_protobuf_handler(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+    Query(params): Query<GetByMonthParam>,
+) -> Result<Protobuf<MonthGroup>, PhotosError> {
+    // 1. Call your existing function to get the DTO response
+    let mg = get_media_by_month(&params.month, &user, &pool).await?;
+    Ok(Protobuf(mg))
+}
+
 /// Get all photo ratios grouped by month in json format.
 #[utoipa::path(
     get,
-    path = "/photos/ratios.pb",
+    path = "/photos/ratios",
     tag = "Photos",
     responses(
         (status = 200, description = "TODO EDIT ME.", body = Vec<Vec<f32>>),
@@ -89,14 +117,13 @@ pub async fn get_media_by_month_handler(
 pub async fn get_photo_ratios_json_handler(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,
-) -> Result<Json<Vec<Vec<f32>>>, PhotosError> {
+) -> Result<Json<Vec<MonthlyRatiosDto>>, PhotosError> {
     let now = Instant::now();
-    let result = get_all_photo_ratios(&user, &pool).await?;
+    let ratios_by_month = get_all_photo_ratios2(&user, &pool).await?;
     println!("service took {:?}", now.elapsed());
-    Ok(Json(result))
+    Ok(Json(ratios_by_month))
 }
 
-/// Get all photo ratios grouped by month in a compact Protobuf format.
 #[utoipa::path(
     get,
     path = "/photos/ratios.pb",
@@ -111,27 +138,23 @@ pub async fn get_photo_ratios_pb_handler(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,
 ) -> Result<Response, PhotosError> {
-    // 1. Fetch the data from the database, same as before.
-    let ratios_by_month: Vec<Vec<f32>> = get_all_photo_ratios(&user, &pool).await?;
+    let ratios_by_month: Vec<MonthlyRatiosDto> = get_all_photo_ratios2(&user, &pool).await?;
 
-    // 2. Convert the Rust Vecs into the generated Protobuf structs.
-    let response = AllPhotoRatiosResponse {
-        months: ratios_by_month
+    let response = GetMonthlyRatiosResponse {
+        results: ratios_by_month
             .into_iter()
-            .map(|ratios| MonthlyPhotoRatios { ratios })
+            .map(|db_result| MonthlyRatios {
+                month: db_result.month,
+                ratios: db_result.ratios,
+            })
             .collect(),
     };
 
-    // 3. Serialize the Protobuf struct into a binary Vec<u8>.
     let body = response.encode_to_vec();
-
-    // 4. Create headers to specify the binary content type.
     let mut headers = HeaderMap::new();
     headers.insert(
         header::CONTENT_TYPE,
         "application/x-protobuf".parse().unwrap(),
     );
-
-    // 5. Return the headers and binary body.
     Ok((headers, body).into_response())
 }

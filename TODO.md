@@ -66,10 +66,15 @@
   to user)
 * camelCase elke interfaces.rs struct
 * monitoring/alerting
-  * prometheus
-  * grafana
-  * alertmanager
-  * loki? denk t niet
+    * prometheus
+    * grafana
+    * alertmanager
+    * loki? denk t niet
+* protobuf for more endpoints?
+* i made the photos handler/service code garbage. clean up pls.
+* Dont use single character field names now that we use protobuf for big requests
+* look into not using generated code, just add the prost annotations on the real structs
+* use proper index on get-month endpoint, if not already at max perf level.
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

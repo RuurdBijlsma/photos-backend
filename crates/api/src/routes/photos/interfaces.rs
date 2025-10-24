@@ -3,6 +3,7 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Serialize, ToSchema)]
@@ -26,8 +27,16 @@ pub struct TimelineSummary {
 /// Defines the query parameters for requesting media by month(s).
 #[derive(Deserialize, IntoParams, ToSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct GetByMonthParam {
+    /// "YYYY-MM" string.
+    pub month: String,
+}
+
+/// Defines the query parameters for requesting media by month(s).
+#[derive(Deserialize, IntoParams, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct GetMediaByMonthParams {
-    /// A comma-separated list of "YYYY-MM" strings.
+    /// "YYYY-MM" strings.
     pub months: String,
 }
 
@@ -37,8 +46,6 @@ pub struct GetMediaByMonthParams {
 pub struct MediaItemDto {
     #[serde(rename = "i")]
     pub id: String,
-    #[serde(rename = "r")]
-    pub ratio: f64,
     #[serde(rename = "v")]
     pub is_video: i32,
     #[serde(rename = "d")]
@@ -51,7 +58,7 @@ pub struct MediaItemDto {
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct MonthGroup {
+pub struct MonthGroupDto {
     pub month: String,
     pub media_items: Vec<MediaItemDto>,
 }
@@ -59,5 +66,24 @@ pub struct MonthGroup {
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PaginatedMediaResponse {
-    pub months: Vec<MonthGroup>,
+    pub months: Vec<MonthGroupDto>,
+}
+
+// Ratio types
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct JsonMonthlyPhotoRatios {
+    pub ratios: Vec<f32>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct JsonPhotoRatiosResponse {
+    pub months: Vec<JsonMonthlyPhotoRatios>,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct MonthlyRatiosDto {
+    pub month: String,
+    pub ratios: Vec<f32>,
 }

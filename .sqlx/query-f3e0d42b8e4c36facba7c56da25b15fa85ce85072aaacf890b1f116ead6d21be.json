@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO app_user (email, name, password, role)\n        SELECT\n            $1, -- payload.email\n            $2, -- payload.name\n            $3, -- hashed password\n            CASE\n                WHEN NOT EXISTS (SELECT 1 FROM app_user) THEN 'admin'::user_role\n                ELSE 'user'::user_role\n            END\n        RETURNING id, email, name, media_folder, role as \"role: UserRole\", created_at, updated_at\n        ",
+  "query": "\n        INSERT INTO app_user (email, name, password, role)\n        VALUES ($1, $2, $3, $4)\n        RETURNING id, email, name, media_folder, role as \"role: UserRole\", created_at, updated_at\n        ",
   "describe": {
     "columns": [
       {
@@ -53,7 +53,18 @@
       "Left": [
         "Text",
         "Text",
-        "Text"
+        "Text",
+        {
+          "Custom": {
+            "name": "user_role",
+            "kind": {
+              "Enum": [
+                "admin",
+                "user"
+              ]
+            }
+          }
+        }
       ]
     },
     "nullable": [
@@ -66,5 +77,5 @@
       false
     ]
   },
-  "hash": "d2d60fc24e688727022f1163c9f9fe36f7d785bb140f241c751ef014f707bfc9"
+  "hash": "f3e0d42b8e4c36facba7c56da25b15fa85ce85072aaacf890b1f116ead6d21be"
 }
