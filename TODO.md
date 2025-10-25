@@ -75,6 +75,8 @@
 * Dont use single character field names now that we use protobuf for big requests
 * look into not using generated code, just add the prost annotations on the real structs
 * use proper index on get-month endpoint, if not already at max perf level.
+* response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms, but on frontend end is 100-125 ms.
+* make ratios endpoint more of a timeline endpoint, with count per month.
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

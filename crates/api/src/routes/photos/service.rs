@@ -1,7 +1,7 @@
 // crates/api/src/routes/photos/service.rs
 
 use crate::auth::db_model::User;
-use crate::pb::api::{MediaItem, MonthGroup};
+use crate::pb::api::{MediaItem, MonthGroup, MultiMonthGroup};
 use crate::photos::error::PhotosError;
 use crate::photos::interfaces::{
     GetMediaByMonthParams, MediaItemDto, MonthGroupDto, MonthlyRatiosDto, PaginatedMediaResponse,
@@ -152,6 +152,95 @@ pub async fn get_media_by_months(
     let months = group_media_by_month(media_items);
 
     Ok(PaginatedMediaResponse { months })
+}
+
+pub async fn get_media_by_latest_n_months(
+    n: i64,
+    user: &User,
+    pool: &PgPool,
+) -> Result<MultiMonthGroup, PhotosError> {
+    let media_items_proto: Vec<MediaItem> = sqlx::query_as!(
+        MediaItem,
+        r#"
+        WITH latest_months AS (
+            SELECT DISTINCT
+                DATE_TRUNC('month', taken_at_local) AS month_start
+            FROM
+                media_item
+            WHERE
+                user_id = $1
+                AND deleted = false
+            ORDER BY
+                month_start DESC
+            LIMIT $2
+        )
+        SELECT
+            mi.id AS "i!",
+            mi.is_video::INT AS "v!",
+            mi.duration_ms AS d,
+            mi.use_panorama_viewer::INT AS "p!",
+            mi.taken_at_local::TEXT AS "t!"
+        FROM
+            media_item mi
+        JOIN
+            latest_months lm ON DATE_TRUNC('month', mi.taken_at_local) = lm.month_start
+        WHERE
+            mi.user_id = $1
+            AND mi.deleted = false
+        ORDER BY
+            mi.taken_at_local DESC
+        "#,
+        user.id,
+        n
+    )
+        .fetch_all(pool)
+        .await?;
+
+    let month_groups = group_media_by_month_proto(media_items_proto);
+
+    // Wrap the Vec<MonthGroup> in the new response struct
+    Ok(MultiMonthGroup { months: month_groups })
+}
+
+/// Groups a flat, sorted list of `MediaItem`s into a `Vec<MonthGroup>`.
+///
+/// This helper function takes a vector of `MediaItem` protobuf messages, which are
+/// assumed to be sorted by their timestamp in descending order, and groups them
+/// into a vector of `MonthGroup` messages.
+fn group_media_by_month_proto(media_items: Vec<MediaItem>) -> Vec<MonthGroup> {
+    let mut month_groups: Vec<MonthGroup> = Vec::new();
+    if media_items.is_empty() {
+        return month_groups;
+    }
+
+    // Initialize the first group with the first item.
+    // The timestamp string `t` is expected to be in a format like 'YYYY-MM-DD HH:MI:SS'.
+    // We can safely slice the first 7 characters to get the 'YYYY-MM' string.
+    let mut current_month_group = MonthGroup {
+        month: media_items[0].t[0..7].to_string(),
+        media_items: Vec::new(),
+    };
+
+    for item in media_items {
+        let item_month = &item.t[0..7];
+
+        if item_month != current_month_group.month {
+            // When the month changes, we push the completed group to our results...
+            month_groups.push(current_month_group);
+            // ...and start a new group for the new month.
+            current_month_group = MonthGroup {
+                month: item_month.to_string(),
+                media_items: Vec::new(),
+            };
+        }
+        // Add the current item to the current month's group.
+        current_month_group.media_items.push(item);
+    }
+
+    // After the loop, the last group is still in `current_month_group`, so we add it to the results.
+    month_groups.push(current_month_group);
+
+    month_groups
 }
 
 pub async fn get_media_by_month(

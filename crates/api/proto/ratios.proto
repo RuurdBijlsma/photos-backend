@@ -26,3 +26,7 @@ message MonthGroup {
   string month = 1;
   repeated MediaItem media_items = 2;
 }
+
+message MultiMonthGroup {
+  repeated MonthGroup months = 1;
+}

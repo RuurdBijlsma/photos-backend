@@ -1,5 +1,5 @@
 directories:
-  media_folder: C:\Users\Ruurd\Pictures\deleteme2
+  media_folder: C:\Users\Ruurd\Pictures\deleteme
   thumbnails_folder: thumbnails
 
 logging:
@@ -10,6 +10,7 @@ api:
   port: 9475
   allowed_origins:
     - "http://localhost:5173"
+    - "http://localhost:3000"
 
 auth:
   jwt_secret: "overwrite-me-with-env"

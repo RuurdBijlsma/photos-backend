@@ -1,15 +1,9 @@
 use crate::auth::db_model::User;
-use crate::pb::api::{GetMonthlyRatiosResponse, MonthlyRatios};
+use crate::pb::api::{GetMonthlyRatiosResponse, MonthlyRatios, MultiMonthGroup};
 use crate::pb::api::MonthGroup;
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{
-    GetByMonthParam, GetMediaByMonthParams, MonthlyRatiosDto,
-    PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary,
-};
-use crate::photos::service::{
-    get_all_photo_ratios2, get_media_by_month, get_media_by_months, get_timeline_summary,
-    random_photo,
-};
+use crate::photos::interfaces::{GetByMonthParam, GetLatestMonthsParam, GetMediaByMonthParams, MonthlyRatiosDto, PaginatedMediaResponse, RandomPhotoResponse, TimelineSummary};
+use crate::photos::service::{get_all_photo_ratios2, get_media_by_latest_n_months, get_media_by_month, get_media_by_months, get_timeline_summary, random_photo};
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
 use axum::{Extension, Json};
@@ -92,7 +86,6 @@ pub async fn get_media_by_month_handler(
     ),
     security(("bearer_auth" = []))
 )]
-#[axum::debug_handler]
 pub async fn get_media_by_month_protobuf_handler(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,
@@ -100,6 +93,16 @@ pub async fn get_media_by_month_protobuf_handler(
 ) -> Result<Protobuf<MonthGroup>, PhotosError> {
     // 1. Call your existing function to get the DTO response
     let mg = get_media_by_month(&params.month, &user, &pool).await?;
+    Ok(Protobuf(mg))
+}
+
+pub async fn get_latest_months_protobuf_handler(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+    Query(params): Query<GetLatestMonthsParam>,
+) -> Result<Protobuf<MultiMonthGroup>, PhotosError> {
+    // 1. Call your existing function to get the DTO response
+    let mg = get_media_by_latest_n_months(params.n_months, &user, &pool).await?;
     Ok(Protobuf(mg))
 }
 

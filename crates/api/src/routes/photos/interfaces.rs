@@ -32,6 +32,12 @@ pub struct GetByMonthParam {
     pub month: String,
 }
 
+#[derive(Deserialize, IntoParams, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GetLatestMonthsParam {
+    pub n_months: i64,
+}
+
 /// Defines the query parameters for requesting media by month(s).
 #[derive(Deserialize, IntoParams, ToSchema)]
 #[serde(rename_all = "camelCase")]
