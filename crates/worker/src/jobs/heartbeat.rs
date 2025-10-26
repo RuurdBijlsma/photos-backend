@@ -1,6 +1,7 @@
 use sqlx::PgPool;
 use tokio::task::JoinHandle;
 
+#[must_use] 
 pub fn start_heartbeat_loop(pool: &PgPool, job_id: i64) -> JoinHandle<()> {
     let pool_clone = pool.clone();
     tokio::spawn(async move {

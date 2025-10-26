@@ -11,21 +11,24 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::{get_latest_months_protobuf_handler, get_media_by_month_handler, get_media_by_month_protobuf_handler, get_photo_ratios_json_handler, get_photo_ratios_pb_handler, get_random_photo, get_timeline_summary_handler};
+use crate::photos::handlers::{
+     get_media_by_month_handler,
+    get_photo_ratios_pb_handler, get_random_photo,
+};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
     get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
-    post_start_processing, welcome_needed,
+    post_start_processing,
 };
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 use common_photos::UserRole;
 use sqlx::PgPool;
-use tower_http::{LatencyUnit, trace::TraceLayer};
+use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
@@ -42,7 +45,6 @@ use utoipa_scalar::{Scalar, Servable};
         auth::handlers::logout,
         auth::handlers::get_me,
         // Setup handlers
-        setup::handlers::welcome_needed,
         setup::handlers::get_disk_response,
         setup::handlers::get_folder_media_sample,
         setup::handlers::get_folder_unsupported,
@@ -52,9 +54,8 @@ use utoipa_scalar::{Scalar, Servable};
         download::handlers::download_full_file,
         // --- Add new photo handlers ---
         photos::handlers::get_random_photo,
-        photos::handlers::get_timeline_summary_handler,
         photos::handlers::get_media_by_month_handler,
-        photos::handlers::get_photo_ratios_json_handler,
+        photos::handlers::get_photo_ratios_pb_handler,
     ),
     components(
         schemas(
@@ -85,7 +86,6 @@ use utoipa_scalar::{Scalar, Servable};
     modifiers(&SecurityAddon),
     tags(
         (name = "Ruurd Photos", description = "Ruurd Photos' API"),
-        // --- Add a new tag for better organization ---
         (name = "Photos", description = "Endpoints for browsing and managing media items")
     )
 )]
@@ -126,7 +126,6 @@ pub fn create_router(pool: PgPool) -> Router {
 fn public_routes() -> Router<PgPool> {
     Router::new()
         .route("/", get(root))
-        .route("/setup/welcome-needed", get(welcome_needed))
         .route("/auth/refresh", post(refresh_session))
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
@@ -138,11 +137,7 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
         .route("/auth/me", get(get_me))
         .route("/download/full-file", get(download_full_file))
         .route("/photos/random", get(get_random_photo))
-        .route("/photos/timeline", get(get_timeline_summary_handler))
         .route("/photos/by-month", get(get_media_by_month_handler))
-        .route("/photos/by-month.pb", get(get_media_by_month_protobuf_handler))
-        .route("/photos/latest-months.pb", get(get_latest_months_protobuf_handler))
-        .route("/photos/ratios", get(get_photo_ratios_json_handler))
         .route("/photos/ratios.pb", get(get_photo_ratios_pb_handler))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }

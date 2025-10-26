@@ -7,7 +7,6 @@ use crate::photos::interfaces::{
     GetMediaByMonthParams, MediaItemDto, MonthGroupDto, MonthlyRatiosDto, PaginatedMediaResponse,
     RandomPhotoResponse, TimelineSummary,
 };
-use chrono::{Datelike, NaiveDate, NaiveTime};
 use rand::Rng;
 use sqlx::PgPool;
 use tracing::warn;

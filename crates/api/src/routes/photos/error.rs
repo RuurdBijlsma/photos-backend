@@ -42,7 +42,7 @@ impl IntoResponse for PhotosError {
             ),
             Self::InvalidMonthFormat(invalid_month) => (
                 StatusCode::BAD_REQUEST,
-                format!("Invalid month format. Expected YYYY-MM, but got '{}'", invalid_month),
+                format!("Invalid month format. Expected YYYY-MM, but got '{invalid_month}'"),
             ),
         };
 

@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::auth::db_model::User;
 use crate::setup::error::SetupError;
@@ -16,30 +15,6 @@ use sqlx::PgPool;
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
-
-static WELCOME_NEEDED: AtomicBool = AtomicBool::new(true);
-
-/// Checks if the initial setup is required by checking for any admin users.
-///
-/// # Errors
-///
-/// Returns `SetupError` if there is a problem querying the database.
-pub async fn is_welcome_needed(pool: &PgPool) -> Result<bool, SetupError> {
-    if !WELCOME_NEEDED.load(Ordering::Relaxed) {
-        return Ok(false);
-    }
-
-    let user_option = sqlx::query_scalar!(r"SELECT 1 FROM app_user LIMIT 1")
-        .fetch_optional(pool)
-        .await?
-        .flatten();
-
-    if user_option.is_some() {
-        WELCOME_NEEDED.store(false, Ordering::Relaxed);
-        return Ok(false);
-    }
-    Ok(true)
-}
 
 /// Gathers information about the media and thumbnail directories.
 ///
