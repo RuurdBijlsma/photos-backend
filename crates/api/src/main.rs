@@ -1,7 +1,7 @@
 #![allow(clippy::needless_for_each, clippy::cognitive_complexity)]
 
-pub mod routes;
 mod pb;
+pub mod routes;
 
 use axum::routing::get_service;
 pub use routes::*;

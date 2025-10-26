@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use color_eyre::eyre::Result;
-use common_photos::{get_db_pool, nice_id, UserRole};
+use common_photos::{UserRole, get_db_pool, nice_id};
 use media_analyzer::{
     AnalyzeResult, CaptureDetails, FileMetadata, PanoInfo, SourceDetails, TagData, TimeInfo,
 };

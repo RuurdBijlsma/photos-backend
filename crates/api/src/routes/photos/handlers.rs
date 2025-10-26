@@ -1,9 +1,7 @@
 use crate::auth::db_model::User;
 use crate::pb::api::{ByMonthResponse, TimelineResponse};
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{
-    GetMediaByMonthParams, RandomPhotoResponse,
-};
+use crate::photos::interfaces::{GetMediaByMonthParams, RandomPhotoResponse};
 use crate::photos::service::{get_photos_by_month, get_timeline, random_photo};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
@@ -79,7 +77,11 @@ pub async fn get_photos_by_month_handler(
     Extension(user): Extension<User>,
     Query(params): Query<GetMediaByMonthParams>,
 ) -> Result<Protobuf<ByMonthResponse>, PhotosError> {
-    let month_ids = params.months.split(',').map(ToString::to_string).collect::<Vec<_>>();
+    let month_ids = params
+        .months
+        .split(',')
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
     let photos = get_photos_by_month(&user, &pool, &month_ids).await?;
     Ok(Protobuf(photos))
 }

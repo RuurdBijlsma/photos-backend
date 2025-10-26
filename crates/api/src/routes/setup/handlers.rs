@@ -7,8 +7,8 @@ use crate::setup::interfaces::{
     UnsupportedFilesResponse,
 };
 use crate::setup::service::{
-    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders
-    , start_processing, validate_user_folder,
+    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
+    start_processing, validate_user_folder,
 };
 use axum::extract::{Query, State};
 use axum::http::StatusCode;

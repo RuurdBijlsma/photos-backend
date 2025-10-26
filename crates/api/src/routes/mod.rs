@@ -11,7 +11,9 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::{get_photos_by_month_handler, get_random_photo, get_timeline_handler};
+use crate::photos::handlers::{
+    get_photos_by_month_handler, get_random_photo, get_timeline_handler,
+};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
@@ -20,12 +22,12 @@ use crate::setup::handlers::{
 };
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use common_photos::UserRole;
 use sqlx::PgPool;
-use tower_http::{trace::TraceLayer, LatencyUnit};
+use tower_http::{LatencyUnit, trace::TraceLayer};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};

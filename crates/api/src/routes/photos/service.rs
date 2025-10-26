@@ -29,9 +29,9 @@ pub async fn random_photo(
         "#,
         user.id
     )
-        .fetch_one(pool)
-        .await?
-        .unwrap_or(0); // Default to 0 if count is NULL
+    .fetch_one(pool)
+    .await?
+    .unwrap_or(0); // Default to 0 if count is NULL
 
     if count == 0 {
         warn!("No photos with color data for user {}", user.id);
@@ -60,8 +60,8 @@ pub async fn random_photo(
         user.id,
         random_offset
     )
-        .fetch_optional(pool)
-        .await?;
+    .fetch_optional(pool)
+    .await?;
 
     if random_data.is_none() {
         // This can happen in a race condition if photos are deleted between the COUNT and this query.
@@ -98,8 +98,8 @@ pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse
         "#,
         user.id
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     Ok(TimelineResponse { months })
 }
@@ -135,8 +135,8 @@ pub async fn get_photos_by_month(
         user.id,
         month_ids,
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     let mut months_map: HashMap<String, Vec<MediaItem>> = HashMap::new();
     for item in items {

@@ -3,7 +3,7 @@ use crate::handlers::JobResult;
 use crate::macros::backoff_seconds;
 use chrono::{Duration, Utc};
 use color_eyre::Result;
-use common_photos::{alert, Job};
+use common_photos::{Job, alert};
 use common_photos::{JobStatus, JobType};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing::{info, warn};
