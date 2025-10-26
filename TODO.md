@@ -77,6 +77,8 @@
 * use proper index on get-month endpoint, if not already at max perf level.
 * response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms, but on frontend end is 100-125 ms.
 * make ratios endpoint more of a timeline endpoint, with count per month.
+* heb ik met de nieuwe fallback timezone 0 null's in taken at utc? 
+* make sure cache control on thumbnails are immutable/max age.
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 
