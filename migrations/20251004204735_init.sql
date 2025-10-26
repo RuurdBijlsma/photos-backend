@@ -20,7 +20,7 @@ CREATE TABLE app_user
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     email        TEXT        NOT NULL UNIQUE,
     password     TEXT        NOT NULL,
-    name         TEXT        NOT NULL UNIQUE,
+    name         TEXT        NOT NULL,
     media_folder TEXT,
     role         user_role   NOT NULL DEFAULT 'user'
 );
@@ -41,6 +41,7 @@ CREATE TABLE refresh_token
 CREATE TABLE media_item
 (
     id                  VARCHAR(10) PRIMARY KEY,
+    hash                TEXT        NOT NULL,
     relative_path       TEXT        NOT NULL UNIQUE,
     user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -48,11 +49,13 @@ CREATE TABLE media_item
     width               INT         NOT NULL,
     height              INT         NOT NULL,
     is_video            BOOLEAN     NOT NULL,
-    data_url            TEXT        NOT NULL,
     duration_ms         BIGINT,
-    taken_at_naive      TIMESTAMP, -- Naive timestamp without timezone information.
-    use_panorama_viewer BOOLEAN,
-    deleted             BOOLEAN     NOT NULL DEFAULT false
+    taken_at_local      TIMESTAMP   NOT NULL,
+    taken_at_utc        TIMESTAMPTZ,
+    use_panorama_viewer BOOLEAN     NOT NULL,
+    deleted             BOOLEAN     NOT NULL DEFAULT false,
+    CONSTRAINT width_positive CHECK (width > 0),
+    CONSTRAINT height_positive CHECK (height > 0)
 );
 
 -- The following tables store optional, detailed metadata for a MediaItem.
@@ -72,7 +75,6 @@ CREATE TABLE gps
 CREATE TABLE time_details
 (
     media_item_id           VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    datetime_utc            TIMESTAMPTZ,
     timezone_name           TEXT,
     timezone_offset_seconds INT,
     source                  TEXT,
@@ -147,5 +149,6 @@ CREATE INDEX idx_gps_location_id ON gps (location_id);
 
 -- Indices for common sorting/filtering operations on media_item.
 CREATE INDEX idx_media_item_created_at ON media_item (created_at);
-CREATE INDEX idx_media_item_taken_at_naive ON media_item (taken_at_naive);
+CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
+CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);

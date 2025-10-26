@@ -7,6 +7,11 @@ use tokio::time::sleep;
 use tracing::info;
 
 /// The main loop for the worker process, continuously fetching and processing jobs.
+///
+/// # Errors
+///
+/// This function will return an error if there is a problem communicating with the
+/// database when claiming or updating a job. The loop will terminate in such a case.
 pub async fn run_worker_loop(context: &WorkerContext) -> Result<()> {
     let mut sleeping = false;
 

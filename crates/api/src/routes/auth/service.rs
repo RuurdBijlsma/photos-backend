@@ -52,7 +52,11 @@ pub async fn authenticate_user(
 /// * `AuthError::Internal` for hashing errors.
 /// * `AuthError::InvalidUsername` when the username contains illegal characters.
 pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, AuthError> {
-    if !payload.name.chars().all(char::is_alphanumeric) {
+    let username = &payload.name;
+    if !username.chars().all(|c| c.is_alphanumeric() || c == ' ')
+        || username.starts_with(' ')
+        || username.ends_with(' ')
+    {
         return Err(AuthError::InvalidUsername);
     }
     let hashed = hash_password(payload.password.as_ref())?;
@@ -60,24 +64,37 @@ pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, Au
         "Creating user email={}, name={}",
         payload.email, payload.name
     );
+    let is_first_user = sqlx::query_scalar!("SELECT 1 FROM app_user")
+        .fetch_optional(pool)
+        .await?
+        .flatten()
+        .is_none();
+    let role = if is_first_user {
+        UserRole::Admin
+    } else {
+        UserRole::User
+    };
+
+    if role == UserRole::User {
+        // New users will need an invite code, this isn't implemented yet.
+        // TODO: add invite code functionality.
+        return Err(AuthError::PermissionDenied {
+            user_email: payload.email.clone(),
+            path: String::new(),
+        });
+    }
 
     let result = sqlx::query_as!(
         User,
         r#"
         INSERT INTO app_user (email, name, password, role)
-        SELECT
-            $1, -- payload.email
-            $2, -- payload.name
-            $3, -- hashed password
-            CASE
-                WHEN NOT EXISTS (SELECT 1 FROM app_user) THEN 'admin'::user_role
-                ELSE 'user'::user_role
-            END
+        VALUES ($1, $2, $3, $4)
         RETURNING id, email, name, media_folder, role as "role: UserRole", created_at, updated_at
         "#,
         payload.email,
         payload.name,
-        hashed
+        hashed,
+        role as UserRole
     )
     .fetch_one(pool)
     .await;

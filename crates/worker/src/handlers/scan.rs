@@ -185,6 +185,12 @@ pub async fn run_scan(pool: &PgPool) -> Result<()> {
     Ok(())
 }
 
+/// Triggers a full scan to synchronize the filesystem and database.
+///
+/// # Errors
+///
+/// This function will return an error if the synchronization scan fails,
+/// which can be caused by database or filesystem I/O errors.
 pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
     run_scan(&context.pool).await?;
 

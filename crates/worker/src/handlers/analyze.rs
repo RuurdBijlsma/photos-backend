@@ -7,6 +7,12 @@ use color_eyre::eyre::{Result, eyre};
 use common_photos::{Job, file_is_ingested, is_photo_file, media_dir, settings, thumbnails_dir};
 use tracing::info;
 
+/// Handles the analysis of a given job.
+///
+/// # Errors
+///
+/// This function will return an error if the media analysis fails,
+/// or if there are issues with database operations.
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(relative_path) = &job.relative_path else {
         return Err(eyre!("Ingest job has no associated relative_path"));

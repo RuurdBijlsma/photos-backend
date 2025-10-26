@@ -1,17 +1,9 @@
-#![allow(clippy::cognitive_complexity)]
-
-use crate::context::WorkerContext;
-use crate::worker::run_worker_loop;
 use clap::Parser;
 use color_eyre::Result;
 use common_photos::{get_db_pool, nice_id};
 use tracing::info;
-
-mod context;
-mod handlers;
-mod jobs;
-mod macros;
-mod worker;
+use worker::context::WorkerContext;
+use worker::worker::run_worker_loop;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

@@ -14,6 +14,11 @@ pub struct WorkerContext {
 }
 
 impl WorkerContext {
+    /// Creates a new instance of `WorkerContext`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the creation of `MediaAnalyzer` or `VisualAnalyzer` fails.
     pub async fn new(pool: PgPool, worker_id: String, handle_analysis: bool) -> Result<Self> {
         Ok(Self {
             pool,

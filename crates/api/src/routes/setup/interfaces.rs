@@ -3,11 +3,13 @@ use std::collections::HashMap;
 use utoipa::ToSchema;
 
 #[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct FolderQuery {
     pub folder: String,
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct PathInfoResponse {
     pub folder: String,
     pub disk_available: u64,
@@ -18,6 +20,7 @@ pub struct PathInfoResponse {
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct MediaSampleResponse {
     pub read_access: bool,
     pub folder: String,
@@ -40,6 +43,7 @@ impl MediaSampleResponse {
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct UnsupportedFilesResponse {
     pub read_access: bool,
     pub folder: String,
@@ -62,18 +66,21 @@ impl UnsupportedFilesResponse {
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct DiskResponse {
     pub media_folder: PathInfoResponse,
     pub thumbnails_folder: PathInfoResponse,
 }
 
 #[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct MakeFolderBody {
     pub base_folder: String,
     pub new_name: String,
 }
 
 #[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct StartProcessingBody {
     pub user_folder: String,
 }

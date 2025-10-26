@@ -1,5 +1,5 @@
 directories:
-  media_folder: C:\Users\Ruurd\Pictures\deleteme2
+  media_folder: C:\Users\Ruurd\Pictures\deleteme
   thumbnails_folder: thumbnails
 
 logging:
@@ -10,6 +10,7 @@ api:
   port: 9475
   allowed_origins:
     - "http://localhost:5173"
+    - "http://localhost:3000"
 
 auth:
   jwt_secret: "overwrite-me-with-env"
@@ -29,6 +30,7 @@ database:
   media_item_id_length: 10
 
 analyzer:
+  fallback_timezone: Europe/Amsterdam
   theme_generation:
     variant: Vibrant
     contrast_level: 0.5
@@ -39,13 +41,13 @@ analyzer:
 
 thumbnail_generation:
   heights:
-    - 8
     - 144
     - 240
     - 360
     - 480
     - 720
     - 1080
+    - 1440
   thumbnail_extension: "avif"
   avif_options:
     quality: 80

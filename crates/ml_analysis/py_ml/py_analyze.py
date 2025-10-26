@@ -7,7 +7,8 @@ import numpy as np
 from PIL import Image
 from material_color_utilities import (
     prominent_colors_from_image,
-    theme_from_color, Variant,
+    theme_from_color,
+    Variant,
 )
 from numpy.typing import NDArray
 from ruurd_photos_ml import (
@@ -41,15 +42,15 @@ def get_theme_from_color(
     return theme_from_color(
         color,
         variant={
-            "monochrome":Variant.MONOCHROME,
-            "neutral":Variant.NEUTRAL,
-            "tonalspot":Variant.TONALSPOT,
-            "vibrant":Variant.VIBRANT,
-            "expressive":Variant.EXPRESSIVE,
-            "fidelity":Variant.FIDELITY,
-            "content":Variant.CONTENT,
-            "rainbow":Variant.RAINBOW,
-            "fruitsalad":Variant.FRUITSALAD,
+            "monochrome": Variant.MONOCHROME,
+            "neutral": Variant.NEUTRAL,
+            "tonalspot": Variant.TONALSPOT,
+            "vibrant": Variant.VIBRANT,
+            "expressive": Variant.EXPRESSIVE,
+            "fidelity": Variant.FIDELITY,
+            "content": Variant.CONTENT,
+            "rainbow": Variant.RAINBOW,
+            "fruitsalad": Variant.FRUITSALAD,
         }[variant.lower()],
         contrast_level=contrast_level,
     ).dict()

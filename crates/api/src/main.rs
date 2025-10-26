@@ -1,5 +1,6 @@
 #![allow(clippy::needless_for_each, clippy::cognitive_complexity)]
 
+mod pb;
 pub mod routes;
 
 use axum::routing::get_service;
@@ -8,6 +9,7 @@ pub use routes::*;
 use color_eyre::Result;
 use common_photos::{get_db_pool, settings};
 use http::{HeaderValue, header};
+use tower_http::compression::CompressionLayer;
 use tower_http::cors;
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
@@ -71,6 +73,7 @@ async fn main() -> Result<()> {
     // --- Create Router & Start Server ---
     let app = create_router(pool)
         .layer(cors)
+        .layer(CompressionLayer::new())
         .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
     let listen_address = format!("{}:{}", api_settings.host, api_settings.port);
     let listener = tokio::net::TcpListener::bind(&listen_address).await?;

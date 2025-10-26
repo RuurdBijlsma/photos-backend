@@ -1,3 +1,5 @@
+// crates/api/src/routes/mod.rs
+
 pub mod auth;
 pub mod download;
 pub mod photos;
@@ -9,12 +11,14 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::random_photo;
+use crate::photos::handlers::{
+    get_photos_by_month_handler, get_random_photo, get_timeline_handler,
+};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
     get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
-    post_start_processing, welcome_needed,
+    post_start_processing,
 };
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use axum::{
@@ -40,7 +44,6 @@ use utoipa_scalar::{Scalar, Servable};
         auth::handlers::logout,
         auth::handlers::get_me,
         // Setup handlers
-        setup::handlers::welcome_needed,
         setup::handlers::get_disk_response,
         setup::handlers::get_folder_media_sample,
         setup::handlers::get_folder_unsupported,
@@ -48,6 +51,8 @@ use utoipa_scalar::{Scalar, Servable};
         setup::handlers::make_folder,
         // Download handlers
         download::handlers::download_full_file,
+        // --- Add new photo handlers ---
+        photos::handlers::get_random_photo,
     ),
     components(
         schemas(
@@ -67,14 +72,16 @@ use utoipa_scalar::{Scalar, Servable};
             setup::interfaces::DiskResponse,
             // Download schemas
             download::interfaces::DownloadMediaQuery,
-        )
+        ),
     ),
     modifiers(&SecurityAddon),
     tags(
-(name = "Ruurd Photos", description = "Ruurd Photos' API")
+        (name = "Ruurd Photos", description = "Ruurd Photos' API"),
+        (name = "Photos", description = "Endpoints for browsing and managing media items")
     )
 )]
 struct ApiDoc;
+
 /// A modifier to add bearer token security to the `OpenAPI` specification.
 struct SecurityAddon;
 
@@ -102,7 +109,7 @@ pub fn create_router(pool: PgPool) -> Router {
             TraceLayer::new_for_http().on_response(
                 tower_http::trace::DefaultOnResponse::new()
                     .level(tracing::Level::INFO)
-                    .latency_unit(LatencyUnit::Micros),
+                    .latency_unit(LatencyUnit::Millis),
             ),
         )
 }
@@ -110,7 +117,6 @@ pub fn create_router(pool: PgPool) -> Router {
 fn public_routes() -> Router<PgPool> {
     Router::new()
         .route("/", get(root))
-        .route("/setup/welcome-needed", get(welcome_needed))
         .route("/auth/refresh", post(refresh_session))
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
@@ -121,7 +127,9 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
     Router::new()
         .route("/auth/me", get(get_me))
         .route("/download/full-file", get(download_full_file))
-        .route("/photos/random", get(random_photo))
+        .route("/photos/random", get(get_random_photo))
+        .route("/photos/timeline", get(get_timeline_handler))
+        .route("/photos/by-month", get(get_photos_by_month_handler))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 

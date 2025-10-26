@@ -2,6 +2,11 @@ use crate::insert_query;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;
 
+/// Retrieves an existing location's ID or creates a new one if it doesn't exist.
+///
+/// # Errors
+///
+/// This function will return an error if any of the database select or insert operations fail.
 async fn get_or_create_location(
     tx: &mut PgTransaction<'_>,
     location_data: &LocationName,
@@ -40,7 +45,11 @@ async fn get_or_create_location(
     }
 }
 
-/// Inserts a full media item using your `AnalyzeResult` struct within a single transaction.
+/// Inserts a full media item and its associated metadata into the database.
+///
+/// # Errors
+///
+/// Returns an error if any of the database deletion or insertion queries fail.
 #[allow(
     clippy::too_many_lines,
     clippy::cast_possible_truncation,
@@ -65,13 +74,14 @@ pub async fn store_media_item(
     insert_query!(tx, "media_item", {
         id: &item_id,
         user_id: user_id,
+        hash: &data.hash,
         relative_path: relative_path,
         width: data.metadata.width as i32,
         height: data.metadata.height as i32,
         is_video: data.tags.is_video,
-        data_url: &data.data_url,
         duration_ms: data.metadata.duration.map(|d| (d * 1000.0) as i64),
-        taken_at_naive: data.time_info.datetime_naive,
+        taken_at_local: data.time_info.datetime_local,
+        taken_at_utc: data.time_info.datetime_utc,
         use_panorama_viewer: data.pano_info.use_panorama_viewer,
     })
     .await?;
@@ -91,7 +101,6 @@ pub async fn store_media_item(
 
     insert_query!(tx, "time_details", {
         media_item_id: &item_id,
-        datetime_utc: data.time_info.datetime_utc,
         timezone_name: data.time_info.timezone.as_ref().map(|tz| &tz.name),
         timezone_offset_seconds: data.time_info.timezone.as_ref().map(|tz| tz.offset_seconds),
         source: data.time_info.timezone.as_ref().map(|tz| &tz.source),

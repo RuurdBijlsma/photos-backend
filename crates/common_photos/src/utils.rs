@@ -62,7 +62,7 @@ pub fn nice_id(length: usize) -> String {
 pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
     let db_settings = &settings().database;
     let database_url = &db_settings.url;
-    info!("Connecting to database at: {}", database_url);
+    info!("Connecting to database.");
     let pool = PgPoolOptions::new()
         .max_connections(db_settings.max_connections)
         .min_connections(db_settings.min_connection)
@@ -72,7 +72,6 @@ pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
         .test_before_acquire(true)
         .connect(database_url)
         .await?;
-    sqlx::migrate!("../../migrations").run(&pool).await?;
     Ok(pool)
 }
 

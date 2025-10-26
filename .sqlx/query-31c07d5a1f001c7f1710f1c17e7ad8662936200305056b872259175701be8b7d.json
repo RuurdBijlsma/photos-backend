@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT 1 FROM app_user LIMIT 1",
+  "query": "SELECT 1 FROM app_user",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       null
     ]
   },
-  "hash": "0d0e8fc931557fdf4cd88594d7df90b79ef5830500617a94de3bdeb9c42a17fc"
+  "hash": "31c07d5a1f001c7f1710f1c17e7ad8662936200305056b872259175701be8b7d"
 }

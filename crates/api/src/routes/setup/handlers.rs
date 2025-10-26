@@ -8,7 +8,7 @@ use crate::setup::interfaces::{
 };
 use crate::setup::service::{
     create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
-    is_welcome_needed, start_processing, validate_user_folder,
+    start_processing, validate_user_folder,
 };
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -121,24 +121,6 @@ pub async fn get_folders(
 pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCode, SetupError> {
     create_folder(&params.base_folder, &params.new_name).await?;
     Ok(StatusCode::NO_CONTENT)
-}
-
-/// Checks if any users exist in the database to determine if the setup process is needed.
-///
-/// # Errors
-///
-/// Returns a `SetupError` if a database connection cannot be established or the query fails.
-#[utoipa::path(
-    get,
-    path = "/setup/welcome-needed",
-    responses(
-        (status = 200, description = "Welcome status retrieved successfully", body = bool),
-        (status = 500, description = "Database error"),
-    )
-)]
-pub async fn welcome_needed(State(pool): State<PgPool>) -> Result<Json<bool>, SetupError> {
-    let needed = is_welcome_needed(&pool).await?;
-    Ok(Json(needed))
 }
 
 /// Start scanning the user folder and process the photos and videos.
