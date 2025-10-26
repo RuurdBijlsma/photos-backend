@@ -1,16 +1,14 @@
 // crates/api/src/routes/photos/service.rs
 
 use crate::auth::db_model::User;
-use crate::pb::api::MediaItem;
-use crate::pb::api::{MonthMedia, MonthTimeline, PhotosByMonthResponse, TimelineResponse};
+use crate::pb::api::{ByMonthResponse, MediaItem, MediaMonth, TimelineMonth, TimelineResponse};
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{GetMediaByMonthParams, RandomPhotoResponse};
+use crate::photos::interfaces::RandomPhotoResponse;
 use rand::Rng;
 use sqlx::PgPool;
 use std::collections::HashMap;
 use tracing::warn;
 
-// --- Existing Function (modified for clarity) ---
 /// Fetches a random photo with its color theme data for a specific user.
 ///
 /// # Errors
@@ -31,16 +29,16 @@ pub async fn random_photo(
         "#,
         user.id
     )
-    .fetch_one(pool)
-    .await?
-    .unwrap_or(0); // Default to 0 if count is NULL
+        .fetch_one(pool)
+        .await?
+        .unwrap_or(0); // Default to 0 if count is NULL
 
     if count == 0 {
         warn!("No photos with color data for user {}", user.id);
         return Ok(None);
     }
 
-    // Use a thread-safe random number generator
+    // Use a thread-safe random number generator to select a random offset.
     let random_offset = rand::rng().random_range(0..count);
 
     // Fetch a single row from `color_data` using the random offset,
@@ -62,8 +60,8 @@ pub async fn random_photo(
         user.id,
         random_offset
     )
-    .fetch_optional(pool)
-    .await?;
+        .fetch_optional(pool)
+        .await?;
 
     if random_data.is_none() {
         // This can happen in a race condition if photos are deleted between the COUNT and this query.
@@ -76,11 +74,14 @@ pub async fn random_photo(
     Ok(random_data)
 }
 
-// todo make summary table for this
-// and test performance with 100k media items
+/// Fetches a timeline of media items, grouped by month.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
 pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse, PhotosError> {
     let months = sqlx::query_as!(
-        MonthTimeline,
+        TimelineMonth,
         r#"
         SELECT
             TO_CHAR(taken_at_local, 'YYYY-MM') as "month_id!",
@@ -97,8 +98,8 @@ pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse
         "#,
         user.id
     )
-    .fetch_all(pool)
-    .await?;
+        .fetch_all(pool)
+        .await?;
 
     Ok(TimelineResponse { months })
 }
@@ -112,7 +113,7 @@ pub async fn get_photos_by_month(
     user: &User,
     pool: &PgPool,
     month_ids: &[String],
-) -> Result<PhotosByMonthResponse, PhotosError> {
+) -> Result<ByMonthResponse, PhotosError> {
     let items = sqlx::query_as!(
         MediaItem,
         r#"
@@ -134,8 +135,8 @@ pub async fn get_photos_by_month(
         user.id,
         month_ids,
     )
-    .fetch_all(pool)
-    .await?;
+        .fetch_all(pool)
+        .await?;
 
     let mut months_map: HashMap<String, Vec<MediaItem>> = HashMap::new();
     for item in items {
@@ -145,8 +146,8 @@ pub async fn get_photos_by_month(
 
     let months = months_map
         .into_iter()
-        .map(|(month_id, items)| MonthMedia { month_id, items })
+        .map(|(month_id, items)| MediaMonth { month_id, items })
         .collect();
 
-    Ok(PhotosByMonthResponse { months })
+    Ok(ByMonthResponse { months })
 }

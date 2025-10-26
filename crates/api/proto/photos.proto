@@ -4,21 +4,21 @@ package api;
 
 // Contains ratios and amount of media items per month, grouped by month.
 message TimelineResponse {
-  repeated MonthTimeline months = 1;
+  repeated TimelineMonth months = 1;
 }
 
-message MonthTimeline {
+message TimelineMonth {
   string month_id = 1;
   int32 count = 2;
   repeated float ratios = 3;
 }
 
 // Contains detailed information for media items for the requested months, grouped by month.
-message PhotosByMonthResponse {
-  repeated MonthMedia months = 1;
+message ByMonthResponse {
+  repeated MediaMonth months = 1;
 }
 
-message MonthMedia {
+message MediaMonth {
   string month_id = 1;
   repeated MediaItem items = 2;
 }

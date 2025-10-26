@@ -1,9 +1,15 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use color_eyre::Result;
 use color_eyre::eyre::eyre;
-use common_photos::{Job, media_dir, thumbnails_dir};
+use color_eyre::Result;
+use common_photos::{media_dir, thumbnails_dir, Job};
 
+/// Handles the removal of a media item from the database and filesystem.
+///
+/// # Errors
+///
+/// This function will return an error if the job is missing a `relative_path`,
+/// or if any database or filesystem operations fail.
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(relative_path) = &job.relative_path else {
         return Err(eyre!("Remove job has no associated relative_path"));

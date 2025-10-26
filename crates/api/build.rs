@@ -1,5 +1,5 @@
 fn main() -> std::io::Result<()> {
-    println!("cargo:rerun-if-changed=proto/ratios.proto");
+    println!("cargo:rerun-if-changed=proto/photos.proto");
 
     let mut config = prost_build::Config::new();
 
@@ -9,26 +9,26 @@ fn main() -> std::io::Result<()> {
     );
 
     config.type_attribute(
-        ".api.MonthTimeline",
+        ".api.TimelineMonth",
         "#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]"
     );
 
     config.type_attribute(
-        ".api.PhotosByMonthResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]"
+        ".api.ByMonthResponse",
+        "#[derive(Eq, serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]"
     );
 
     config.type_attribute(
-        ".api.MonthMedia",
-        "#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]"
+        ".api.MediaMonth",
+        "#[derive(Eq, serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]"
     );
 
     config.type_attribute(
         ".api.MediaItem",
-        "#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]"
+        "#[derive(Eq, serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]"
     );
 
-    config.compile_protos(&["proto/ratios.proto"], &["proto/"])?;
+    config.compile_protos(&["proto/photos.proto"], &["proto/"])?;
 
     Ok(())
 }

@@ -2,7 +2,13 @@ use ml_analysis::VisualImageData;
 use pgvector::Vector;
 use sqlx::PgTransaction;
 
-#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
+/// Stores the detailed results of a visual analysis for a media item in the database.
+///
+/// # Errors
+///
+/// This function will return an error if any of the database insertion queries fail
+/// or if color histogram data cannot be serialized to JSON.
+#[allow(clippy::too_many_lines)]
 pub async fn store_visual_analysis(
     tx: &mut PgTransaction<'_>,
     media_item_id: &str,

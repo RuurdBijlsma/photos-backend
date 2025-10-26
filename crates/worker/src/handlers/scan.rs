@@ -1,10 +1,10 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use color_eyre::eyre::Result;
 use color_eyre::eyre::eyre;
+use color_eyre::eyre::Result;
 use common_photos::{
-    Job, JobType, enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs, settings,
-    thumbnails_dir, user_id_from_relative_path,
+    enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs, settings, thumbnails_dir, user_id_from_relative_path,
+    Job, JobType,
 };
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
@@ -185,6 +185,12 @@ pub async fn run_scan(pool: &PgPool) -> Result<()> {
     Ok(())
 }
 
+/// Triggers a full scan to synchronize the filesystem and database.
+///
+/// # Errors
+///
+/// This function will return an error if the synchronization scan fails,
+/// which can be caused by database or filesystem I/O errors.
 pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
     run_scan(&context.pool).await?;
 

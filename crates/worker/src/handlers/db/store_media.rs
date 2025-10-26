@@ -2,6 +2,11 @@ use crate::insert_query;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;
 
+/// Retrieves an existing location's ID or creates a new one if it doesn't exist.
+///
+/// # Errors
+///
+/// This function will return an error if any of the database select or insert operations fail.
 async fn get_or_create_location(
     tx: &mut PgTransaction<'_>,
     location_data: &LocationName,
@@ -40,7 +45,11 @@ async fn get_or_create_location(
     }
 }
 
-/// Inserts a full media item using `AnalyzeResult` struct within a single transaction.
+/// Inserts a full media item and its associated metadata into the database.
+///
+/// # Errors
+///
+/// Returns an error if any of the database deletion or insertion queries fail.
 #[allow(
     clippy::too_many_lines,
     clippy::cast_possible_truncation,

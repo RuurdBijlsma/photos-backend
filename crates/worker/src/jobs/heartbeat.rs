@@ -1,7 +1,8 @@
 use sqlx::PgPool;
 use tokio::task::JoinHandle;
 
-#[must_use] 
+/// Spawns a background task to periodically update the `last_heartbeat` for a running job.
+#[must_use]
 pub fn start_heartbeat_loop(pool: &PgPool, job_id: i64) -> JoinHandle<()> {
     let pool_clone = pool.clone();
     tokio::spawn(async move {
@@ -15,7 +16,8 @@ pub fn start_heartbeat_loop(pool: &PgPool, job_id: i64) -> JoinHandle<()> {
             .execute(&pool_clone)
             .await;
 
-            if result.is_err() || result.unwrap().rows_affected() == 0 {
+            let Ok(res) = result else { break };
+            if res.rows_affected() == 0 {
                 break;
             }
         }

@@ -1,3 +1,5 @@
+#![allow(clippy::cognitive_complexity)]
+
 pub mod context;
 pub mod handlers;
 pub mod jobs;

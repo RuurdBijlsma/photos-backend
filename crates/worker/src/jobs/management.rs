@@ -3,11 +3,16 @@ use crate::handlers::JobResult;
 use crate::macros::backoff_seconds;
 use chrono::{Duration, Utc};
 use color_eyre::Result;
-use common_photos::{Job, alert};
+use common_photos::{alert, Job};
 use common_photos::{JobStatus, JobType};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing::{info, warn};
 
+/// Atomically claims the next available job from the queue.
+///
+/// # Errors
+///
+/// Returns an error if the database transaction fails.
 pub async fn claim_next_job(context: &WorkerContext) -> Result<Option<Job>> {
     let mut tx = context.pool.begin().await?;
     let heartbeat_timeout_seconds = 300.;
@@ -44,6 +49,11 @@ pub async fn claim_next_job(context: &WorkerContext) -> Result<Option<Job>> {
     Ok(job)
 }
 
+/// Updates a job's status based on a successful completion result.
+///
+/// # Errors
+///
+/// Returns an error if the database update fails.
 pub async fn update_job_on_completion(pool: &PgPool, job: &Job, result: JobResult) -> Result<()> {
     match result {
         JobResult::Done => mark_job_done(pool, job.id).await,
@@ -61,6 +71,11 @@ pub async fn update_job_on_completion(pool: &PgPool, job: &Job, result: JobResul
     }
 }
 
+/// Updates a job's status on failure, either marking it as failed or rescheduling it.
+///
+/// # Errors
+///
+/// Returns an error if the database update fails.
 pub async fn update_job_on_failure(pool: &PgPool, job: &Job, error: &str) -> Result<()> {
     if job.attempts + 1 >= job.max_attempts {
         mark_job_failed(pool, job.id, error).await
@@ -70,6 +85,11 @@ pub async fn update_job_on_failure(pool: &PgPool, job: &Job, error: &str) -> Res
     }
 }
 
+/// Marks a job as done in the database.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
 async fn mark_job_done(pool: &PgPool, job_id: i64) -> Result<()> {
     sqlx::query!(
         "UPDATE jobs SET status = 'done', finished_at = now() WHERE id = $1",
@@ -80,6 +100,11 @@ async fn mark_job_done(pool: &PgPool, job_id: i64) -> Result<()> {
     Ok(())
 }
 
+/// Marks a job as cancelled in the database.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
 async fn mark_job_cancelled(pool: &PgPool, job_id: i64) -> Result<()> {
     sqlx::query!("UPDATE jobs SET status = 'cancelled' WHERE id = $1", job_id)
         .execute(pool)
@@ -87,6 +112,11 @@ async fn mark_job_cancelled(pool: &PgPool, job_id: i64) -> Result<()> {
     Ok(())
 }
 
+/// Marks a job as failed in the database.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
 async fn mark_job_failed(pool: &PgPool, job_id: i64, last_error: &str) -> Result<()> {
     alert!("‼️ Marking job {} as failed: {}", job_id, last_error);
     sqlx::query!(
@@ -99,6 +129,11 @@ async fn mark_job_failed(pool: &PgPool, job_id: i64, last_error: &str) -> Result
     Ok(())
 }
 
+/// Reschedules a job to be tried again after a backoff period.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
 async fn reschedule_for_retry(
     pool: &PgPool,
     job_id: i64,
@@ -121,6 +156,11 @@ async fn reschedule_for_retry(
     Ok(())
 }
 
+/// Reschedules a job because its dependencies are not met.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
 async fn dependency_reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64) -> Result<()> {
     info!(
         "⏳ Dependency not met for job {}. Rescheduling in {}s.",
@@ -137,6 +177,11 @@ async fn dependency_reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64
     Ok(())
 }
 
+/// Checks if a job has been cancelled within a given transaction.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
 pub async fn is_job_cancelled(
     transaction: &mut Transaction<'_, Postgres>,
     job_id: i64,

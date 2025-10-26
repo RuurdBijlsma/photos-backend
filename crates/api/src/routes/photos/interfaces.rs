@@ -1,9 +1,7 @@
 // crates/api/src/routes/photos/interfaces.rs
 
-use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::FromRow;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Serialize, ToSchema)]

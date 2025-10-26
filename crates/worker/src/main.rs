@@ -1,5 +1,3 @@
-#![allow(clippy::cognitive_complexity)]
-
 use clap::Parser;
 use color_eyre::Result;
 use common_photos::{get_db_pool, nice_id};

@@ -126,8 +126,8 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
         .route("/auth/me", get(get_me))
         .route("/download/full-file", get(download_full_file))
         .route("/photos/random", get(get_random_photo))
-        .route("/photos/timeline.pb", get(get_timeline_handler))
-        .route("/photos/by-month.pb", get(get_photos_by_month_handler))
+        .route("/photos/timeline", get(get_timeline_handler))
+        .route("/photos/by-month", get(get_photos_by_month_handler))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 
