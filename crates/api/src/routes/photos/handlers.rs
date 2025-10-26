@@ -64,7 +64,7 @@ pub async fn get_media_by_month_handler(
     ),
     security(("bearer_auth" = []))
 )]
-//todo rewrite function with Protobuf, use straight up pb types in db query, remove possible panics.
+//todo rewrite function with Protobuf, use straight up pb types in db query, remove possible panics, use summary table again.
 pub async fn get_photo_ratios_pb_handler(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,

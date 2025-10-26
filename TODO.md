@@ -79,6 +79,7 @@
 * make ratios endpoint more of a timeline endpoint, with count per month.
 * heb ik met de nieuwe fallback timezone 0 null's in taken at utc? 
 * make sure cache control on thumbnails are immutable/max age.
+* refresh token gives 415 for some reason.
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 
