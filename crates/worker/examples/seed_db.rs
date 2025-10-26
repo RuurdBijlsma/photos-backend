@@ -51,8 +51,8 @@ async fn create_or_update_mock_user(tx: &mut PgTransaction<'_>) -> Result<i32> {
     // This query inserts the user. If a user with that email already exists
     // (violating the UNIQUE constraint), the ON CONFLICT clause triggers,
     // updating the existing record instead. In both cases, it returns the user's ID.
-    let user_id: i32 = sqlx::query_scalar!(
-        r#"
+    let user_id: i32 = sqlx::query_scalar(
+        r"
         INSERT INTO app_user (email, password, name, role, media_folder)
         VALUES ($1, $2, $3, $4::user_role, '')
         ON CONFLICT (email) DO UPDATE
@@ -62,12 +62,12 @@ async fn create_or_update_mock_user(tx: &mut PgTransaction<'_>) -> Result<i32> {
             role = EXCLUDED.role,
             updated_at = now()
         RETURNING id
-        "#,
-        email,
-        password_hash,
-        name,
-        role as UserRole,
+        ",
     )
+    .bind(email)
+    .bind(password_hash)
+    .bind(name)
+    .bind(role)
     .fetch_one(&mut **tx)
     .await?;
 
