@@ -34,11 +34,8 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Cache and install system dependencies
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: libfontconfig1-dev pkg-config nasm
-          version: 1.0
+      - name: apt install
+        run: sudo apt update && sudo apt install -y protobuf-compiler libfontconfig1-dev pkg-config nasm
 
       # Build the code
       - name: Build
