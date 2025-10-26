@@ -1,14 +1,13 @@
 // crates/api/src/routes/photos/service.rs
 
 use crate::auth::db_model::User;
-use crate::pb::api::{MediaItem, MonthGroup, MultiMonthGroup};
+use crate::pb::api::MediaItem;
+use crate::pb::api::{MonthMedia, MonthTimeline, PhotosByMonthResponse, TimelineResponse};
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{
-    GetMediaByMonthParams, MediaItemDto, MonthGroupDto, MonthlyRatiosDto, PaginatedMediaResponse,
-    RandomPhotoResponse, TimelineSummary,
-};
+use crate::photos::interfaces::{GetMediaByMonthParams, RandomPhotoResponse};
 use rand::Rng;
 use sqlx::PgPool;
+use std::collections::HashMap;
 use tracing::warn;
 
 // --- Existing Function (modified for clarity) ---
@@ -77,113 +76,77 @@ pub async fn random_photo(
     Ok(random_data)
 }
 
-/// Fetches media items for the given months and groups them by month, then by day.
-pub async fn get_media_by_months(
-    params: &GetMediaByMonthParams,
-    user: &User,
-    pool: &PgPool,
-) -> Result<PaginatedMediaResponse, PhotosError> {
-    let month_tuples: Vec<(i32, i32)> = params
-        .months
-        .split(',')
-        .filter_map(|s| {
-            let parts: Vec<&str> = s.split('-').collect();
-            if parts.len() == 2 {
-                let year = parts[0].parse::<i32>().ok();
-                let month = parts[1].parse::<i32>().ok();
-                year.and_then(|y| month.map(|m| (y, m)))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    if month_tuples.is_empty() {
-        return Ok(PaginatedMediaResponse { months: vec![] });
-    }
-
-    let media_items = sqlx::query_as!(
-        MediaItemDto,
-        r#"
-        SELECT id,
-               is_video::int as "is_video!",
-               taken_at_local,
-               duration_ms,
-               use_panorama_viewer::int as "use_panorama_viewer!"
-        FROM media_item
-        WHERE user_id = $1
-          AND deleted = false
-          AND (EXTRACT(YEAR FROM taken_at_local), EXTRACT(MONTH FROM taken_at_local)) IN
-              (SELECT * FROM UNNEST($2::integer[], $3::integer[]))
-        ORDER BY taken_at_local DESC
-        "#,
-        user.id,
-        &month_tuples.iter().map(|(y, _)| *y).collect::<Vec<i32>>(),
-        &month_tuples.iter().map(|(_, m)| *m).collect::<Vec<i32>>(),
-    )
-    .fetch_all(pool)
-    .await?;
-
-    let months = group_media_by_month(media_items);
-
-    Ok(PaginatedMediaResponse { months })
-}
-
-/// Groups a flat, sorted list of `MediaItemDto`s into a `Vec<MonthGroup>`.
-fn group_media_by_month(media_items: Vec<MediaItemDto>) -> Vec<MonthGroupDto> {
-    let mut month_groups: Vec<MonthGroupDto> = Vec::new();
-    let mut current_month_group: Option<MonthGroupDto> = None;
-
-    for item in media_items {
-        let item_month = item.taken_at_local.format("%Y-%m").to_string();
-        if let Some(current) = &mut current_month_group
-            && current.month == item_month
-        {
-            // Same month as previous media item, push item to month struct.
-            current.media_items.push(item);
-        } else {
-            // Different month, or first month
-            if let Some(current) = current_month_group {
-                // Different month, push previous month to month_groups
-                month_groups.push(current);
-            }
-            current_month_group = Some(MonthGroupDto {
-                month: item_month,
-                media_items: vec![item],
-            });
-        }
-    }
-
-    if let Some(current) = current_month_group {
-        // Push last month to month_groups
-        month_groups.push(current);
-    }
-
-    month_groups
-}
-
-pub async fn get_all_photo_ratios2(
-    user: &User,
-    pool: &PgPool,
-) -> Result<Vec<MonthlyRatiosDto>, PhotosError> {
-    let results = sqlx::query_as!(
-        MonthlyRatiosDto,
+// todo make summary table for this
+// and test performance with 100k media items
+pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse, PhotosError> {
+    let months = sqlx::query_as!(
+        MonthTimeline,
         r#"
         SELECT
-            TO_CHAR(DATE_TRUNC('month', taken_at_local), 'YYYY-MM')               as "month!",
-            array_agg((width::float / height)::real ORDER BY taken_at_local DESC) as "ratios!"
-        FROM media_item
-        WHERE user_id = $1
-          AND deleted = false
+            TO_CHAR(taken_at_local, 'YYYY-MM') as "month_id!",
+            COUNT(*)::INT AS "count!",
+            array_agg(width::real / height::real) AS "ratios!"
+        FROM
+            media_item
+        WHERE
+            user_id = $1 AND deleted = false
         GROUP BY
-            DATE_TRUNC('month', taken_at_local)
+            TO_CHAR(taken_at_local, 'YYYY-MM')
         ORDER BY
-            DATE_TRUNC('month', taken_at_local) DESC
+            "month_id!" DESC
         "#,
         user.id
     )
     .fetch_all(pool)
     .await?;
 
-    Ok(results)
+    Ok(TimelineResponse { months })
+}
+
+/// Fetches media items for a given list of month IDs, grouped by month.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
+pub async fn get_photos_by_month(
+    user: &User,
+    pool: &PgPool,
+    month_ids: &[String],
+) -> Result<PhotosByMonthResponse, PhotosError> {
+    let items = sqlx::query_as!(
+        MediaItem,
+        r#"
+        SELECT
+            id as "id!",
+            is_video as "is_video!",
+            use_panorama_viewer as "is_panorama!",
+            duration_ms::INT,
+            taken_at_local::TEXT as "timestamp!"
+        FROM
+            media_item
+        WHERE
+            user_id = $1
+            AND deleted = false
+            AND TO_CHAR(taken_at_local, 'YYYY-MM') = ANY($2)
+        ORDER BY
+            taken_at_local DESC
+        "#,
+        user.id,
+        month_ids,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let mut months_map: HashMap<String, Vec<MediaItem>> = HashMap::new();
+    for item in items {
+        let month_id = item.timestamp[0..7].to_string();
+        months_map.entry(month_id).or_default().push(item);
+    }
+
+    let months = months_map
+        .into_iter()
+        .map(|(month_id, items)| MonthMedia { month_id, items })
+        .collect();
+
+    Ok(PhotosByMonthResponse { months })
 }

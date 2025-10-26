@@ -25,15 +25,12 @@
     * ✅ indexing
     * ✅ clean refresh token table on schedule
     * clustering on schedule
-    * ? refrehs materialized view of amount of photos per month
 * Show photos in ui:
     * ✅ make endpoint: get photos by month, ui handles which month to fetch
     * ✅ make endpoint: get timeline summary -> get list of every month with amount of photos for that month. (per user)
     * ✅ moet nog een photo density endpoint hebben om de scrollbar density te laten zien.
     * ✅ nieuwe dag is niet altijd newline in de photos grid, misschien toch weer over gaan naar maanden requesten.
     * ✅ data_url veld in db is useless denk ik (ook in alle analyzers)
-    * ? make postgres materialized view for amount of photos per month. Refresh on schedule (maybe start without
-      materiazlied view, if the view is fast enough)
     * virtual scroll waar elke maand 1 virtual scroll item is? of elke row is 1 virtual item??
 * api:
     * ✅ add random image + theme endpoint
@@ -73,13 +70,14 @@
 * protobuf for more endpoints?
 * i made the photos handler/service code garbage. clean up pls.
 * Dont use single character field names now that we use protobuf for big requests
-* look into not using generated code, just add the prost annotations on the real structs
+* 👎 look into not using generated code, just add the prost annotations on the real structs
 * use proper index on get-month endpoint, if not already at max perf level.
 * response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms, but on frontend end is 100-125 ms.
 * make ratios endpoint more of a timeline endpoint, with count per month.
 * heb ik met de nieuwe fallback timezone 0 null's in taken at utc? 
 * make sure cache control on thumbnails are immutable/max age.
 * refresh token gives 415 for some reason.
+* thumbnails zijn gedraait (orientation tag exif)
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

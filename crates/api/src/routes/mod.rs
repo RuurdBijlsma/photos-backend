@@ -11,10 +11,7 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::{
-     get_media_by_month_handler,
-    get_photo_ratios_pb_handler, get_random_photo,
-};
+use crate::photos::handlers::{get_photos_by_month_handler, get_random_photo, get_timeline_handler};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
@@ -54,8 +51,6 @@ use utoipa_scalar::{Scalar, Servable};
         download::handlers::download_full_file,
         // --- Add new photo handlers ---
         photos::handlers::get_random_photo,
-        photos::handlers::get_media_by_month_handler,
-        photos::handlers::get_photo_ratios_pb_handler,
     ),
     components(
         schemas(
@@ -75,12 +70,6 @@ use utoipa_scalar::{Scalar, Servable};
             setup::interfaces::DiskResponse,
             // Download schemas
             download::interfaces::DownloadMediaQuery,
-            // --- Add new photos schemas ---
-            photos::interfaces::RandomPhotoResponse,
-            photos::interfaces::MediaItemDto,
-            photos::interfaces::PaginatedMediaResponse,
-            photos::interfaces::TimelineSummary,
-            photos::interfaces::GetMediaByMonthParams,
         ),
     ),
     modifiers(&SecurityAddon),
@@ -137,8 +126,8 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
         .route("/auth/me", get(get_me))
         .route("/download/full-file", get(download_full_file))
         .route("/photos/random", get(get_random_photo))
-        .route("/photos/by-month", get(get_media_by_month_handler))
-        .route("/photos/ratios.pb", get(get_photo_ratios_pb_handler))
+        .route("/photos/timeline.pb", get(get_timeline_handler))
+        .route("/photos/by-month.pb", get(get_photos_by_month_handler))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 
