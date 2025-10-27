@@ -82,6 +82,7 @@
   the
   db, so we'll somehow have to get this. I think only way is loop over all media_folders in db and see if file path
   starts_with each media_folder)
+* by-month and timeline dont return in sync media items. timeline ratios is wrong, it's not in order of taken_at_local.
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

@@ -84,17 +84,14 @@ pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse
         TimelineMonth,
         r#"
         SELECT
-            TO_CHAR(taken_at_local, 'YYYY-MM') as "month_id!",
+            TO_CHAR(taken_at_local, 'YYYY-MM') AS "month_id!",
             COUNT(*)::INT AS "count!",
-            array_agg(width::real / height::real) AS "ratios!"
-        FROM
-            media_item
-        WHERE
-            user_id = $1 AND deleted = false
-        GROUP BY
-            TO_CHAR(taken_at_local, 'YYYY-MM')
-        ORDER BY
-            "month_id!" DESC
+            array_agg(width::real / height::real ORDER BY taken_at_local DESC) AS "ratios!"
+        FROM media_item
+        WHERE user_id = $1
+          AND deleted = false
+        GROUP BY TO_CHAR(taken_at_local, 'YYYY-MM')
+        ORDER BY "month_id!" DESC
         "#,
         user.id
     )
