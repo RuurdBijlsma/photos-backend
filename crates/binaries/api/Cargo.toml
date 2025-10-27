@@ -5,7 +5,7 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
-common_photos = { path = "../common_photos" }
+common_photos = { path = "../../libs/common_photos" }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter"] }
 color-eyre = "0.6.5"

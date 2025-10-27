@@ -1,11 +1,13 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/api",
-    "crates/common_photos",
-    "crates/tasks",
-    "crates/watcher",
-    "crates/ml_analysis",
-    "crates/worker",
-    "crates/generate_thumbnails"
+    # Binaries
+    "crates/binaries/api",
+    "crates/binaries/worker",
+    "crates/binaries/tasks",
+    "crates/binaries/watcher",
+    # Libs
+    "crates/libs/common_photos",
+    "crates/libs/ml_analysis",
+    "crates/libs/generate_thumbnails"
 ]

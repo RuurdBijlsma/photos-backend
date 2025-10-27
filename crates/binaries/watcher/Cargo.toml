@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-common_photos = { path = "../common_photos" }
+common_photos = { path = "../../libs/common_photos" }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json"] }
 futures = "0.3.31"
 tokio = { version = "1.47.1", features = ["full"] }

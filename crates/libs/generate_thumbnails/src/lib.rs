@@ -1,9 +1,11 @@
+#![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+
 //! # Thumbnail Generation Crate
 //!
 //! A Rust crate for generating a variety of thumbnails for photos and videos.
 //!
 //! This library provides a flexible and efficient way to create thumbnails using either
-//! native Rust image processing for formats like AVIF or by leveraging the power of FFmpeg
+//! native Rust image processing for formats like AVIF or by leveraging the power of `FFmpeg`
 //! for a wide range of media types.
 //!
 //! ## Features
@@ -14,7 +16,7 @@
 //!   - Automatic EXIF orientation correction.
 //! - **Video Thumbnails**: Create a comprehensive set of thumbnails from videos.
 //!   - Generate still frames at specific timestamps or percentages.
-//!   - Create transcoded video previews in different resolutions (e.g., 480p, 720p WebM).
+//!   - Create transcoded video previews in different resolutions (e.g., 480p, 720p `WebM`).
 //! - **Efficient Processing**:
 //!   - Uses a single `FFmpeg` command to generate all required outputs simultaneously, minimizing process overhead.
 //!   - Leverages parallel processing for native image resizing.
@@ -53,7 +55,8 @@ use temp_dir::TempDir;
 ///
 /// Returns `Ok(true)` if all expected thumbnails exist, `Ok(false)` otherwise.
 /// Returns an error if there's an issue accessing the filesystem.
-pub fn thumbs_exist(file: &Path, thumb_folder: &Path, config: &ThumbOptions) -> Result<bool> {
+#[must_use]
+pub fn thumbs_exist(file: &Path, thumb_folder: &Path, config: &ThumbOptions) -> bool {
     let photo_thumb_ext = &config.thumbnail_extension;
     let video_thumb_ext = &config.video_options.extension;
 
@@ -86,14 +89,14 @@ pub fn thumbs_exist(file: &Path, thumb_folder: &Path, config: &ThumbOptions) -> 
     };
 
     if (is_photo || is_video) && !photo_stills_exist() {
-        return Ok(false);
+        return false;
     }
 
     if is_video && (!video_stills_exist() || !video_transcodes_exist()) {
-        return Ok(false);
+        return false;
     }
 
-    Ok(true)
+    true
 }
 
 /// Generates thumbnails for a given media file (image or video) based on the provided configuration.
@@ -110,7 +113,7 @@ pub fn thumbs_exist(file: &Path, thumb_folder: &Path, config: &ThumbOptions) -> 
 ///
 /// # Errors
 ///
-/// Returns an error if paths are invalid, FFmpeg commands fail, or file I/O operations fail.
+/// Returns an error if paths are invalid, `FFmpeg` commands fail, or file I/O operations fail.
 pub async fn generate_thumbnails(
     file: &Path,
     out_folder: &Path,
@@ -122,7 +125,7 @@ pub async fn generate_thumbnails(
     };
     let orientation = orientation.unwrap_or(0);
 
-    if config.skip_if_exists && thumbs_exist(file, out_folder, config)? {
+    if config.skip_if_exists && thumbs_exist(file, out_folder, config) {
         return Ok(());
     }
 

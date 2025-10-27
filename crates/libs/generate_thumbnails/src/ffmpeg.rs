@@ -8,7 +8,7 @@ use color_eyre::eyre;
 use tokio::process::Command;
 use common_photos::VideoOutputFormat;
 
-/// A builder for creating and running complex FFmpeg commands.
+/// A builder for creating and running complex `FFmpeg` commands.
 pub struct FfmpegCommand {
     inputs: Vec<(PathBuf, Option<f64>)>,
     filters: Vec<String>,
@@ -16,7 +16,7 @@ pub struct FfmpegCommand {
 }
 
 impl FfmpegCommand {
-    /// Creates a new FFmpeg command with a primary input file.
+    /// Creates a new `FFmpeg` command with a primary input file.
     pub fn new(input: &Path) -> Self {
         Self {
             inputs: vec![(input.to_path_buf(), None)],
@@ -88,7 +88,7 @@ impl FfmpegCommand {
     }
 
 
-    /// Builds and runs the FFmpeg command.
+    /// Builds and runs the `FFmpeg` command.
     pub async fn run(self) -> Result<()> {
         if self.maps.is_empty() {
             return Ok(()); // Nothing to do
@@ -112,7 +112,7 @@ impl FfmpegCommand {
     }
 }
 
-async fn run_ffmpeg<S: AsRef<OsStr>>(args: &[S]) -> Result<()> {
+async fn run_ffmpeg<S: AsRef<OsStr> + Send + Sync>(args: &[S]) -> Result<()> {
     let output = Command::new("ffmpeg")
         .args(args)
         .stdout(Stdio::null())

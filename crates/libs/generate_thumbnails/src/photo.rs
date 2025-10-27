@@ -105,7 +105,7 @@ pub fn generate_native_photo_thumbnails(
     Ok(())
 }
 
-/// Generates photo thumbnails using FFmpeg.
+/// Generates photo thumbnails using `FFmpeg`.
 pub async fn generate_ffmpeg_photo_thumbnails(
     input: &Path,
     output_dir: &Path,

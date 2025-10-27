@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-common_photos = { path = "../common_photos" }
+common_photos = { path = "../../libs/common_photos" }
 tokio = { version = "1.47.1", features = ["full"] }
 color-eyre = "0.6.5"
 tracing = "0.1.41"

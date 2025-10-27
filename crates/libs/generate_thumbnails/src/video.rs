@@ -86,6 +86,6 @@ fn generate_video_transcodes(
         let scaled_v_stream = cmd.add_scale(&v_streams[i], -2, h as i32);
         let out_path = output_dir.join(format!("{h}p.{}", config.video_options.extension));
 
-        cmd.map_video_output(&scaled_v_stream, &a_streams[i], &hq_config, &out_path);
+        cmd.map_video_output(&scaled_v_stream, &a_streams[i], hq_config, &out_path);
     }
 }
