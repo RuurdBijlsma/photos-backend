@@ -15,4 +15,4 @@ imageproc = { version = "0.25.0" }
 tempfile = "3.23.0"
 tokio = { version = "1.47.1", features = ["full"]}
 common_photos = { path = "../common_photos" }
-sqlx = "0.8.6"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json"] }

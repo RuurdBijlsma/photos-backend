@@ -927,7 +927,6 @@ dependencies = [
  "config",
  "dotenv",
  "rand 0.10.0-rc.0",
- "ruurd_photos_thumbnail_generation",
  "serde",
  "sqlx",
  "tracing",
@@ -1930,6 +1929,27 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "slab",
+]
+
+[[package]]
+name = "generate_thumbnails"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "common_photos",
+ "fast_image_resize",
+ "futures",
+ "image",
+ "imgref",
+ "ravif 0.12.0",
+ "rayon",
+ "rgb",
+ "serde",
+ "serde_json",
+ "temp-dir",
+ "tokio",
+ "tokio-retry",
+ "walkdir",
 ]
 
 [[package]]
@@ -5082,28 +5102,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
-name = "ruurd_photos_thumbnail_generation"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3baac1b3f3c47d7f4a514727293b93656b825efafbd3416c8ab6c555e8da8d1e"
-dependencies = [
- "color-eyre",
- "fast_image_resize",
- "futures",
- "image",
- "imgref",
- "ravif 0.12.0",
- "rayon",
- "rgb",
- "serde",
- "serde_json",
- "temp-dir",
- "tokio",
- "tokio-retry",
- "walkdir",
-]
-
-[[package]]
 name = "ryu"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7202,11 +7200,11 @@ dependencies = [
  "clap",
  "color-eyre",
  "common_photos",
+ "generate_thumbnails",
  "media_analyzer",
  "ml_analysis",
  "pgvector",
  "rand 0.10.0-rc.0",
- "ruurd_photos_thumbnail_generation",
  "serde_json",
  "sqlx",
  "tokio",

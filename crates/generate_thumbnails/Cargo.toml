@@ -1,0 +1,21 @@
+[package]
+name = "generate_thumbnails"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+common_photos = { path = "../common_photos" }
+tokio = { version = "1.47.1", features = ["full"] }
+walkdir = "2.5.0"
+tokio-retry = "0.3.0"
+serde_json = "1.0.145"
+serde = { version = "1.0.228", features = ["derive"] }
+temp-dir = "0.1.16"
+futures = "0.3.31"
+color-eyre = "0.6.5"
+ravif = { version = "0.12.0", features = ["asm"] }
+rayon = "1.11.0"
+image = { version = "0.25.8", features = ["jpeg", "png", "gif"] }
+fast_image_resize = { version = "5.3.0", features = ["image"] }
+rgb = "0.8"
+imgref = "1.12.0"

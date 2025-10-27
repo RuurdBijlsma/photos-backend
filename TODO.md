@@ -14,6 +14,13 @@
 * ✅ BUG als een worker dood gaat terwijl een job aan het running is dan blijft ie running en pakt niemand m meer op.
 * ✅ add time_utc to media_item table
 * ✅ rename taken_at_local to taken_at_local
+* ✅ camelCase elke interfaces.rs struct
+* ✅ protobuf for more endpoints?
+* ✅ i made the photos handler/service code garbage. clean up pls.
+* ✅ Dont use single character field names now that we use protobuf for big requests
+* ✅ 👎 look into not using generated code, just add the prost annotations on the real structs
+* ✅ response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms, but on frontend end is 100-125 ms.
+* ✅ make ratios endpoint more of a timeline endpoint, with count per month.
 * ✅ ML Analysis:
     * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
     * ✅ color data from python, make in rust
@@ -31,20 +38,21 @@
     * ✅ moet nog een photo density endpoint hebben om de scrollbar density te laten zien.
     * ✅ nieuwe dag is niet altijd newline in de photos grid, misschien toch weer over gaan naar maanden requesten.
     * ✅ data_url veld in db is useless denk ik (ook in alle analyzers)
-    * virtual scroll waar elke maand 1 virtual scroll item is? of elke row is 1 virtual item??
+    * ✅ virtual scroll waar elke maand 1 virtual scroll item is? of elke row is 1 virtual item??
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
     * ✅ change the json output of vec<photo> to have small field names (is like 50% smaller)
-    * Show photos in ui
+    * ✅ Show photos in ui
+    * ✅ only allow register if no user exists
+    * ✅ frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
     * password reset flow (email) (make mail optional)
     * add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
-    * ✅ only allow register if no user exists
     * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
       db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
       user account)
-    * frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
+    * axum-gate? crate voor axum auth
 * integration test
     * auth
     * "setup"
@@ -53,31 +61,27 @@
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
-* !BUG user_id from relative path is broken (it looks for username in first path of path, but we use media folder now in
-  the
-  db, so we'll somehow have to get this. I think only way is loop over all media_folders in db and see if file path
-  starts_with each media_folder)
 * Improve last_error field in jobs, just put entire report in there?
-* a lotta failed jobs
-* use time_utc for sorting with COALESCE (don't use it for binning into months and such, and don't return the utc time
-  to user)
-* camelCase elke interfaces.rs struct
 * monitoring/alerting
     * prometheus
     * grafana
     * alertmanager
     * loki? denk t niet
-* protobuf for more endpoints?
-* i made the photos handler/service code garbage. clean up pls.
-* Dont use single character field names now that we use protobuf for big requests
-* 👎 look into not using generated code, just add the prost annotations on the real structs
 * use proper index on get-month endpoint, if not already at max perf level.
-* response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms, but on frontend end is 100-125 ms.
-* make ratios endpoint more of a timeline endpoint, with count per month.
 * heb ik met de nieuwe fallback timezone 0 null's in taken at utc? 
 * make sure cache control on thumbnails are immutable/max age.
 * refresh token gives 415 for some reason.
+
+# hot topics 
+
 * thumbnails zijn gedraait (orientation tag exif)
+* use time_utc for sorting with COALESCE (don't use it for binning into months and such, and don't return the utc time
+  to user)
+* Fix failed analysis jobs
+* !BUG user_id from relative path is broken (it looks for username in first path of path, but we use media folder now in
+  the
+  db, so we'll somehow have to get this. I think only way is loop over all media_folders in db and see if file path
+  starts_with each media_folder)
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

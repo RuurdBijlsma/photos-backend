@@ -1,6 +1,5 @@
-use crate::{canon_media_dir, media_dir, settings, thumbnails_dir};
+use crate::{canon_media_dir, media_dir, settings, thumbnails_dir, ThumbOptions};
 use color_eyre::eyre::eyre;
-use ruurd_photos_thumbnail_generation::ThumbOptions;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Executor, Pool, Postgres};
 use std::fs::canonicalize;

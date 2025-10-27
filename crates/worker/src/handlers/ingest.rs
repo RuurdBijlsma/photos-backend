@@ -7,7 +7,7 @@ use color_eyre::eyre::eyre;
 use common_photos::{
     Job, get_thumb_options, media_dir, nice_id, relative_path_abs, settings, thumbnails_dir,
 };
-use ruurd_photos_thumbnail_generation::generate_thumbnails;
+use generate_thumbnails::generate_thumbnails;
 
 /// Handles the ingestion of a media file, including thumbnail generation and database storage.
 ///
@@ -22,7 +22,13 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(user_id) = job.user_id else {
         return Err(eyre!("Ingest job has no associated user_id"));
     };
+
     let file_path = media_dir().join(relative_path);
+    let media_info = {
+        let mut analyzer = context.media_analyzer.lock().await;
+        analyzer.analyze_media(&file_path).await?
+    };
+
     let thumb_config = get_thumb_options();
     let thumb_base_dir = thumbnails_dir();
     let media_item_id = nice_id(settings().database.media_item_id_length);
@@ -34,11 +40,6 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         // File deleted while thumbs where generating
         return Ok(JobResult::Cancelled);
     }
-
-    let media_info = {
-        let mut analyzer = context.media_analyzer.lock().await;
-        analyzer.analyze_media(&file_path).await?
-    };
 
     let mut tx = context.pool.begin().await?;
 

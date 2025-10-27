@@ -1,4 +1,3 @@
-use ruurd_photos_thumbnail_generation::{AvifOptions, VideoThumbOptions};
 use serde::{Deserialize, Serialize};
 
 /// Overall application configuration structure.
@@ -127,4 +126,56 @@ impl Variant {
             Self::FruitSalad => "FRUIT_SALAD",
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VideoOutputFormat {
+    /// The height of the output video in pixels. The width will be scaled automatically to maintain aspect ratio.
+    pub height: u64,
+    /// The quality setting for the video encoding. For VP9, this is the CRF (Constant Rate Factor) value.
+    pub quality: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AvifOptions {
+    /// Quality 1..=100. Panics if out of range.
+    pub quality: f32,
+    /// Quality for the alpha channel only. `1..=100`. Panics if out of range.
+    pub alpha_quality: f32,
+    /// - 1 = very slow, but max compression.
+    /// - 10 = quick, but larger file sizes and lower quality.
+    ///
+    /// Panics if outside 1..=10.
+    pub speed: u8,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VideoThumbOptions {
+    /// The specific time in seconds from the start of the video to generate multi-size stills from.
+    pub thumb_time: f64,
+    /// A vector of percentages of the video's total duration at which to capture still images.
+    pub percentages: Vec<u64>,
+    /// The height in pixels for the thumbnails generated based on the `percentages` field.
+    pub height: u64,
+    /// A list of video formats to generate as previews from the source video.
+    pub transcode_outputs: Vec<VideoOutputFormat>,
+    /// The file extension for video transcoding (e.g., "webm", "mp4").
+    pub extension: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ThumbOptions {
+    /// Which extensions are categorized as video
+    pub video_extensions: Vec<String>,
+    /// Which extensions are categorized as photos
+    pub photo_extensions: Vec<String>,
+    /// A vector of heights for generating multiple thumbnails.
+    /// - For videos, these are the heights for stills taken at `thumb_time`.
+    /// - For images, these are the heights for the generated thumbnails.
+    pub heights: Vec<u64>,
+    /// The file extension for photo thumbnails (e.g., "avif", "webp", "jpg").
+    pub thumbnail_extension: String,
+    pub avif_options: AvifOptions,
+    pub video_options: VideoThumbOptions,
+    pub skip_if_exists: bool,
 }
