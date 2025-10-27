@@ -7,7 +7,7 @@ edition = "2024"
 common_photos = { path = "../../libs/common_photos" }
 generate_thumbnails = { path = "../../libs/generate_thumbnails" }
 ml_analysis = { path = "../../libs/ml_analysis" }
-media_analyzer = "0.3.2"
+media_analyzer = "0.3.4"
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json"] }
 tokio = { version = "1.47.1", features = ["full"] }
 color-eyre = "0.6.5"
