@@ -34,7 +34,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let media_item_id = nice_id(settings().database.media_item_id_length);
     let thumbnail_out_dir = thumb_base_dir.join(&media_item_id);
 
-    generate_thumbnails(&file_path, &thumbnail_out_dir, &thumb_config).await?;
+    generate_thumbnails(&file_path, &thumbnail_out_dir, &thumb_config, media_info.metadata.orientation).await?;
 
     if !file_path.exists() {
         // File deleted while thumbs where generating

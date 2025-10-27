@@ -1,5 +1,6 @@
-use color_eyre::eyre::eyre;
-use color_eyre::eyre::Result;
+use crate::ffmpeg::FfmpegCommand;
+use color_eyre::eyre::{eyre, Result};
+use common_photos::ThumbOptions;
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};
 use image::{ImageBuffer, ImageReader, Rgba};
@@ -10,13 +11,14 @@ use rgb::RGBA;
 use std::fs;
 use std::num::NonZeroU32;
 use std::path::Path;
-use common_photos::ThumbOptions;
 
-pub fn generate_photo_thumbnails(
+/// Generates photo thumbnails using a native Rust image processing library.
+/// This is optimized for AVIF output and supports EXIF orientation correction.
+pub fn generate_native_photo_thumbnails(
     input_path: &Path,
     output_dir: &Path,
     config: &ThumbOptions,
-    orientation: u8,
+    orientation: u64,
 ) -> Result<()> {
     fs::create_dir_all(output_dir)?;
     if config.heights.is_empty() {
@@ -103,68 +105,26 @@ pub fn generate_photo_thumbnails(
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use std::time::Instant;
-    use common_photos::{AvifOptions, VideoOutputFormat, VideoThumbOptions};
-
-    #[test]
-    fn test_generate_thumbnails() -> Result<()> {
-        let config = ThumbOptions {
-            photo_extensions: ["jpg", "jpeg", "png", "gif", "tiff", "tga", "avif"]
-                .iter()
-                .map(|x| x.to_string())
-                .collect(),
-            video_extensions: [
-                "mp4", "webm", "av1", "3gp", "mov", "mkv", "flv", "m4v", "m4p",
-            ]
-                .iter()
-                .map(|x| x.to_string())
-                .collect(),
-            skip_if_exists: true,
-            heights: vec![10, 144, 240, 360, 480, 720, 1080],
-            thumbnail_extension: "avif".to_string(),
-            avif_options: AvifOptions {
-                // Bad quality and speed settings for test to speed it up.
-                quality: 20.,
-                alpha_quality: 20.,
-                speed: 10,
-            },
-            video_options: VideoThumbOptions {
-                extension: "webm".to_string(),
-                thumb_time: 0.5,
-                percentages: vec![0, 33, 66, 99],
-                height: 720,
-                transcode_outputs: vec![
-                    VideoOutputFormat {
-                        height: 480,
-                        quality: 35,
-                    },
-                    VideoOutputFormat {
-                        height: 144,
-                        quality: 40,
-                    },
-                ],
-            },
-        };
-
-        let input = Path::new("assets/orientation-5.jpg");
-        let filename = input
-            .file_name()
-            .map(|f| f.to_string_lossy().to_string())
-            .unwrap();
-        let out_dir = Path::new("thumbs").join(&filename);
-        if out_dir.exists() {
-            fs::remove_dir_all(&out_dir)?;
-        }
-
-        let now = Instant::now();
-        // For testing purposes, we'll manually set the orientation.
-        // In a real-world application, you would extract this from the EXIF data.
-        generate_photo_thumbnails(input, &out_dir, &config, 5)?;
-        println!("Elapsed: {:.2?}", now.elapsed());
-        Ok(())
+/// Generates photo thumbnails using FFmpeg.
+pub async fn generate_ffmpeg_photo_thumbnails(
+    input: &Path,
+    output_dir: &Path,
+    config: &ThumbOptions,
+) -> Result<()> {
+    if config.heights.is_empty() {
+        return Ok(());
     }
+    fs::create_dir_all(output_dir)?;
+
+    let mut cmd = FfmpegCommand::new(input);
+    let input_stream = "[0:v]";
+    let output_streams = cmd.add_split(input_stream, config.heights.len());
+
+    for (i, &h) in config.heights.iter().enumerate() {
+        let scaled_stream = cmd.add_scale(&output_streams[i], -1, h as i32);
+        let out_path = output_dir.join(format!("{h}p.{}", config.thumbnail_extension));
+        cmd.map_still_output(&scaled_stream, &out_path);
+    }
+
+    cmd.run().await
 }

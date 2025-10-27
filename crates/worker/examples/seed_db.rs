@@ -104,6 +104,7 @@ async fn seed_mock_photos_in_tx(
                 mime_type: "image/jpeg".to_string(),
                 duration: None,
                 size_bytes: rng.random_range(1_000_000..=8_000_000),
+                orientation: None,
             },
             capture_details: CaptureDetails {
                 iso: None,
