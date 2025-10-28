@@ -1,4 +1,4 @@
-use crate::ffmpeg::{get_video_duration, FfmpegCommand};
+use crate::ffmpeg::{FfmpegCommand, get_video_duration};
 use color_eyre::eyre::Result;
 use common_photos::ThumbOptions;
 use std::path::Path;
@@ -26,11 +26,7 @@ pub async fn generate_video_thumbnails(
     cmd.run().await
 }
 
-fn generate_fixed_time_stills(
-    cmd: &mut FfmpegCommand,
-    output_dir: &Path,
-    config: &ThumbOptions,
-) {
+fn generate_fixed_time_stills(cmd: &mut FfmpegCommand, output_dir: &Path, config: &ThumbOptions) {
     if config.heights.is_empty() {
         return;
     }
@@ -65,11 +61,7 @@ fn generate_percentage_stills(
     }
 }
 
-fn generate_video_transcodes(
-    cmd: &mut FfmpegCommand,
-    output_dir: &Path,
-    config: &ThumbOptions,
-) {
+fn generate_video_transcodes(cmd: &mut FfmpegCommand, output_dir: &Path, config: &ThumbOptions) {
     if config.video_options.transcode_outputs.is_empty() {
         return;
     }

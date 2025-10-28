@@ -35,7 +35,7 @@ mod utils;
 mod video;
 
 use color_eyre::Result;
-use common_photos::{is_photo_file, is_video_file, ThumbOptions};
+use common_photos::{ThumbOptions, is_photo_file, is_video_file};
 use std::path::Path;
 use temp_dir::TempDir;
 
@@ -78,14 +78,10 @@ pub fn thumbs_exist(file: &Path, thumb_folder: &Path, config: &ThumbOptions) -> 
     };
 
     let video_transcodes_exist = || {
-        config
-            .video_options
-            .transcode_outputs
-            .iter()
-            .all(|x| {
-                let thumb_path = thumb_folder.join(format!("{}p.{}", x.height, video_thumb_ext));
-                thumb_path.exists()
-            })
+        config.video_options.transcode_outputs.iter().all(|x| {
+            let thumb_path = thumb_folder.join(format!("{}p.{}", x.height, video_thumb_ext));
+            thumb_path.exists()
+        })
     };
 
     if (is_photo || is_video) && !photo_stills_exist() {

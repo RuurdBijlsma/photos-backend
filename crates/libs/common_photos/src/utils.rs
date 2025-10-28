@@ -1,4 +1,4 @@
-use crate::{canon_media_dir, media_dir, settings, thumbnails_dir, ThumbOptions};
+use crate::{ThumbOptions, canon_media_dir, media_dir, settings, thumbnails_dir};
 use color_eyre::eyre::eyre;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Executor, Pool, Postgres};

@@ -138,7 +138,7 @@ pub async fn get_photos_by_month(
 
     let mut months_map: HashMap<String, Vec<MediaItem>> = HashMap::new();
     for item in items {
-        let month_id = format!("{}-01", item.timestamp[0..7].to_string());
+        let month_id = format!("{}-01", &item.timestamp[0..7]);
         months_map.entry(month_id).or_default().push(item);
     }
 

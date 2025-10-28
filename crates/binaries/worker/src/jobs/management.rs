@@ -3,7 +3,7 @@ use crate::handlers::JobResult;
 use crate::macros::backoff_seconds;
 use chrono::{Duration, Utc};
 use color_eyre::{Report, Result};
-use common_photos::{alert, Job};
+use common_photos::{Job, alert};
 use common_photos::{JobStatus, JobType};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing::{info, warn};
@@ -141,11 +141,8 @@ async fn reschedule_for_retry(
     backoff_secs: i64,
     last_error: &str,
 ) -> Result<()> {
-    warn!(
-        "⚠️ Rescheduling job {}. Backoff: {}s, error: {}",
-        job_id, backoff_secs, last_error
-    );
-    println!("{}", last_error);
+    warn!("⚠️ Rescheduling job {}. Backoff: {}s", job_id, backoff_secs);
+    println!("{last_error}");
     let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
         "UPDATE jobs SET status = 'queued', scheduled_at = $2, attempts = attempts + 1, owner = NULL, started_at = NULL, last_error = $3 WHERE id = $1",

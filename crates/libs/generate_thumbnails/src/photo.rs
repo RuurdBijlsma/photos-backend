@@ -1,5 +1,5 @@
 use crate::ffmpeg::FfmpegCommand;
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{Result, eyre};
 use common_photos::ThumbOptions;
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};

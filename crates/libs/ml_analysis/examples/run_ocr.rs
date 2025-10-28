@@ -3,15 +3,12 @@ use pyo3::prelude::*;
 use std::path::Path;
 use std::time::Instant;
 
-
 fn main() -> PyResult<()> {
     Python::attach(|py| {
         let py_interop = PyInterop::new(py)?;
         println!("Python analyzer initialized.");
 
-        let files = vec![
-            Path::new("media_dir/rutenl/ocr-bug.jpg"),
-        ];
+        let files = vec![Path::new("media_dir/rutenl/ocr-bug.jpg")];
 
         for file in files {
             // === OCR ===

@@ -1,12 +1,12 @@
 use crate::utils;
-use color_eyre::eyre::{bail, Context, Result};
+use color_eyre::eyre;
+use color_eyre::eyre::{Context, Result, bail};
+use common_photos::VideoOutputFormat;
 use serde::Deserialize;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use color_eyre::eyre;
 use tokio::process::Command;
-use common_photos::VideoOutputFormat;
 
 /// A builder for creating and running complex `FFmpeg` commands.
 pub struct FfmpegCommand {
@@ -36,15 +36,21 @@ impl FfmpegCommand {
 
     /// Adds a `split` filter to create multiple identical streams from one input stream.
     pub fn add_split(&mut self, input_stream: &str, count: usize) -> Vec<String> {
-        let labels: Vec<String> = (0..count).map(|i| format!("[s{}_{i}]", self.filters.len())).collect();
-        self.filters.push(format!("{input_stream}split={count}{}", labels.join("")));
+        let labels: Vec<String> = (0..count)
+            .map(|i| format!("[s{}_{i}]", self.filters.len()))
+            .collect();
+        self.filters
+            .push(format!("{input_stream}split={count}{}", labels.join("")));
         labels
     }
 
     /// Adds an `asplit` filter for audio streams.
     pub fn add_asplit(&mut self, input_stream: &str, count: usize) -> Vec<String> {
-        let labels: Vec<String> = (0..count).map(|i| format!("[as{}_{i}]", self.filters.len())).collect();
-        self.filters.push(format!("{input_stream}asplit={count}{}", labels.join("")));
+        let labels: Vec<String> = (0..count)
+            .map(|i| format!("[as{}_{i}]", self.filters.len()))
+            .collect();
+        self.filters
+            .push(format!("{input_stream}asplit={count}{}", labels.join("")));
         labels
     }
 
@@ -52,7 +58,8 @@ impl FfmpegCommand {
     /// Returns the output stream label (e.g., `[out_0]`).
     pub fn add_scale(&mut self, input_stream: &str, width: i32, height: i32) -> String {
         let out_label = format!("[out_{}]", self.filters.len());
-        self.filters.push(format!("{input_stream}scale={width}:{height}{out_label}"));
+        self.filters
+            .push(format!("{input_stream}scale={width}:{height}{out_label}"));
         out_label
     }
 
@@ -76,17 +83,23 @@ impl FfmpegCommand {
         out_path: &Path,
     ) {
         self.maps.extend([
-            "-map".into(), video_stream.into(),
-            "-map".into(), audio_stream.into(),
-            "-c:v".into(), "libvpx-vp9".into(),
-            "-crf".into(), hq_config.quality.to_string().into(),
-            "-b:v".into(), "0".into(),
-            "-c:a".into(), "libopus".into(),
-            "-b:a".into(), "64k".into(),
+            "-map".into(),
+            video_stream.into(),
+            "-map".into(),
+            audio_stream.into(),
+            "-c:v".into(),
+            "libvpx-vp9".into(),
+            "-crf".into(),
+            hq_config.quality.to_string().into(),
+            "-b:v".into(),
+            "0".into(),
+            "-c:a".into(),
+            "libopus".into(),
+            "-b:a".into(),
+            "64k".into(),
             utils::path_to_os_string(out_path),
         ]);
     }
-
 
     /// Builds and runs the `FFmpeg` command.
     pub async fn run(self) -> Result<()> {
@@ -129,9 +142,13 @@ async fn run_ffmpeg<S: AsRef<OsStr> + Send + Sync>(args: &[S]) -> Result<()> {
 }
 
 #[derive(Deserialize)]
-struct FfprobeOutput { format: FormatInfo }
+struct FfprobeOutput {
+    format: FormatInfo,
+}
 #[derive(Deserialize)]
-struct FormatInfo { duration: String }
+struct FormatInfo {
+    duration: String,
+}
 
 /// Gets the duration of a video file in seconds using ffprobe.
 pub async fn get_video_duration(video_path: &Path) -> Result<f64> {
@@ -140,8 +157,12 @@ pub async fn get_video_duration(video_path: &Path) -> Result<f64> {
         .map_err(|_| eyre::eyre!("ffprobe video path is not valid UTF-8"))?;
 
     let args = &[
-        "-v", "quiet", "-print_format", "json",
-        "-show_format", &video_path_str,
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_format",
+        &video_path_str,
     ];
 
     let output = Command::new("ffprobe")
@@ -158,5 +179,9 @@ pub async fn get_video_duration(video_path: &Path) -> Result<f64> {
     let ffprobe_data: FfprobeOutput =
         serde_json::from_slice(&output.stdout).context("Failed to parse ffprobe JSON output")?;
 
-    ffprobe_data.format.duration.parse().context("Failed to parse duration string")
+    ffprobe_data
+        .format
+        .duration
+        .parse()
+        .context("Failed to parse duration string")
 }
