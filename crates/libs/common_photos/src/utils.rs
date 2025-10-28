@@ -1,5 +1,5 @@
-use crate::{ThumbOptions, canon_media_dir, media_dir, settings, thumbnails_dir};
-use color_eyre::eyre::eyre;
+use crate::UserRole;
+use crate::{ThumbOptions, User, canon_media_dir, media_dir, settings, thumbnails_dir};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Executor, Pool, Postgres};
 use std::fs::canonicalize;
@@ -111,53 +111,38 @@ pub fn is_video_file(file: &Path) -> bool {
 /// * If the username cannot be extracted from the path.
 /// * If the database query to find the user by username fails.
 /// * If no user is found for the extracted username.
-pub async fn user_id_from_relative_path<'c, E>(
+pub async fn user_from_relative_path<'c, E>(
     relative_path: &str,
     executor: E,
-) -> color_eyre::Result<i32>
+) -> color_eyre::Result<Option<User>>
 where
     E: Executor<'c, Database = Postgres>,
 {
-    let file = media_dir().join(relative_path);
-    let Some(username) = username_from_path(&file) else {
-        return Err(eyre!("Can't get username from path {}", relative_path));
-    };
-    let Ok(user_id) = user_id_from_username(&username, executor).await else {
-        return Err(eyre!(
-            "Error getting user from database for username = '{}'",
-            username
-        ));
-    };
-    let Some(user_id) = user_id else {
-        return Err(eyre!("Can't find user id for username '{}'", username));
-    };
-    Ok(user_id)
-}
+    let users = sqlx::query_as!(
+        User,
+        r#"
+        SELECT id, created_at, updated_at, email, name, media_folder, role as "role: UserRole"
+        FROM app_user
+        WHERE media_folder IS NOT null
+    "#
+    )
+    .fetch_all(executor)
+    .await?;
 
-/// Extracts the username from the first component of a file's relative path.
-fn username_from_path(path: &Path) -> Option<String> {
-    let relative_path = relative_path_abs(path).ok()?;
-    relative_path
-        .split('/')
-        .next()
-        .map(std::string::ToString::to_string)
-}
+    let mut best_match: Option<User> = None;
+    let mut max_len = 0;
 
-/// Retrieves a user's ID from the database based on their username.
-/// # Errors
-///
-/// * If the database query fails.
-async fn user_id_from_username<'c, E>(
-    username: &str,
-    executor: E,
-) -> color_eyre::Result<Option<i32>>
-where
-    E: Executor<'c, Database = Postgres>,
-{
-    let user_id = sqlx::query_scalar!("SELECT id FROM app_user WHERE name = $1", username)
-        .fetch_optional(executor)
-        .await?;
-    Ok(user_id)
+    for user in users {
+        if let Some(media_folder) = &user.media_folder
+            && relative_path.starts_with(media_folder)
+            && media_folder.len() > max_len
+        {
+            max_len = media_folder.len();
+            best_match = Some(user);
+        }
+    }
+
+    Ok(best_match)
 }
 
 /// Constructs thumbnail generation options from the application settings.

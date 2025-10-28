@@ -3,13 +3,14 @@ use crate::handlers::JobResult;
 use color_eyre::eyre::Result;
 use color_eyre::eyre::eyre;
 use common_photos::{
-    Job, JobType, enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs, settings,
-    thumbnails_dir, user_id_from_relative_path,
+    Job, JobType, alert, enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs,
+    settings, thumbnails_dir, user_from_relative_path,
 };
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
+use tracing::warn;
 use tracing::{error, info};
 use walkdir::WalkDir;
 
@@ -145,8 +146,12 @@ async fn sync_thumbnails(pool: &Pool<Postgres>) -> Result<()> {
         if file.exists() {
             info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
             // Re-ingest files with missing thumbnails, as long as the fs file exists.
-            let user_id = user_id_from_relative_path(&relative_path, pool).await?;
-            enqueue_full_ingest(pool, &relative_path, user_id).await?;
+
+            if let Some(user) = user_from_relative_path(&relative_path, pool).await? {
+                enqueue_full_ingest(pool, &relative_path, user.id).await?;
+            } else {
+                alert!("[Sync - Thumbnail scan] Cannot find user from relative path.");
+            }
         }
     }
 

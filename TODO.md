@@ -19,8 +19,16 @@
 * ✅ i made the photos handler/service code garbage. clean up pls.
 * ✅ Dont use single character field names now that we use protobuf for big requests
 * ✅ 👎 look into not using generated code, just add the prost annotations on the real structs
-* ✅ response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms, but on frontend end is 100-125 ms.
+* ✅ response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms,
+  but on frontend end is 100-125 ms.
 * ✅ make ratios endpoint more of a timeline endpoint, with count per month.
+* ✅ thumbnails zijn gedraait (orientation tag exif)
+* ✅ by-month and timeline dont return in sync media items. timeline ratios is wrong, it's not in order of
+  taken_at_local.
+* ✅ use time_utc for sorting with COALESCE (don't use it for binning into months and such, and don't return the utc time
+  to user)
+* ✅ Fix failed analysis jobs
+* ✅ !BUG user_id from relative path is broken
 * ✅ ML Analysis:
     * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
     * ✅ color data from python, make in rust
@@ -68,23 +76,17 @@
     * alertmanager
     * loki? denk t niet
 * use proper index on get-month endpoint, if not already at max perf level.
-* heb ik met de nieuwe fallback timezone 0 null's in taken at utc? 
+* heb ik met de nieuwe fallback timezone 0 null's in taken at utc?
 * make sure cache control on thumbnails are immutable/max age.
 * refresh token gives 415 for some reason.
 * at some point copy paste all sql queries into gemini en ask for proper indices
 * now that i have sort_timezone in the db, should i still use fallback timezone to calculate time_utc?
 
-# hot topics 
+# hot topics
 
-* ✅ thumbnails zijn gedraait (orientation tag exif)
-* use time_utc for sorting with COALESCE (don't use it for binning into months and such, and don't return the utc time
-  to user)
-* Fix failed analysis jobs
-* !BUG user_id from relative path is broken (it looks for username in first path of path, but we use media folder now in
-  the
-  db, so we'll somehow have to get this. I think only way is loop over all media_folders in db and see if file path
-  starts_with each media_folder)
-* ✅ by-month and timeline dont return in sync media items. timeline ratios is wrong, it's not in order of taken_at_local.
+* Refresh auth wordt niet goed gedaan in frontend.
+* Summary table voor ratios
+* performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel delay toevoegt)
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

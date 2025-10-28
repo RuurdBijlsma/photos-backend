@@ -1,5 +1,6 @@
 use common_photos::{
-    JobType, enqueue_file_job, enqueue_full_ingest, relative_path_abs, user_id_from_relative_path,
+    JobType, alert, enqueue_file_job, enqueue_full_ingest, relative_path_abs,
+    user_from_relative_path,
 };
 use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
@@ -17,8 +18,11 @@ async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::R
     info!("File created {:?}", file);
 
     let rel_path = relative_path_abs(file)?;
-    let user_id = user_id_from_relative_path(&rel_path, pool).await?;
-    enqueue_full_ingest(pool, &rel_path, user_id).await?;
+    if let Some(user) = user_from_relative_path(&rel_path, pool).await? {
+        enqueue_full_ingest(pool, &rel_path, user.id).await?;
+    } else {
+        alert!("[Create file event] Cannot find user from relative path.");
+    }
 
     Ok(())
 }
@@ -32,8 +36,11 @@ async fn handle_remove_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::R
     info!("File removed {:?}", file);
 
     let rel_path = relative_path_abs(file)?;
-    let user_id = user_id_from_relative_path(&rel_path, pool).await?;
-    enqueue_file_job(pool, JobType::Remove, &rel_path, user_id).await?;
+    if let Some(user) = user_from_relative_path(&rel_path, pool).await? {
+        enqueue_file_job(pool, JobType::Remove, &rel_path, user.id).await?;
+    } else {
+        alert!("[Create file event] Cannot find user from relative path.");
+    }
 
     Ok(())
 }
