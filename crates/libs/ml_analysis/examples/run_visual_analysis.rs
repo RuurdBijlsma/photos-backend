@@ -11,7 +11,7 @@ async fn main() -> color_eyre::Result<()> {
     let analyzer = VisualAnalyzer::new()?;
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
 
-    let images = vec![Path::new("media_dir/av-test.avif")];
+    let images = vec![Path::new("media_dir/rutenl/ocr-bug-2.jpg")];
 
     for image in images {
         let image_filename = image.file_name().unwrap().to_string_lossy().to_string();

@@ -52,8 +52,10 @@ CREATE TABLE media_item
     duration_ms         BIGINT,
     taken_at_local      TIMESTAMP   NOT NULL,
     taken_at_utc        TIMESTAMPTZ,
+    sort_timestamp      TIMESTAMPTZ NOT NULL,
     use_panorama_viewer BOOLEAN     NOT NULL,
     deleted             BOOLEAN     NOT NULL DEFAULT false,
+    month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
     CONSTRAINT width_positive CHECK (width > 0),
     CONSTRAINT height_positive CHECK (height > 0)
 );
@@ -152,3 +154,10 @@ CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
 CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);
+CREATE INDEX idx_media_item_user_month_order_partial
+    ON media_item (
+                   user_id,
+                   month_id,
+                   sort_timestamp DESC
+        )
+    WHERE deleted = false;

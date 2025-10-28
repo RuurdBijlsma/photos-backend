@@ -14,6 +14,6 @@ pub struct RandomPhotoResponse {
 #[derive(Deserialize, IntoParams, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMediaByMonthParams {
-    /// "YYYY-MM" strings.
+    /// "YYYY-MM-DD" strings.
     pub months: String,
 }

@@ -1,4 +1,6 @@
 use crate::insert_query;
+use chrono::{TimeZone, Utc};
+use common_photos::fallback_timezone;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;
 
@@ -71,6 +73,17 @@ pub async fn store_media_item(
     .execute(&mut **tx)
     .await?;
 
+    let sort_timestamp = data.time_info.datetime_utc.unwrap_or_else(|| {
+        fallback_timezone().as_ref().map_or_else(
+            || data.time_info.datetime_local.and_utc(),
+            |tz| {
+                tz.from_local_datetime(&data.time_info.datetime_local)
+                    .unwrap()
+                    .with_timezone(&Utc)
+            },
+        )
+    });
+
     insert_query!(tx, "media_item", {
         id: &item_id,
         user_id: user_id,
@@ -82,6 +95,7 @@ pub async fn store_media_item(
         duration_ms: data.metadata.duration.map(|d| (d * 1000.0) as i64),
         taken_at_local: data.time_info.datetime_local,
         taken_at_utc: data.time_info.datetime_utc,
+        sort_timestamp: sort_timestamp,
         use_panorama_viewer: data.pano_info.use_panorama_viewer,
     })
     .await?;

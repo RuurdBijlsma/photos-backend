@@ -4,6 +4,7 @@ use crate::auth::db_model::User;
 use crate::pb::api::{ByMonthResponse, MediaItem, MediaMonth, TimelineMonth, TimelineResponse};
 use crate::photos::error::PhotosError;
 use crate::photos::interfaces::RandomPhotoResponse;
+use chrono::NaiveDate;
 use rand::Rng;
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -84,14 +85,14 @@ pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse
         TimelineMonth,
         r#"
         SELECT
-            TO_CHAR(taken_at_local, 'YYYY-MM') AS "month_id!",
+            month_id::TEXT as "month_id!",
             COUNT(*)::INT AS "count!",
             array_agg(width::real / height::real ORDER BY taken_at_local DESC) AS "ratios!"
         FROM media_item
         WHERE user_id = $1
           AND deleted = false
-        GROUP BY TO_CHAR(taken_at_local, 'YYYY-MM')
-        ORDER BY "month_id!" DESC
+        GROUP BY month_id
+        ORDER BY month_id DESC
         "#,
         user.id
     )
@@ -109,7 +110,7 @@ pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse
 pub async fn get_photos_by_month(
     user: &User,
     pool: &PgPool,
-    month_ids: &[String],
+    month_ids: &[NaiveDate],
 ) -> Result<ByMonthResponse, PhotosError> {
     let items = sqlx::query_as!(
         MediaItem,
@@ -125,7 +126,7 @@ pub async fn get_photos_by_month(
         WHERE
             user_id = $1
             AND deleted = false
-            AND TO_CHAR(taken_at_local, 'YYYY-MM') = ANY($2)
+            AND month_id = ANY($2)
         ORDER BY
             taken_at_local DESC
         "#,
@@ -137,7 +138,7 @@ pub async fn get_photos_by_month(
 
     let mut months_map: HashMap<String, Vec<MediaItem>> = HashMap::new();
     for item in items {
-        let month_id = item.timestamp[0..7].to_string();
+        let month_id = format!("{}-01", item.timestamp[0..7].to_string());
         months_map.entry(month_id).or_default().push(item);
     }
 

@@ -65,7 +65,7 @@ impl VisualAnalyzer {
 
         let ocr = self
             .py_interop
-            .ocr(file, analyzer_settings.ocr.languages.clone())?;
+            .ocr(&analysis_file, analyzer_settings.ocr.languages.clone())?;
 
         // delete the tempfile
         tokio::fs::remove_file(&analysis_file).await?;

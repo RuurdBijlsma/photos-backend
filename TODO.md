@@ -71,10 +71,12 @@
 * heb ik met de nieuwe fallback timezone 0 null's in taken at utc? 
 * make sure cache control on thumbnails are immutable/max age.
 * refresh token gives 415 for some reason.
+* at some point copy paste all sql queries into gemini en ask for proper indices
+* now that i have sort_timezone in the db, should i still use fallback timezone to calculate time_utc?
 
 # hot topics 
 
-* thumbnails zijn gedraait (orientation tag exif)
+* ✅ thumbnails zijn gedraait (orientation tag exif)
 * use time_utc for sorting with COALESCE (don't use it for binning into months and such, and don't return the utc time
   to user)
 * Fix failed analysis jobs
@@ -82,7 +84,7 @@
   the
   db, so we'll somehow have to get this. I think only way is loop over all media_folders in db and see if file path
   starts_with each media_folder)
-* by-month and timeline dont return in sync media items. timeline ratios is wrong, it's not in order of taken_at_local.
+* ✅ by-month and timeline dont return in sync media items. timeline ratios is wrong, it's not in order of taken_at_local.
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

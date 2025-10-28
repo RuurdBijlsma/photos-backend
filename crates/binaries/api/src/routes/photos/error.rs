@@ -14,8 +14,8 @@ pub enum PhotosError {
     #[error("internal error")]
     Internal(#[from] eyre::Report),
 
-    #[error("Invalid month format. Expected YYYY-MM, but got '{0}'")]
-    InvalidMonthFormat(String), // New variant added here
+    #[error("Invalid month format. Expected YYYY-MM-DD, but got '{0}'")]
+    InvalidMonthFormat(String),
 }
 
 // Renamed for more general use
@@ -44,7 +44,7 @@ impl IntoResponse for PhotosError {
             ),
             Self::InvalidMonthFormat(invalid_month) => (
                 StatusCode::BAD_REQUEST,
-                format!("Invalid month format. Expected YYYY-MM, but got '{invalid_month}'"),
+                format!("Invalid month format. Expected YYYY-MM-DD, but got '{invalid_month}'"),
             ),
         };
 

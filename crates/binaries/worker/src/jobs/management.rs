@@ -2,8 +2,8 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::macros::backoff_seconds;
 use chrono::{Duration, Utc};
-use color_eyre::Result;
-use common_photos::{Job, alert};
+use color_eyre::{Report, Result};
+use common_photos::{alert, Job};
 use common_photos::{JobStatus, JobType};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing::{info, warn};
@@ -76,12 +76,13 @@ pub async fn update_job_on_completion(pool: &PgPool, job: &Job, result: JobResul
 /// # Errors
 ///
 /// Returns an error if the database update fails.
-pub async fn update_job_on_failure(pool: &PgPool, job: &Job, error: &str) -> Result<()> {
+pub async fn update_job_on_failure(pool: &PgPool, job: &Job, error: &Report) -> Result<()> {
+    let error_string = &format!("{error:?}");
     if job.attempts + 1 >= job.max_attempts {
-        mark_job_failed(pool, job.id, error).await
+        mark_job_failed(pool, job.id, error_string).await
     } else {
         let delay = backoff_seconds(job.attempts);
-        reschedule_for_retry(pool, job.id, delay, error).await
+        reschedule_for_retry(pool, job.id, delay, error_string).await
     }
 }
 
@@ -144,6 +145,7 @@ async fn reschedule_for_retry(
         "⚠️ Rescheduling job {}. Backoff: {}s, error: {}",
         job_id, backoff_secs, last_error
     );
+    println!("{}", last_error);
     let scheduled_at = Utc::now() + Duration::seconds(backoff_secs);
     sqlx::query!(
         "UPDATE jobs SET status = 'queued', scheduled_at = $2, attempts = attempts + 1, owner = NULL, started_at = NULL, last_error = $3 WHERE id = $1",

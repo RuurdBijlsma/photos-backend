@@ -29,7 +29,7 @@ pub async fn run_worker_loop(context: &WorkerContext) -> Result<()> {
 
             match job_result {
                 Ok(result) => update_job_on_completion(&context.pool, &job, result).await?,
-                Err(e) => update_job_on_failure(&context.pool, &job, &e.to_string()).await?,
+                Err(e) => update_job_on_failure(&context.pool, &job, &e).await?,
             }
         } else {
             if !sleeping {

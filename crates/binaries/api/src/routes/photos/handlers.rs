@@ -6,6 +6,7 @@ use crate::photos::service::{get_photos_by_month, get_timeline, random_photo};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
+use chrono::NaiveDate;
 use sqlx::PgPool;
 
 /// Get a random photo and its associated theme.
@@ -80,8 +81,15 @@ pub async fn get_photos_by_month_handler(
     let month_ids = params
         .months
         .split(',')
-        .map(ToString::to_string)
-        .collect::<Vec<_>>();
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d"))
+        .collect::<Result<Vec<NaiveDate>, _>>()
+        .map_err(|_| {
+            PhotosError::InvalidMonthFormat(
+                "Invalid date format in 'months' parameter. Please use 'YYYY-MM-DD'.".to_string(),
+            )
+        })?;
     let photos = get_photos_by_month(&user, &pool, &month_ids).await?;
     Ok(Protobuf(photos))
 }
