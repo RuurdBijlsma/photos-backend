@@ -81,12 +81,35 @@
 * refresh token gives 415 for some reason.
 * at some point copy paste all sql queries into gemini en ask for proper indices
 * now that i have sort_timezone in the db, should i still use fallback timezone to calculate time_utc?
+* improve OCR
 
 # hot topics
 
 * Refresh auth wordt niet goed gedaan in frontend.
 * Summary table voor ratios
-* performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel delay toevoegt)
+* performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel delay
+  toevoegt)
+
+# Features
+
+* storage indicator bottom left, like googly photos
+* albums
+* front page -> 1 year ago, 4 years ago today, etc in top balk
+* photo trashbin?
+* facial recognition
+* upload photos
+  * robust! stable!
+* search photos
+  * hybrid search
+* photo map
+  * time range restriction
+* explore photos
+    * cluster by photo embeddings
+    * sort by all kinds of things (exposure, iso, hue, saturation, gps lat, lon, temperature, altitude, windyness (
+      is_outdoor = true & sort by wind speed or gust))
+    * group by: {country (if there are enough countries, otherwise group by province, otherwise group by city), camera
+      model, main_subject, setting, animal type, pet type, food type, landmark, document type, photo_type, activity}
+    * sunset/sunrise photos
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 
