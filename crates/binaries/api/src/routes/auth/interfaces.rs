@@ -32,6 +32,7 @@ pub struct RefreshTokenPayload {
 #[derive(Serialize, Debug, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Tokens {
+    pub expiry: u64,
     pub access_token: String,
     pub refresh_token: String,
 }

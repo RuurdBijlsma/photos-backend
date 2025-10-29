@@ -1,16 +1,16 @@
 use crate::auth::db_model::User;
 use crate::auth::token::{
-    RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
+    generate_refresh_token_parts, split_refresh_token, verify_token, RefreshTokenParts,
 };
 use crate::routes::auth::error::AuthError;
 use crate::routes::auth::hashing::{hash_password, verify_password};
 use crate::routes::auth::interfaces::{Claims, CreateUser, Tokens};
-use axum::Json;
 use axum::http::StatusCode;
+use axum::Json;
 use chrono::{Duration, Utc};
 use common_photos::UserRole;
-use common_photos::{UserWithPassword, settings};
-use jsonwebtoken::{EncodingKey, Header, encode};
+use common_photos::{settings, UserWithPassword};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
 
@@ -140,7 +140,7 @@ where
 /// # Errors
 ///
 /// * `jsonwebtoken::Error` if token encoding fails.
-pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, AuthError> {
+pub fn create_access_token(user_id: i32, role: UserRole) -> Result<(String, u64), AuthError> {
     let cfg = settings();
     let exp = (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp();
     let claims = Claims {
@@ -148,12 +148,14 @@ pub fn create_access_token(user_id: i32, role: UserRole) -> Result<String, AuthE
         role,
         exp,
     };
-    encode(
+    let access_token = encode(
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(cfg.auth.jwt_secret.as_ref()),
     )
-    .map_err(Into::into)
+    .map_err(Into::<AuthError>::into)?;
+
+    Ok((access_token, exp as u64))
 }
 
 /// Handles refresh token rotation, invalidating the old token and issuing a new pair.
@@ -205,8 +207,9 @@ pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Token
 
     tx.commit().await?;
 
-    let access_token = create_access_token(record.user_id, user_role)?;
+    let (access_token, expiry) = create_access_token(record.user_id, user_role)?;
     Ok(Json(Tokens {
+        expiry,
         access_token,
         refresh_token: new_parts.raw_token,
     }))

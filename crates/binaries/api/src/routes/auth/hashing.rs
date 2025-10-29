@@ -21,13 +21,8 @@ pub fn verify_password(password: &[u8], hash: &str) -> color_eyre::Result<bool> 
 /// * `SaltString::try_from_rng` can return an error if a random salt cannot be generated.
 /// * `Argon2::hash_password` can return an error if the password hashing fails.
 pub fn hash_password(password: &[u8]) -> color_eyre::Result<String> {
-    let salt = SaltString::try_from_rng(&mut OsRng)?;
-
-    // Argon2 with default params (Argon2id v19)
     let argon2 = Argon2::default();
-
-    // Hash password to PHC string ($argon2id$v=19$...)
+    let salt = SaltString::try_from_rng(&mut OsRng)?;
     let password_hash = argon2.hash_password(password, &salt)?.to_string();
-
     Ok(password_hash)
 }

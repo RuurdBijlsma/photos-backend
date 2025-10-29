@@ -11,10 +11,11 @@ api:
   allowed_origins:
     - "http://localhost:5173"
     - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
 
 auth:
   jwt_secret: "overwrite-me-with-env"
-  access_token_expiry_minutes: 5
+  access_token_expiry_minutes: 30
   refresh_token_expiry_days: 7
 
 setup:

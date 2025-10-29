@@ -31,11 +31,12 @@ pub async fn login(
     Json(payload): Json<LoginUser>,
 ) -> Result<Json<Tokens>, AuthError> {
     let user = authenticate_user(&pool, &payload.email, &payload.password).await?;
-    let access_token = create_access_token(user.id, user.role)?;
+    let (access_token, expiry) = create_access_token(user.id, user.role)?;
     let token_parts = generate_refresh_token_parts()?;
     store_refresh_token(&pool, user.id, &token_parts).await?;
 
     Ok(Json(Tokens {
+        expiry,
         access_token,
         refresh_token: token_parts.raw_token,
     }))
