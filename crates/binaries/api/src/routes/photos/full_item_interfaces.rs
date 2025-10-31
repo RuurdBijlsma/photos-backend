@@ -6,9 +6,7 @@ use utoipa::ToSchema;
 
 /// Corresponds to the 'location' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Location {
-    pub id: i32,
     pub name: Option<String>,
     pub admin1: Option<String>,
     pub admin2: Option<String>,
@@ -18,10 +16,7 @@ pub struct Location {
 
 /// Corresponds to the 'ocr_box' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct OcrBox {
-    pub id: i64,
-    pub ocr_data_id: i64,
     pub text: String,
     pub position_x: f32,
     pub position_y: f32,
@@ -32,10 +27,7 @@ pub struct OcrBox {
 
 /// Corresponds to the 'face' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Face {
-    pub id: i64,
-    pub visual_analysis_id: i64,
     pub position_x: f32,
     pub position_y: f32,
     pub width: f32,
@@ -53,16 +45,11 @@ pub struct Face {
     pub eye_left_y: f32,
     pub eye_right_x: f32,
     pub eye_right_y: f32,
-    #[schema(value_type = Vec<f32>)]
-    pub embedding: Vec<f32>,
 }
 
 /// Corresponds to the 'detected_object' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct DetectedObject {
-    pub id: i64,
-    pub visual_analysis_id: i64,
     pub position_x: f32,
     pub position_y: f32,
     pub width: f32,
@@ -73,9 +60,7 @@ pub struct DetectedObject {
 
 /// Corresponds to the 'quality_data' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct QualityData {
-    pub visual_analysis_id: i64,
     pub blurriness: f64,
     pub noisiness: f64,
     pub exposure: f64,
@@ -84,9 +69,7 @@ pub struct QualityData {
 
 /// Corresponds to the 'color_data' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct ColorData {
-    pub visual_analysis_id: i64,
     pub themes: Vec<Value>,
     pub prominent_colors: Option<Vec<String>>,
     pub average_hue: f32,
@@ -97,9 +80,7 @@ pub struct ColorData {
 
 /// Corresponds to the 'caption_data' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct CaptionData {
-    pub visual_analysis_id: i64,
     pub default_caption: Option<String>,
     pub main_subject: Option<String>,
     pub contains_pets: bool,
@@ -130,9 +111,7 @@ pub struct CaptionData {
 
 /// Corresponds to the 'time_details' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct TimeDetails {
-    pub media_item_id: String,
     pub timezone_name: Option<String>,
     pub timezone_offset_seconds: Option<i32>,
     pub source: Option<String>,
@@ -142,9 +121,7 @@ pub struct TimeDetails {
 
 /// Corresponds to the 'weather' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Weather {
-    pub media_item_id: String,
     pub temperature: Option<f32>,
     pub dew_point: Option<f32>,
     pub relative_humidity: Option<i32>,
@@ -165,9 +142,7 @@ pub struct Weather {
 
 /// Corresponds to the 'details' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Details {
-    pub media_item_id: String,
     pub mime_type: String,
     pub size_bytes: i64,
     pub is_motion_photo: bool,
@@ -184,9 +159,7 @@ pub struct Details {
 
 /// Corresponds to the 'capture_details' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct CaptureDetails {
-    pub media_item_id: String,
     pub iso: Option<i32>,
     pub exposure_time: Option<f32>,
     pub aperture: Option<f32>,
@@ -197,9 +170,7 @@ pub struct CaptureDetails {
 
 /// Corresponds to the 'panorama' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Panorama {
-    pub media_item_id: String,
     pub is_photosphere: bool,
     pub projection_type: Option<String>,
     pub horizontal_fov_deg: Option<f32>,
@@ -210,10 +181,7 @@ pub struct Panorama {
 
 /// A composite struct representing data from the 'ocr_data' table, with its associated OCR boxes nested inside.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct OcrData {
-    pub id: i64,
-    pub visual_analysis_id: i64,
     pub has_legible_text: bool,
     pub ocr_text: Option<String>,
     pub boxes: Vec<OcrBox>,
@@ -221,13 +189,8 @@ pub struct OcrData {
 
 /// A composite struct representing a 'visual_analysis' run and all its associated nested data.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct VisualAnalysis {
-    pub id: i64,
-    pub media_item_id: String,
     pub created_at: DateTime<Utc>,
-    #[schema(value_type = Vec<f32>)]
-    pub embedding: Option<Vec<f32>>,
     pub ocr_data: Vec<OcrData>,
     pub faces: Vec<Face>,
     pub detected_objects: Vec<DetectedObject>,
@@ -238,9 +201,7 @@ pub struct VisualAnalysis {
 
 /// A composite struct representing data from the 'gps' table, with its associated 'location' data nested inside.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Gps {
-    pub media_item_id: String,
     pub latitude: f64,
     pub longitude: f64,
     pub altitude: Option<f64>,
@@ -250,7 +211,6 @@ pub struct Gps {
 
 /// The root struct representing a 'media_item' and all its available, nested information.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct FullMediaItem {
     pub id: String,
     pub hash: String,
