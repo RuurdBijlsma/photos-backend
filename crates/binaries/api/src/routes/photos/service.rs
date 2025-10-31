@@ -72,26 +72,26 @@ pub async fn fetch_full_media_item(
                         'id', va.id,
                         'created_at', va.created_at,
                         'quality', (
-                            SELECT to_jsonb(qd) - 'visual_analysis_id'
+                            SELECT to_jsonb(qd)
                             FROM quality_data qd WHERE qd.visual_analysis_id = va.id
                         ),
                         'colors', (
-                            SELECT to_jsonb(cld) - 'visual_analysis_id'
+                            SELECT to_jsonb(cld)
                             FROM color_data cld WHERE cld.visual_analysis_id = va.id
                         ),
                         'caption', (
-                            SELECT to_jsonb(cpd) - 'visual_analysis_id'
+                            SELECT to_jsonb(cpd)
                             FROM caption_data cpd WHERE cpd.visual_analysis_id = va.id
                         ),
                         'faces', (
                             SELECT COALESCE(
-                                jsonb_agg(to_jsonb(f) - 'visual_analysis_id'),
+                                jsonb_agg(to_jsonb(f)),
                                 '[]'::jsonb
                             ) FROM face f WHERE f.visual_analysis_id = va.id
                         ),
                         'detected_objects', (
                             SELECT COALESCE(
-                                jsonb_agg(to_jsonb(obj) - 'visual_analysis_id'),
+                                jsonb_agg(to_jsonb(obj)),
                                 '[]'::jsonb
                             ) FROM detected_object obj WHERE obj.visual_analysis_id = va.id
                         ),
@@ -120,25 +120,25 @@ pub async fn fetch_full_media_item(
 
             COALESCE(va.data, '[]'::jsonb) AS "visual_analyses: Json<Vec<VisualAnalysis>>",
 
-            (SELECT to_jsonb(g) - 'media_item_id'
+            (SELECT to_jsonb(g)
                     || jsonb_build_object('location',
                         (SELECT to_jsonb(l.*) FROM location l WHERE l.id = g.location_id))
                 FROM gps g WHERE g.media_item_id = mi.id
             ) AS "gps: Json<Gps>",
 
-            (SELECT to_jsonb(td) - 'media_item_id' FROM time_details td WHERE td.media_item_id = mi.id)
+            (SELECT to_jsonb(td) FROM time_details td WHERE td.media_item_id = mi.id)
                 AS "time_details: Json<TimeDetails>",
 
-            (SELECT to_jsonb(w) - 'media_item_id' FROM weather w WHERE w.media_item_id = mi.id)
+            (SELECT to_jsonb(w) FROM weather w WHERE w.media_item_id = mi.id)
                 AS "weather: Json<Weather>",
 
-            (SELECT to_jsonb(d) - 'media_item_id' FROM details d WHERE d.media_item_id = mi.id)
+            (SELECT to_jsonb(d) FROM details d WHERE d.media_item_id = mi.id)
                 AS "details: Json<Details>",
 
-            (SELECT to_jsonb(cd) - 'media_item_id' FROM capture_details cd WHERE cd.media_item_id = mi.id)
+            (SELECT to_jsonb(cd) FROM capture_details cd WHERE cd.media_item_id = mi.id)
                 AS "capture_details: Json<CaptureDetails>",
 
-            (SELECT to_jsonb(p) - 'media_item_id' FROM panorama p WHERE p.media_item_id = mi.id)
+            (SELECT to_jsonb(p) FROM panorama p WHERE p.media_item_id = mi.id)
                 AS "panorama: Json<Panorama>"
 
         FROM media_item mi
@@ -148,8 +148,8 @@ pub async fn fetch_full_media_item(
         id,
         user.id
     )
-        .fetch_optional(pool)
-        .await?;
+    .fetch_optional(pool)
+    .await?;
 
     Ok(row_result.map(FullMediaItem::from))
 }
