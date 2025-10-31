@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
     info!("[Worker ID: {}] Starting.", worker_id);
 
     let pool = get_db_pool().await?;
-    let context = WorkerContext::new(pool, worker_id.to_string(), args.analysis).await?;
+    let context = WorkerContext::new(pool, worker_id.clone(), args.analysis).await?;
 
     run_worker_loop(&context).await?;
 

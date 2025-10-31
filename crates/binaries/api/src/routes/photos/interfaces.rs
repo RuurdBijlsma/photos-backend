@@ -17,3 +17,9 @@ pub struct GetMediaByMonthParams {
     /// "YYYY-MM-DD" strings.
     pub months: String,
 }
+
+#[derive(Deserialize, IntoParams, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GetMediaItemParams {
+    pub id: String,
+}

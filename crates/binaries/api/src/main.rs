@@ -1,4 +1,8 @@
-#![allow(clippy::needless_for_each, clippy::cognitive_complexity)]
+#![allow(
+    clippy::needless_for_each,
+    clippy::cognitive_complexity,
+    clippy::cast_sign_loss
+)]
 
 mod pb;
 pub mod routes;
@@ -8,7 +12,7 @@ pub use routes::*;
 
 use color_eyre::Result;
 use common_photos::{get_db_pool, settings};
-use http::{HeaderValue, header};
+use http::{header, HeaderValue};
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
 use tower_http::cors::CorsLayer;

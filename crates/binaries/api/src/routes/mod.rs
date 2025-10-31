@@ -11,9 +11,7 @@ use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::{
-    get_photos_by_month_handler, get_random_photo, get_timeline_handler,
-};
+use crate::photos::handlers::{get_full_item_handler, get_photos_by_month_handler, get_random_photo, get_timeline_handler};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
@@ -130,6 +128,7 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
         .route("/photos/random", get(get_random_photo))
         .route("/photos/timeline", get(get_timeline_handler))
         .route("/photos/by-month", get(get_photos_by_month_handler))
+        .route("/photos/item", get(get_full_item_handler))
         .route_layer(from_extractor_with_state::<User, PgPool>(pool))
 }
 

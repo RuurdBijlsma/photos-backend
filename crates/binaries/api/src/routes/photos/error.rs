@@ -16,6 +16,9 @@ pub enum PhotosError {
 
     #[error("Invalid month format. Expected YYYY-MM-DD, but got '{0}'")]
     InvalidMonthFormat(String),
+
+    #[error("Media item not found: {0}")]
+    MediaNotFound(String),
 }
 
 // Renamed for more general use
@@ -25,6 +28,9 @@ fn log_error(error: &PhotosError) {
         PhotosError::Internal(e) => error!("Internal error: {:?}", e),
         PhotosError::InvalidMonthFormat(month) => {
             error!("Invalid month format provided: {}", month);
+        },
+        PhotosError::MediaNotFound(id) => {
+            error!("Media item not found: {}", id);
         }
     }
 }
@@ -45,6 +51,10 @@ impl IntoResponse for PhotosError {
             Self::InvalidMonthFormat(invalid_month) => (
                 StatusCode::BAD_REQUEST,
                 format!("Invalid month format. Expected YYYY-MM-DD, but got '{invalid_month}'"),
+            ),
+            Self::MediaNotFound(media_id) => (
+                StatusCode::NOT_FOUND,
+                format!("Media item not found: {media_id}"),
             ),
         };
 

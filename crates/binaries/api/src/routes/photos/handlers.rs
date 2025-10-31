@@ -1,13 +1,46 @@
 use crate::auth::db_model::User;
 use crate::pb::api::{ByMonthResponse, TimelineResponse};
 use crate::photos::error::PhotosError;
-use crate::photos::interfaces::{GetMediaByMonthParams, RandomPhotoResponse};
-use crate::photos::service::{get_photos_by_month, get_timeline, random_photo};
+use crate::photos::interfaces::{GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
+use crate::photos::service::{fetch_full_media_item, get_photos_by_month, get_timeline, random_photo};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
 use sqlx::PgPool;
+use crate::photos::full_item_interfaces::FullMediaItem;
+
+/// Get a random photo and its associated theme.
+///
+/// # Errors
+///
+/// Returns a `PhotosError` if the database query fails.
+#[utoipa::path(
+    get,
+    path = "/photos/item",
+    tag = "Photos",
+    params(
+        GetMediaItemParams
+    ),
+    responses(
+        (status = 200, description = "Get random photo and associated themes.", body = FullMediaItem),
+        (status = 404, description = "Item not found."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_full_item_handler(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+    Query(params): Query<GetMediaItemParams>,
+) -> Result<Json<FullMediaItem>, PhotosError> {
+    let item = fetch_full_media_item(&user, &pool, &params.id).await?;
+    if let Some(item) = item{
+        Ok(Json(item))
+    }else{
+        Err(PhotosError::MediaNotFound(params.id))
+    }
+}
 
 /// Get a random photo and its associated theme.
 ///
