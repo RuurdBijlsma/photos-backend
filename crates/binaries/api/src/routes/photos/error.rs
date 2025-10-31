@@ -28,7 +28,7 @@ fn log_error(error: &PhotosError) {
         PhotosError::Internal(e) => error!("Internal error: {:?}", e),
         PhotosError::InvalidMonthFormat(month) => {
             error!("Invalid month format provided: {}", month);
-        },
+        }
         PhotosError::MediaNotFound(id) => {
             error!("Media item not found: {}", id);
         }

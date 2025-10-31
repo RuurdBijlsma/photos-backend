@@ -82,6 +82,7 @@
 * at some point copy paste all sql queries into gemini en ask for proper indices
 * now that i have sort_timezone in the db, should i still use fallback timezone to calculate time_utc?
 * improve OCR
+* timeline_summary.sql en ratios_summary.sql migrations deleten, en weer maken met goeie nieuwe columns (maybe its already pretty good).
 
 # hot topics
 

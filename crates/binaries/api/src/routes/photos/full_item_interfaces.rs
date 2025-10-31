@@ -2,6 +2,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
+use sqlx::types::Json;
 use utoipa::ToSchema;
 
 /// Corresponds to the 'location' table.
@@ -14,7 +15,7 @@ pub struct Location {
     pub country_name: String,
 }
 
-/// Corresponds to the 'ocr_box' table.
+/// Corresponds to the '`ocr_box`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct OcrBox {
     pub text: String,
@@ -47,7 +48,7 @@ pub struct Face {
     pub eye_right_y: f32,
 }
 
-/// Corresponds to the 'detected_object' table.
+/// Corresponds to the '`detected_object`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct DetectedObject {
     pub position_x: f32,
@@ -58,7 +59,7 @@ pub struct DetectedObject {
     pub label: String,
 }
 
-/// Corresponds to the 'quality_data' table.
+/// Corresponds to the '`quality_data`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct QualityData {
     pub blurriness: f64,
@@ -67,7 +68,7 @@ pub struct QualityData {
     pub quality_score: f64,
 }
 
-/// Corresponds to the 'color_data' table.
+/// Corresponds to the '`color_data`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct ColorData {
     pub themes: Vec<Value>,
@@ -78,7 +79,7 @@ pub struct ColorData {
     pub histogram: Option<Value>,
 }
 
-/// Corresponds to the 'caption_data' table.
+/// Corresponds to the '`caption_data`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct CaptionData {
     pub default_caption: Option<String>,
@@ -109,7 +110,7 @@ pub struct CaptionData {
     pub activity_description: Option<String>,
 }
 
-/// Corresponds to the 'time_details' table.
+/// Corresponds to the '`time_details`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct TimeDetails {
     pub timezone_name: Option<String>,
@@ -157,7 +158,7 @@ pub struct Details {
     pub exif: Option<Value>,
 }
 
-/// Corresponds to the 'capture_details' table.
+/// Corresponds to the '`capture_details`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct CaptureDetails {
     pub iso: Option<i32>,
@@ -179,7 +180,7 @@ pub struct Panorama {
     pub center_pitch_deg: Option<f32>,
 }
 
-/// A composite struct representing data from the 'ocr_data' table, with its associated OCR boxes nested inside.
+/// A composite struct representing data from the '`ocr_data`' table, with its associated OCR boxes nested inside.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct OcrData {
     pub has_legible_text: bool,
@@ -187,7 +188,7 @@ pub struct OcrData {
     pub boxes: Vec<OcrBox>,
 }
 
-/// A composite struct representing a 'visual_analysis' run and all its associated nested data.
+/// A composite struct representing a '`visual_analysis`' run and all its associated nested data.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct VisualAnalysis {
     pub created_at: DateTime<Utc>,
@@ -209,7 +210,7 @@ pub struct Gps {
     pub location: Option<Location>,
 }
 
-/// The root struct representing a 'media_item' and all its available, nested information.
+/// The root struct representing a '`media_item`' and all its available, nested information.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct FullMediaItem {
     pub id: String,
@@ -233,7 +234,7 @@ pub struct FullMediaItem {
     pub panorama: Option<Panorama>,
 }
 
-#[derive(sqlx::FromRow, Debug)]
+#[derive(sqlx::FromRow, Debug, Clone)]
 pub struct FullMediaItemRow {
     pub id: String,
     pub hash: String,
@@ -247,39 +248,37 @@ pub struct FullMediaItemRow {
     pub taken_at_local: NaiveDateTime,
     pub taken_at_utc: Option<DateTime<Utc>>,
     pub use_panorama_viewer: bool,
-    // THIS LINE IS CHANGED
-    pub visual_analyses: Option<sqlx::types::Json<Vec<VisualAnalysis>>>,
-    pub gps: Option<sqlx::types::Json<Gps>>,
-    pub time_details: Option<sqlx::types::Json<TimeDetails>>,
-    pub weather: Option<sqlx::types::Json<Weather>>,
-    pub details: Option<sqlx::types::Json<Details>>,
-    pub capture_details: Option<sqlx::types::Json<CaptureDetails>>,
-    pub panorama: Option<sqlx::types::Json<Panorama>>,
+    pub visual_analyses: Option<Json<Vec<VisualAnalysis>>>,
+    pub gps: Option<Json<Gps>>,
+    pub time_details: Option<Json<TimeDetails>>,
+    pub weather: Option<Json<Weather>>,
+    pub details: Option<Json<Details>>,
+    pub capture_details: Option<Json<CaptureDetails>>,
+    pub panorama: Option<Json<Panorama>>,
 }
 
 impl From<FullMediaItemRow> for FullMediaItem {
-    fn from(row: FullMediaItemRow) -> Self {
+    fn from(r: FullMediaItemRow) -> Self {
         Self {
-            id: row.id,
-            hash: row.hash,
-            relative_path: row.relative_path,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-            width: row.width,
-            height: row.height,
-            is_video: row.is_video,
-            duration_ms: row.duration_ms,
-            taken_at_local: row.taken_at_local,
-            taken_at_utc: row.taken_at_utc,
-            use_panorama_viewer: row.use_panorama_viewer,
-            // THIS LINE IS CHANGED to safely handle the Option
-            visual_analyses: row.visual_analyses.map_or(Vec::new(), |j| j.0),
-            gps: row.gps.map(|j| j.0),
-            time_details: row.time_details.map(|j| j.0),
-            weather: row.weather.map(|j| j.0),
-            details: row.details.map(|j| j.0),
-            capture_details: row.capture_details.map(|j| j.0),
-            panorama: row.panorama.map(|j| j.0),
+            id: r.id,
+            hash: r.hash,
+            relative_path: r.relative_path,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+            width: r.width,
+            height: r.height,
+            is_video: r.is_video,
+            duration_ms: r.duration_ms,
+            taken_at_local: r.taken_at_local,
+            taken_at_utc: r.taken_at_utc,
+            use_panorama_viewer: r.use_panorama_viewer,
+            visual_analyses: r.visual_analyses.map(|j| j.0).unwrap_or_default(),
+            gps: r.gps.map(|j| j.0),
+            time_details: r.time_details.map(|j| j.0),
+            weather: r.weather.map(|j| j.0),
+            details: r.details.map(|j| j.0),
+            capture_details: r.capture_details.map(|j| j.0),
+            panorama: r.panorama.map(|j| j.0),
         }
     }
 }

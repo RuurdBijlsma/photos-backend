@@ -10,71 +10,140 @@ use crate::photos::full_item_interfaces::{
 use crate::photos::interfaces::RandomPhotoResponse;
 use chrono::NaiveDate;
 use rand::Rng;
-use sqlx::types::Json;
 use sqlx::PgPool;
+use sqlx::types::Json;
 use std::collections::HashMap;
 use tracing::warn;
 
+/// Fetches a full media item with all related analyses and metadata.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails or the connection pool is invalid.
+#[allow(clippy::too_many_lines)]
 pub async fn fetch_full_media_item(
     user: &User,
     pool: &PgPool,
     id: &str,
 ) -> Result<Option<FullMediaItem>, sqlx::Error> {
-    // NOTE: This assumes you've updated your Rust structs as described above.
-    // The FullMediaItemRow and From<...> impl are still used but their
-    // underlying types (like Gps, Face, etc.) are now simpler.
-
     let row_result = sqlx::query_as!(
         FullMediaItemRow,
         r#"
-WITH full_visual_analyses AS (
-    SELECT
-        va.media_item_id,
-        jsonb_agg(
-            jsonb_build_object(
-                'id', va.id,
-                'created_at', va.created_at,
-                'quality', (SELECT jsonb_build_object('blurriness', qd.blurriness, 'noisiness', qd.noisiness, 'exposure', qd.exposure, 'quality_score', qd.quality_score) FROM quality_data qd WHERE qd.visual_analysis_id = va.id),
-                'colors', (SELECT jsonb_build_object('themes', cld.themes, 'prominent_colors', cld.prominent_colors, 'average_hue', cld.average_hue, 'average_saturation', cld.average_saturation, 'average_lightness', cld.average_lightness, 'histogram', cld.histogram) FROM color_data cld WHERE cld.visual_analysis_id = va.id),
-                'caption', (SELECT to_jsonb(cpd) - 'visual_analysis_id' FROM caption_data cpd WHERE cpd.visual_analysis_id = va.id),
-                'faces', (SELECT COALESCE(jsonb_agg(jsonb_build_object('id', f.id, 'position_x', f.position_x, 'position_y', f.position_y, 'width', f.width, 'height', f.height, 'confidence', f.confidence, 'age', f.age, 'sex', f.sex, 'mouth_left_x', f.mouth_left_x, 'mouth_left_y', f.mouth_left_y, 'mouth_right_x', f.mouth_right_x, 'mouth_right_y', f.mouth_right_y, 'nose_tip_x', f.nose_tip_x, 'nose_tip_y', f.nose_tip_y, 'eye_left_x', f.eye_left_x, 'eye_left_y', f.eye_left_y, 'eye_right_x', f.eye_right_x, 'eye_right_y', f.eye_right_y)), '[]'::jsonb) FROM face f WHERE f.visual_analysis_id = va.id),
-                'detected_objects', (SELECT COALESCE(jsonb_agg(jsonb_build_object('id', obj.id, 'position_x', obj.position_x, 'position_y', obj.position_y, 'width', obj.width, 'height', obj.height, 'confidence', obj.confidence, 'label', obj.label)), '[]'::jsonb) FROM detected_object obj WHERE obj.visual_analysis_id = va.id),
-                'ocr_data', (
-                    SELECT COALESCE(jsonb_agg(
-                        jsonb_build_object(
-                            'id', ocr.id,
-                            'has_legible_text', ocr.has_legible_text,
-                            'ocr_text', ocr.ocr_text,
-                            'boxes', (SELECT COALESCE(jsonb_agg(jsonb_build_object('id', b.id, 'text', b.text, 'position_x', b.position_x, 'position_y', b.position_y, 'width', b.width, 'height', b.height, 'confidence', b.confidence)), '[]'::jsonb) FROM ocr_box b WHERE b.ocr_data_id = ocr.id)
+        WITH
+        -- 1️⃣ Collect OCR data and their boxes
+        ocr_json AS (
+            SELECT
+                o.visual_analysis_id,
+                jsonb_agg(
+                    jsonb_build_object(
+                        'id', o.id,
+                        'has_legible_text', o.has_legible_text,
+                        'ocr_text', o.ocr_text,
+                        'boxes', (
+                            SELECT COALESCE(
+                                jsonb_agg(
+                                    jsonb_build_object(
+                                        'id', b.id,
+                                        'text', b.text,
+                                        'position_x', b.position_x,
+                                        'position_y', b.position_y,
+                                        'width', b.width,
+                                        'height', b.height,
+                                        'confidence', b.confidence
+                                    )
+                                ),
+                                '[]'::jsonb
+                            )
+                            FROM ocr_box b
+                            WHERE b.ocr_data_id = o.id
                         )
-                    ), '[]'::jsonb)
-                    FROM ocr_data ocr WHERE ocr.visual_analysis_id = va.id
-                )
-            ) ORDER BY va.created_at DESC
-        ) AS data
-    FROM visual_analysis va
-    WHERE va.media_item_id = $1
-    GROUP BY va.media_item_id
-)
-SELECT
-    mi.id, mi.hash, mi.relative_path, mi.created_at, mi.updated_at, mi.width, mi.height,
-    mi.is_video, mi.duration_ms, mi.taken_at_local, mi.taken_at_utc, mi.use_panorama_viewer,
+                    )
+                ) AS data
+            FROM ocr_data o
+            GROUP BY o.visual_analysis_id
+        ),
 
-    COALESCE(fva.data, '[]'::jsonb) AS "visual_analyses: Json<Vec<VisualAnalysis>>",
+        -- 2️⃣ Collect all visual analyses and nested data
+        visual_analyses AS (
+            SELECT
+                va.media_item_id,
+                jsonb_agg(
+                    jsonb_build_object(
+                        'id', va.id,
+                        'created_at', va.created_at,
+                        'quality', (
+                            SELECT to_jsonb(qd) - 'visual_analysis_id'
+                            FROM quality_data qd WHERE qd.visual_analysis_id = va.id
+                        ),
+                        'colors', (
+                            SELECT to_jsonb(cld) - 'visual_analysis_id'
+                            FROM color_data cld WHERE cld.visual_analysis_id = va.id
+                        ),
+                        'caption', (
+                            SELECT to_jsonb(cpd) - 'visual_analysis_id'
+                            FROM caption_data cpd WHERE cpd.visual_analysis_id = va.id
+                        ),
+                        'faces', (
+                            SELECT COALESCE(
+                                jsonb_agg(to_jsonb(f) - 'visual_analysis_id'),
+                                '[]'::jsonb
+                            ) FROM face f WHERE f.visual_analysis_id = va.id
+                        ),
+                        'detected_objects', (
+                            SELECT COALESCE(
+                                jsonb_agg(to_jsonb(obj) - 'visual_analysis_id'),
+                                '[]'::jsonb
+                            ) FROM detected_object obj WHERE obj.visual_analysis_id = va.id
+                        ),
+                        'ocr_data', COALESCE(ocr.data, '[]'::jsonb)
+                    )
+                    ORDER BY va.created_at DESC
+                ) AS data
+            FROM visual_analysis va
+            LEFT JOIN ocr_json ocr ON ocr.visual_analysis_id = va.id
+            GROUP BY va.media_item_id
+        )
 
-    -- NOTE: A trick for removing a single key is `to_jsonb(table) - 'key_to_remove'`. It's cleaner.
-    (SELECT to_jsonb(g) - 'media_item_id' || jsonb_build_object('location', (SELECT to_jsonb(l.*) FROM location l WHERE l.id = g.location_id)) FROM gps g WHERE g.media_item_id = mi.id) AS "gps: Json<Gps>",
-    (SELECT to_jsonb(td) - 'media_item_id' FROM time_details td WHERE td.media_item_id = mi.id) AS "time_details: Json<TimeDetails>",
-    (SELECT to_jsonb(w) - 'media_item_id' FROM weather w WHERE w.media_item_id = mi.id) AS "weather: Json<Weather>",
-    (SELECT to_jsonb(d) - 'media_item_id' FROM details d WHERE d.media_item_id = mi.id) AS "details: Json<Details>",
-    (SELECT to_jsonb(cd) - 'media_item_id' FROM capture_details cd WHERE cd.media_item_id = mi.id) AS "capture_details: Json<CaptureDetails>",
-    (SELECT to_jsonb(p) - 'media_item_id' FROM panorama p WHERE p.media_item_id = mi.id) AS "panorama: Json<Panorama>"
-FROM
-    media_item mi
-LEFT JOIN
-    full_visual_analyses fva ON mi.id = fva.media_item_id
-WHERE
-    mi.id = $1 AND mi.user_id = $2 AND mi.deleted = false
+        SELECT
+            mi.id,
+            mi.hash,
+            mi.relative_path,
+            mi.created_at,
+            mi.updated_at,
+            mi.width,
+            mi.height,
+            mi.is_video,
+            mi.duration_ms,
+            mi.taken_at_local,
+            mi.taken_at_utc,
+            mi.use_panorama_viewer,
+
+            COALESCE(va.data, '[]'::jsonb) AS "visual_analyses: Json<Vec<VisualAnalysis>>",
+
+            (SELECT to_jsonb(g) - 'media_item_id'
+                    || jsonb_build_object('location',
+                        (SELECT to_jsonb(l.*) FROM location l WHERE l.id = g.location_id))
+                FROM gps g WHERE g.media_item_id = mi.id
+            ) AS "gps: Json<Gps>",
+
+            (SELECT to_jsonb(td) - 'media_item_id' FROM time_details td WHERE td.media_item_id = mi.id)
+                AS "time_details: Json<TimeDetails>",
+
+            (SELECT to_jsonb(w) - 'media_item_id' FROM weather w WHERE w.media_item_id = mi.id)
+                AS "weather: Json<Weather>",
+
+            (SELECT to_jsonb(d) - 'media_item_id' FROM details d WHERE d.media_item_id = mi.id)
+                AS "details: Json<Details>",
+
+            (SELECT to_jsonb(cd) - 'media_item_id' FROM capture_details cd WHERE cd.media_item_id = mi.id)
+                AS "capture_details: Json<CaptureDetails>",
+
+            (SELECT to_jsonb(p) - 'media_item_id' FROM panorama p WHERE p.media_item_id = mi.id)
+                AS "panorama: Json<Panorama>"
+
+        FROM media_item mi
+        LEFT JOIN visual_analyses va ON mi.id = va.media_item_id
+        WHERE mi.id = $1 AND mi.user_id = $2 AND mi.deleted = false;
         "#,
         id,
         user.id

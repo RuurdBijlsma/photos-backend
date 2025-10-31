@@ -1,7 +1,8 @@
 #![allow(
     clippy::needless_for_each,
     clippy::cognitive_complexity,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    clippy::struct_excessive_bools
 )]
 
 mod pb;
@@ -12,7 +13,7 @@ pub use routes::*;
 
 use color_eyre::Result;
 use common_photos::{get_db_pool, settings};
-use http::{header, HeaderValue};
+use http::{HeaderValue, header};
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
 use tower_http::cors::CorsLayer;

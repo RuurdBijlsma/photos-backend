@@ -1,14 +1,16 @@
 use crate::auth::db_model::User;
 use crate::pb::api::{ByMonthResponse, TimelineResponse};
 use crate::photos::error::PhotosError;
+use crate::photos::full_item_interfaces::FullMediaItem;
 use crate::photos::interfaces::{GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
-use crate::photos::service::{fetch_full_media_item, get_photos_by_month, get_timeline, random_photo};
+use crate::photos::service::{
+    fetch_full_media_item, get_photos_by_month, get_timeline, random_photo,
+};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
 use sqlx::PgPool;
-use crate::photos::full_item_interfaces::FullMediaItem;
 
 /// Get a random photo and its associated theme.
 ///
@@ -35,9 +37,9 @@ pub async fn get_full_item_handler(
     Query(params): Query<GetMediaItemParams>,
 ) -> Result<Json<FullMediaItem>, PhotosError> {
     let item = fetch_full_media_item(&user, &pool, &params.id).await?;
-    if let Some(item) = item{
+    if let Some(item) = item {
         Ok(Json(item))
-    }else{
+    } else {
         Err(PhotosError::MediaNotFound(params.id))
     }
 }
