@@ -3,9 +3,7 @@ use crate::pb::api::{ByMonthResponse, TimelineResponse};
 use crate::photos::error::PhotosError;
 use crate::photos::full_item_interfaces::FullMediaItem;
 use crate::photos::interfaces::{GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
-use crate::photos::service::{
-    fetch_full_media_item, get_photos_by_month, get_timeline, random_photo,
-};
+use crate::photos::service::{fetch_full_media_item, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
@@ -67,14 +65,14 @@ pub async fn get_random_photo(
     Ok(Json(result))
 }
 
-/// Get a timeline of all media, grouped by month.
+/// Get a timeline of all media ratios, grouped by month.
 ///
 /// # Errors
 ///
 /// Returns a `PhotosError` if the database query fails.
 #[utoipa::path(
     get,
-    path = "/photos/timeline",
+    path = "/photos/timeline/ratios",
     tag = "Photos",
     responses(
         (status = 200, description = "A timeline of media items grouped by month.", body = TimelineResponse),
@@ -82,12 +80,35 @@ pub async fn get_random_photo(
     ),
     security(("bearer_auth" = []))
 )]
-pub async fn get_timeline_handler(
+pub async fn get_timeline_ratios_handler(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,
 ) -> Result<Protobuf<TimelineResponse>, PhotosError> {
-    let timeline = get_timeline(&user, &pool).await?;
+    let timeline = get_timeline_ratios(&user, &pool).await?;
     Ok(Protobuf(timeline))
+}
+
+/// Get a timeline of all media ids
+///
+/// # Errors
+///
+/// Returns a `PhotosError` if the database query fails.
+#[utoipa::path(
+    get,
+    path = "/photos/timeline/ids",
+    tag = "Photos",
+    responses(
+        (status = 200, description = "A timeline of media items grouped by month.", body = Vec<String>),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_timeline_ids_handler(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+) -> Result<Json<Vec<String>>, PhotosError> {
+    let timeline = get_timeline_ids(&user, &pool).await?;
+    Ok(Json(timeline))
 }
 
 /// Get all media items for a given set of months.

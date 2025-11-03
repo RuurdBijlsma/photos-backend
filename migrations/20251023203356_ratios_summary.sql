@@ -47,7 +47,7 @@ BEGIN
         p_user_id,
         p_month_start,
         COALESCE(
-                array_agg((width::float / height)::real ORDER BY taken_at_local DESC),
+                array_agg((width::float / height)::real ORDER BY sort_timestamp DESC),
                 '{}'::real[]
         )
     FROM

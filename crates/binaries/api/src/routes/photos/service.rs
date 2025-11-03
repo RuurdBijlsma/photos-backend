@@ -10,8 +10,8 @@ use crate::photos::full_item_interfaces::{
 use crate::photos::interfaces::RandomPhotoResponse;
 use chrono::NaiveDate;
 use rand::Rng;
-use sqlx::PgPool;
 use sqlx::types::Json;
+use sqlx::PgPool;
 use std::collections::HashMap;
 use tracing::warn;
 
@@ -219,19 +219,22 @@ pub async fn random_photo(
     Ok(random_data)
 }
 
-/// Fetches a timeline of media items, grouped by month.
+/// Fetches a timeline of media item ratios, grouped by month.
 ///
 /// # Errors
 ///
 /// Returns an error if the database query fails.
-pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse, PhotosError> {
+pub async fn get_timeline_ratios(
+    user: &User,
+    pool: &PgPool,
+) -> Result<TimelineResponse, PhotosError> {
     let months = sqlx::query_as!(
         TimelineMonth,
         r#"
         SELECT
             month_id::TEXT as "month_id!",
             COUNT(*)::INT AS "count!",
-            array_agg(width::real / height::real ORDER BY taken_at_local DESC) AS "ratios!"
+            array_agg(width::real / height::real ORDER BY sort_timestamp DESC) AS "ratios!"
         FROM media_item
         WHERE user_id = $1
           AND deleted = false
@@ -244,6 +247,27 @@ pub async fn get_timeline(user: &User, pool: &PgPool) -> Result<TimelineResponse
     .await?;
 
     Ok(TimelineResponse { months })
+}
+
+/// Fetches a timeline of media item ids.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
+pub async fn get_timeline_ids(user: &User, pool: &PgPool) -> Result<Vec<String>, PhotosError> {
+    let months = sqlx::query_scalar!(
+        r#"
+        SELECT id 
+        FROM media_item 
+        WHERE user_id = $1 AND deleted IS NOT TRUE 
+        ORDER BY sort_timestamp DESC
+        "#,
+        user.id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(months)
 }
 
 /// Fetches media items for a given list of month IDs, grouped by month.
@@ -272,7 +296,7 @@ pub async fn get_photos_by_month(
             AND deleted = false
             AND month_id = ANY($2)
         ORDER BY
-            taken_at_local DESC
+            sort_timestamp DESC
         "#,
         user.id,
         month_ids,
