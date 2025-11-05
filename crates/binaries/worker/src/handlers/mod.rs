@@ -5,10 +5,10 @@ use common_photos::{Job, JobType};
 
 pub mod analyze;
 pub mod clean_db;
+pub mod cluster;
 pub mod ingest;
 pub mod remove;
 pub mod scan;
-pub mod cluster;
 
 pub mod db;
 

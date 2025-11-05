@@ -1,5 +1,5 @@
 use color_eyre::Result;
-use common_photos::{enqueue_system_job, get_db_pool, JobType};
+use common_photos::{JobType, enqueue_system_job, get_db_pool};
 
 #[tokio::main]
 async fn main() -> Result<()> {

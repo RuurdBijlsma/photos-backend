@@ -3,7 +3,9 @@ use crate::pb::api::{ByMonthResponse, TimelineResponse};
 use crate::photos::error::PhotosError;
 use crate::photos::full_item_interfaces::FullMediaItem;
 use crate::photos::interfaces::{GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
-use crate::photos::service::{fetch_full_media_item, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo};
+use crate::photos::service::{
+    fetch_full_media_item, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo,
+};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;

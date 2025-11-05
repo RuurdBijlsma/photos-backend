@@ -1,17 +1,22 @@
 use crate::context::WorkerContext;
-use crate::handlers::db::model::{ExistingPerson, FaceEmbedding};
 use crate::handlers::JobResult;
-use color_eyre::{eyre::eyre, Result};
+use crate::handlers::db::model::{ExistingPerson, FaceEmbedding};
+use color_eyre::{Result, eyre::eyre};
 use common_photos::Job;
 use hdbscan::{Center, DistanceMetric, Hdbscan, HdbscanHyperParams};
 use pgvector::Vector;
-use sqlx::{query, query_as, query_scalar, PgPool, Transaction};
+use sqlx::{PgPool, Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
 use tracing::info;
 
 const CENTROID_MATCH_THRESHOLD: f32 = 0.6;
 const MIN_FACES_TO_CLUSTER: usize = 5;
 
+/// Calculates the L2 (Euclidean) distance between two equal-length vectors.
+///
+/// # Errors
+///
+/// Returns an error if the input slices `a` and `b` have different lengths.
 pub fn l2_distance(a: &[f32], b: &[f32]) -> Result<f32> {
     if a.len() != b.len() {
         return Err(eyre!("Vectors must have the same dimension"));
@@ -20,6 +25,11 @@ pub fn l2_distance(a: &[f32], b: &[f32]) -> Result<f32> {
     Ok(sum_sq.sqrt())
 }
 
+/// Fetches all user IDs to process, or a single user ID if specified in the job.
+///
+/// # Errors
+///
+/// Returns an error if the database query to fetch all user IDs fails.
 pub async fn fetch_user_ids(pool: &PgPool, job: &Job) -> Result<Vec<i32>> {
     if let Some(user_id) = job.user_id {
         Ok(vec![user_id])
@@ -31,18 +41,28 @@ pub async fn fetch_user_ids(pool: &PgPool, job: &Job) -> Result<Vec<i32>> {
     }
 }
 
+/// Fetches all existing people with their centroids for a given user.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
 pub async fn fetch_existing_people(pool: &PgPool, user_id: i32) -> Result<Vec<ExistingPerson>> {
     let people = query_as!(
         ExistingPerson,
         r#"SELECT id, name, centroid as "centroid: _" FROM person WHERE user_id = $1"#,
         user_id
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
     Ok(people)
 }
 
-pub async fn fetch_face_embeddings(pool:&PgPool, user_id: i32) -> Result<Vec<FaceEmbedding>> {
+/// Fetches all face embeddings associated with a specific user.
+///
+/// # Errors
+///
+/// Returns an error if the database query fails.
+pub async fn fetch_face_embeddings(pool: &PgPool, user_id: i32) -> Result<Vec<FaceEmbedding>> {
     let faces = query_as!(
         FaceEmbedding,
         r#"SELECT
@@ -55,11 +75,16 @@ pub async fn fetch_face_embeddings(pool:&PgPool, user_id: i32) -> Result<Vec<Fac
            WHERE media_item.user_id = $1"#,
         user_id
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
     Ok(faces)
 }
 
+/// Runs the HDBSCAN algorithm to find clusters of faces and their centroids.
+///
+/// # Errors
+///
+/// Returns an error if the clustering or centroid calculation fails.
 pub fn run_hdbscan(embeddings: &[Vec<f32>]) -> Result<(Vec<i32>, Vec<Vec<f32>>)> {
     let params = HdbscanHyperParams::builder()
         .min_cluster_size(4)
@@ -74,6 +99,15 @@ pub fn run_hdbscan(embeddings: &[Vec<f32>]) -> Result<(Vec<i32>, Vec<Vec<f32>>)>
     Ok((labels, centroids))
 }
 
+/// Matches new centroids to existing people if they are within a distance threshold.
+///
+/// # Errors
+///
+/// Returns an error if the `l2_distance` calculation fails.
+///
+/// # Panics
+///
+/// Panics if a person's centroid is `None` when it's filtered to be `Some`.
 pub fn match_centroids(
     new_centroids: &[Vec<f32>],
     existing_people: &[ExistingPerson],
@@ -95,15 +129,17 @@ pub fn match_centroids(
             }
         }
         if let Some((id, _)) = best
-            && !used_old.contains(&id) {
-                map.insert(cid, id);
-                used_old.insert(id);
-            }
+            && !used_old.contains(&id)
+        {
+            map.insert(cid, id);
+            used_old.insert(id);
+        }
     }
 
     Ok(map)
 }
 
+/// Groups face embeddings into a map based on their assigned cluster label.
 #[must_use]
 pub fn group_faces_by_cluster<'a>(
     labels: &[i32],
@@ -118,6 +154,11 @@ pub fn group_faces_by_cluster<'a>(
     clusters
 }
 
+/// Updates existing people or creates new ones, and links faces to them within a transaction.
+///
+/// # Errors
+///
+/// Returns an error if any of the database update or insert operations fail.
 pub async fn upsert_people_and_link_faces<S: ::std::hash::BuildHasher>(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     user_id: i32,
@@ -127,7 +168,9 @@ pub async fn upsert_people_and_link_faces<S: ::std::hash::BuildHasher>(
 ) -> Result<()> {
     for (cluster_id, faces_in_cluster) in clusters {
         let face_ids: Vec<i64> = faces_in_cluster.iter().map(|f| f.id).collect();
-        let new_centroid_vec = new_centroids.get(cluster_id).map(|v| Vector::from(v.clone()));
+        let new_centroid_vec = new_centroids
+            .get(cluster_id)
+            .map(|v| Vector::from(v.clone()));
         let thumbnail_media_item_id = &faces_in_cluster[0].media_item_id;
 
         let person_id: i64 = if let Some(existing) = cluster_to_person.get(&cluster_id) {
@@ -156,12 +199,17 @@ pub async fn upsert_people_and_link_faces<S: ::std::hash::BuildHasher>(
             person_id,
             &face_ids
         )
-            .execute(&mut **tx)
-            .await?;
+        .execute(&mut **tx)
+        .await?;
     }
     Ok(())
 }
 
+/// Deletes people who no longer have any associated face clusters.
+///
+/// # Errors
+///
+/// Returns an error if any of the database update or delete operations fail.
 pub async fn cleanup_obsolete<S: ::std::hash::BuildHasher>(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     existing_people: &[ExistingPerson],
@@ -174,9 +222,12 @@ pub async fn cleanup_obsolete<S: ::std::hash::BuildHasher>(
         .collect();
 
     if !obsolete.is_empty() {
-        query!("UPDATE face SET person_id = NULL WHERE person_id = ANY($1)", &obsolete)
-            .execute(&mut **tx)
-            .await?;
+        query!(
+            "UPDATE face SET person_id = NULL WHERE person_id = ANY($1)",
+            &obsolete
+        )
+        .execute(&mut **tx)
+        .await?;
         query!("DELETE FROM person WHERE id = ANY($1)", &obsolete)
             .execute(&mut **tx)
             .await?;
@@ -184,6 +235,11 @@ pub async fn cleanup_obsolete<S: ::std::hash::BuildHasher>(
     Ok(())
 }
 
+/// The main handler function that orchestrates the entire face clustering and reconciliation process.
+///
+/// # Errors
+///
+/// Returns an error if any step in the process fails, such as database queries, clustering, or transaction commits.
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_ids = fetch_user_ids(&context.pool, job).await?;
 
@@ -201,8 +257,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         let mut tx = context.pool.begin().await?;
 
         let cluster_to_person = match_centroids(&new_centroids, &existing_people)?;
-        let matched_old_person_ids: HashSet<i64> =
-            cluster_to_person.values().copied().collect();
+        let matched_old_person_ids: HashSet<i64> = cluster_to_person.values().copied().collect();
 
         let clusters = group_faces_by_cluster(&labels, &face_data);
         upsert_people_and_link_faces(
@@ -212,7 +267,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             &new_centroids,
             &cluster_to_person,
         )
-            .await?;
+        .await?;
 
         cleanup_obsolete(&mut tx, &existing_people, &matched_old_person_ids).await?;
 

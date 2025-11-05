@@ -7,7 +7,7 @@ use ab_glyph::FontArc;
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
-use sqlx::{query_as, PgPool};
+use sqlx::{PgPool, query_as};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;

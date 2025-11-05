@@ -10,8 +10,8 @@ use crate::photos::full_item_interfaces::{
 use crate::photos::interfaces::RandomPhotoResponse;
 use chrono::NaiveDate;
 use rand::Rng;
-use sqlx::types::Json;
 use sqlx::PgPool;
+use sqlx::types::Json;
 use std::collections::HashMap;
 use tracing::warn;
 

@@ -1,7 +1,6 @@
 use pgvector::Vector;
 use sqlx::FromRow;
 
-
 #[derive(Debug, FromRow, Clone)]
 pub struct FaceEmbedding {
     pub id: i64,
