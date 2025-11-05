@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01c0457472c38ea5bd1c3b5ada5e368271cb550be7a4ca4a0b4634e9913f6cc2"
 dependencies = [
  "ab_glyph_rasterizer",
- "owned_ttf_parser",
+ "owned_ttf_parser 0.25.1",
 ]
 
 [[package]]
@@ -2136,6 +2136,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef9482608b217d89a3caeb5fe2336a0491d1dc0be5d89c67125ea514b1f6a660"
 
 [[package]]
+name = "hdbscan"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95bd4d39a1e96420f31b20ac30d5052ba76d9b2bde2987beade48445073a063c"
+dependencies = [
+ "kdtree",
+ "num-traits",
+]
+
+[[package]]
 name = "heapless"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2704,6 +2714,16 @@ dependencies = [
  "sha2",
  "signature",
  "simple_asn1",
+]
+
+[[package]]
+name = "kdtree"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f0a0e9f770b65bac9aad00f97a67ab5c5319effed07f6da385da3c2115e47ba"
+dependencies = [
+ "num-traits",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -3430,11 +3450,20 @@ dependencies = [
 
 [[package]]
 name = "owned_ttf_parser"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05e6affeb1632d6ff6a23d2cd40ffed138e82f1532571a26f527c8a284bb2fbb"
+dependencies = [
+ "ttf-parser 0.15.2",
+]
+
+[[package]]
+name = "owned_ttf_parser"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36820e9051aca1014ddc75770aab4d68bc1e9e632f0f5627c4086bc216fb583b"
 dependencies = [
- "ttf-parser",
+ "ttf-parser 0.25.1",
 ]
 
 [[package]]
@@ -5103,6 +5132,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rusttype"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ff8374aa04134254b7995b63ad3dc41c7f7236f69528b28553da7d72efaa967"
+dependencies = [
+ "ab_glyph_rasterizer",
+ "owned_ttf_parser 0.15.2",
+]
+
+[[package]]
 name = "rustversion"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6296,6 +6335,12 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "ttf-parser"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b3e06c9b9d80ed6b745c7159c40b311ad2916abb34a49e9be2653b90db0d8dd"
+
+[[package]]
+name = "ttf-parser"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
@@ -7188,15 +7233,21 @@ checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
 name = "worker"
 version = "0.1.0"
 dependencies = [
+ "ab_glyph",
  "chrono",
  "clap",
  "color-eyre",
  "common_photos",
  "generate_thumbnails",
+ "hdbscan",
+ "image",
+ "imageproc",
  "media_analyzer",
  "ml_analysis",
  "pgvector",
  "rand 0.10.0-rc.0",
+ "rusttype",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",

@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                   face.id,\n                   visual_analysis.media_item_id,\n                   face.embedding as \"embedding!: Vector\"\n               FROM face\n               JOIN visual_analysis ON face.visual_analysis_id = visual_analysis.id\n               JOIN media_item ON media_item.id = visual_analysis.media_item_id\n               WHERE media_item.user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "media_item_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "embedding!: Vector",
+        "type_info": {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "15994805317a59058878b7146be5529f81044376e920da3f23b31614f8be422e"
+}

@@ -8,6 +8,7 @@ pub mod clean_db;
 pub mod ingest;
 pub mod remove;
 pub mod scan;
+pub mod cluster;
 
 pub mod db;
 
@@ -33,6 +34,7 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::Remove => remove::handle(context, job).await,
         JobType::Scan => scan::handle(context, job).await,
         JobType::CleanDB => clean_db::handle(context, job).await,
+        JobType::Cluster => cluster::handle(context, job).await,
     };
 
     heartbeat_handle.abort();

@@ -25,7 +25,8 @@
                 "remove",
                 "analysis",
                 "scan",
-                "cleandb"
+                "cleandb",
+                "cluster"
               ]
             }
           }

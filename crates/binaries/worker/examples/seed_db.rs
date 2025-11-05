@@ -1,5 +1,3 @@
-// crates/api/src/dev_utils.rs
-
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use color_eyre::eyre::Result;
 use common_photos::{UserRole, get_db_pool, nice_id};

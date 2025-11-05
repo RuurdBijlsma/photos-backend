@@ -21,6 +21,7 @@ pub enum JobType {
     Analysis,
     Scan,
     CleanDB,
+    Cluster,
 }
 
 impl JobType {
@@ -44,6 +45,7 @@ impl JobType {
             Self::Remove => 0,
             Self::Scan => 10,
             Self::CleanDB => 20,
+            Self::Cluster => 30,
         }
     }
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id FROM app_user WHERE name = $1",
+  "query": "SELECT id FROM app_user",
   "describe": {
     "columns": [
       {
@@ -10,13 +10,11 @@
       }
     ],
     "parameters": {
-      "Left": [
-        "Text"
-      ]
+      "Left": []
     },
     "nullable": [
       false
     ]
   },
-  "hash": "13391b155bb254a7351e15003f4c20043e042527badfef27d9fef749f4f3f26c"
+  "hash": "87969d669c886a6f208edcba448e87c4406a592779c8234ff9a78f5c2db2d453"
 }

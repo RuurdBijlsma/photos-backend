@@ -1,6 +1,3 @@
--- Ensure the vector extension is available.
-CREATE EXTENSION IF NOT EXISTS vector;
-
 -- A record for a single visual analysis run.
 CREATE TABLE visual_analysis
 (
@@ -58,10 +55,12 @@ CREATE TABLE face
     eye_left_y         REAL        NOT NULL,
     eye_right_x        REAL        NOT NULL,
     eye_right_y        REAL        NOT NULL,
-    embedding          VECTOR(512) NOT NULL
+    embedding          VECTOR(512) NOT NULL,
+    person_id BIGINT REFERENCES person (id) ON DELETE SET NULL
 );
 CREATE INDEX idx_face_visual_analysis_id ON face (visual_analysis_id);
 CREATE INDEX ON face USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX idx_face_person_id ON face (person_id);
 
 
 CREATE TABLE detected_object

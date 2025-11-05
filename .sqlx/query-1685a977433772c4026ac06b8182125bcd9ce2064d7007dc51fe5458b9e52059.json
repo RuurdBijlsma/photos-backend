@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id as \"id!\",\n            is_video as \"is_video!\",\n            use_panorama_viewer as \"is_panorama!\",\n            duration_ms::INT,\n            taken_at_local::TEXT as \"timestamp!\"\n        FROM\n            media_item\n        WHERE\n            user_id = $1\n            AND deleted = false\n            AND TO_CHAR(taken_at_local, 'YYYY-MM') = ANY($2)\n        ORDER BY\n            taken_at_local DESC\n        ",
+  "query": "\n        SELECT\n            id as \"id!\",\n            is_video as \"is_video!\",\n            use_panorama_viewer as \"is_panorama!\",\n            duration_ms::INT,\n            taken_at_local::TEXT as \"timestamp!\"\n        FROM\n            media_item\n        WHERE\n            user_id = $1\n            AND deleted = false\n            AND month_id = ANY($2)\n        ORDER BY\n            sort_timestamp DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -32,7 +32,7 @@
     "parameters": {
       "Left": [
         "Int4",
-        "TextArray"
+        "DateArray"
       ]
     },
     "nullable": [
@@ -43,5 +43,5 @@
       null
     ]
   },
-  "hash": "f2ad286a2cbc4093adabcaba351effd9abec4bddf9c598780a1d1dd01f3f8c2e"
+  "hash": "1685a977433772c4026ac06b8182125bcd9ce2064d7007dc51fe5458b9e52059"
 }

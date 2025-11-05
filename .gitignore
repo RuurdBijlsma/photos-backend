@@ -3,3 +3,4 @@
 .env
 /thumbnails
 .venv
+cluster_debug_output
