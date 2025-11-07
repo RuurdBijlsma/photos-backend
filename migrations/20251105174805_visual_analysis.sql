@@ -2,9 +2,10 @@
 CREATE TABLE visual_analysis
 (
     id            BIGSERIAL PRIMARY KEY,
-    media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    embedding     VECTOR(1024) NOT NULL
+    media_item_id VARCHAR(10)  NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    embedding     VECTOR(1024) NOT NULL,
+    percentage    INT          NOT NULL
 );
 CREATE INDEX idx_visual_analysis_media_item_id ON visual_analysis (media_item_id);
 CREATE INDEX ON visual_analysis USING hnsw (embedding vector_cosine_ops);
@@ -56,7 +57,7 @@ CREATE TABLE face
     eye_right_x        REAL        NOT NULL,
     eye_right_y        REAL        NOT NULL,
     embedding          VECTOR(512) NOT NULL,
-    person_id BIGINT REFERENCES person (id) ON DELETE SET NULL
+    person_id          BIGINT      REFERENCES person (id) ON DELETE SET NULL
 );
 CREATE INDEX idx_face_visual_analysis_id ON face (visual_analysis_id);
 CREATE INDEX ON face USING hnsw (embedding vector_cosine_ops);
@@ -94,11 +95,11 @@ CREATE TABLE color_data
 (
     visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
     themes             JSONB[] NOT NULL,
-    prominent_colors   TEXT[] NOT NULL,
-    average_hue        REAL NOT NULL,
-    average_saturation REAL NOT NULL,
-    average_lightness  REAL NOT NULL,
-    histogram          JSONB NOT NULL
+    prominent_colors   TEXT[]  NOT NULL,
+    average_hue        REAL    NOT NULL,
+    average_saturation REAL    NOT NULL,
+    average_lightness  REAL    NOT NULL,
+    histogram          JSONB   NOT NULL
 );
 
 
@@ -106,8 +107,8 @@ CREATE TABLE color_data
 CREATE TABLE caption_data
 (
     visual_analysis_id   BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    default_caption      TEXT NOT NULL,
-    main_subject         TEXT NOT NULL,
+    default_caption      TEXT    NOT NULL,
+    main_subject         TEXT    NOT NULL,
     contains_pets        BOOLEAN NOT NULL,
     contains_vehicle     BOOLEAN NOT NULL,
     contains_landmarks   BOOLEAN NOT NULL,
@@ -120,7 +121,7 @@ CREATE TABLE caption_data
     is_landscape         BOOLEAN NOT NULL,
     is_cityscape         BOOLEAN NOT NULL,
     is_activity          BOOLEAN NOT NULL,
-    setting              TEXT NOT NULL,
+    setting              TEXT    NOT NULL,
     pet_type             TEXT,
     animal_type          TEXT,
     food_or_drink_type   TEXT,

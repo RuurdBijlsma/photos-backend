@@ -30,9 +30,12 @@
 * ✅ Fix failed analysis jobs
 * ✅ Refresh auth wordt niet goed gedaan in frontend.
 * ✅ !BUG user_id from relative path is broken
+* ✅ heb ik met de nieuwe fallback timezone 0 null's in taken at utc? ja maar dat is een leugen dus ik haal t weg
 * ✅ refresh token gives 415 for some reason.
 * ✅ add llm to py interop
 * ✅ Improve last_error field in jobs, just put entire report in there?
+* ✅ now that i have sort_timezone in the db, should i still use fallback timezone to calculate time_utc?
+* ✅ visual analysis should have frame percentage or something as a column.
 * ✅ ML Analysis:
     * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
     * ✅ color data from python, make in rust
@@ -78,14 +81,14 @@
     * grafana
     * alertmanager
     * loki? denk t niet
-* use proper index on get-month endpoint, if not already at max perf level.
-* heb ik met de nieuwe fallback timezone 0 null's in taken at utc?
+* api performance
+  * use proper index on get-month endpoint, if not already at max perf level.
+  * at some point copy paste all sql queries into gemini en ask for proper indices
+  * timeline_summary.sql en ratios_summary.sql migrations deleten, en weer maken met goeie nieuwe columns (maybe its already pretty good).
+  * Summary table voor ratios
+  * performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel delay
+    toevoegt)
 * make sure cache control on thumbnails are immutable/max age.
-* at some point copy paste all sql queries into gemini en ask for proper indices
-* now that i have sort_timezone in the db, should i still use fallback timezone to calculate time_utc?
-* improve OCR
-* timeline_summary.sql en ratios_summary.sql migrations deleten, en weer maken met goeie nieuwe columns (maybe its already pretty good).
-* visual analysis should have frame percentage or something as a column.
 * fun "albums" notifications & in UI frontpage
   * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
   * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at the lake", "Cat pics")
@@ -95,19 +98,15 @@
     * group by animal type?
   * make sure each "fun album" is shown as notification only once. In UI it can be more often?
 * split routes/photos into timeline related and media item related
-
-# hot topics
-
-* Summary table voor ratios
-* performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel delay
-  toevoegt)
+* websocket om nieuwe foto events te sturen
+* improve OCR
 
 # Features
 
 * storage indicator bottom left, like googly photos
 * albums
-* front page -> 1 year ago, 4 years ago today, etc in top balk
-* photo trashbin?
+* front page -> 1 year ago, 4 years ago today, etc. in top balk
+* photo trash bin?
 * facial recognition
 * upload photos
   * robust! stable!
@@ -137,3 +136,4 @@
 - gebruikt meer resources dan docker compose
 - meer omslachtige mounting van schijven
 - meer complicated troubleshooting, logs enzo
+- docker compose past beter in mn server setup

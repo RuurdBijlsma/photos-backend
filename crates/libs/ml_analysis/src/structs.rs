@@ -145,6 +145,7 @@ pub struct CaptionData {
 // This top-level struct is assembled manually, so it does not need FromRow
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct VisualImageData {
+    pub percentage: i32,
     pub color_data: ColorData,
     pub quality_data: QualityData,
     pub caption_data: CaptionData,

@@ -1,10 +1,10 @@
 use crate::context::WorkerContext;
-use crate::handlers::JobResult;
 use crate::handlers::db::helpers::get_media_item_id;
 use crate::handlers::db::store_analysis::store_visual_analysis;
+use crate::handlers::JobResult;
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::eyre::{Result, eyre};
-use common_photos::{Job, file_is_ingested, is_photo_file, media_dir, settings, thumbnails_dir};
+use color_eyre::eyre::{eyre, Result};
+use common_photos::{file_is_ingested, is_photo_file, media_dir, settings, thumbnails_dir, Job};
 use tracing::info;
 
 /// Handles the analysis of a given job.
@@ -38,20 +38,30 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             .iter()
             .max()
             .ok_or_else(|| eyre!("Cannot find max thumbnail size"))?;
-        vec![thumb_dir.join(format!("{max_thumb}p.avif"))]
+        vec![(0, thumb_dir.join(format!("{max_thumb}p.avif")))]
     } else {
         settings()
             .thumbnail_generation
             .video_options
             .percentages
             .iter()
-            .map(|p| thumb_dir.join(format!("{p}_percent.avif")))
+            .map(|p| {
+                (
+                    i32::try_from(*p).expect("Percentage should fit in i32"),
+                    thumb_dir.join(format!("{p}_percent.avif")),
+                )
+            })
             .collect()
     };
 
     let mut analyses = Vec::new();
-    for image_path in images_to_analyze {
-        analyses.push(context.visual_analyzer.analyze_image(&image_path).await?);
+    for (percentage, image_path) in images_to_analyze {
+        analyses.push(
+            context
+                .visual_analyzer
+                .analyze_image(&image_path, percentage)
+                .await?,
+        );
     }
 
     let job_result = if is_job_cancelled(&mut tx, job.id).await? {

@@ -59,7 +59,11 @@ impl VisualAnalyzer {
     /// # Errors
     ///
     /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
-    pub async fn analyze_image(&self, file: &Path) -> color_eyre::Result<VisualImageData> {
+    pub async fn analyze_image(
+        &self,
+        file: &Path,
+        percentage: i32,
+    ) -> color_eyre::Result<VisualImageData> {
         let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_string()) else {
             return Err(eyre!("Can't get extension from file"));
         };
@@ -99,6 +103,7 @@ impl VisualAnalyzer {
         tokio::fs::remove_file(&analysis_file).await?;
 
         Ok(VisualImageData {
+            percentage,
             color_data,
             quality_data,
             caption_data,

@@ -19,12 +19,13 @@ pub async fn store_visual_analysis(
         let embed_vector = Vector::from(analysis.embedding.clone());
         let visual_analysis_id: i64 = sqlx::query_scalar!(
             r#"
-            INSERT INTO visual_analysis (media_item_id, embedding)
-            VALUES ($1, $2)
+            INSERT INTO visual_analysis (media_item_id, embedding, percentage)
+            VALUES ($1, $2, $3)
             RETURNING id
             "#,
             media_item_id,
             embed_vector as _,
+            analysis.percentage,
         )
         .fetch_one(&mut **tx)
         .await?;
