@@ -4,8 +4,9 @@ use crate::quality_data::get_quality_data;
 use crate::utils::convert_media_file;
 use crate::{ChatMessage, PyInterop, VisualImageData};
 use color_eyre::eyre::eyre;
-use common_photos::settings;
+use common_photos::{settings, Variant};
 use pyo3::Python;
+use serde_json::Value;
 use std::path::Path;
 use tempfile::Builder;
 
@@ -24,6 +25,23 @@ impl VisualAnalyzer {
             let py_interop = PyInterop::new(py)?;
             Ok(Self { py_interop })
         })
+    }
+
+    /// Get theme json from a given color.
+    ///
+    /// # Errors
+    ///
+    /// Error if we can't get theme from color, or Python interop don't work.
+    pub fn theme_from_color(
+        &self,
+        color: &str,
+        variant: &Variant,
+        contrast_level: f32,
+    ) -> color_eyre::Result<Value> {
+        let result = self
+            .py_interop
+            .get_theme_from_color(color, variant, contrast_level)?;
+        Ok(result)
     }
 
     /// Send llm message history, and receive a response.

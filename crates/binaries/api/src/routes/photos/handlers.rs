@@ -2,14 +2,13 @@ use crate::auth::db_model::User;
 use crate::pb::api::{ByMonthResponse, TimelineResponse};
 use crate::photos::error::PhotosError;
 use crate::photos::full_item_interfaces::FullMediaItem;
-use crate::photos::interfaces::{GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
-use crate::photos::service::{
-    fetch_full_media_item, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo,
-};
+use crate::photos::interfaces::{ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
+use crate::photos::service::{fetch_full_media_item, get_color_theme, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
+use serde_json::Value;
 use sqlx::PgPool;
 
 /// Get a random photo and its associated theme.
@@ -42,29 +41,6 @@ pub async fn get_full_item_handler(
     } else {
         Err(PhotosError::MediaNotFound(params.id))
     }
-}
-
-/// Get a random photo and its associated theme.
-///
-/// # Errors
-///
-/// Returns a `PhotosError` if the database query fails.
-#[utoipa::path(
-    get,
-    path = "/photos/random",
-    tag = "Photos",
-    responses(
-        (status = 200, description = "Get random photo and associated themes.", body = RandomPhotoResponse),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_random_photo(
-    State(pool): State<PgPool>,
-    Extension(user): Extension<User>,
-) -> Result<Json<Option<RandomPhotoResponse>>, PhotosError> {
-    let result = random_photo(&user, &pool).await?;
-    Ok(Json(result))
 }
 
 /// Get a timeline of all media ratios, grouped by month.
@@ -150,4 +126,53 @@ pub async fn get_photos_by_month_handler(
         })?;
     let photos = get_photos_by_month(&user, &pool, &month_ids).await?;
     Ok(Protobuf(photos))
+}
+
+
+/// Get a random photo and its associated theme.
+///
+/// # Errors
+///
+/// Returns a `PhotosError` if the database query fails.
+#[utoipa::path(
+    get,
+    path = "/photos/random",
+    tag = "Photos",
+    responses(
+        (status = 200, description = "Get random photo and associated themes.", body = RandomPhotoResponse),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_random_photo(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+) -> Result<Json<Option<RandomPhotoResponse>>, PhotosError> {
+    let result = random_photo(&user, &pool).await?;
+    Ok(Json(result))
+}
+
+/// Get a random photo and its associated theme.
+///
+/// # Errors
+///
+/// Returns a `PhotosError` if the database query fails.
+#[utoipa::path(
+    get,
+    path = "/photos/theme",
+    tag = "Photos",
+    params(
+        GetMediaByMonthParams
+    ),
+    responses(
+        (status = 200, description = "Get theme object from a color.", body = Value),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_color_theme_handler(
+    Query(params): Query<ColorThemeParams>,
+) -> Result<Json<Value>, PhotosError> {
+    let result = get_color_theme(params.color).await?;
+    Ok(Json(result))
 }

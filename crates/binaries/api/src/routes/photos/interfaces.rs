@@ -23,3 +23,9 @@ pub struct GetMediaByMonthParams {
 pub struct GetMediaItemParams {
     pub id: String,
 }
+
+#[derive(Deserialize, IntoParams, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ColorThemeParams {
+    pub color: String,
+}

@@ -9,9 +9,12 @@ use crate::photos::full_item_interfaces::{
 };
 use crate::photos::interfaces::RandomPhotoResponse;
 use chrono::NaiveDate;
+use common_photos::settings;
+use ml_analysis::VisualAnalyzer;
 use rand::Rng;
-use sqlx::PgPool;
+use serde_json::Value;
 use sqlx::types::Json;
+use sqlx::PgPool;
 use std::collections::HashMap;
 use tracing::warn;
 
@@ -316,4 +319,12 @@ pub async fn get_photos_by_month(
         .collect();
 
     Ok(ByMonthResponse { months })
+}
+
+pub async fn get_color_theme(color: String) -> Result<Value, PhotosError> {
+    let visual_analyzer = VisualAnalyzer::new()?;
+    let variant = &settings().analyzer.theme_generation.variant;
+    let contrast_level = settings().analyzer.theme_generation.contrast_level;
+    let theme = visual_analyzer.theme_from_color(&color, variant, contrast_level as f32)?;
+    Ok(theme)
 }

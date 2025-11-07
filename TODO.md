@@ -40,11 +40,11 @@
     * ✅ quality measure from python, make in rust
     * ✅ make required sql migration tables for ML analysis
     * ✅ handle machine learning analysis job, put in db
-* schedule runner -> might have to use ofelia or kubernetes+helm to get clean cronjobs.
+* ✅ schedule runner -> might have to use ofelia or kubernetes+helm to get clean cronjobs.
     * ✅ indexing
     * ✅ clean refresh token table on schedule
-    * clustering on schedule
-* Show photos in ui:
+    * ✅ clustering on schedule
+* ✅ Show photos in ui:
     * ✅ make endpoint: get photos by month, ui handles which month to fetch
     * ✅ make endpoint: get timeline summary -> get list of every month with amount of photos for that month. (per user)
     * ✅ moet nog een photo density endpoint hebben om de scrollbar density te laten zien.
@@ -94,6 +94,7 @@
     * group by country?
     * group by animal type?
   * make sure each "fun album" is shown as notification only once. In UI it can be more often?
+* split routes/photos into timeline related and media item related
 
 # hot topics
 

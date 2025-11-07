@@ -176,6 +176,7 @@ dependencies = [
  "http",
  "jsonwebtoken",
  "mime_guess",
+ "ml_analysis",
  "prost 0.13.5",
  "prost-build 0.13.5",
  "rand 0.10.0-rc.0",
