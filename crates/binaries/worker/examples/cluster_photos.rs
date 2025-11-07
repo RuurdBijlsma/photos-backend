@@ -26,26 +26,10 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
     let pool = get_db_pool().await?;
-    let media_root = media_dir();
     let output_path = PathBuf::from(OUTPUT_DIR);
 
     // --- 1. Fetch User and Photo Data ---
     info!("Fetching data for user_id = {}", USER_ID_TO_TEST);
-
-    // Get the user's specific media folder name from their profile.
-    let user_media_folder: String = sqlx::query_scalar!(
-        "SELECT media_folder FROM app_user WHERE id = $1",
-        USER_ID_TO_TEST
-    )
-    .fetch_optional(&pool)
-    .await?
-    .flatten() // The result is Option<Option<String>>, flatten to Option<String>
-    .ok_or_else(|| {
-        eyre!(
-            "User with id {} not found or has no media_folder",
-            USER_ID_TO_TEST
-        )
-    })?;
 
     // Fetch all photo embeddings for the user.
     // We use DISTINCT ON to get only one embedding per media item, which is crucial for videos.
