@@ -1,12 +1,12 @@
-use color_eyre::eyre::{eyre, Context};
 use color_eyre::Result;
+use color_eyre::eyre::{Context, eyre};
+use common_photos::{get_db_pool, media_dir};
 use pgvector::Vector;
-use sqlx::{FromRow};
+use sqlx::FromRow;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::info;
-use common_photos::{get_db_pool, media_dir};
 use worker::handlers::common::clustering::run_hdbscan;
 
 /// A simple struct to hold the necessary data for clustering and file operations.
@@ -15,7 +15,6 @@ struct PhotoData {
     relative_path: String,
     embedding: Vector,
 }
-
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -38,10 +37,15 @@ async fn main() -> Result<()> {
         "SELECT media_folder FROM app_user WHERE id = $1",
         USER_ID_TO_TEST
     )
-        .fetch_optional(&pool)
-        .await?
-        .flatten() // The result is Option<Option<String>>, flatten to Option<String>
-        .ok_or_else(|| eyre!("User with id {} not found or has no media_folder", USER_ID_TO_TEST))?;
+    .fetch_optional(&pool)
+    .await?
+    .flatten() // The result is Option<Option<String>>, flatten to Option<String>
+    .ok_or_else(|| {
+        eyre!(
+            "User with id {} not found or has no media_folder",
+            USER_ID_TO_TEST
+        )
+    })?;
 
     // Fetch all photo embeddings for the user.
     // We use DISTINCT ON to get only one embedding per media item, which is crucial for videos.
@@ -56,8 +60,8 @@ async fn main() -> Result<()> {
            ORDER BY media_item.id, va.created_at"#,
         USER_ID_TO_TEST
     )
-        .fetch_all(&pool)
-        .await?;
+    .fetch_all(&pool)
+    .await?;
 
     if photos.is_empty() {
         info!("No photos found for user {}. Exiting.", USER_ID_TO_TEST);
@@ -69,7 +73,14 @@ async fn main() -> Result<()> {
     info!("Running HDBSCAN clustering...");
     let embeddings: Vec<Vec<f32>> = photos.iter().map(|p| p.embedding.to_vec()).collect();
     let (labels, _centroids) = run_hdbscan(&embeddings, 3, 4)?;
-    info!("Clustering complete. Found {} clusters (excluding noise).", labels.iter().filter(|&&l| l >= 0).max().map_or(0, |max| max + 1));
+    info!(
+        "Clustering complete. Found {} clusters (excluding noise).",
+        labels
+            .iter()
+            .filter(|&&l| l >= 0)
+            .max()
+            .map_or(0, |max| max + 1)
+    );
 
     // --- 3. Group Photos by Cluster ID ---
     let mut clusters: HashMap<i32, Vec<&PhotoData>> = HashMap::new();
@@ -79,7 +90,10 @@ async fn main() -> Result<()> {
     }
 
     // --- 4. Organize Files into Directories ---
-    info!("Organizing photos into output directory: {:?}", &output_path);
+    info!(
+        "Organizing photos into output directory: {:?}",
+        &output_path
+    );
     prepare_output_directory(&output_path)?;
 
     for (cluster_id, photos_in_cluster) in clusters {
@@ -92,7 +106,11 @@ async fn main() -> Result<()> {
         let cluster_path = output_path.join(&cluster_dir_name);
         fs::create_dir_all(&cluster_path)?;
 
-        info!("Copying {} photos into '{}'", photos_in_cluster.len(), cluster_dir_name);
+        info!(
+            "Copying {} photos into '{}'",
+            photos_in_cluster.len(),
+            cluster_dir_name
+        );
 
         for photo in photos_in_cluster {
             let source_path = media_dir().join(&photo.relative_path);
@@ -105,12 +123,18 @@ async fn main() -> Result<()> {
 
             // Copy the file. This is cross-platform but uses more disk space than symlinks.
             if let Err(e) = fs::copy(&source_path, &dest_path) {
-                eprintln!("Warning: Could not copy file from {:?} to {:?}: {}. Skipping.", source_path, dest_path, e);
+                eprintln!(
+                    "Warning: Could not copy file from {:?} to {:?}: {}. Skipping.",
+                    source_path, dest_path, e
+                );
             }
         }
     }
 
-    info!("Successfully organized photos into cluster directories at: {}", output_path.display());
+    info!(
+        "Successfully organized photos into cluster directories at: {}",
+        output_path.display()
+    );
     Ok(())
 }
 

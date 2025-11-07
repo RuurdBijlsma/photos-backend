@@ -1,15 +1,15 @@
 // handlers/cluster_faces.rs
 
 use crate::context::WorkerContext;
+use crate::handlers::JobResult;
 use crate::handlers::common::clustering;
 use crate::handlers::common::clustering::{Clusterable, ClusteringStrategy};
 use crate::handlers::db::model::{ExistingPerson, FaceEmbedding};
-use crate::handlers::JobResult;
 use async_trait::async_trait;
 use color_eyre::Result;
 use common_photos::Job;
 use pgvector::Vector;
-use sqlx::{query, query_as, query_scalar, Transaction};
+use sqlx::{Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
 
 impl Clusterable for ExistingPerson {
@@ -30,7 +30,7 @@ impl ClusteringStrategy for FaceClusteringStrategy {
 
     const ENTITY_NAME: &'static str = "face";
     const MIN_ITEMS_TO_CLUSTER: usize = 4;
-    const MIN_SAMPLES: usize  = 5;
+    const MIN_SAMPLES: usize = 5;
     const CENTROID_MATCH_THRESHOLD: f32 = 0.6;
 
     fn embedding_vector(item: &Self::Embedding) -> Vec<f32> {

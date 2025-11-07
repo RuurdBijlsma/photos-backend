@@ -1,5 +1,5 @@
-use crate::structs::{FaceBox, OCRData, ObjectBox};
 use crate::ChatMessage;
+use crate::structs::{FaceBox, OCRData, ObjectBox};
 use color_eyre::eyre::Context;
 use common_photos::Variant;
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};

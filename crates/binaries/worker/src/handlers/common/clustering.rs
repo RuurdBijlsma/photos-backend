@@ -3,7 +3,7 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use async_trait::async_trait;
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{Result, eyre::eyre};
 use common_photos::Job;
 use hdbscan::{Center, DistanceMetric, Hdbscan, HdbscanHyperParams};
 use pgvector::Vector;
@@ -69,11 +69,19 @@ fn l2_distance(a: &[f32], b: &[f32]) -> Result<f32> {
     if a.len() != b.len() {
         return Err(eyre!("Vectors must have the same dimension"));
     }
-    Ok(a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum::<f32>().sqrt())
+    Ok(a.iter()
+        .zip(b.iter())
+        .map(|(x, y)| (x - y).powi(2))
+        .sum::<f32>()
+        .sqrt())
 }
 
 /// Runs the HDBSCAN algorithm to find clusters and their centroids.
-pub fn run_hdbscan(embeddings: &[Vec<f32>], min_cluster_size: usize, min_samples: usize) -> Result<(Vec<i32>, Vec<Vec<f32>>)> {
+pub fn run_hdbscan(
+    embeddings: &[Vec<f32>],
+    min_cluster_size: usize,
+    min_samples: usize,
+) -> Result<(Vec<i32>, Vec<Vec<f32>>)> {
     let params = HdbscanHyperParams::builder()
         .min_cluster_size(min_cluster_size)
         .min_samples(min_samples)
@@ -114,18 +122,16 @@ fn match_centroids<T: Clusterable>(
         }
 
         if let Some((id, _)) = best_match
-            && used_old_ids.insert(id) {
-                map.insert(new_cid, id);
-            }
+            && used_old_ids.insert(id)
+        {
+            map.insert(new_cid, id);
+        }
     }
     Ok(map)
 }
 
 /// Groups items into a map based on their assigned cluster label.
-pub fn group_by_cluster<'a, T>(
-    labels: &[i32],
-    items: &'a [T],
-) -> HashMap<usize, Vec<&'a T>> {
+pub fn group_by_cluster<'a, T>(labels: &[i32], items: &'a [T]) -> HashMap<usize, Vec<&'a T>> {
     let mut clusters: HashMap<usize, Vec<&'a T>> = HashMap::new();
     for (i, &label) in labels.iter().enumerate() {
         if label >= 0 {
@@ -140,7 +146,10 @@ async fn fetch_user_ids(pool: &PgPool, job: &Job) -> Result<Vec<i32>> {
     if let Some(user_id) = job.user_id {
         Ok(vec![user_id])
     } else {
-        query_scalar!("SELECT id FROM app_user").fetch_all(pool).await.map_err(Into::into)
+        query_scalar!("SELECT id FROM app_user")
+            .fetch_all(pool)
+            .await
+            .map_err(Into::into)
     }
 }
 
@@ -160,9 +169,14 @@ pub async fn handle<S: ClusteringStrategy + Sync>(
         }
 
         let embeddings: Vec<Vec<f32>> = items_to_cluster.iter().map(S::embedding_vector).collect();
-        let (labels, new_centroids) = run_hdbscan(&embeddings, S::MIN_ITEMS_TO_CLUSTER, S::MIN_SAMPLES)?;
+        let (labels, new_centroids) =
+            run_hdbscan(&embeddings, S::MIN_ITEMS_TO_CLUSTER, S::MIN_SAMPLES)?;
 
-        let cluster_map = match_centroids(&new_centroids, &existing_clusters, S::CENTROID_MATCH_THRESHOLD)?;
+        let cluster_map = match_centroids(
+            &new_centroids,
+            &existing_clusters,
+            S::CENTROID_MATCH_THRESHOLD,
+        )?;
         let matched_old_ids: HashSet<i64> = cluster_map.values().copied().collect();
         let new_clusters = group_by_cluster(&labels, &items_to_cluster);
 
@@ -172,7 +186,11 @@ pub async fn handle<S: ClusteringStrategy + Sync>(
         S::cleanup_obsolete(&mut tx, &existing_clusters, &matched_old_ids).await?;
 
         tx.commit().await?;
-        info!("Reconciled {} clusters for user {}", S::ENTITY_NAME, user_id);
+        info!(
+            "Reconciled {} clusters for user {}",
+            S::ENTITY_NAME,
+            user_id
+        );
     }
 
     Ok(JobResult::Done)

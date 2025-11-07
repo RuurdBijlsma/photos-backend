@@ -1,10 +1,8 @@
+use pyo3::prelude::*;
 use pyo3::{IntoPyObject, IntoPyObjectExt, Python};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
-use pyo3::prelude::*;
-
-
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -23,11 +21,11 @@ impl<'py> IntoPyObject<'py> for ChatRole {
             Self::User => {
                 let result = "user".into_bound_py_any(py).unwrap();
                 Ok(result)
-            },
+            }
             Self::Assistant => {
                 let result = "assistant".into_bound_py_any(py).unwrap();
                 Ok(result)
-            },
+            }
         }
     }
 }
