@@ -5,12 +5,14 @@ use common_photos::{Job, JobType};
 
 pub mod analyze;
 pub mod clean_db;
-pub mod cluster;
+pub mod cluster_faces;
+pub mod cluster_photos;
 pub mod ingest;
 pub mod remove;
 pub mod scan;
 
 pub mod db;
+pub mod common;
 
 /// The outcome of a job handler's execution.
 #[derive(Debug, PartialEq, Eq)]
@@ -34,7 +36,8 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::Remove => remove::handle(context, job).await,
         JobType::Scan => scan::handle(context, job).await,
         JobType::CleanDB => clean_db::handle(context, job).await,
-        JobType::Cluster => cluster::handle(context, job).await,
+        JobType::ClusterFaces => cluster_faces::handle(context, job).await,
+        JobType::ClusterPhotos => cluster_photos::handle(context, job).await,
     };
 
     heartbeat_handle.abort();

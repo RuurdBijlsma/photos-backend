@@ -3,15 +3,14 @@ use common_photos::{get_db_pool, media_dir, to_posix_string};
 use worker::handlers::db::model::FaceEmbedding;
 
 use ab_glyph::FontArc;
-// Use ab_glyph
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
-use sqlx::{PgPool, query_as};
+use sqlx::{query_as, PgPool};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use worker::handlers::cluster::{group_faces_by_cluster, run_hdbscan};
+use worker::handlers::common::clustering::{group_by_cluster, run_hdbscan};
 
 // A new struct to hold more comprehensive face details for drawing
 #[derive(sqlx::FromRow, Debug)]
@@ -61,8 +60,8 @@ async fn main() -> Result<()> {
     let pool = get_db_pool().await?;
 
     // --- Configuration ---
-    let user_id_to_debug = 1; // <--- SET THE USER ID YOU WANT TO DEBUG
-    let output_directory = Path::new("cluster_debug_output");
+    let user_id_to_debug = 1;
+    let output_directory = Path::new("face_clusters_output");
 
     // --- 1. Fetch Data ---
     println!("Fetching data for user_id: {}", user_id_to_debug);
@@ -90,10 +89,10 @@ async fn main() -> Result<()> {
 
     // --- 2. Run Clustering ---
     println!("Running HDBSCAN clustering...");
-    let (labels, _new_centroids) = run_hdbscan(&embeddings)?;
+    let (labels, _new_centroids) = run_hdbscan(&embeddings, 4, 5)?;
     println!("Clustering complete.");
 
-    let clusters = group_faces_by_cluster(&labels, &face_embeddings_for_clustering);
+    let clusters = group_by_cluster(&labels, &face_embeddings_for_clustering);
 
     // --- 3. Prepare for Drawing ---
     if output_directory.exists() {

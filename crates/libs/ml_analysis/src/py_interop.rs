@@ -1,4 +1,5 @@
 use crate::structs::{FaceBox, OCRData, ObjectBox};
+use crate::ChatMessage;
 use color_eyre::eyre::Context;
 use common_photos::Variant;
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
@@ -18,6 +19,7 @@ pub struct PyInterop {
     texts_embed_func: Py<PyAny>,
     get_image_prominent_colors_func: Py<PyAny>,
     get_theme_from_color_func: Py<PyAny>,
+    llm_chat_func: Py<PyAny>,
 }
 
 impl PyInterop {
@@ -61,6 +63,7 @@ impl PyInterop {
             .into_pyobject(py)?;
         let get_theme_from_color_func =
             module.getattr("get_theme_from_color")?.into_pyobject(py)?;
+        let llm_chat_func = module.getattr("llm_chat")?.into_pyobject(py)?;
 
         let json = py.import("json")?;
         let dumps = json.getattr("dumps")?.into_pyobject(py)?;
@@ -75,9 +78,23 @@ impl PyInterop {
             facial_recognition_func: facial_recognition_func.into(),
             captioner_func: captioner_func.into(),
             json_dumps: dumps.into(),
-            // Add these two lines to initialize the struct fields
             get_image_prominent_colors_func: get_image_prominent_colors_func.into(),
             get_theme_from_color_func: get_theme_from_color_func.into(),
+            llm_chat_func: llm_chat_func.into(),
+        })
+    }
+
+    /// Generate LLM responses from by sending a chat history.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the Python call fails or if the result
+    /// cannot be converted to a `String`.
+    pub fn llm_chat(&self, messages: Vec<ChatMessage>) -> Result<String, PyErr> {
+        Python::attach(|py| {
+            let func = self.llm_chat_func.bind(py);
+            let result = func.call1((messages,))?;
+            result.extract()
         })
     }
 

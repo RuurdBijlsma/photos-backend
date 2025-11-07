@@ -3,4 +3,5 @@
 .env
 /thumbnails
 .venv
-cluster_debug_output
+face_clusters_output
+photo_clusters_output

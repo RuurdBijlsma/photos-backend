@@ -2,7 +2,7 @@ use crate::caption_data::get_caption_data;
 use crate::color_data::get_color_data;
 use crate::quality_data::get_quality_data;
 use crate::utils::convert_media_file;
-use crate::{PyInterop, VisualImageData};
+use crate::{ChatMessage, PyInterop, VisualImageData};
 use color_eyre::eyre::eyre;
 use common_photos::settings;
 use pyo3::Python;
@@ -24,6 +24,16 @@ impl VisualAnalyzer {
             let py_interop = PyInterop::new(py)?;
             Ok(Self { py_interop })
         })
+    }
+
+    /// Send llm message history, and receive a response.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
+    pub fn llm_chat(&self, messages: Vec<ChatMessage>) -> color_eyre::Result<String> {
+        let result = self.py_interop.llm_chat(messages)?;
+        Ok(result)
     }
 
     /// Performs a visual analysis of the given image file, extracting various data points like color, quality, and content.

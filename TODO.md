@@ -28,7 +28,11 @@
 * ✅ use time_utc for sorting with COALESCE (don't use it for binning into months and such, and don't return the utc time
   to user)
 * ✅ Fix failed analysis jobs
+* ✅ Refresh auth wordt niet goed gedaan in frontend.
 * ✅ !BUG user_id from relative path is broken
+* ✅ refresh token gives 415 for some reason.
+* ✅ add llm to py interop
+* ✅ Improve last_error field in jobs, just put entire report in there?
 * ✅ ML Analysis:
     * ✅ Make ML jobtype, give priority below videos (30?) so they are done last
     * ✅ color data from python, make in rust
@@ -69,7 +73,6 @@
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
-* Improve last_error field in jobs, just put entire report in there?
 * monitoring/alerting
     * prometheus
     * grafana
@@ -78,15 +81,22 @@
 * use proper index on get-month endpoint, if not already at max perf level.
 * heb ik met de nieuwe fallback timezone 0 null's in taken at utc?
 * make sure cache control on thumbnails are immutable/max age.
-* refresh token gives 415 for some reason.
 * at some point copy paste all sql queries into gemini en ask for proper indices
 * now that i have sort_timezone in the db, should i still use fallback timezone to calculate time_utc?
 * improve OCR
 * timeline_summary.sql en ratios_summary.sql migrations deleten, en weer maken met goeie nieuwe columns (maybe its already pretty good).
+* visual analysis should have frame percentage or something as a column.
+* fun "albums" notifications & in UI frontpage
+  * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
+  * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at the lake", "Cat pics")
+  * group by  (only changes with significantly more photos)
+    * caption columns ("setting", "main subject", "is_outside & sunset & ...")
+    * group by country?
+    * group by animal type?
+  * make sure each "fun album" is shown as notification only once. In UI it can be more often?
 
 # hot topics
 
-* Refresh auth wordt niet goed gedaan in frontend.
 * Summary table voor ratios
 * performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel delay
   toevoegt)

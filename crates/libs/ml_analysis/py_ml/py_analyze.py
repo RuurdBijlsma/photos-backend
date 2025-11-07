@@ -16,7 +16,7 @@ from ruurd_photos_ml import (
     get_facial_recognition,
     get_object_detection,
     get_ocr,
-    get_embedder,
+    get_embedder, get_llm, ChatMessage,
 )
 
 captioner_instance = get_captioner()
@@ -24,6 +24,7 @@ facial_recognition_instance = get_facial_recognition()
 object_detection_instance = get_object_detection()
 ocr_instance = get_ocr()
 embedder_instance = get_embedder()
+llm_instance = get_llm()
 
 
 @lru_cache(maxsize=256)
@@ -37,7 +38,7 @@ def get_image_prominent_colors(image_path: Path) -> list[str]:
 
 
 def get_theme_from_color(
-    color: str, variant: str, contrast_level: float
+        color: str, variant: str, contrast_level: float
 ) -> dict[str, Any]:
     return theme_from_color(
         color,
@@ -108,3 +109,7 @@ def ocr(image_path: Path, languages: tuple[str, ...]) -> dict[str, Any]:
         "ocr_text": ocr_text,
         "ocr_boxes": boxes_dicts,
     }
+
+
+def llm_chat(messages: list[ChatMessage]) -> str:
+    return llm_instance.chat(messages)

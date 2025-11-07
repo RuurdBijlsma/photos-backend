@@ -20,8 +20,7 @@ clap = { version = "4.5.48", features = ["derive"] }
 walkdir = "2.5.0"
 rand = "0.10.0-rc.0"
 hdbscan = "0.11.0"
-serde = { version = "1.0.228", features = ["derive"] }
 image = "0.25.8"
 imageproc = "0.25.0"
-rusttype = "0.9.3"
 ab_glyph = "0.2.32"
+async-trait = "0.1.89"

@@ -1,4 +1,4 @@
-use ml_analysis::VisualAnalyzer;
+use ml_analysis::{ChatMessage, ChatRole, VisualAnalyzer};
 use std::fs::File;
 use std::path::Path;
 use std::time::Instant;
@@ -11,7 +11,15 @@ async fn main() -> color_eyre::Result<()> {
     let analyzer = VisualAnalyzer::new()?;
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
 
-    let images = vec![Path::new("media_dir/rutenl/hert.jpg")];
+    let now = Instant::now();
+    let response = analyzer.llm_chat(vec![ChatMessage {
+        role: ChatRole::User,
+        content: "What's your favourite painting?".to_string(),
+    }])?;
+    println!("chat response {response:?}");
+    println!("analyzer.llm_chat {:?}\n", now.elapsed());
+
+    let images = vec![Path::new("media_dir/rutenl/cat-pet.jpg")];
 
     for image in images {
         let image_filename = image.file_name().unwrap().to_string_lossy().to_string();

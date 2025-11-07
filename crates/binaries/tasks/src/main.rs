@@ -18,7 +18,8 @@ async fn main() -> Result<()> {
     let pool = get_db_pool().await?;
     enqueue_system_job(&pool, JobType::Scan).await?;
     enqueue_system_job(&pool, JobType::CleanDB).await?;
-    enqueue_system_job(&pool, JobType::Cluster).await?;
+    enqueue_system_job(&pool, JobType::ClusterPhotos).await?;
+    enqueue_system_job(&pool, JobType::ClusterFaces).await?;
     Ok(())
     //         }
     //         .await;
