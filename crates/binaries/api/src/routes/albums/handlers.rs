@@ -37,6 +37,7 @@ pub async fn create_album_handler(
         user.id,
         &payload.name,
         payload.description.as_deref(),
+        payload.is_public,
     )
     .await?;
     Ok((StatusCode::CREATED, Json(album)))
@@ -121,6 +122,7 @@ pub async fn update_album_handler(
         user.id,
         payload.name,
         payload.description,
+        payload.is_public
     )
     .await?;
     Ok(Json(album))

@@ -9,6 +9,7 @@ use utoipa::{IntoParams, ToSchema};
 pub struct CreateAlbumRequest {
     pub name: String,
     pub description: Option<String>,
+    pub is_public: bool,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -29,6 +30,7 @@ pub struct AddCollaboratorRequest {
 pub struct UpdateAlbumRequest {
     pub name: Option<String>,
     pub description: Option<String>,
+    pub is_public: Option<bool>,
 }
 
 // --- URL/Path Parameters ---

@@ -61,6 +61,7 @@ pub async fn create_album(
     user_id: i32,
     name: &str,
     description: Option<&str>,
+    is_public: bool,
 ) -> Result<Album, AlbumsError> {
     let mut tx = pool.begin().await?;
 
@@ -68,13 +69,14 @@ pub async fn create_album(
     let album = sqlx::query_as!(
         Album,
         r#"
-        INSERT INTO album (owner_id, name, description)
-        VALUES ($1, $2, $3)
+        INSERT INTO album (owner_id, name, description, is_public)
+        VALUES ($1, $2, $3, $4)
         RETURNING *
         "#,
         user_id,
         name,
         description,
+        is_public,
     )
     .fetch_one(&mut *tx)
     .await?;
@@ -131,7 +133,7 @@ pub async fn get_album_details(
         .await?;
     if !album.is_public {
         let Some(user_id) = user_id else {
-            return Err(AlbumsError::Unauthorized("No user id passed".to_string()));
+            return Err(AlbumsError::NotFound(album_id.to_string()));
         };
         // Permission Check: User must be part of the album to view it.
         let is_collaborator = check_user_role(
@@ -141,7 +143,6 @@ pub async fn get_album_details(
             &[AlbumRole::Owner, AlbumRole::Contributor, AlbumRole::Viewer],
         )
         .await?;
-
         if !is_collaborator {
             return Err(AlbumsError::NotFound(album_id.to_string()));
         }
@@ -382,6 +383,7 @@ pub async fn update_album(
     user_id: i32,
     name: Option<String>,
     description: Option<String>,
+    is_public: Option<bool>,
 ) -> Result<Album, AlbumsError> {
     // Permission Check: Only the owner can update album details.
     if !is_album_owner(pool, user_id, album_id).await? {
@@ -391,7 +393,7 @@ pub async fn update_album(
     }
 
     // At least one field must be provided for the update.
-    if name.is_none() && description.is_none() {
+    if name.is_none() && description.is_none() && is_public.is_none() {
         // If no changes are requested, just return the current album data.
         return sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
             .fetch_one(pool)
@@ -406,12 +408,14 @@ pub async fn update_album(
         SET
             name = COALESCE($1, name),
             description = COALESCE($2, description),
+            is_public = COALESCE($3, is_public),
             updated_at = now()
-        WHERE id = $3
+        WHERE id = $4
         RETURNING *
         "#,
         name,
         description,
+        is_public,
         album_id
     )
     .fetch_one(pool)
