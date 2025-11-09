@@ -124,24 +124,31 @@ pub async fn get_user_albums(pool: &PgPool, user_id: i32) -> Result<Vec<Album>, 
 pub async fn get_album_details(
     pool: &PgPool,
     album_id: Uuid,
-    user_id: i32,
+    user_id: Option<i32>,
 ) -> Result<AlbumDetailsResponse, AlbumsError> {
-    // Permission Check: User must be part of the album to view it.
-    let is_collaborator = check_user_role(
-        pool,
-        user_id,
-        album_id,
-        &[AlbumRole::Owner, AlbumRole::Contributor, AlbumRole::Viewer],
-    )
-    .await?;
+    let album = sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
+        .fetch_one(pool)
+        .await?;
+    if !album.is_public {
+        let Some(user_id) = user_id else {
+            return Err(AlbumsError::Unauthorized("No user id passed".to_string()));
+        };
+        // Permission Check: User must be part of the album to view it.
+        let is_collaborator = check_user_role(
+            pool,
+            user_id,
+            album_id,
+            &[AlbumRole::Owner, AlbumRole::Contributor, AlbumRole::Viewer],
+        )
+        .await?;
 
-    if !is_collaborator {
-        return Err(AlbumsError::NotFound(album_id.to_string()));
+        if !is_collaborator {
+            return Err(AlbumsError::NotFound(album_id.to_string()));
+        }
     }
 
     // Fetch album details, media items, and collaborators in parallel
-    let (album_res, media_items_res, collaborators_res) = tokio::join!(
-        sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id).fetch_one(pool),
+    let (media_items_res, collaborators_res) = tokio::join!(
         sqlx::query_as!(
             AlbumMediaItemSummary,
             r#"
@@ -166,7 +173,6 @@ pub async fn get_album_details(
         .fetch_all(pool)
     );
 
-    let album = album_res?;
     let media_items = media_items_res?;
     let collaborators = collaborators_res?;
 
@@ -295,9 +301,7 @@ pub async fn add_collaborator(
     )
     .fetch_optional(pool)
     .await?
-    .ok_or_else(|| {
-        AlbumsError::NotFound(format!("User with email {new_user_email} not found."))
-    })?;
+    .ok_or_else(|| AlbumsError::NotFound(format!("User with email {new_user_email} not found.")))?;
 
     // An owner cannot be added or demoted via this function.
     if matches!(role, AlbumRole::Owner) {
@@ -410,8 +414,8 @@ pub async fn update_album(
         description,
         album_id
     )
-        .fetch_one(pool)
-        .await?;
+    .fetch_one(pool)
+    .await?;
 
     Ok(updated_album)
 }

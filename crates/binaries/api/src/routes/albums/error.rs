@@ -18,8 +18,12 @@ pub enum AlbumsError {
     #[error("Not found: {0}")]
     NotFound(String),
 
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
+
     #[error("Invalid UUID: {0}")]
     InvalidUuid(#[from] uuid::Error),
+
 }
 
 // Renamed for more general use
@@ -29,6 +33,9 @@ fn log_error(error: &AlbumsError) {
         AlbumsError::Internal(e) => error!("Internal error: {:?}", e),
         AlbumsError::NotFound(id) => {
             error!("Media item not found: {}", id);
+        }
+        AlbumsError::Unauthorized(id) => {
+            error!("Unauthorized: {}", id);
         }
         AlbumsError::InvalidUuid(e) => error!("Invalid UUID provided: {}", e),
     }
@@ -50,6 +57,10 @@ impl IntoResponse for AlbumsError {
             Self::NotFound(message) => (
                 StatusCode::NOT_FOUND,
                 format!("Album not found: {message}"),
+            ),
+            Self::Unauthorized(message) => (
+                StatusCode::UNAUTHORIZED,
+                format!("Unauthorized: {message}"),
             ),
             Self::InvalidUuid(e) => (
                 StatusCode::BAD_REQUEST,
