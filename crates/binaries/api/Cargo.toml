@@ -35,6 +35,7 @@ prost = "0.13.5"
 bytes = "1.10.1"
 axum-extra = {version =  "0.10.3" , features = ["protobuf"]}
 uuid = { version = "1.18.1", features = ["v4"] }
+async-trait = "0.1.89"
 
 [build-dependencies]
 prost-build = "0.13.5"

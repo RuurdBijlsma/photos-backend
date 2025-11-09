@@ -15,7 +15,7 @@ use crate::albums::handlers::{
 };
 use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
-use crate::auth::middleware::require_role;
+use crate::auth::middleware::{require_role, OptionalUser};
 use crate::download::handlers::download_full_file;
 use crate::photos::handlers::{
     get_color_theme_handler, get_full_item_handler, get_photos_by_month_handler, get_random_photo,
@@ -28,7 +28,7 @@ use crate::setup::handlers::{
     post_start_processing,
 };
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
-use axum::routing::delete;
+use axum::routing::{delete, put};
 use axum::{
     routing::{get, post},
     Router,
@@ -132,6 +132,7 @@ pub fn create_router(pool: PgPool) -> Router {
         .merge(Scalar::with_url("/docs", openapi.clone()).custom_html(get_custom_html(&openapi)))
         .merge(public_routes())
         .merge(protected_routes(pool.clone()))
+        .merge(auth_optional_routes(pool.clone()))
         .merge(admin_routes(pool.clone()))
         .with_state(pool)
         .layer(
@@ -150,6 +151,14 @@ fn public_routes() -> Router<PgPool> {
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
         .route("/auth/logout", post(logout))
+}
+
+fn auth_optional_routes(pool: PgPool) -> Router<PgPool> {
+    Router::new()
+        .route("/albums/{album_id}", get(get_album_details_handler))
+        .route_layer(from_extractor_with_state::<OptionalUser, PgPool>(
+            pool,
+        ))
 }
 
 fn protected_routes(pool: PgPool) -> Router<PgPool> {
@@ -177,10 +186,7 @@ fn album_routes() -> Router<PgPool> {
             "/albums",
             post(create_album_handler).get(get_user_albums_handler),
         )
-        .route(
-            "/albums/{album_id}",
-            get(get_album_details_handler).put(update_album_handler),
-        )
+        .route("/albums/{album_id}", put(update_album_handler))
         .route("/albums/{album_id}/media", post(add_media_to_album_handler))
         .route(
             "/albums/{album_id}/media/{media_item_id}",

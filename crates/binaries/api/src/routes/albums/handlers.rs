@@ -1,4 +1,5 @@
 use crate::auth::db_model::User;
+use crate::auth::middleware::OptionalUser;
 use crate::routes::albums::db_model::{Album, AlbumCollaborator};
 use crate::routes::albums::error::AlbumsError;
 use crate::routes::albums::interfaces::{
@@ -31,7 +32,13 @@ pub async fn create_album_handler(
     Extension(user): Extension<User>,
     Json(payload): Json<CreateAlbumRequest>,
 ) -> Result<(StatusCode, Json<Album>), AlbumsError> {
-    let album = service::create_album(&pool, user.id, &payload.name, payload.description.as_deref()).await?;
+    let album = service::create_album(
+        &pool,
+        user.id,
+        &payload.name,
+        payload.description.as_deref(),
+    )
+    .await?;
     Ok((StatusCode::CREATED, Json(album)))
 }
 
@@ -75,11 +82,11 @@ pub async fn get_user_albums_handler(
 )]
 pub async fn get_album_details_handler(
     State(pool): State<PgPool>,
-    Extension(user): Extension<User>,
+    Extension(user): Extension<OptionalUser>,
     Path(album_id): Path<String>,
 ) -> Result<Json<AlbumDetailsResponse>, AlbumsError> {
     let album_uuid = Uuid::parse_str(&album_id)?;
-    let details = service::get_album_details(&pool, album_uuid, user.id).await?;
+    let details = service::get_album_details(&pool, album_uuid, user.0.map(|u| u.id)).await?;
     Ok(Json(details))
 }
 
@@ -108,7 +115,14 @@ pub async fn update_album_handler(
     Json(payload): Json<UpdateAlbumRequest>,
 ) -> Result<Json<Album>, AlbumsError> {
     let album_uuid = Uuid::parse_str(&album_id)?;
-    let album = service::update_album(&pool, album_uuid, user.id, payload.name, payload.description).await?;
+    let album = service::update_album(
+        &pool,
+        album_uuid,
+        user.id,
+        payload.name,
+        payload.description,
+    )
+    .await?;
     Ok(Json(album))
 }
 
@@ -194,7 +208,14 @@ pub async fn add_collaborator_handler(
     Json(payload): Json<AddCollaboratorRequest>,
 ) -> Result<Json<AlbumCollaborator>, AlbumsError> {
     let album_uuid = Uuid::parse_str(&album_id)?;
-    let collaborator = service::add_collaborator(&pool, album_uuid, &payload.user_email, payload.role, user.id).await?;
+    let collaborator = service::add_collaborator(
+        &pool,
+        album_uuid,
+        &payload.user_email,
+        payload.role,
+        user.id,
+    )
+    .await?;
     Ok(Json(collaborator))
 }
 
