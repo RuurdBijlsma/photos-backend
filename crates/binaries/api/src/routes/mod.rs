@@ -1,5 +1,6 @@
 // crates/api/src/routes/mod.rs
 
+pub mod albums;
 pub mod auth;
 pub mod download;
 pub mod photos;
@@ -7,11 +8,19 @@ pub mod root;
 pub mod scalar_config;
 pub mod setup;
 
+use crate::albums::handlers::{
+    add_collaborator_handler, add_media_to_album_handler, create_album_handler,
+    get_album_details_handler, get_user_albums_handler, remove_collaborator_handler,
+    remove_media_from_album_handler, update_album_handler,
+};
 use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::require_role;
 use crate::download::handlers::download_full_file;
-use crate::photos::handlers::{get_color_theme_handler, get_full_item_handler, get_photos_by_month_handler, get_random_photo, get_timeline_ids_handler, get_timeline_ratios_handler};
+use crate::photos::handlers::{
+    get_color_theme_handler, get_full_item_handler, get_photos_by_month_handler, get_random_photo,
+    get_timeline_ids_handler, get_timeline_ratios_handler,
+};
 use crate::root::handlers::root;
 use crate::scalar_config::get_custom_html;
 use crate::setup::handlers::{
@@ -19,13 +28,14 @@ use crate::setup::handlers::{
     post_start_processing,
 };
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
+use axum::routing::delete;
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
 use common_photos::UserRole;
 use sqlx::PgPool;
-use tower_http::{LatencyUnit, trace::TraceLayer};
+use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
@@ -49,8 +59,17 @@ use utoipa_scalar::{Scalar, Servable};
         setup::handlers::make_folder,
         // Download handlers
         download::handlers::download_full_file,
-        // --- Add new photo handlers ---
+        // --- Photos handlers ---
         photos::handlers::get_random_photo,
+        // --- Album handlers ---
+        albums::handlers::create_album_handler,
+        albums::handlers::get_user_albums_handler,
+        albums::handlers::get_album_details_handler,
+        albums::handlers::update_album_handler,
+        albums::handlers::add_media_to_album_handler,
+        albums::handlers::remove_media_from_album_handler,
+        albums::handlers::add_collaborator_handler,
+        albums::handlers::remove_collaborator_handler,
     ),
     components(
         schemas(
@@ -70,12 +89,24 @@ use utoipa_scalar::{Scalar, Servable};
             setup::interfaces::DiskResponse,
             // Download schemas
             download::interfaces::DownloadMediaQuery,
+            // --- Add Album schemas ---
+            albums::db_model::Album,
+            albums::db_model::AlbumRole,
+            albums::db_model::AlbumCollaborator,
+            albums::interfaces::CreateAlbumRequest,
+            albums::interfaces::UpdateAlbumRequest,
+            albums::interfaces::AddMediaToAlbumRequest,
+            albums::interfaces::AddCollaboratorRequest,
+            albums::interfaces::AlbumDetailsResponse,
+            albums::interfaces::AlbumMediaItemSummary,
+            albums::interfaces::CollaboratorSummary,
         ),
     ),
     modifiers(&SecurityAddon),
     tags(
         (name = "Ruurd Photos", description = "Ruurd Photos' API"),
-        (name = "Photos", description = "Endpoints for browsing and managing media items")
+        (name = "Photos", description = "Endpoints for browsing and managing media items"),
+        (name = "Albums", description = "Endpoints for managing photo albums and collaboration")
     )
 )]
 struct ApiDoc;
@@ -125,13 +156,44 @@ fn protected_routes(pool: PgPool) -> Router<PgPool> {
     Router::new()
         .route("/auth/me", get(get_me))
         .route("/download/full-file", get(download_full_file))
+        .merge(photos_routes())
+        .merge(album_routes())
+        .route_layer(from_extractor_with_state::<User, PgPool>(pool))
+}
+
+fn photos_routes() -> Router<PgPool> {
+    Router::new()
         .route("/photos/random", get(get_random_photo))
         .route("/photos/theme", get(get_color_theme_handler))
         .route("/photos/timeline/ratios", get(get_timeline_ratios_handler))
         .route("/photos/timeline/ids", get(get_timeline_ids_handler))
         .route("/photos/by-month", get(get_photos_by_month_handler))
         .route("/photos/item", get(get_full_item_handler))
-        .route_layer(from_extractor_with_state::<User, PgPool>(pool))
+}
+
+fn album_routes() -> Router<PgPool> {
+    Router::new()
+        .route(
+            "/albums",
+            post(create_album_handler).get(get_user_albums_handler),
+        )
+        .route(
+            "/albums/{album_id}",
+            get(get_album_details_handler).put(update_album_handler),
+        )
+        .route("/albums/{album_id}/media", post(add_media_to_album_handler))
+        .route(
+            "/albums/{album_id}/media/{media_item_id}",
+            delete(remove_media_from_album_handler),
+        )
+        .route(
+            "/albums/{album_id}/collaborators",
+            post(add_collaborator_handler),
+        )
+        .route(
+            "/albums/{album_id}/collaborators/{collaborator_id}",
+            delete(remove_collaborator_handler),
+        )
 }
 
 fn admin_routes(pool: PgPool) -> Router<PgPool> {

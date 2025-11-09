@@ -192,6 +192,7 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "utoipa-scalar",
+ "uuid",
  "walkdir",
 ]
 
@@ -5542,6 +5543,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -5622,6 +5624,7 @@ dependencies = [
  "stringprep",
  "thiserror 2.0.17",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -5660,6 +5663,7 @@ dependencies = [
  "stringprep",
  "thiserror 2.0.17",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -5686,6 +5690,7 @@ dependencies = [
  "thiserror 2.0.17",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
