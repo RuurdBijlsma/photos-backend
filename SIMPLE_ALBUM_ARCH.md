@@ -25,7 +25,7 @@
 #### S2S:
 
 - `POST` `/s2s/albums/invite-summary`, body: `{token: str}`
-- `POST` `/s2s/albums/files/{media_item_id}`, body: `{token: str}`
+- `GET` `/s2s/albums/files/{media_item_id}`, body: `{token: str}`
 
 ### Invite link generation [flow 3.]
 
@@ -64,12 +64,12 @@ Bob pastes Alice's invite string into his UI.
 
 #### Worker handler for `ImportAlbumItem`
 
-* Bob's server calls Alice's server at `/s2s/albums/files/{media_item_id}` {todo: where to put the token? can post
-  request respond with bytes?}
+* Bob's server calls Alice's server at `/s2s/albums/files/{media_item_id}`, put inv token in Authorization header.
+  `Authorization: Bearer inv-{the_rest_of_the_token}`
     * Alice's server validates the token, checks that it matches the album, and then streams the raw file bytes in
-      the response. {todo: Filename in a header?}
+      the response. Header: `Content-Disposition: attachment; filename="IMG_1234.JPG"`
 * Bob's server stores the received files in the media dir in a folder: media_dir()/{bob_folder}/{album_name}/{file}, if
-  the `album_name` folder exists, append a number
+  the `album_name` folder exists, append a number. The filename is gotten from the `Content-Disposition` header.
 * The watcher should automatically start processing the photos, but to be sure might as well enqueue the ingest job
   for them. [aside: i have to add a column to media_item: remote_owner: nullable text]
 * A `pending_album_media_items` table will be needed to link the relative_paths that aren't ingested yet to the album
