@@ -100,6 +100,7 @@
 * split routes/photos into timeline related and media item related
 * websocket om nieuwe foto events te sturen
 * improve OCR
+* Change album id from uuid to niceid (no longer univerally unique requirement)
 
 # Features
 
