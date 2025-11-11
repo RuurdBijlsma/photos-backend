@@ -1,11 +1,16 @@
 use super::db_model::{Album, AlbumCollaborator, AlbumRole};
 use super::error::AlbumsError;
 use super::interfaces::{AlbumDetailsResponse, AlbumMediaItemSummary, CollaboratorSummary};
+use crate::albums::interfaces::{AcceptInviteRequest};
 use crate::routes::auth::db_model::User;
 use crate::routes::UserRole;
+use chrono::{Duration, Utc};
+use common_photos::{enqueue_job, nice_id, settings, InviteSummaryResponse, JobType};
+use rand::distr::{Alphanumeric, SampleString};
+use serde_json::json;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
-use common_photos::{nice_id, settings};
+use url::Url;
 // --- Helper Functions for Permission Checks ---
 
 /// Checks if a user has a specific role in an album.
@@ -422,4 +427,130 @@ pub async fn update_album(
     .await?;
 
     Ok(updated_album)
+}
+
+#[instrument(skip(pool))]
+pub async fn generate_invite(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+    user_name: &str,
+) -> Result<String, AlbumsError> {
+    // Permission Check: Only the owner can generate an invite.
+    if !is_album_owner(pool, user_id, album_id).await? {
+        return Err(AlbumsError::Unauthorized(
+            "Only the album owner can generate an invitation.".to_string(),
+        ));
+    }
+
+    let settings = settings();
+    let secure_token = Alphanumeric.sample_string(&mut rand::rng(), 32);
+    let expires_at = Utc::now() + Duration::minutes(settings.api.album_invitation_expiry_minutes);
+
+    sqlx::query!(
+        r#"
+        INSERT INTO album_invites (album_id, token, expires_at)
+        VALUES ($1, $2, $3)
+        "#,
+        album_id,
+        secure_token,
+        expires_at
+    )
+    .execute(pool)
+    .await?;
+
+    // Format: inv-{random_string}-{user.name}@{settings.public_url}
+    let full_token = format!(
+        "inv-{}-{}-{}",
+        secure_token,
+        user_name.replace(' ', "_"), // Sanitize username
+        settings.api.public_url
+    );
+
+    Ok(full_token)
+}
+
+/// Parses an invite token to extract the remote server URL and the full token string.
+fn parse_invite_token(token: &str) -> Result<(Url, &str), AlbumsError> {
+    let parts: Vec<&str> = token.split('-').collect();
+    if parts.len() < 3 || parts[0] != "inv" {
+        return Err(AlbumsError::InvalidInviteToken(
+            "Token format is incorrect.".to_string(),
+        ));
+    }
+
+    // The host is the last part of the token, e.g., 'alice@photos.alice.com' or 'photos.alice.com'
+    // We just need the host part.
+    let host_part = parts.last().unwrap();
+    let host = host_part.split('@').last().unwrap();
+
+    let remote_url = Url::parse(&format!("http://{host}"))
+        .or_else(|_| Url::parse(&format!("https://{host}")))
+        .map_err(|_| AlbumsError::InvalidInviteToken(format!("Invalid host: {host}")))?;
+
+    Ok((remote_url, token))
+}
+
+/// Contacts the remote server to get a summary of an album invitation.
+#[instrument(skip(pool))]
+pub async fn check_invite(
+    pool: &PgPool,
+    token: &str,
+) -> Result<InviteSummaryResponse, AlbumsError> {
+    let (mut remote_url, full_token) = parse_invite_token(token)?;
+    remote_url.set_path("/s2s/albums/invite-summary");
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(remote_url.clone())
+        .bearer_auth(full_token)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await.unwrap_or_default();
+        return Err(AlbumsError::RemoteServerError(format!(
+            "Remote server {} returned an error: {}",
+            remote_url, error_text
+        )));
+    }
+
+    let summary: InviteSummaryResponse = response.json().await?;
+    Ok(summary)
+}
+
+/// Accepts an album invitation and enqueues a background job to start the import.
+#[instrument(skip(pool))]
+pub async fn accept_invite(
+    pool: &PgPool,
+    user_id: i32,
+    payload: &AcceptInviteRequest,
+) -> Result<(), AlbumsError> {
+    // We only need to parse the token to get the remote owner's identity.
+    let parts: Vec<&str> = payload.token.split('-').collect();
+    if parts.len() < 3 || parts[0] != "inv" {
+        return Err(AlbumsError::InvalidInviteToken(
+            "Token format is incorrect.".to_string(),
+        ));
+    }
+    // The remote identity is the last two parts, e.g., 'john_doe-photos.example.com'
+    let remote_owner_identity = format!("{}@{}", parts[parts.len() - 2], parts[parts.len() - 1]);
+
+    let job_payload = json!({
+        "token": payload.token,
+        "album_name": payload.name,
+        "album_description": payload.description,
+        "remote_owner_identity": remote_owner_identity,
+    });
+
+    enqueue_job(
+        pool,
+        JobType::ImportAlbum,
+        None,
+        Some(user_id),
+        Some(job_payload),
+    )
+    .await?;
+
+    Ok(())
 }

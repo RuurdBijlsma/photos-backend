@@ -68,3 +68,29 @@ CREATE TABLE album_collaborator
             (user_id IS NULL AND remote_user_id IS NOT NULL)
             )
 );
+
+-- Table to store secure, single-use invitation tokens for sharing albums.
+CREATE TABLE album_invites
+(
+    id         BIGSERIAL PRIMARY KEY,
+    album_id   VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
+    token      TEXT        NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+-- Index for quickly finding an invitation by its token.
+CREATE INDEX idx_album_invites_token ON album_invites (token);
+
+
+-- A table to link imported media to a target album and remote owner before ingestion is complete.
+CREATE TABLE pending_album_media_items
+(
+    relative_path        TEXT PRIMARY KEY,
+    album_id             VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
+    -- The string identity of the original owner (e.g., 'alice@photos.alice.com').
+    remote_user_identity TEXT        NOT NULL
+);
+
+-- Index for finding all pending items for a specific album import.
+CREATE INDEX idx_pending_album_media_items_target_album_id ON pending_album_media_items (album_id);

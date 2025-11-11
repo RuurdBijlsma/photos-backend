@@ -78,7 +78,7 @@ pub async fn sync_user_files_to_db(
         }
     }
     for rel_path in to_remove {
-        if let Err(e) = enqueue_file_job(pool, JobType::Remove, &rel_path, user_id).await {
+        if let Err(e) = enqueue_file_job(pool, JobType::Remove, &rel_path, user_id, None).await {
             error!("Error enqueueing file remove: {:?}", e.to_string());
         }
     }

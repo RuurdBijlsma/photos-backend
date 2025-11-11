@@ -1,9 +1,11 @@
+use serde_json::Value;
 use sqlx::{FromRow, Type};
 
 #[derive(FromRow, Debug)]
 #[allow(clippy::struct_field_names)]
 pub struct Job {
     pub id: i64,
+    pub payload: Option<Value>,
     pub relative_path: Option<String>,
     pub user_id: Option<i32>,
     pub job_type: JobType,
@@ -14,7 +16,7 @@ pub struct Job {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Type)]
-#[sqlx(type_name = "job_type", rename_all = "lowercase")]
+#[sqlx(type_name = "job_type", rename_all = "snake_case")]
 pub enum JobType {
     Ingest,
     Remove,
@@ -23,6 +25,8 @@ pub enum JobType {
     CleanDB,
     ClusterFaces,
     ClusterPhotos,
+    ImportAlbum,
+    ImportAlbumItem,
 }
 
 impl JobType {
@@ -48,12 +52,14 @@ impl JobType {
             Self::CleanDB => 20,
             Self::ClusterFaces => 30,
             Self::ClusterPhotos => 35,
+            Self::ImportAlbum => 25,
+            Self::ImportAlbumItem => 24,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Type)]
-#[sqlx(type_name = "job_status", rename_all = "lowercase")]
+#[sqlx(type_name = "job_status", rename_all = "snake_case")]
 pub enum JobStatus {
     Queued,
     Running,

@@ -82,25 +82,41 @@
     * alertmanager
     * loki? denk t niet
 * api performance
-  * use proper index on get-month endpoint, if not already at max perf level.
-  * at some point copy paste all sql queries into gemini en ask for proper indices
-  * timeline_summary.sql en ratios_summary.sql migrations deleten, en weer maken met goeie nieuwe columns (maybe its already pretty good).
-  * Summary table voor ratios
-  * performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel delay
-    toevoegt)
+    * use proper index on get-month endpoint, if not already at max perf level.
+    * at some point copy paste all sql queries into gemini en ask for proper indices
+    * timeline_summary.sql en ratios_summary.sql migrations deleten, en weer maken met goeie nieuwe columns (maybe its
+      already pretty good).
+    * Summary table voor ratios
+    * performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel
+      delay
+      toevoegt)
 * make sure cache control on thumbnails are immutable/max age.
 * fun "albums" notifications & in UI frontpage
-  * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
-  * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at the lake", "Cat pics")
-  * group by  (only changes with significantly more photos)
-    * caption columns ("setting", "main subject", "is_outside & sunset & ...")
-    * group by country?
-    * group by animal type?
-  * make sure each "fun album" is shown as notification only once. In UI it can be more often?
+    * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
+    * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at
+      the lake", "Cat pics")
+    * group by  (only changes with significantly more photos)
+        * caption columns ("setting", "main subject", "is_outside & sunset & ...")
+        * group by country?
+        * group by animal type?
+    * make sure each "fun album" is shown as notification only once. In UI it can be more often?
 * split routes/photos into timeline related and media item related
 * websocket om nieuwe foto events te sturen
 * improve OCR
 * Change album id from uuid to niceid (no longer univerally unique requirement)
+* clean up error and warn and info tracing logs
+    * error for fatal boys
+    * warn for user might be impacted
+    * info for info
+* make invite check work with "localhost:9475" insted of "http://localhost:9475" and make it work with https. (it
+  currently assumes http).
+* repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
+  * parse url stuff
+  * parse token maybe?
+  * get s2s invite summary
+  * make s2s client in common code somewhere, to call s2s endpoints.
+  * share reqwest client via application state and worker context so it's not made every time.
+  * Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
 
 # Features
 
@@ -110,11 +126,11 @@
 * photo trash bin?
 * facial recognition
 * upload photos
-  * robust! stable!
+    * robust! stable!
 * search photos
-  * hybrid search
+    * hybrid search
 * photo map
-  * time range restriction
+    * time range restriction
 * explore photos
     * cluster by photo embeddings
     * sort by all kinds of things (exposure, iso, hue, saturation, gps lat, lon, temperature, altitude, windyness (

@@ -1,0 +1,61 @@
+use crate::routes::s2s::error::S2SError;
+use crate::routes::s2s::service;
+use axum::extract::{Path, State};
+use axum::http::header;
+use axum::response::IntoResponse;
+use axum::Json;
+use axum_extra::headers::authorization::Bearer;
+use axum_extra::headers::Authorization;
+use axum_extra::TypedHeader;
+use sqlx::PgPool;
+use tokio_util::io::ReaderStream;
+
+pub async fn invite_summary_handler(
+    State(pool): State<PgPool>,
+    TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
+) -> Result<impl IntoResponse, S2SError> {
+    let token = authorization.token();
+    let summary = service::get_invite_summary(&pool, token).await?;
+    Ok(Json(summary))
+}
+
+pub async fn download_file_handler(
+    State(pool): State<PgPool>,
+    Path(media_item_id): Path<String>,
+    TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
+) -> Result<impl IntoResponse, S2SError> {
+    // The full token is passed in the bearer token
+    let token = authorization.token();
+    service::validate_token_for_media_item(&pool, token, &media_item_id).await?;
+
+    let file_path = service::get_media_item_path(&pool, &media_item_id).await?;
+    let file_name = file_path
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+
+    // Guess the MIME type from the file path.
+    let mime_type = mime_guess::from_path(&file_path)
+        .first_or_octet_stream()
+        .as_ref()
+        .to_string();
+
+    let file = tokio::fs::File::open(&file_path)
+        .await
+        .map_err(|_| S2SError::NotFound(format!("File not found on disk for item {}", &media_item_id)))?;
+
+    let stream = ReaderStream::new(file);
+    let body = axum::body::Body::from_stream(stream);
+
+    // Use the dynamically determined MIME type in the response header.
+    let headers = [
+        (header::CONTENT_TYPE, mime_type),
+        (
+            header::CONTENT_DISPOSITION,
+            format!("attachment; filename=\"{}\"", file_name),
+        ),
+    ];
+
+    Ok((headers, body))
+}

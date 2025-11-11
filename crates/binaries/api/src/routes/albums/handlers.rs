@@ -11,6 +11,8 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use sqlx::PgPool;
+use common_photos::InviteSummaryResponse;
+use crate::albums::interfaces::{AcceptInviteRequest, CheckInviteRequest};
 
 /// Create a new album.
 ///
@@ -119,7 +121,7 @@ pub async fn update_album_handler(
         user.id,
         payload.name,
         payload.description,
-        payload.is_public
+        payload.is_public,
     )
     .await?;
     Ok(Json(album))
@@ -204,14 +206,9 @@ pub async fn add_collaborator_handler(
     Path(album_id): Path<String>,
     Json(payload): Json<AddCollaboratorRequest>,
 ) -> Result<Json<AlbumCollaborator>, AlbumsError> {
-    let collaborator = service::add_collaborator(
-        &pool,
-        &album_id,
-        &payload.user_email,
-        payload.role,
-        user.id,
-    )
-    .await?;
+    let collaborator =
+        service::add_collaborator(&pool, &album_id, &payload.user_email, payload.role, user.id)
+            .await?;
     Ok(Json(collaborator))
 }
 
@@ -240,4 +237,76 @@ pub async fn remove_collaborator_handler(
 ) -> Result<StatusCode, AlbumsError> {
     service::remove_collaborator(&pool, &album_id, collaborator_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Generate a cross-server invitation link for an album.
+///
+/// The inviting user must be the album owner. The generated token has a configurable expiry time.
+#[utoipa::path(
+    get,
+    path = "/albums/{album_id}/generate-invite",
+    tag = "Albums",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album to share.")
+    ),
+    responses(
+        (status = 200, description = "Invitation token generated successfully.", body = String),
+        (status = 404, description = "Album not found."),
+        (status = 401, description = "User is not the album owner."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn generate_invite_handler(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+    Path(album_id): Path<String>,
+) -> Result<Json<String>, AlbumsError> {
+    let token = service::generate_invite(&pool, &album_id, user.id, &user.name).await?;
+    Ok(Json(token))
+}
+
+#[utoipa::path(
+    post,
+    path = "/albums/invite/check",
+    tag = "Albums",
+    request_body = CheckInviteRequest,
+    responses(
+        (status = 200, description = "Invitation summary retrieved successfully.", body = InviteSummaryResponse),
+        (status = 400, description = "The invitation token is malformed."),
+        (status = 502, description = "The remote server could not be reached or returned an error."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn check_invite_handler(
+    State(pool): State<PgPool>,
+    Json(payload): Json<CheckInviteRequest>,
+) -> Result<Json<InviteSummaryResponse>, AlbumsError> {
+    let summary = service::check_invite(&pool, &payload.token).await?;
+    Ok(Json(summary))
+}
+
+/// Accept an album invitation.
+///
+/// This will enqueue a background job to begin the process of importing the album
+/// from the remote server.
+#[utoipa::path(
+    post,
+    path = "/albums/invite/accept",
+    tag = "Albums",
+    request_body = AcceptInviteRequest,
+    responses(
+        (status = 202, description = "Album import process has been started."),
+        (status = 400, description = "The invitation token is malformed."),
+        (status = 500, description = "A database error occurred while creating the job."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn accept_invite_handler(
+    State(pool): State<PgPool>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<AcceptInviteRequest>,
+) -> Result<StatusCode, AlbumsError> {
+    service::accept_invite(&pool, user.id, &payload).await?;
+    Ok(StatusCode::ACCEPTED)
 }

@@ -36,7 +36,7 @@ pub async fn claim_next_job(context: &WorkerContext) -> Result<Option<Job>> {
             last_heartbeat = now(),
             attempts = CASE WHEN status = 'running' THEN attempts + 1 ELSE attempts END
         WHERE id = (SELECT id FROM candidate)
-        RETURNING id, relative_path, job_type AS "job_type!: JobType", priority, user_id, attempts, max_attempts, dependency_attempts
+        RETURNING id, payload, relative_path, job_type AS "job_type!: JobType", priority, user_id, attempts, max_attempts, dependency_attempts
         "#,
         context.worker_id,
         heartbeat_timeout_seconds,

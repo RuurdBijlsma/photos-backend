@@ -33,7 +33,9 @@ tokio-util = { version = "0.7.16", features = ["codec"] }
 http = "1.3.1"
 prost = "0.13.5"
 bytes = "1.10.1"
-axum-extra = {version =  "0.10.3" , features = ["protobuf"]}
+axum-extra = { version = "0.10.3", features = ["protobuf", "typed-header"] }
+reqwest = { version = "0.12.24", features = ["json"] }
+url = "2.5.7"
 uuid = { version = "1.18.1", features = ["v4"] }
 async-trait = "0.1.89"
 

@@ -50,6 +50,8 @@ pub struct ApiSettings {
     pub host: String,
     pub port: u32,
     pub allowed_origins: Vec<String>,
+    pub album_invitation_expiry_minutes: i64,
+    pub public_url: String,
 }
 
 /// Defines paths for media and thumbnail storage.

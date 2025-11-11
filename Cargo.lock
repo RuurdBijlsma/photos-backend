@@ -181,6 +181,7 @@ dependencies = [
  "prost 0.13.5",
  "prost-build 0.13.5",
  "rand 0.10.0-rc.1",
+ "reqwest",
  "serde",
  "serde_json",
  "sqlx",
@@ -191,6 +192,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "url",
  "utoipa",
  "utoipa-scalar",
  "uuid",
@@ -468,6 +470,7 @@ dependencies = [
  "axum-core",
  "bytes",
  "futures-util",
+ "headers",
  "http",
  "http-body",
  "http-body-util",
@@ -940,6 +943,7 @@ dependencies = [
  "dotenv",
  "rand 0.10.0-rc.1",
  "serde",
+ "serde_json",
  "sqlx",
  "tracing",
  "utoipa",
@@ -2146,6 +2150,30 @@ checksum = "95bd4d39a1e96420f31b20ac30d5052ba76d9b2bde2987beade48445073a063c"
 dependencies = [
  "kdtree",
  "num-traits",
+]
+
+[[package]]
+name = "headers"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3314d5adb5d94bcdf56771f2e50dbbc80bb4bdf88967526706205ac9eff24eb"
+dependencies = [
+ "base64 0.22.1",
+ "bytes",
+ "headers-core",
+ "http",
+ "httpdate",
+ "mime",
+ "sha1",
+]
+
+[[package]]
+name = "headers-core"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54b4a22553d4242c49fddb9ba998a99962b5cc6f22cb5a3482bec22522403ce4"
+dependencies = [
+ "http",
 ]
 
 [[package]]
@@ -5162,6 +5190,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sanitize-filename"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc984f4f9ceb736a7bb755c3e3bd17dc56370af2600c9780dcc48c66453da34d"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7227,6 +7264,7 @@ dependencies = [
  "clap",
  "color-eyre",
  "common_photos",
+ "futures-util",
  "generate_thumbnails",
  "hdbscan",
  "image",
@@ -7235,11 +7273,15 @@ dependencies = [
  "ml_analysis",
  "pgvector",
  "rand 0.10.0-rc.1",
+ "reqwest",
+ "sanitize-filename",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "url",
  "walkdir",
 ]
 

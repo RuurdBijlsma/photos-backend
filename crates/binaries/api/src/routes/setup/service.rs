@@ -8,8 +8,8 @@ use crate::setup::error::SetupError;
 use crate::setup::helpers::{check_drive_info, list_folders};
 use crate::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
 use common_photos::{
-    JobType, enqueue_system_job, is_media_file, is_photo_file, media_dir, relative_path_canon,
-    settings, thumbnails_dir, to_posix_string,
+    enqueue_job, is_media_file, is_photo_file, media_dir, relative_path_canon,
+    settings, thumbnails_dir, to_posix_string, JobType,
 };
 use sqlx::PgPool;
 use tokio::fs as tokio_fs;
@@ -247,7 +247,7 @@ pub async fn start_processing(
     .execute(pool)
     .await?;
 
-    enqueue_system_job(pool, JobType::Scan).await?;
+    enqueue_job(pool, JobType::Scan, None, Some(user.id), None).await?;
 
     Ok(())
 }

@@ -10,6 +10,8 @@ pub mod cluster_photos;
 pub mod ingest;
 pub mod remove;
 pub mod scan;
+pub mod import_album;
+pub mod import_album_item;
 
 pub mod common;
 pub mod db;
@@ -38,6 +40,8 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::CleanDB => clean_db::handle(context, job).await,
         JobType::ClusterFaces => cluster_faces::handle(context, job).await,
         JobType::ClusterPhotos => cluster_photos::handle(context, job).await,
+        JobType::ImportAlbum => import_album::handle(context, job).await,
+        JobType::ImportAlbumItem => import_album_item::handle(context, job).await,
     };
 
     heartbeat_handle.abort();

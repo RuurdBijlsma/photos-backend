@@ -7,12 +7,9 @@ pub mod photos;
 pub mod root;
 pub mod scalar_config;
 pub mod setup;
+pub mod s2s;
 
-use crate::albums::handlers::{
-    add_collaborator_handler, add_media_to_album_handler, create_album_handler,
-    get_album_details_handler, get_user_albums_handler, remove_collaborator_handler,
-    remove_media_from_album_handler, update_album_handler,
-};
+use crate::albums::handlers::{accept_invite_handler, add_collaborator_handler, add_media_to_album_handler, check_invite_handler, create_album_handler, generate_invite_handler, get_album_details_handler, get_user_albums_handler, remove_collaborator_handler, remove_media_from_album_handler, update_album_handler};
 use crate::auth::db_model::User;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use crate::auth::middleware::{require_role, OptionalUser};
@@ -39,6 +36,7 @@ use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_scalar::{Scalar, Servable};
+use crate::s2s::handlers::{download_file_handler, invite_summary_handler};
 
 // --- API Documentation ---
 #[derive(OpenApi)]
@@ -131,6 +129,7 @@ pub fn create_router(pool: PgPool) -> Router {
     Router::new()
         .merge(Scalar::with_url("/docs", openapi.clone()).custom_html(get_custom_html(&openapi)))
         .merge(public_routes())
+        .merge(s2s_routes())
         .merge(protected_routes(pool.clone()))
         .merge(auth_optional_routes(pool.clone()))
         .merge(admin_routes(pool.clone()))
@@ -142,6 +141,12 @@ pub fn create_router(pool: PgPool) -> Router {
                     .latency_unit(LatencyUnit::Millis),
             ),
         )
+}
+
+fn s2s_routes() -> Router<PgPool> {
+    Router::new()
+        .route("/s2s/albums/invite-summary", get(invite_summary_handler))
+        .route("/s2s/albums/files/{media_item_id}", get(download_file_handler))
 }
 
 fn public_routes() -> Router<PgPool> {
@@ -200,6 +205,12 @@ fn album_routes() -> Router<PgPool> {
             "/albums/{album_id}/collaborators/{collaborator_id}",
             delete(remove_collaborator_handler),
         )
+        .route(
+            "/albums/{album_id}/generate-invite",
+            get(generate_invite_handler),
+        )
+        .route("/albums/invite/check", post(check_invite_handler))
+        .route("/albums/invite/accept", post(accept_invite_handler))
 }
 
 fn admin_routes(pool: PgPool) -> Router<PgPool> {

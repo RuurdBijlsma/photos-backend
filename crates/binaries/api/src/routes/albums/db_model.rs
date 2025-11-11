@@ -49,3 +49,14 @@ pub struct AlbumCollaborator {
     pub role: AlbumRole,
     pub added_at: DateTime<Utc>,
 }
+
+/// Represents a secure, single-use invitation token for sharing an album.
+#[derive(Debug, Serialize, FromRow, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AlbumInvite {
+    pub id: i64,
+    pub album_id: String,
+    pub token: String,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+}

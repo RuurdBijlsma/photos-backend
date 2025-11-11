@@ -1,8 +1,37 @@
 use crate::insert_query;
 use chrono::{TimeZone, Utc};
-use common_photos::fallback_timezone;
+use common_photos::{fallback_timezone, PendingAlbumMediaItem};
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;
+
+async fn get_or_create_remote_user(
+    tx: &mut PgTransaction<'_>,
+    local_user_id: i32,
+    remote_identity: &str,
+) -> Result<i32, sqlx::Error> {
+    let remote_user_id = sqlx::query_scalar!(
+        "SELECT id FROM remote_user WHERE identity = $1 AND user_id = $2",
+        remote_identity,
+        local_user_id
+    )
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    if let Some(id) = remote_user_id {
+        return Ok(id);
+    }
+
+    // Not found, so create it
+    let new_id = sqlx::query_scalar!(
+        "INSERT INTO remote_user (identity, user_id) VALUES ($1, $2) RETURNING id",
+        remote_identity,
+        local_user_id
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+
+    Ok(new_id)
+}
 
 /// Retrieves an existing location's ID or creates a new one if it doesn't exist.
 ///
@@ -73,6 +102,25 @@ pub async fn store_media_item(
     .execute(&mut **tx)
     .await?;
 
+    let pending_info: Option<PendingAlbumMediaItem> = sqlx::query_as!(
+        PendingAlbumMediaItem,
+        r#"
+        DELETE FROM pending_album_media_items
+        WHERE relative_path = $1
+        RETURNING album_id, remote_user_identity, relative_path
+        "#,
+        relative_path
+    )
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    let mut remote_user_id: Option<i32> = None;
+    if let Some(info) = &pending_info {
+        // If a pending item was found, get or create the remote_user
+        let id = get_or_create_remote_user(tx, user_id, &info.remote_user_identity).await?;
+        remote_user_id = Some(id);
+    }
+
     let sort_timestamp = data.time_info.datetime_utc.unwrap_or_else(|| {
         fallback_timezone().as_ref().map_or_else(
             || data.time_info.datetime_local.and_utc(),
@@ -86,6 +134,7 @@ pub async fn store_media_item(
 
     insert_query!(tx, "media_item", {
         id: &item_id,
+        remote_user_id: remote_user_id,
         user_id: user_id,
         hash: &data.hash,
         relative_path: relative_path,

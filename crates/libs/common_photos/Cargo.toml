@@ -14,3 +14,4 @@ config = "0.15.18"
 dotenv = "0.15.0"
 utoipa = { version = "5", features = ["axum_extras", "chrono"] }
 chrono-tz = "0.10.4"
+serde_json = "1.0.145"

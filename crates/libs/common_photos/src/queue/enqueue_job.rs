@@ -1,5 +1,6 @@
-use crate::{JobType, is_video_file, media_dir};
+use crate::{is_video_file, media_dir, JobType};
 use color_eyre::eyre::Result;
+use serde_json::Value;
 use sqlx::{PgConnection, PgPool, PgTransaction};
 use tracing::info;
 
@@ -9,8 +10,8 @@ use tracing::info;
 ///
 /// Returns an error if any of the database operations fail.
 pub async fn enqueue_full_ingest(pool: &PgPool, relative_path: &str, user_id: i32) -> Result<()> {
-    enqueue_file_job(pool, JobType::Ingest, relative_path, user_id).await?;
-    enqueue_file_job(pool, JobType::Analysis, relative_path, user_id).await?;
+    enqueue_file_job(pool, JobType::Ingest, relative_path, user_id, None).await?;
+    enqueue_file_job(pool, JobType::Analysis, relative_path, user_id, None).await?;
     Ok(())
 }
 
@@ -29,19 +30,6 @@ async fn prepare_remove_job(tx: &mut PgTransaction<'_>, relative_path: &str) -> 
     Ok(())
 }
 
-/// Enqueues a system-level job that isn't associated with a specific file.
-///
-/// # Errors
-///
-/// Returns an error if the database transaction fails.
-pub async fn enqueue_system_job(pool: &PgPool, job_type: JobType) -> Result<()> {
-    let priority = job_type.get_priority(false);
-    let mut tx = pool.begin().await?;
-    base_enqueue(&mut tx, job_type, None, None, priority).await?;
-    tx.commit().await?;
-    Ok(())
-}
-
 /// Enqueues a job for a specific file, such as ingestion or removal.
 ///
 /// # Errors
@@ -52,6 +40,7 @@ pub async fn enqueue_file_job(
     job_type: JobType,
     relative_path: &str,
     user_id: i32,
+    payload: Option<Value>,
 ) -> Result<()> {
     let is_video = is_video_file(&media_dir().join(relative_path));
     let priority = job_type.get_priority(is_video);
@@ -60,16 +49,38 @@ pub async fn enqueue_file_job(
     if job_type == JobType::Remove {
         prepare_remove_job(&mut tx, relative_path).await?;
     }
-    base_enqueue(
+    base_enqueue_job(
         &mut tx,
         job_type,
         Some(relative_path),
         Some(user_id),
         priority,
+        payload,
     )
     .await?;
     tx.commit().await?;
     Ok(())
+}
+
+pub async fn enqueue_job(
+    pool: &PgPool,
+    job_type: JobType,
+    relative_path: Option<&str>,
+    user_id: Option<i32>,
+    payload: Option<Value>,
+) -> Result<bool> {
+    let mut tx = pool.begin().await?;
+    let result = base_enqueue_job(
+        &mut tx,
+        job_type,
+        relative_path,
+        user_id,
+        job_type.get_priority(false),
+        payload,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(result)
 }
 
 /// Handles the core logic of inserting a new job into the database if a similar one isn't already active.
@@ -77,12 +88,13 @@ pub async fn enqueue_file_job(
 /// # Errors
 ///
 /// Returns an error if any of the database queries fail.
-async fn base_enqueue(
+async fn base_enqueue_job(
     tx: &mut PgConnection,
     job_type: JobType,
     relative_path: Option<&str>,
     user_id: Option<i32>,
     priority: i32,
+    payload: Option<Value>,
 ) -> Result<bool> {
     let job_exists = sqlx::query_scalar!(
         r#"
@@ -108,14 +120,15 @@ async fn base_enqueue(
 
     let result = sqlx::query!(
         r#"
-        INSERT INTO jobs (relative_path, job_type, priority, user_id)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO jobs (relative_path, job_type, priority, user_id, payload)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT DO NOTHING
         "#,
         relative_path,
         job_type as JobType,
         priority,
-        user_id
+        user_id,
+        payload,
     )
     .execute(&mut *tx)
     .await?;

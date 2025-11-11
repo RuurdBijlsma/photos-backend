@@ -37,7 +37,7 @@ async fn handle_remove_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::R
 
     let rel_path = relative_path_abs(file)?;
     if let Some(user) = user_from_relative_path(&rel_path, pool).await? {
-        enqueue_file_job(pool, JobType::Remove, &rel_path, user.id).await?;
+        enqueue_file_job(pool, JobType::Remove, &rel_path, user.id, None).await?;
     } else {
         alert!("[Create file event] Cannot find user from relative path.");
     }
