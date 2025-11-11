@@ -11,7 +11,6 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use sqlx::PgPool;
-use uuid::Uuid;
 
 /// Create a new album.
 ///
@@ -86,8 +85,7 @@ pub async fn get_album_details_handler(
     Extension(user): Extension<OptionalUser>,
     Path(album_id): Path<String>,
 ) -> Result<Json<AlbumDetailsResponse>, AlbumsError> {
-    let album_uuid = Uuid::parse_str(&album_id)?;
-    let details = service::get_album_details(&pool, album_uuid, user.0.map(|u| u.id)).await?;
+    let details = service::get_album_details(&pool, &album_id, user.0.map(|u| u.id)).await?;
     Ok(Json(details))
 }
 
@@ -115,10 +113,9 @@ pub async fn update_album_handler(
     Path(album_id): Path<String>,
     Json(payload): Json<UpdateAlbumRequest>,
 ) -> Result<Json<Album>, AlbumsError> {
-    let album_uuid = Uuid::parse_str(&album_id)?;
     let album = service::update_album(
         &pool,
-        album_uuid,
+        &album_id,
         user.id,
         payload.name,
         payload.description,
@@ -152,8 +149,7 @@ pub async fn add_media_to_album_handler(
     Path(album_id): Path<String>,
     Json(payload): Json<AddMediaToAlbumRequest>,
 ) -> Result<StatusCode, AlbumsError> {
-    let album_uuid = Uuid::parse_str(&album_id)?;
-    service::add_media_to_album(&pool, album_uuid, &payload.media_item_ids, user.id).await?;
+    service::add_media_to_album(&pool, &album_id, &payload.media_item_ids, user.id).await?;
     Ok(StatusCode::OK)
 }
 
@@ -180,8 +176,7 @@ pub async fn remove_media_from_album_handler(
     Extension(user): Extension<User>,
     Path((album_id, media_item_id)): Path<(String, String)>,
 ) -> Result<StatusCode, AlbumsError> {
-    let album_uuid = Uuid::parse_str(&album_id)?;
-    service::remove_media_from_album(&pool, album_uuid, &media_item_id, user.id).await?;
+    service::remove_media_from_album(&pool, &album_id, &media_item_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -209,10 +204,9 @@ pub async fn add_collaborator_handler(
     Path(album_id): Path<String>,
     Json(payload): Json<AddCollaboratorRequest>,
 ) -> Result<Json<AlbumCollaborator>, AlbumsError> {
-    let album_uuid = Uuid::parse_str(&album_id)?;
     let collaborator = service::add_collaborator(
         &pool,
-        album_uuid,
+        &album_id,
         &payload.user_email,
         payload.role,
         user.id,
@@ -244,7 +238,6 @@ pub async fn remove_collaborator_handler(
     Extension(user): Extension<User>,
     Path((album_id, collaborator_id)): Path<(String, i64)>,
 ) -> Result<StatusCode, AlbumsError> {
-    let album_uuid = Uuid::parse_str(&album_id)?;
-    service::remove_collaborator(&pool, album_uuid, collaborator_id, user.id).await?;
+    service::remove_collaborator(&pool, &album_id, collaborator_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT role as \"role: AlbumRole\"\n        FROM album_collaborator\n        WHERE user_id = $1 AND album_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "role: AlbumRole",
+        "type_info": {
+          "Custom": {
+            "name": "album_role",
+            "kind": {
+              "Enum": [
+                "owner",
+                "contributor",
+                "viewer"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "82adab745242ae1785489643b9c230a6e539b2f8eb26f3ecdee67678ff8197fe"
+}

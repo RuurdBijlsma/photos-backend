@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM album_media_item WHERE album_id = $1 AND media_item_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "759562227fd2e2d08d0eac3c8e2b480b12f4a7c8f18f22aec8777a9b75e77b96"
+}

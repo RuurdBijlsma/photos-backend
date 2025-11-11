@@ -30,6 +30,7 @@ database:
   idle_timeout: 600
   acquire_timeout: 30
   media_item_id_length: 10
+  album_id_length: 10
 
 analyzer:
   fallback_timezone: Europe/Amsterdam

@@ -7,11 +7,9 @@ CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'rejected');
 -- Step 2: Create the core tables for local album management.
 
 -- The main 'album' table.
--- We use UUID for the primary key to ensure it's globally unique, which is
--- essential for future federation.
 CREATE TABLE album
 (
-    id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
+    id          VARCHAR(10) PRIMARY KEY,
     owner_id    INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     name        TEXT        NOT NULL,
     description TEXT,
@@ -30,7 +28,7 @@ CREATE INDEX idx_album_is_public ON album (id) WHERE is_public = true;
 -- A many-to-many join table connecting albums and media_items.
 CREATE TABLE album_media_item
 (
-    album_id      UUID        NOT NULL REFERENCES album (id) ON DELETE CASCADE,
+    album_id      VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
     media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
     -- Tracks which user added the media item to the album. Can be null if the user is deleted.
     added_by_user INT         REFERENCES app_user (id) ON DELETE SET NULL,
@@ -45,28 +43,28 @@ CREATE INDEX idx_album_media_item_album_id ON album_media_item (album_id);
 CREATE INDEX idx_album_media_item_media_item_id ON album_media_item (media_item_id);
 
 
--- Step 3: Create the collaborator table, designed to handle BOTH local and federated users.
+-- Step 3: Create the collaborator table, designed to handle BOTH local and remote users.
 
 -- Manages permissions for albums, linking users (local or remote) to albums with a specific role.
 CREATE TABLE album_collaborator
 (
-    id                BIGSERIAL PRIMARY KEY,
-    album_id          UUID        NOT NULL REFERENCES album (id) ON DELETE CASCADE,
-    -- For local users on this server. NULL if the collaborator is federated.
-    user_id           INTEGER REFERENCES app_user (id) ON DELETE CASCADE,
+    id             BIGSERIAL PRIMARY KEY,
+    album_id       VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
+    -- For local users on this server. NULL if the collaborator is remote.
+    user_id        INTEGER REFERENCES app_user (id) ON DELETE CASCADE,
     -- For remote users. e.g., 'user@other-server.com'. NULL if the collaborator is local.
-    federated_user_id TEXT,
-    role              album_role  NOT NULL,
-    added_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    remote_user_id TEXT,
+    role           album_role  NOT NULL,
+    added_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    -- A user (local or federated) can only have one role per album.
+    -- A user (local or remote) can only have one role per album.
     CONSTRAINT uq_album_local_collaborator UNIQUE (album_id, user_id),
-    CONSTRAINT uq_album_federated_collaborator UNIQUE (album_id, federated_user_id),
+    CONSTRAINT uq_album_remote_collaborator UNIQUE (album_id, remote_user_id),
 
-    -- Enforces that a collaborator must be EITHER local OR federated, but never both.
+    -- Enforces that a collaborator must be EITHER local OR remote, but never both.
     CONSTRAINT chk_collaborator_identity
         CHECK (
-            (user_id IS NOT NULL AND federated_user_id IS NULL) OR
-            (user_id IS NULL AND federated_user_id IS NOT NULL)
+            (user_id IS NOT NULL AND remote_user_id IS NULL) OR
+            (user_id IS NULL AND remote_user_id IS NOT NULL)
             )
 );

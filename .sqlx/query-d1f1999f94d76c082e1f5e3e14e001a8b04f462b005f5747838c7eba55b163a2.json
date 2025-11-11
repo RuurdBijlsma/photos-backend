@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, email, name, media_folder, role as \"role: UserRole\",\n                      created_at, updated_at\n               FROM app_user WHERE id = $1",
+  "query": "SELECT \n            id, email, name, media_folder, \n            created_at, updated_at,\n            role as \"role: UserRole\"\n        FROM app_user \n        WHERE email = $1",
   "describe": {
     "columns": [
       {
@@ -25,6 +25,16 @@
       },
       {
         "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
         "name": "role: UserRole",
         "type_info": {
           "Custom": {
@@ -37,21 +47,11 @@
             }
           }
         }
-      },
-      {
-        "ordinal": 5,
-        "name": "created_at",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 6,
-        "name": "updated_at",
-        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Int4"
+        "Text"
       ]
     },
     "nullable": [
@@ -64,5 +64,5 @@
       false
     ]
   },
-  "hash": "2908e6e014544f63a573bbebb71549987886afd07f8f62a561f5b1d1d744b43c"
+  "hash": "d1f1999f94d76c082e1f5e3e14e001a8b04f462b005f5747838c7eba55b163a2"
 }

@@ -5,7 +5,6 @@ use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
 use tracing::error;
-use uuid;
 
 #[derive(Debug, Error)]
 pub enum AlbumsError {
@@ -20,10 +19,6 @@ pub enum AlbumsError {
 
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
-
-    #[error("Invalid UUID: {0}")]
-    InvalidUuid(#[from] uuid::Error),
-
 }
 
 // Renamed for more general use
@@ -37,7 +32,6 @@ fn log_error(error: &AlbumsError) {
         AlbumsError::Unauthorized(id) => {
             error!("Unauthorized: {}", id);
         }
-        AlbumsError::InvalidUuid(e) => error!("Invalid UUID provided: {}", e),
     }
 }
 
@@ -61,10 +55,6 @@ impl IntoResponse for AlbumsError {
             Self::Unauthorized(message) => (
                 StatusCode::UNAUTHORIZED,
                 format!("Unauthorized: {message}"),
-            ),
-            Self::InvalidUuid(e) => (
-                StatusCode::BAD_REQUEST,
-                format!("Invalid ID format: {e}"),
             ),
         };
 

@@ -5,8 +5,7 @@ use crate::routes::auth::db_model::User;
 use crate::routes::UserRole;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
-use uuid::Uuid;
-
+use common_photos::{nice_id, settings};
 // --- Helper Functions for Permission Checks ---
 
 /// Checks if a user has a specific role in an album.
@@ -14,7 +13,7 @@ use uuid::Uuid;
 async fn check_user_role<'c, E>(
     executor: E,
     user_id: i32,
-    album_id: Uuid,
+    album_id: &str,
     required_roles: &[AlbumRole],
 ) -> Result<bool, sqlx::Error>
 where
@@ -43,7 +42,7 @@ where
 async fn is_album_owner<'c, E>(
     executor: E,
     user_id: i32,
-    album_id: Uuid,
+    album_id: &str,
 ) -> Result<bool, sqlx::Error>
 where
     E: Executor<'c, Database = Postgres>,
@@ -64,15 +63,17 @@ pub async fn create_album(
     is_public: bool,
 ) -> Result<Album, AlbumsError> {
     let mut tx = pool.begin().await?;
+    let album_id = nice_id(settings().database.media_item_id_length);
 
     // Step 1: Create the album record
     let album = sqlx::query_as!(
         Album,
         r#"
-        INSERT INTO album (owner_id, name, description, is_public)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO album (id, owner_id, name, description, is_public)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING *
         "#,
+        album_id,
         user_id,
         name,
         description,
@@ -82,13 +83,12 @@ pub async fn create_album(
     .await?;
 
     // Step 2: Add the creator as the 'owner' in the collaborators table
-    let album_uuid = Uuid::parse_str(&album.id)?;
     sqlx::query!(
         r#"
         INSERT INTO album_collaborator (album_id, user_id, role)
         VALUES ($1, $2, $3)
         "#,
-        album_uuid,
+        album_id,
         user_id,
         AlbumRole::Owner as AlbumRole,
     )
@@ -125,7 +125,7 @@ pub async fn get_user_albums(pool: &PgPool, user_id: i32) -> Result<Vec<Album>, 
 #[instrument(skip(pool))]
 pub async fn get_album_details(
     pool: &PgPool,
-    album_id: Uuid,
+    album_id: &str,
     user_id: Option<i32>,
 ) -> Result<AlbumDetailsResponse, AlbumsError> {
     let album = sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
@@ -194,7 +194,7 @@ pub async fn get_album_details(
 #[instrument(skip(pool))]
 pub async fn add_media_to_album(
     pool: &PgPool,
-    album_id: Uuid,
+    album_id: &str,
     media_item_ids: &[String],
     user_id: i32,
 ) -> Result<(), AlbumsError> {
@@ -238,7 +238,7 @@ pub async fn add_media_to_album(
 #[instrument(skip(pool))]
 pub async fn remove_media_from_album(
     pool: &PgPool,
-    album_id: Uuid,
+    album_id: &str,
     media_item_id: &str,
     user_id: i32,
 ) -> Result<(), AlbumsError> {
@@ -277,7 +277,7 @@ pub async fn remove_media_from_album(
 #[instrument(skip(pool))]
 pub async fn add_collaborator(
     pool: &PgPool,
-    album_id: Uuid,
+    album_id: &str,
     new_user_email: &str,
     role: AlbumRole,
     inviting_user_id: i32,
@@ -318,7 +318,7 @@ pub async fn add_collaborator(
         INSERT INTO album_collaborator (album_id, user_id, role)
         VALUES ($1, $2, $3)
         ON CONFLICT (album_id, user_id) DO UPDATE SET role = EXCLUDED.role
-        RETURNING id, album_id, user_id, federated_user_id, role as "role: AlbumRole", added_at
+        RETURNING id, album_id, user_id, remote_user_id, role as "role: AlbumRole", added_at
         "#,
         album_id,
         user_to_add.id,
@@ -335,7 +335,7 @@ pub async fn add_collaborator(
 #[instrument(skip(pool))]
 pub async fn remove_collaborator(
     pool: &PgPool,
-    album_id: Uuid,
+    album_id: &str,
     collaborator_id_to_remove: i64,
     requesting_user_id: i32,
 ) -> Result<(), AlbumsError> {
@@ -349,7 +349,7 @@ pub async fn remove_collaborator(
     // Get the collaborator record to check if we're trying to remove the owner.
     let collaborator_to_remove = sqlx::query_as!(
         AlbumCollaborator,
-        r#"SELECT id, album_id, user_id, federated_user_id, role as "role: AlbumRole", added_at FROM album_collaborator WHERE id = $1"#,
+        r#"SELECT id, album_id, user_id, remote_user_id, role as "role: AlbumRole", added_at FROM album_collaborator WHERE id = $1"#,
         collaborator_id_to_remove
     )
         .fetch_optional(pool)
@@ -379,7 +379,7 @@ pub async fn remove_collaborator(
 #[instrument(skip(pool))]
 pub async fn update_album(
     pool: &PgPool,
-    album_id: Uuid,
+    album_id: &str,
     user_id: i32,
     name: Option<String>,
     description: Option<String>,

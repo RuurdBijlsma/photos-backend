@@ -72,6 +72,7 @@ pub struct DatabaseSettings {
     pub acquire_timeout: u64,
     /// Length of generated `id` to use for media item in database.
     pub media_item_id_length: usize,
+    pub album_id_length: usize,
 }
 
 /// Logging configuration.

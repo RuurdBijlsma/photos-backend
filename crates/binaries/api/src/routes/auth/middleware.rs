@@ -1,17 +1,14 @@
-use std::convert::Infallible;
-use async_trait::async_trait;
 use axum::{
     body::Body,
     extract::{FromRequestParts, State},
-    http::{Request, request::Parts, header},
+    http::{header, request::Parts, Request},
     middleware::Next,
     response::Response,
 };
 use color_eyre::eyre::eyre;
-use common_photos::{UserRole, settings};
-use jsonwebtoken::{DecodingKey, Validation, decode};
+use common_photos::{settings, UserRole};
+use jsonwebtoken::{decode, DecodingKey, Validation};
 use sqlx::PgPool;
-use tracing::warn;
 
 use crate::{
     auth::db_model::User,
@@ -41,7 +38,9 @@ fn extract_token(parts: &Parts) -> Result<&str, AuthError> {
         .and_then(|v| v.to_str().ok())
         .ok_or(AuthError::MissingToken)?;
 
-    auth_header.strip_prefix("Bearer ").ok_or(AuthError::InvalidToken)
+    auth_header
+        .strip_prefix("Bearer ")
+        .ok_or(AuthError::InvalidToken)
 }
 
 fn decode_token(token: &str) -> Result<Claims, AuthError> {
@@ -51,8 +50,8 @@ fn decode_token(token: &str) -> Result<Claims, AuthError> {
         &DecodingKey::from_secret(jwt_secret.as_ref()),
         &Validation::default(),
     )
-        .map(|data| data.claims)
-        .map_err(|_| AuthError::InvalidToken)
+    .map(|data| data.claims)
+    .map_err(|_| AuthError::InvalidToken)
 }
 
 async fn fetch_user(pool: &PgPool, user_id: i32) -> Result<User, AuthError> {
@@ -63,9 +62,9 @@ async fn fetch_user(pool: &PgPool, user_id: i32) -> Result<User, AuthError> {
            FROM app_user WHERE id = $1"#,
         user_id
     )
-        .fetch_optional(pool)
-        .await?
-        .ok_or(AuthError::UserNotFound)
+    .fetch_optional(pool)
+    .await?
+    .ok_or(AuthError::UserNotFound)
 }
 
 impl<S> FromRequestParts<S> for User

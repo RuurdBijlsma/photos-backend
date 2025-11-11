@@ -1,6 +1,6 @@
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use color_eyre::eyre::Result;
-use common_photos::{UserRole, get_db_pool, nice_id};
+use common_photos::{UserRole, get_db_pool, nice_id, settings};
 use media_analyzer::{
     AnalyzeResult, CaptureDetails, FileMetadata, PanoInfo, SourceDetails, TagData, TimeInfo,
 };
@@ -86,7 +86,7 @@ async fn seed_mock_photos_in_tx(
     let seconds_in_five_years = 5 * 365 * 24 * 60 * 60;
 
     for i in 0..num_items {
-        let item_id = nice_id(10);
+        let item_id = nice_id(settings().database.media_item_id_length);
         let relative_path = format!("/mock/{}.jpg", &item_id);
 
         let random_seconds_ago = rng.random_range(0..seconds_in_five_years);

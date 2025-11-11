@@ -45,7 +45,7 @@ pub struct AlbumCollaborator {
     pub id: i64,
     pub album_id: String,
     pub user_id: Option<i32>,
-    pub federated_user_id: Option<String>,
+    pub remote_user_id: Option<String>,
     pub role: AlbumRole,
     pub added_at: DateTime<Utc>,
 }
