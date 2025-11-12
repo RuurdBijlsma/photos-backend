@@ -1,13 +1,13 @@
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
 use tracing::{error, warn};
 
 #[derive(Debug, Error)]
-pub enum AlbumsError {
+pub enum AlbumError {
     #[error("Database error")]
     Database(#[from] sqlx::Error),
 
@@ -28,26 +28,26 @@ pub enum AlbumsError {
 }
 
 // Renamed for more general use
-fn log_error(error: &AlbumsError) {
+fn log_error(error: &AlbumError) {
     match error {
-        AlbumsError::Database(e) => warn!("Database query failed: {}", e),
-        AlbumsError::Internal(e) => warn!("Internal error: {:?}", e),
-        AlbumsError::NotFound(id) => {
+        AlbumError::Database(e) => warn!("Database query failed: {}", e),
+        AlbumError::Internal(e) => warn!("Internal error: {:?}", e),
+        AlbumError::NotFound(id) => {
             warn!("Album -> Media item not found: {}", id);
         }
-        AlbumsError::Unauthorized(id) => {
+        AlbumError::Unauthorized(id) => {
             warn!("Unauthorized: {}", id);
         }
-        AlbumsError::InvalidInviteToken(id) => {
+        AlbumError::InvalidInviteToken(id) => {
             warn!("Invalid invitation token: {}", id);
         }
-        AlbumsError::RemoteServerError(message) => {
-            warn!("Album sharing -> Remote server error: {}", message)
+        AlbumError::RemoteServerError(message) => {
+            warn!("Album sharing -> Remote server error: {}", message);
         }
     }
 }
 
-impl IntoResponse for AlbumsError {
+impl IntoResponse for AlbumError {
     fn into_response(self) -> Response {
         log_error(&self);
 
@@ -81,13 +81,13 @@ impl IntoResponse for AlbumsError {
     }
 }
 
-impl From<reqwest::Error> for AlbumsError {
+impl From<reqwest::Error> for AlbumError {
     fn from(err: reqwest::Error) -> Self {
         Self::RemoteServerError(err.to_string())
     }
 }
 
-impl From<tokio::task::JoinError> for AlbumsError {
+impl From<tokio::task::JoinError> for AlbumError {
     fn from(err: tokio::task::JoinError) -> Self {
         Self::Internal(eyre::Report::new(err))
     }

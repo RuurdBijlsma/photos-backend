@@ -4,7 +4,7 @@ use crate::quality_data::get_quality_data;
 use crate::utils::convert_media_file;
 use crate::{ChatMessage, PyInterop, VisualImageData};
 use color_eyre::eyre::eyre;
-use common_photos::{settings, Variant};
+use common_photos::{Variant, settings};
 use pyo3::Python;
 use serde_json::Value;
 use std::path::Path;

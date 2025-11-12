@@ -1,5 +1,6 @@
 //! This module defines the HTTP handlers for authentication-related routes.
 
+use crate::api_state::ApiState;
 use crate::auth::db_model::User;
 use crate::auth::error::AuthError;
 use crate::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
@@ -9,7 +10,6 @@ use crate::auth::service::{
 };
 use crate::auth::token::generate_refresh_token_parts;
 use axum::{Extension, Json, extract::State, http::StatusCode};
-use sqlx::PgPool;
 
 /// Handles user login and returns a new set of tokens.
 ///
@@ -27,13 +27,13 @@ use sqlx::PgPool;
     )
 )]
 pub async fn login(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Json(payload): Json<LoginUser>,
 ) -> Result<Json<Tokens>, AuthError> {
-    let user = authenticate_user(&pool, &payload.email, &payload.password).await?;
+    let user = authenticate_user(&api_state.pool, &payload.email, &payload.password).await?;
     let (access_token, expiry) = create_access_token(user.id, user.role)?;
     let token_parts = generate_refresh_token_parts()?;
-    store_refresh_token(&pool, user.id, &token_parts).await?;
+    store_refresh_token(&api_state.pool, user.id, &token_parts).await?;
 
     Ok(Json(Tokens {
         expiry,
@@ -58,10 +58,10 @@ pub async fn login(
     )
 )]
 pub async fn register(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Json(payload): Json<CreateUser>,
 ) -> Result<Json<User>, AuthError> {
-    let user = create_user(&pool, &payload).await?;
+    let user = create_user(&api_state.pool, &payload).await?;
     Ok(Json(user))
 }
 
@@ -80,10 +80,10 @@ pub async fn register(
     )
 )]
 pub async fn refresh_session(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Json(payload): Json<RefreshTokenPayload>,
 ) -> Result<Json<Tokens>, AuthError> {
-    refresh_tokens(&pool, &payload.refresh_token).await
+    refresh_tokens(&api_state.pool, &payload.refresh_token).await
 }
 
 /// Handles user logout by invalidating the provided refresh token.
@@ -101,10 +101,10 @@ pub async fn refresh_session(
     )
 )]
 pub async fn logout(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Json(payload): Json<RefreshTokenPayload>,
 ) -> Result<StatusCode, AuthError> {
-    logout_user(&pool, &payload.refresh_token).await
+    logout_user(&api_state.pool, &payload.refresh_token).await
 }
 
 /// Get current user info.

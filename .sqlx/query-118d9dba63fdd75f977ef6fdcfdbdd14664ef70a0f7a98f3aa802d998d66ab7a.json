@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO album_invites (album_id, token, expires_at)\n        VALUES ($1, $2, $3)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "118d9dba63fdd75f977ef6fdcfdbdd14664ef70a0f7a98f3aa802d998d66ab7a"
+}

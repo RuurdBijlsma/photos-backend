@@ -117,6 +117,7 @@
   * make s2s client in common code somewhere, to call s2s endpoints.
   * share reqwest client via application state and worker context so it's not made every time.
   * Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
+* pending_album_media_items isnt getting used
 
 # Features
 

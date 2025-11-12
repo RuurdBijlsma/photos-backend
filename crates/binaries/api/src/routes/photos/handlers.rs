@@ -1,15 +1,20 @@
+use crate::api_state::ApiState;
 use crate::auth::db_model::User;
 use crate::pb::api::{ByMonthResponse, TimelineResponse};
 use crate::photos::error::PhotosError;
 use crate::photos::full_item_interfaces::FullMediaItem;
-use crate::photos::interfaces::{ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
-use crate::photos::service::{fetch_full_media_item, get_color_theme, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo};
+use crate::photos::interfaces::{
+    ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse,
+};
+use crate::photos::service::{
+    fetch_full_media_item, get_color_theme, get_photos_by_month, get_timeline_ids,
+    get_timeline_ratios, random_photo,
+};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
 use serde_json::Value;
-use sqlx::PgPool;
 
 /// Get a random photo and its associated theme.
 ///
@@ -31,11 +36,11 @@ use sqlx::PgPool;
     security(("bearer_auth" = []))
 )]
 pub async fn get_full_item_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Query(params): Query<GetMediaItemParams>,
 ) -> Result<Json<FullMediaItem>, PhotosError> {
-    let item = fetch_full_media_item(&user, &pool, &params.id).await?;
+    let item = fetch_full_media_item(&user, &api_state.pool, &params.id).await?;
     if let Some(item) = item {
         Ok(Json(item))
     } else {
@@ -59,10 +64,10 @@ pub async fn get_full_item_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_timeline_ratios_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
 ) -> Result<Protobuf<TimelineResponse>, PhotosError> {
-    let timeline = get_timeline_ratios(&user, &pool).await?;
+    let timeline = get_timeline_ratios(&user, &api_state.pool).await?;
     Ok(Protobuf(timeline))
 }
 
@@ -82,10 +87,10 @@ pub async fn get_timeline_ratios_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_timeline_ids_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Vec<String>>, PhotosError> {
-    let timeline = get_timeline_ids(&user, &pool).await?;
+    let timeline = get_timeline_ids(&user, &api_state.pool).await?;
     Ok(Json(timeline))
 }
 
@@ -108,7 +113,7 @@ pub async fn get_timeline_ids_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_photos_by_month_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Query(params): Query<GetMediaByMonthParams>,
 ) -> Result<Protobuf<ByMonthResponse>, PhotosError> {
@@ -124,10 +129,9 @@ pub async fn get_photos_by_month_handler(
                 "Invalid date format in 'months' parameter. Please use 'YYYY-MM-DD'.".to_string(),
             )
         })?;
-    let photos = get_photos_by_month(&user, &pool, &month_ids).await?;
+    let photos = get_photos_by_month(&user, &api_state.pool, &month_ids).await?;
     Ok(Protobuf(photos))
 }
-
 
 /// Get a random photo and its associated theme.
 ///
@@ -145,10 +149,10 @@ pub async fn get_photos_by_month_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_random_photo(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Option<RandomPhotoResponse>>, PhotosError> {
-    let result = random_photo(&user, &pool).await?;
+    let result = random_photo(&user, &api_state.pool).await?;
     Ok(Json(result))
 }
 

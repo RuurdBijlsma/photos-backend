@@ -3,3 +3,5 @@ pub mod handlers;
 mod helpers;
 pub mod interfaces;
 pub mod service;
+
+pub mod router;

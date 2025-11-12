@@ -1,9 +1,9 @@
 use crate::context::WorkerContext;
-use crate::handlers::common::job_payloads::ImportAlbumItemPayload;
 use crate::handlers::JobResult;
-use color_eyre::eyre::{eyre, Context};
+use crate::handlers::common::job_payloads::ImportAlbumItemPayload;
 use color_eyre::Result;
-use common_photos::{enqueue_full_ingest, enqueue_job, media_dir, Job, JobType};
+use color_eyre::eyre::{Context, eyre};
+use common_photos::{Job, enqueue_full_ingest, media_dir, to_posix_string};
 use futures_util::StreamExt;
 use sqlx::query;
 use std::path::Path;
@@ -42,10 +42,13 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     }
 
     // 2. Determine file name and save path
-    let album_name = query!("SELECT name FROM album WHERE id = $1", payload.local_album_id)
-        .fetch_one(&context.pool)
-        .await?
-        .name;
+    let album_name = query!(
+        "SELECT name FROM album WHERE id = $1",
+        payload.local_album_id
+    )
+    .fetch_one(&context.pool)
+    .await?
+    .name;
 
     let content_disposition = response
         .headers()
@@ -57,8 +60,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let filename = content_disposition
         .split("filename=")
         .last()
-        .map(|s| s.trim_matches('"'))
-        .unwrap_or(&payload.remote_media_item_id);
+        .map_or(payload.remote_media_item_id, |s| {
+            s.trim_matches('"').to_owned()
+        });
 
     let user_media_folder = query!("SELECT media_folder FROM app_user WHERE id = $1", user_id)
         .fetch_one(&context.pool)
@@ -72,7 +76,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let full_save_dir = media_dir().join(&relative_dir);
     fs::create_dir_all(&full_save_dir).await?;
 
-    let full_save_path = full_save_dir.join(filename);
+    let full_save_path = full_save_dir.join(&filename);
     let mut dest_file = fs::File::create(&full_save_path).await?;
 
     // This move is now valid because `response` is no longer borrowed.
@@ -83,10 +87,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     }
 
     // 3. Create a pending record
-    let relative_path = relative_dir
-        .join(filename)
-        .to_string_lossy()
-        .to_string();
+    let relative_path = to_posix_string(&relative_dir.join(&filename));
 
     query!(
         r#"
@@ -97,16 +98,11 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         payload.local_album_id,
         payload.remote_owner_identity
     )
-        .execute(&context.pool)
-        .await?;
+    .execute(&context.pool)
+    .await?;
 
     // 4. Enqueue a standard ingest job
-    enqueue_full_ingest(
-        &context.pool,
-        &relative_path,
-        user_id,
-    )
-        .await?;
+    enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;
 
     Ok(JobResult::Done)
 }

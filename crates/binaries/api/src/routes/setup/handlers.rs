@@ -1,5 +1,6 @@
 //! This module defines the HTTP handlers for the initial application setup process.
 
+use crate::api_state::ApiState;
 use crate::auth::db_model::User;
 use crate::setup::error::SetupError;
 use crate::setup::interfaces::{
@@ -13,13 +14,8 @@ use crate::setup::service::{
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use sqlx::PgPool;
 
 /// Retrieves information about the configured media and thumbnail disks.
-///
-/// # Errors
-///
-/// Returns a `SetupError` if a configured media or thumbnail path is not a valid directory.
 #[utoipa::path(
     get,
     path = "/setup/disks",
@@ -34,10 +30,6 @@ pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
 }
 
 /// Retrieves a sample of media files from a specified folder.
-///
-/// # Errors
-///
-/// Returns a `SetupError` if the provided folder path is invalid or cannot be accessed.
 #[utoipa::path(
     get,
     path = "/setup/media-sample",
@@ -58,10 +50,6 @@ pub async fn get_folder_media_sample(
 }
 
 /// Scans a folder and returns a list of unsupported file types.
-///
-/// # Errors
-///
-/// Returns a `SetupError` if the folder path is invalid or if an I/O error occurs during the scan.
 #[utoipa::path(
     get,
     path = "/setup/unsupported-files",
@@ -82,10 +70,6 @@ pub async fn get_folder_unsupported(
 }
 
 /// Lists the subfolders within a given directory.
-///
-/// # Errors
-///
-/// Returns a `SetupError` if the base folder path is invalid or inaccessible.
 #[utoipa::path(
     get,
     path = "/setup/folders",
@@ -105,10 +89,6 @@ pub async fn get_folders(
 }
 
 /// Creates a new folder within a specified base directory.
-///
-/// # Errors
-///
-/// Returns a `SetupError` if the folder name or path is invalid, or if an I/O error occurs.
 #[utoipa::path(
     post,
     path = "/setup/make-folder",
@@ -137,10 +117,10 @@ pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCod
     )
 )]
 pub async fn post_start_processing(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Json(payload): Json<StartProcessingBody>,
 ) -> Result<Json<bool>, SetupError> {
-    start_processing(&user, &pool, payload.user_folder).await?;
+    start_processing(&user, &api_state.pool, payload.user_folder).await?;
     Ok(Json(true))
 }

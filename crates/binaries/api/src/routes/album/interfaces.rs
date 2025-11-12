@@ -1,4 +1,4 @@
-use crate::routes::albums::db_model::AlbumRole;
+use crate::routes::album::db_model::AlbumRole;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};

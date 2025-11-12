@@ -1,13 +1,13 @@
 use axum::{
     body::Body,
     extract::{FromRequestParts, State},
-    http::{header, request::Parts, Request},
+    http::{Request, header, request::Parts},
     middleware::Next,
     response::Response,
 };
 use color_eyre::eyre::eyre;
-use common_photos::{settings, UserRole};
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use common_photos::{UserRole, settings};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
 
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
     routes::auth::{error::AuthError, interfaces::Claims},
 };
 
-/// Get PgPool from Parts
+/// Get `PgPool` from Parts
 async fn extract_pool<S>(parts: &mut Parts, state: &S) -> Result<PgPool, AuthError>
 where
     S: Send + Sync,

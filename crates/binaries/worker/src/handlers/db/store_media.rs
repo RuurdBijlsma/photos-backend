@@ -1,6 +1,6 @@
 use crate::insert_query;
 use chrono::{TimeZone, Utc};
-use common_photos::{fallback_timezone, PendingAlbumMediaItem};
+use common_photos::{PendingAlbumMediaItem, fallback_timezone};
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;
 
@@ -114,12 +114,11 @@ pub async fn store_media_item(
     .fetch_optional(&mut **tx)
     .await?;
 
-    let mut remote_user_id: Option<i32> = None;
-    if let Some(info) = &pending_info {
-        // If a pending item was found, get or create the remote_user
-        let id = get_or_create_remote_user(tx, user_id, &info.remote_user_identity).await?;
-        remote_user_id = Some(id);
-    }
+    let remote_user_id = if let Some(info) = &pending_info {
+        Some(get_or_create_remote_user(tx, user_id, &info.remote_user_identity).await?)
+    } else {
+        None
+    };
 
     let sort_timestamp = data.time_info.datetime_utc.unwrap_or_else(|| {
         fallback_timezone().as_ref().map_or_else(

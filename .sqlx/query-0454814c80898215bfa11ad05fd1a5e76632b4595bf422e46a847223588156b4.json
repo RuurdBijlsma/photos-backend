@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            a.name AS album_name,\n            a.description AS album_description,\n            (SELECT array_agg(ami.media_item_id) FROM album_media_item ami WHERE ami.album_id = a.id) as \"media_item_ids!\"\n        FROM album_invites ai\n        JOIN album a ON ai.album_id = a.id\n        WHERE ai.token = $1 AND ai.expires_at > now()\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "album_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "album_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "media_item_ids!",
+        "type_info": "VarcharArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "0454814c80898215bfa11ad05fd1a5e76632b4595bf422e46a847223588156b4"
+}

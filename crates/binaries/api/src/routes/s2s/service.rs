@@ -1,5 +1,5 @@
 use crate::routes::s2s::error::S2SError;
-use common_photos::{media_dir, InviteSummaryResponse};
+use common_photos::{InviteSummaryResponse, media_dir};
 use sqlx::PgPool;
 use tracing::instrument;
 
@@ -40,12 +40,12 @@ pub async fn get_invite_summary(
     })
 }
 
-/// A validated token and its associated album_id.
+/// A validated token and its associated `album_id`.
 pub struct ValidatedToken {
     pub album_id: String,
 }
 
-/// Validates a token and checks that a media_item_id belongs to the token's album.
+/// Validates a token and checks that a `media_item_id` belongs to the token's album.
 /// This is a critical security check.
 #[instrument(skip(pool))]
 pub async fn validate_token_for_media_item(

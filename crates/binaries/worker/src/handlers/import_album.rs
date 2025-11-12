@@ -1,12 +1,11 @@
 use crate::context::WorkerContext;
-use crate::handlers::common::job_payloads::{ImportAlbumItemPayload, ImportAlbumPayload};
 use crate::handlers::JobResult;
-use color_eyre::eyre::{eyre, Context};
+use crate::handlers::common::job_payloads::{ImportAlbumItemPayload, ImportAlbumPayload};
 use color_eyre::Result;
-use common_photos::{enqueue_job, nice_id, settings, InviteSummaryResponse, Job, JobType};
+use color_eyre::eyre::{Context, eyre};
+use common_photos::{InviteSummaryResponse, Job, JobType, enqueue_job, nice_id, settings};
 use serde_json::json;
 use sqlx::query;
-use tracing::warn;
 use url::Url;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
@@ -19,9 +18,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     // 1. Contact remote server to get the list of media items
     let parts: Vec<&str> = payload.token.split('-').collect();
     let host_part = parts.last().ok_or_else(|| eyre!("Invalid token format"))?;
-    let host = host_part.split('@').last().unwrap();
-    let mut remote_url = Url::parse(&format!("http://{}", host))
-        .or_else(|_| Url::parse(&format!("https://{}", host)))?;
+    let host = host_part.split('@').next_back().unwrap();
+    let mut remote_url = Url::parse(&format!("http://{host}"))
+        .or_else(|_| Url::parse(&format!("https://{host}")))?;
     remote_url.set_path("/s2s/albums/invite-summary");
 
     let client = reqwest::Client::new();
@@ -31,8 +30,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .send()
         .await
         .wrap_err(format!(
-            "Failed to contact remote server {} for invite summary.",
-            remote_url
+            "Failed to contact remote server {remote_url} for invite summary."
         ))?;
 
     if !response.status().is_success() {

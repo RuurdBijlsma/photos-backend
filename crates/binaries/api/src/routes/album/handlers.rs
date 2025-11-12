@@ -1,18 +1,18 @@
+use crate::album::error::AlbumError;
+use crate::album::interfaces::{AcceptInviteRequest, CheckInviteRequest};
+use crate::api_state::ApiState;
 use crate::auth::db_model::User;
 use crate::auth::middleware::OptionalUser;
-use crate::routes::albums::db_model::{Album, AlbumCollaborator};
-use crate::routes::albums::error::AlbumsError;
-use crate::routes::albums::interfaces::{
+use crate::routes::album::db_model::{Album, AlbumCollaborator};
+use crate::routes::album::interfaces::{
     AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse, CreateAlbumRequest,
     UpdateAlbumRequest,
 };
-use crate::routes::albums::service;
+use crate::routes::album::service;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use sqlx::PgPool;
 use common_photos::InviteSummaryResponse;
-use crate::albums::interfaces::{AcceptInviteRequest, CheckInviteRequest};
 
 /// Create a new album.
 ///
@@ -29,12 +29,12 @@ use crate::albums::interfaces::{AcceptInviteRequest, CheckInviteRequest};
     security(("bearer_auth" = []))
 )]
 pub async fn create_album_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Json(payload): Json<CreateAlbumRequest>,
-) -> Result<(StatusCode, Json<Album>), AlbumsError> {
+) -> Result<(StatusCode, Json<Album>), AlbumError> {
     let album = service::create_album(
-        &pool,
+        &api_state.pool,
         user.id,
         &payload.name,
         payload.description.as_deref(),
@@ -58,10 +58,10 @@ pub async fn create_album_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_user_albums_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
-) -> Result<Json<Vec<Album>>, AlbumsError> {
-    let albums = service::get_user_albums(&pool, user.id).await?;
+) -> Result<Json<Vec<Album>>, AlbumError> {
+    let albums = service::get_user_albums(&api_state.pool, user.id).await?;
     Ok(Json(albums))
 }
 
@@ -83,11 +83,12 @@ pub async fn get_user_albums_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_album_details_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<OptionalUser>,
     Path(album_id): Path<String>,
-) -> Result<Json<AlbumDetailsResponse>, AlbumsError> {
-    let details = service::get_album_details(&pool, &album_id, user.0.map(|u| u.id)).await?;
+) -> Result<Json<AlbumDetailsResponse>, AlbumError> {
+    let details =
+        service::get_album_details(&api_state.pool, &album_id, user.0.map(|u| u.id)).await?;
     Ok(Json(details))
 }
 
@@ -110,13 +111,13 @@ pub async fn get_album_details_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn update_album_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
     Json(payload): Json<UpdateAlbumRequest>,
-) -> Result<Json<Album>, AlbumsError> {
+) -> Result<Json<Album>, AlbumError> {
     let album = service::update_album(
-        &pool,
+        &api_state.pool,
         &album_id,
         user.id,
         payload.name,
@@ -146,12 +147,13 @@ pub async fn update_album_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn add_media_to_album_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
     Json(payload): Json<AddMediaToAlbumRequest>,
-) -> Result<StatusCode, AlbumsError> {
-    service::add_media_to_album(&pool, &album_id, &payload.media_item_ids, user.id).await?;
+) -> Result<StatusCode, AlbumError> {
+    service::add_media_to_album(&api_state.pool, &album_id, &payload.media_item_ids, user.id)
+        .await?;
     Ok(StatusCode::OK)
 }
 
@@ -174,11 +176,11 @@ pub async fn add_media_to_album_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn remove_media_from_album_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Path((album_id, media_item_id)): Path<(String, String)>,
-) -> Result<StatusCode, AlbumsError> {
-    service::remove_media_from_album(&pool, &album_id, &media_item_id, user.id).await?;
+) -> Result<StatusCode, AlbumError> {
+    service::remove_media_from_album(&api_state.pool, &album_id, &media_item_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -201,14 +203,19 @@ pub async fn remove_media_from_album_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn add_collaborator_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
     Json(payload): Json<AddCollaboratorRequest>,
-) -> Result<Json<AlbumCollaborator>, AlbumsError> {
-    let collaborator =
-        service::add_collaborator(&pool, &album_id, &payload.user_email, payload.role, user.id)
-            .await?;
+) -> Result<Json<AlbumCollaborator>, AlbumError> {
+    let collaborator = service::add_collaborator(
+        &api_state.pool,
+        &album_id,
+        &payload.user_email,
+        payload.role,
+        user.id,
+    )
+    .await?;
     Ok(Json(collaborator))
 }
 
@@ -231,11 +238,11 @@ pub async fn add_collaborator_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn remove_collaborator_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Path((album_id, collaborator_id)): Path<(String, i64)>,
-) -> Result<StatusCode, AlbumsError> {
-    service::remove_collaborator(&pool, &album_id, collaborator_id, user.id).await?;
+) -> Result<StatusCode, AlbumError> {
+    service::remove_collaborator(&api_state.pool, &album_id, collaborator_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -258,11 +265,11 @@ pub async fn remove_collaborator_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn generate_invite_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
-) -> Result<Json<String>, AlbumsError> {
-    let token = service::generate_invite(&pool, &album_id, user.id, &user.name).await?;
+) -> Result<Json<String>, AlbumError> {
+    let token = service::generate_invite(&api_state.pool, &album_id, user.id, &user.name).await?;
     Ok(Json(token))
 }
 
@@ -279,10 +286,10 @@ pub async fn generate_invite_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn check_invite_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Json(payload): Json<CheckInviteRequest>,
-) -> Result<Json<InviteSummaryResponse>, AlbumsError> {
-    let summary = service::check_invite(&pool, &payload.token).await?;
+) -> Result<Json<InviteSummaryResponse>, AlbumError> {
+    let summary = service::check_invite(&payload.token, &api_state.http_client).await?;
     Ok(Json(summary))
 }
 
@@ -303,10 +310,10 @@ pub async fn check_invite_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn accept_invite_handler(
-    State(pool): State<PgPool>,
+    State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Json(payload): Json<AcceptInviteRequest>,
-) -> Result<StatusCode, AlbumsError> {
-    service::accept_invite(&pool, user.id, &payload).await?;
+) -> Result<StatusCode, AlbumError> {
+    service::accept_invite(&api_state.pool, user.id, &payload).await?;
     Ok(StatusCode::ACCEPTED)
 }

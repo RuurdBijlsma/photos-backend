@@ -1,12 +1,13 @@
 use super::db_model::{Album, AlbumCollaborator, AlbumRole};
-use super::error::AlbumsError;
 use super::interfaces::{AlbumDetailsResponse, AlbumMediaItemSummary, CollaboratorSummary};
-use crate::albums::interfaces::{AcceptInviteRequest};
-use crate::routes::auth::db_model::User;
+use crate::album::error::AlbumError;
+use crate::album::interfaces::AcceptInviteRequest;
 use crate::routes::UserRole;
+use crate::routes::auth::db_model::User;
 use chrono::{Duration, Utc};
-use common_photos::{enqueue_job, nice_id, settings, InviteSummaryResponse, JobType};
+use common_photos::{InviteSummaryResponse, JobType, enqueue_job, nice_id, settings};
 use rand::distr::{Alphanumeric, SampleString};
+use reqwest::Client;
 use serde_json::json;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
@@ -66,7 +67,7 @@ pub async fn create_album(
     name: &str,
     description: Option<&str>,
     is_public: bool,
-) -> Result<Album, AlbumsError> {
+) -> Result<Album, AlbumError> {
     let mut tx = pool.begin().await?;
     let album_id = nice_id(settings().database.media_item_id_length);
 
@@ -107,7 +108,7 @@ pub async fn create_album(
 
 /// Fetches all albums a user is a member of (as owner, contributor, or viewer).
 #[instrument(skip(pool))]
-pub async fn get_user_albums(pool: &PgPool, user_id: i32) -> Result<Vec<Album>, AlbumsError> {
+pub async fn get_user_albums(pool: &PgPool, user_id: i32) -> Result<Vec<Album>, AlbumError> {
     let albums = sqlx::query_as!(
         Album,
         r#"
@@ -132,13 +133,13 @@ pub async fn get_album_details(
     pool: &PgPool,
     album_id: &str,
     user_id: Option<i32>,
-) -> Result<AlbumDetailsResponse, AlbumsError> {
+) -> Result<AlbumDetailsResponse, AlbumError> {
     let album = sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
         .fetch_one(pool)
         .await?;
     if !album.is_public {
         let Some(user_id) = user_id else {
-            return Err(AlbumsError::NotFound(album_id.to_string()));
+            return Err(AlbumError::NotFound(album_id.to_string()));
         };
         // Permission Check: User must be part of the album to view it.
         let is_collaborator = check_user_role(
@@ -149,7 +150,7 @@ pub async fn get_album_details(
         )
         .await?;
         if !is_collaborator {
-            return Err(AlbumsError::NotFound(album_id.to_string()));
+            return Err(AlbumError::NotFound(album_id.to_string()));
         }
     }
 
@@ -202,7 +203,7 @@ pub async fn add_media_to_album(
     album_id: &str,
     media_item_ids: &[String],
     user_id: i32,
-) -> Result<(), AlbumsError> {
+) -> Result<(), AlbumError> {
     // Permission Check
     let has_permission = check_user_role(
         pool,
@@ -212,7 +213,7 @@ pub async fn add_media_to_album(
     )
     .await?;
     if !has_permission {
-        return Err(AlbumsError::NotFound(
+        return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -246,7 +247,7 @@ pub async fn remove_media_from_album(
     album_id: &str,
     media_item_id: &str,
     user_id: i32,
-) -> Result<(), AlbumsError> {
+) -> Result<(), AlbumError> {
     let has_permission = check_user_role(
         pool,
         user_id,
@@ -255,7 +256,7 @@ pub async fn remove_media_from_album(
     )
     .await?;
     if !has_permission {
-        return Err(AlbumsError::NotFound(
+        return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -269,7 +270,7 @@ pub async fn remove_media_from_album(
     .await?;
 
     if result.rows_affected() == 0 {
-        return Err(AlbumsError::NotFound(format!(
+        return Err(AlbumError::NotFound(format!(
             "Media item {media_item_id} not found in album {album_id}"
         )));
     }
@@ -286,10 +287,10 @@ pub async fn add_collaborator(
     new_user_email: &str,
     role: AlbumRole,
     inviting_user_id: i32,
-) -> Result<AlbumCollaborator, AlbumsError> {
+) -> Result<AlbumCollaborator, AlbumError> {
     // The owner is the only one who can add collaborators.
     if !is_album_owner(pool, inviting_user_id, album_id).await? {
-        return Err(AlbumsError::NotFound(
+        return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -307,11 +308,11 @@ pub async fn add_collaborator(
     )
     .fetch_optional(pool)
     .await?
-    .ok_or_else(|| AlbumsError::NotFound(format!("User with email {new_user_email} not found.")))?;
+    .ok_or_else(|| AlbumError::NotFound(format!("User with email {new_user_email} not found.")))?;
 
     // An owner cannot be added or demoted via this function.
     if matches!(role, AlbumRole::Owner) {
-        return Err(AlbumsError::Internal(color_eyre::eyre::eyre!(
+        return Err(AlbumError::Internal(color_eyre::eyre::eyre!(
             "Cannot assign the owner role."
         )));
     }
@@ -343,10 +344,10 @@ pub async fn remove_collaborator(
     album_id: &str,
     collaborator_id_to_remove: i64,
     requesting_user_id: i32,
-) -> Result<(), AlbumsError> {
+) -> Result<(), AlbumError> {
     // Only the album owner can remove collaborators.
     if !is_album_owner(pool, requesting_user_id, album_id).await? {
-        return Err(AlbumsError::NotFound(
+        return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -359,11 +360,11 @@ pub async fn remove_collaborator(
     )
         .fetch_optional(pool)
         .await?
-        .ok_or_else(|| AlbumsError::NotFound("Collaborator not found.".to_string()))?;
+        .ok_or_else(|| AlbumError::NotFound("Collaborator not found.".to_string()))?;
 
     // Safety check: The owner cannot be removed.
     if matches!(collaborator_to_remove.role, AlbumRole::Owner) {
-        return Err(AlbumsError::Internal(color_eyre::eyre::eyre!(
+        return Err(AlbumError::Internal(color_eyre::eyre::eyre!(
             "The album owner cannot be removed."
         )));
     }
@@ -389,10 +390,10 @@ pub async fn update_album(
     name: Option<String>,
     description: Option<String>,
     is_public: Option<bool>,
-) -> Result<Album, AlbumsError> {
+) -> Result<Album, AlbumError> {
     // Permission Check: Only the owner can update album details.
     if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumsError::NotFound(
+        return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -435,10 +436,10 @@ pub async fn generate_invite(
     album_id: &str,
     user_id: i32,
     user_name: &str,
-) -> Result<String, AlbumsError> {
+) -> Result<String, AlbumError> {
     // Permission Check: Only the owner can generate an invite.
     if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumsError::Unauthorized(
+        return Err(AlbumError::Unauthorized(
             "Only the album owner can generate an invitation.".to_string(),
         ));
     }
@@ -471,10 +472,10 @@ pub async fn generate_invite(
 }
 
 /// Parses an invite token to extract the remote server URL and the full token string.
-fn parse_invite_token(token: &str) -> Result<(Url, &str), AlbumsError> {
+fn parse_invite_token(token: &str) -> Result<(Url, &str), AlbumError> {
     let parts: Vec<&str> = token.split('-').collect();
     if parts.len() < 3 || parts[0] != "inv" {
-        return Err(AlbumsError::InvalidInviteToken(
+        return Err(AlbumError::InvalidInviteToken(
             "Token format is incorrect.".to_string(),
         ));
     }
@@ -482,26 +483,24 @@ fn parse_invite_token(token: &str) -> Result<(Url, &str), AlbumsError> {
     // The host is the last part of the token, e.g., 'alice@photos.alice.com' or 'photos.alice.com'
     // We just need the host part.
     let host_part = parts.last().unwrap();
-    let host = host_part.split('@').last().unwrap();
+    let host = host_part.split('@').next_back().unwrap();
 
     let remote_url = Url::parse(&format!("http://{host}"))
         .or_else(|_| Url::parse(&format!("https://{host}")))
-        .map_err(|_| AlbumsError::InvalidInviteToken(format!("Invalid host: {host}")))?;
+        .map_err(|_| AlbumError::InvalidInviteToken(format!("Invalid host: {host}")))?;
 
     Ok((remote_url, token))
 }
 
 /// Contacts the remote server to get a summary of an album invitation.
-#[instrument(skip(pool))]
 pub async fn check_invite(
-    pool: &PgPool,
     token: &str,
-) -> Result<InviteSummaryResponse, AlbumsError> {
+    http_client: &Client,
+) -> Result<InviteSummaryResponse, AlbumError> {
     let (mut remote_url, full_token) = parse_invite_token(token)?;
     remote_url.set_path("/s2s/albums/invite-summary");
 
-    let client = reqwest::Client::new();
-    let response = client
+    let response = http_client
         .get(remote_url.clone())
         .bearer_auth(full_token)
         .send()
@@ -509,9 +508,8 @@ pub async fn check_invite(
 
     if !response.status().is_success() {
         let error_text = response.text().await.unwrap_or_default();
-        return Err(AlbumsError::RemoteServerError(format!(
-            "Remote server {} returned an error: {}",
-            remote_url, error_text
+        return Err(AlbumError::RemoteServerError(format!(
+            "Remote server {remote_url} returned an error: {error_text}"
         )));
     }
 
@@ -525,11 +523,11 @@ pub async fn accept_invite(
     pool: &PgPool,
     user_id: i32,
     payload: &AcceptInviteRequest,
-) -> Result<(), AlbumsError> {
+) -> Result<(), AlbumError> {
     // We only need to parse the token to get the remote owner's identity.
     let parts: Vec<&str> = payload.token.split('-').collect();
     if parts.len() < 3 || parts[0] != "inv" {
-        return Err(AlbumsError::InvalidInviteToken(
+        return Err(AlbumError::InvalidInviteToken(
             "Token format is incorrect.".to_string(),
         ));
     }

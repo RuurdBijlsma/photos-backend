@@ -1,4 +1,4 @@
-use crate::{is_video_file, media_dir, JobType};
+use crate::{JobType, is_video_file, media_dir};
 use color_eyre::eyre::Result;
 use serde_json::Value;
 use sqlx::{PgConnection, PgPool, PgTransaction};
@@ -100,11 +100,12 @@ async fn base_enqueue_job(
         r#"
         SELECT id
         FROM jobs
-        WHERE relative_path = $1 AND job_type = $2 AND status IN ('running', 'queued', 'failed')
+        WHERE relative_path = $1 AND job_type = $2 AND payload = $3 AND status IN ('running', 'queued', 'failed')
         LIMIT 1
         "#,
         relative_path,
-        job_type as JobType
+        job_type as JobType,
+        payload,
     )
     .fetch_optional(&mut *tx)
     .await?;

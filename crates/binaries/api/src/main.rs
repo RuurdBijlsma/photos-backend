@@ -2,15 +2,20 @@
     clippy::needless_for_each,
     clippy::cognitive_complexity,
     clippy::cast_sign_loss,
-    clippy::struct_excessive_bools
+    clippy::struct_excessive_bools,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::cast_possible_truncation
 )]
 
+mod api_state;
 mod pb;
 pub mod routes;
 
 use axum::routing::get_service;
 pub use routes::*;
 
+use crate::api_state::ApiState;
 use color_eyre::Result;
 use common_photos::{get_db_pool, settings};
 use http::{HeaderValue, header};
@@ -38,6 +43,10 @@ async fn main() -> Result<()> {
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let pool = get_db_pool().await?;
+    let api_state = ApiState {
+        pool,
+        http_client: reqwest::Client::new(),
+    };
     let api_settings = &settings().api;
 
     // --- CORS Configuration ---
@@ -76,7 +85,7 @@ async fn main() -> Result<()> {
     );
 
     // --- Create Router & Start Server ---
-    let app = create_router(pool)
+    let app = create_router(api_state)
         .layer(cors)
         .layer(CompressionLayer::new())
         .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));

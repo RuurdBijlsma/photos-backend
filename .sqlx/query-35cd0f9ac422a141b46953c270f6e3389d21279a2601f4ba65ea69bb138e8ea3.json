@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT id\n        FROM jobs\n        WHERE relative_path = $1 AND job_type = $2 AND status IN ('running', 'queued', 'failed')\n        LIMIT 1\n        ",
+  "query": "\n        SELECT id\n        FROM jobs\n        WHERE relative_path = $1 AND job_type = $2 AND payload = $3 AND status IN ('running', 'queued', 'failed')\n        LIMIT 1\n        ",
   "describe": {
     "columns": [
       {
@@ -22,17 +22,20 @@
                 "analysis",
                 "scan",
                 "cleandb",
-                "clusterfaces",
-                "clusterphotos"
+                "cluster_faces",
+                "cluster_photos",
+                "import_album",
+                "import_album_item"
               ]
             }
           }
-        }
+        },
+        "Jsonb"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "3dca7347e4dfc002203b562610c80ff4af01250575ba318696d64700df9687e6"
+  "hash": "35cd0f9ac422a141b46953c270f6e3389d21279a2601f4ba65ea69bb138e8ea3"
 }

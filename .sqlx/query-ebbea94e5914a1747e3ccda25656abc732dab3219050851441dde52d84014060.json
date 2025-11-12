@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO jobs (relative_path, job_type, priority, user_id)\n        VALUES ($1, $2, $3, $4)\n        ON CONFLICT DO NOTHING\n        ",
+  "query": "\n        INSERT INTO jobs (relative_path, job_type, priority, user_id, payload)\n        VALUES ($1, $2, $3, $4, $5)\n        ON CONFLICT DO NOTHING\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -16,17 +16,20 @@
                 "analysis",
                 "scan",
                 "cleandb",
-                "clusterfaces",
-                "clusterphotos"
+                "cluster_faces",
+                "cluster_photos",
+                "import_album",
+                "import_album_item"
               ]
             }
           }
         },
         "Int4",
-        "Int4"
+        "Int4",
+        "Jsonb"
       ]
     },
     "nullable": []
   },
-  "hash": "937d066a605c86b3981598a2c36015fe18bcdfe677d50a4a6cc68f8fabc915af"
+  "hash": "ebbea94e5914a1747e3ccda25656abc732dab3219050851441dde52d84014060"
 }

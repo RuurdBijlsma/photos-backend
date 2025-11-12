@@ -13,8 +13,8 @@ use common_photos::settings;
 use ml_analysis::VisualAnalyzer;
 use rand::Rng;
 use serde_json::Value;
-use sqlx::types::Json;
 use sqlx::PgPool;
+use sqlx::types::Json;
 use std::collections::HashMap;
 use tracing::warn;
 

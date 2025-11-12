@@ -7,11 +7,11 @@ pub mod analyze;
 pub mod clean_db;
 pub mod cluster_faces;
 pub mod cluster_photos;
+pub mod import_album;
+pub mod import_album_item;
 pub mod ingest;
 pub mod remove;
 pub mod scan;
-pub mod import_album;
-pub mod import_album_item;
 
 pub mod common;
 pub mod db;
