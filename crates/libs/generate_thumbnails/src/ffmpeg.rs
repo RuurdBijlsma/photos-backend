@@ -1,7 +1,6 @@
 use crate::utils;
 use color_eyre::eyre;
-use color_eyre::eyre::{Context, Result, bail};
-use common_photos::VideoOutputFormat;
+use color_eyre::eyre::{bail, Context, Result};
 use serde::Deserialize;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -79,7 +78,7 @@ impl FfmpegCommand {
         &mut self,
         video_stream: &str,
         audio_stream: &str,
-        hq_config: &VideoOutputFormat,
+        crf_quality: u64,
         out_path: &Path,
     ) {
         self.maps.extend([
@@ -90,7 +89,7 @@ impl FfmpegCommand {
             "-c:v".into(),
             "libvpx-vp9".into(),
             "-crf".into(),
-            hq_config.quality.to_string().into(),
+            crf_quality.to_string().into(),
             "-b:v".into(),
             "0".into(),
             "-c:a".into(),

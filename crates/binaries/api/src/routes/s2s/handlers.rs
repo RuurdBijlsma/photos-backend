@@ -1,6 +1,4 @@
 use crate::api_state::ApiState;
-use crate::routes::s2s::error::S2SError;
-use crate::routes::s2s::service;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::header;
@@ -9,13 +7,15 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Authorization;
 use axum_extra::headers::authorization::Bearer;
 use tokio_util::io::ReaderStream;
+use common_services::s2s::error::S2SError;
+use common_services::s2s::service::{get_invite_summary, get_media_item_path, validate_token_for_media_item};
 
 pub async fn invite_summary_handler(
     State(api_state): State<ApiState>,
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
 ) -> Result<impl IntoResponse, S2SError> {
     let token = authorization.token();
-    let summary = service::get_invite_summary(&api_state.pool, token).await?;
+    let summary = get_invite_summary(&api_state.pool, token).await?;
     Ok(Json(summary))
 }
 
@@ -26,9 +26,9 @@ pub async fn download_file_handler(
 ) -> Result<impl IntoResponse, S2SError> {
     // The full token is passed in the bearer token
     let token = authorization.token();
-    service::validate_token_for_media_item(&api_state.pool, token, &media_item_id).await?;
+    validate_token_for_media_item(&api_state.pool, token, &media_item_id).await?;
 
-    let file_path = service::get_media_item_path(&api_state.pool, &media_item_id).await?;
+    let file_path = get_media_item_path(&api_state.pool, &media_item_id).await?;
     let file_name = file_path
         .file_name()
         .unwrap_or_default()

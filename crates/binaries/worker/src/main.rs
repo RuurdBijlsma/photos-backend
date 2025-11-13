@@ -1,7 +1,7 @@
 use clap::Parser;
 use color_eyre::Result;
-use common_photos::{get_db_pool, nice_id};
 use tracing::info;
+use common_services::utils::{get_db_pool, nice_id};
 use worker::context::WorkerContext;
 use worker::worker::run_worker_loop;
 

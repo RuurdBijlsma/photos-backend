@@ -1,6 +1,5 @@
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use color_eyre::eyre::Result;
-use common_photos::{UserRole, get_db_pool, nice_id, settings};
 use media_analyzer::{
     AnalyzeResult, CaptureDetails, FileMetadata, PanoInfo, SourceDetails, TagData, TimeInfo,
 };
@@ -8,6 +7,9 @@ use rand::Rng;
 use sqlx::{PgPool, PgTransaction};
 use std::time::Instant;
 use tracing::info;
+use common_services::settings::settings;
+use common_services::utils::{get_db_pool, nice_id};
+use common_types::app_user::UserRole;
 use worker::handlers::db::store_media::store_media_item;
 
 /// The main entry point for seeding the database.
@@ -161,7 +163,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
     let pool = get_db_pool().await?;
-    seed_database_for_dev(&pool, 100000).await?;
+    seed_database_for_dev(&pool, 100_000).await?;
 
     Ok(())
 }

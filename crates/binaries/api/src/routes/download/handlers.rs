@@ -3,11 +3,10 @@
 use axum::Extension;
 use axum::extract::Query;
 use axum::response::IntoResponse;
-
-use crate::auth::db_model::User;
-use crate::download::error::DownloadError;
-use crate::download::interfaces::DownloadMediaQuery;
-use crate::download::service::download_media_file;
+use common_services::download::error::DownloadError;
+use common_services::download::interfaces::DownloadMediaParams;
+use common_services::download::service::download_media_file;
+use common_types::app_user::User;
 
 /// Download a media file.
 ///
@@ -35,7 +34,7 @@ use crate::download::service::download_media_file;
 )]
 pub async fn download_full_file(
     Extension(user): Extension<User>,
-    Query(query): Query<DownloadMediaQuery>,
+    Query(query): Query<DownloadMediaParams>,
 ) -> Result<impl IntoResponse, DownloadError> {
     let response = download_media_file(&user, &query.path).await?;
     Ok(response)

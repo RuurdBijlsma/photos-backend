@@ -1,12 +1,13 @@
 use color_eyre::Result;
 use color_eyre::eyre::{Context, eyre};
-use common_photos::{get_db_pool, media_dir};
 use pgvector::Vector;
 use sqlx::FromRow;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::info;
+use common_services::settings::media_dir;
+use common_services::utils::get_db_pool;
 use worker::handlers::common::clustering::run_hdbscan;
 
 /// A simple struct to hold the necessary data for clustering and file operations.

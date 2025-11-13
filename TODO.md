@@ -112,12 +112,17 @@
 * make invite check work with "localhost:9475" insted of "http://localhost:9475" and make it work with https. (it
   currently assumes http).
 * repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
-  * parse url stuff
-  * parse token maybe?
-  * get s2s invite summary
-  * make s2s client in common code somewhere, to call s2s endpoints.
-  * share reqwest client via application state and worker context so it's not made every time.
-  * Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
+    * parse url stuff
+    * parse token maybe?
+    * get s2s invite summary
+    * make s2s client in common code somewhere, to call s2s endpoints.
+    * share reqwest client via application state and worker context so it's not made every time.
+    * Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
+* rename setup to onboarding
+* worker does not output logs to stdout anymore.
+* [BUG] if album name for /albums/invite/accept is already a folder in media_dir/user_folder, then it doesnt work
+  properly.
+* remove unused crates
 
 # Features
 

@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-common_photos = { path = "../common_photos" }
+common_types = { path = "../common_types" }
+common_services = { path = "../common_services" }
 tokio = { version = "1.47.1", features = ["full"] }
 walkdir = "2.5.0"
 tokio-retry = "0.3.0"

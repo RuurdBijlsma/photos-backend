@@ -14,5 +14,6 @@ color-eyre = "0.6.5"
 imageproc = { version = "0.25.0" }
 tempfile = "3.23.0"
 tokio = { version = "1.47.1", features = ["full"]}
-common_photos = { path = "../common_photos" }
+common_types = { path = "../common_types" }
+common_services = { path = "../common_services" }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json"] }

@@ -1,19 +1,13 @@
 //! This module defines the HTTP handlers for the initial application setup process.
 
 use crate::api_state::ApiState;
-use crate::auth::db_model::User;
-use crate::setup::error::SetupError;
-use crate::setup::interfaces::{
-    DiskResponse, FolderQuery, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
-    UnsupportedFilesResponse,
-};
-use crate::setup::service::{
-    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
-    start_processing, validate_user_folder,
-};
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
+use common_services::setup::error::SetupError;
+use common_services::setup::interfaces::{DiskResponse, FolderParams, MakeFolderBody, MediaSampleResponse, StartProcessingBody, UnsupportedFilesResponse};
+use common_services::setup::service::{create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders, start_processing, validate_user_folder};
+use common_types::app_user::User;
 
 /// Retrieves information about the configured media and thumbnail disks.
 #[utoipa::path(
@@ -42,7 +36,7 @@ pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
     )
 )]
 pub async fn get_folder_media_sample(
-    Query(query): Query<FolderQuery>,
+    Query(query): Query<FolderParams>,
 ) -> Result<Json<MediaSampleResponse>, SetupError> {
     let user_path = validate_user_folder(&query.folder).await?;
     let response = get_media_sample(&user_path)?;
@@ -62,7 +56,7 @@ pub async fn get_folder_media_sample(
     )
 )]
 pub async fn get_folder_unsupported(
-    Query(query): Query<FolderQuery>,
+    Query(query): Query<FolderParams>,
 ) -> Result<Json<UnsupportedFilesResponse>, SetupError> {
     let user_path = validate_user_folder(&query.folder).await?;
     let response = get_folder_unsupported_files(&user_path)?;
@@ -82,7 +76,7 @@ pub async fn get_folder_unsupported(
     )
 )]
 pub async fn get_folders(
-    Query(query): Query<FolderQuery>,
+    Query(query): Query<FolderParams>,
 ) -> Result<Json<Vec<String>>, SetupError> {
     let folders = get_subfolders(&query.folder).await?;
     Ok(Json(folders))
@@ -121,6 +115,6 @@ pub async fn post_start_processing(
     Extension(user): Extension<User>,
     Json(payload): Json<StartProcessingBody>,
 ) -> Result<Json<bool>, SetupError> {
-    start_processing(&user, &api_state.pool, payload.user_folder).await?;
+    start_processing(user.id, &api_state.pool, payload.user_folder).await?;
     Ok(Json(true))
 }

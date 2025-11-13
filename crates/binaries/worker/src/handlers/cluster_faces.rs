@@ -1,15 +1,13 @@
-// handlers/cluster_faces.rs
-
 use crate::context::WorkerContext;
-use crate::handlers::JobResult;
 use crate::handlers::common::clustering;
 use crate::handlers::common::clustering::{Clusterable, ClusteringStrategy};
 use crate::handlers::db::model::{ExistingPerson, FaceEmbedding};
+use crate::handlers::JobResult;
 use async_trait::async_trait;
 use color_eyre::Result;
-use common_photos::Job;
+use common_services::queue::Job;
 use pgvector::Vector;
-use sqlx::{Transaction, query, query_as, query_scalar};
+use sqlx::{query, query_as, query_scalar, Transaction};
 use std::collections::{HashMap, HashSet};
 
 impl Clusterable for ExistingPerson {

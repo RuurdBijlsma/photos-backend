@@ -1,15 +1,12 @@
 //! This module defines the HTTP handlers for authentication-related routes.
 
 use crate::api_state::ApiState;
-use crate::auth::db_model::User;
-use crate::auth::error::AuthError;
-use crate::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
-use crate::auth::service::{
-    authenticate_user, create_access_token, create_user, logout_user, refresh_tokens,
-    store_refresh_token,
-};
-use crate::auth::token::generate_refresh_token_parts;
 use axum::{Extension, Json, extract::State, http::StatusCode};
+use common_services::auth::error::AuthError;
+use common_services::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
+use common_services::auth::service::{authenticate_user, create_access_token, create_user, logout_user, refresh_tokens, store_refresh_token};
+use common_services::auth::token::generate_refresh_token_parts;
+use common_types::app_user::User;
 
 /// Handles user login and returns a new set of tokens.
 ///

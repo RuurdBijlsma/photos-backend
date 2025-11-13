@@ -4,12 +4,12 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use async_trait::async_trait;
 use color_eyre::{Result, eyre::eyre};
-use common_photos::Job;
 use hdbscan::{Center, DistanceMetric, Hdbscan, HdbscanHyperParams};
 use pgvector::Vector;
 use sqlx::{PgPool, Transaction, query_scalar};
 use std::collections::{HashMap, HashSet};
 use tracing::info;
+use common_services::queue::Job;
 
 /// A trait for items that can be clustered. They must provide an ID and a centroid vector.
 pub trait Clusterable {

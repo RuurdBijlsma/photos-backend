@@ -1,26 +1,27 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::job_payloads::ImportAlbumItemPayload;
+use color_eyre::eyre::{eyre, Context};
 use color_eyre::Result;
-use color_eyre::eyre::{Context, eyre};
-use common_photos::{Job, enqueue_full_ingest, media_dir, to_posix_string};
 use futures_util::StreamExt;
+use serde_json::from_value;
 use sqlx::query;
 use std::path::Path;
+use common_services::queue::{enqueue_full_ingest, Job};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use url::Url;
+use common_services::settings::media_dir;
+use common_services::utils::to_posix_string;
+use common_types::ImportAlbumItemPayload;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(payload_value) = &job.payload else {
         return Err(eyre!("ImportAlbumItem job is missing a payload"));
     };
-    let payload: ImportAlbumItemPayload = serde_json::from_value(payload_value.clone())?;
-    let user_id = job.user_id.ok_or_else(|| eyre!("Job missing user_id"))?;
-
-    // 1. Construct download URL and fetch the file
-    let mut remote_url = Url::parse(&format!("http://{}", payload.remote_server_url))
-        .or_else(|_| Url::parse(&format!("https://{}", payload.remote_server_url)))?;
+    let payload: ImportAlbumItemPayload = from_value(payload_value.clone())?;
+    let user_id = job
+        .user_id
+        .ok_or_else(|| eyre!("ImportAlbumItem Job missing user_id"))?;
+    let mut remote_url = payload.remote_url.clone();
     remote_url.set_path(&format!(
         "/s2s/albums/files/{}",
         payload.remote_media_item_id
@@ -60,7 +61,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let filename = content_disposition
         .split("filename=")
         .last()
-        .map_or(payload.remote_media_item_id, |s| {
+        .map_or_else(|| payload.remote_media_item_id.clone(), |s| {
             s.trim_matches('"').to_owned()
         });
 
@@ -95,11 +96,13 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         VALUES ($1, $2, $3)
         "#,
         relative_path,
-        payload.local_album_id,
-        payload.remote_owner_identity
+        payload.local_album_id.clone(),
+        //todo: make nicer remote_user_identity (no https://)
+        format!("{}@{}", payload.remote_username, payload.remote_url),
     )
     .execute(&context.pool)
     .await?;
+    
 
     // 4. Enqueue a standard ingest job
     enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;

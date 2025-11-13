@@ -2,10 +2,10 @@
 name = "api"
 version = "0.1.0"
 edition = "2024"
-build = "build.rs"
 
 [dependencies]
-common_photos = { path = "../../libs/common_photos" }
+common_types = { path = "../../libs/common_types" }
+common_services = { path = "../../libs/common_services" }
 ml_analysis = { path = "../../libs/ml_analysis" }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter"] }
@@ -35,9 +35,6 @@ prost = "0.13.5"
 bytes = "1.10.1"
 axum-extra = { version = "0.10.3", features = ["protobuf", "typed-header"] }
 reqwest = { version = "0.12.24", features = ["json"] }
-url = "2.5.7"
+url = { version = "2.5.7", features = ["serde"] }
 uuid = { version = "1.18.1", features = ["v4"] }
 async-trait = "0.1.89"
-
-[build-dependencies]
-prost-build = "0.13.5"

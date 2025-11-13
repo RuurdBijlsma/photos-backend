@@ -2,6 +2,7 @@ use crate::routes::{album, auth, download, photos, root, setup};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 
+// todo: fix this
 #[derive(OpenApi)]
 #[openapi(
     paths(
@@ -34,33 +35,6 @@ use utoipa::{Modify, OpenApi};
     ),
     components(
         schemas(
-            // Auth schemas
-            auth::db_model::User,
-            common_photos::UserRole,
-            auth::interfaces::CreateUser,
-            auth::interfaces::LoginUser,
-            auth::interfaces::RefreshTokenPayload,
-            auth::interfaces::Tokens,
-            // Setup schemas
-            setup::interfaces::FolderQuery,
-            setup::interfaces::MakeFolderBody,
-            setup::interfaces::PathInfoResponse,
-            setup::interfaces::MediaSampleResponse,
-            setup::interfaces::UnsupportedFilesResponse,
-            setup::interfaces::DiskResponse,
-            // Download schemas
-            download::interfaces::DownloadMediaQuery,
-            // Album schemas
-            album::db_model::Album,
-            album::db_model::AlbumRole,
-            album::db_model::AlbumCollaborator,
-            album::interfaces::CreateAlbumRequest,
-            album::interfaces::UpdateAlbumRequest,
-            album::interfaces::AddMediaToAlbumRequest,
-            album::interfaces::AddCollaboratorRequest,
-            album::interfaces::AlbumDetailsResponse,
-            album::interfaces::AlbumMediaItemSummary,
-            album::interfaces::CollaboratorSummary,
         ),
     ),
     modifiers(&SecurityAddon),

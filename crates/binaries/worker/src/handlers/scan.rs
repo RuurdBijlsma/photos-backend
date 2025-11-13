@@ -1,18 +1,18 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use color_eyre::eyre::Result;
 use color_eyre::eyre::eyre;
-use common_photos::{
-    Job, JobType, alert, enqueue_file_job, enqueue_full_ingest, media_dir, relative_path_abs,
-    settings, thumbnails_dir, user_from_relative_path,
-};
+use color_eyre::eyre::Result;
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
+use common_services::queue::{enqueue_full_ingest, enqueue_job, Job, JobType};
 use std::path::Path;
 use tokio::fs;
 use tracing::warn;
 use tracing::{error, info};
 use walkdir::WalkDir;
+use common_services::alert;
+use common_services::settings::{media_dir, settings, thumbnails_dir};
+use common_services::utils::{relative_path_abs, user_from_relative_path};
 
 /// Checks if a file path has an extension present in a given set of allowed extensions.
 fn has_allowed_ext(path: &Path, allowed: &HashSet<&str>) -> bool {
@@ -78,7 +78,12 @@ pub async fn sync_user_files_to_db(
         }
     }
     for rel_path in to_remove {
-        if let Err(e) = enqueue_file_job(pool, JobType::Remove, &rel_path, user_id, None).await {
+        if let Err(e) = enqueue_job::<()>(pool, JobType::Remove)
+            .relative_path(rel_path)
+            .user_id(user_id)
+            .call()
+            .await
+        {
             error!("Error enqueueing file remove: {:?}", e.to_string());
         }
     }

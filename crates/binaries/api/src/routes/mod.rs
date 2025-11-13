@@ -12,8 +12,7 @@ pub mod setup;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::api_state::ApiState;
-use crate::auth::db_model::User;
-use crate::auth::middleware::{OptionalUser, require_role};
+use crate::auth::middleware::{require_role, ApiUser, OptionalUser};
 use crate::auth::router::{auth_protected_router, auth_public_router};
 use crate::download::router::download_protected_router;
 use crate::photos::router::photos_protected_router;
@@ -23,10 +22,10 @@ use crate::routes::api_doc::ApiDoc;
 use crate::s2s::router::s2s_public_router;
 use crate::scalar_config::get_custom_html;
 use crate::setup::router::setup_admin_router;
-use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
-use common_photos::UserRole;
-use tower_http::{LatencyUnit, trace::TraceLayer};
+use axum::Router;
+use common_types::app_user::UserRole;
+use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::OpenApi;
 use utoipa_scalar::{Scalar, Servable};
 
@@ -71,12 +70,12 @@ fn protected_routes(api_state: ApiState) -> Router<ApiState> {
         .merge(download_protected_router())
         .merge(photos_protected_router())
         .merge(album_protected_router())
-        .route_layer(from_extractor_with_state::<User, ApiState>(api_state))
+        .route_layer(from_extractor_with_state::<ApiUser, ApiState>(api_state))
 }
 
 fn admin_routes(api_state: ApiState) -> Router<ApiState> {
     Router::new()
         .merge(setup_admin_router())
         .route_layer(from_fn_with_state(UserRole::Admin, require_role))
-        .route_layer(from_extractor_with_state::<User, ApiState>(api_state))
+        .route_layer(from_extractor_with_state::<ApiUser, ApiState>(api_state))
 }

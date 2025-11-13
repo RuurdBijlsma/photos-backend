@@ -1,7 +1,7 @@
-use common_photos::get_thumb_options;
 use generate_thumbnails::generate_thumbnails;
 use std::fs;
 use std::path::Path;
+use common_services::utils::get_thumb_options;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {

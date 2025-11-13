@@ -1,20 +1,16 @@
 use crate::api_state::ApiState;
-use crate::auth::db_model::User;
-use crate::pb::api::{ByMonthResponse, TimelineResponse};
-use crate::photos::error::PhotosError;
-use crate::photos::full_item_interfaces::FullMediaItem;
-use crate::photos::interfaces::{
-    ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse,
-};
-use crate::photos::service::{
-    fetch_full_media_item, get_color_theme, get_photos_by_month, get_timeline_ids,
-    get_timeline_ratios, random_photo,
-};
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
 use serde_json::Value;
+use common_services::photos::error::PhotosError;
+use common_services::photos::interfaces::{ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
+use common_services::photos::service::{fetch_full_media_item, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo};
+use common_types::app_user::User;
+use common_types::media_item::FullMediaItem;
+use common_types::pb::api::{ByMonthResponse, TimelineResponse};
+use ml_analysis::get_color_theme;
 
 /// Get a random photo and its associated theme.
 ///
@@ -177,6 +173,5 @@ pub async fn get_random_photo(
 pub async fn get_color_theme_handler(
     Query(params): Query<ColorThemeParams>,
 ) -> Result<Json<Value>, PhotosError> {
-    let result = get_color_theme(params.color).await?;
-    Ok(Json(result))
+    Ok(Json(get_color_theme(&params.color)?))
 }

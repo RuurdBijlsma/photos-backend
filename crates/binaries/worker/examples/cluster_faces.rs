@@ -1,5 +1,4 @@
 use color_eyre::eyre::Result;
-use common_photos::{get_db_pool, media_dir, to_posix_string};
 use worker::handlers::db::model::FaceEmbedding;
 
 use ab_glyph::FontArc;
@@ -10,6 +9,8 @@ use sqlx::{PgPool, query_as};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use common_services::settings::media_dir;
+use common_services::utils::{get_db_pool, to_posix_string};
 use worker::handlers::common::clustering::{group_by_cluster, run_hdbscan};
 
 // A new struct to hold more comprehensive face details for drawing

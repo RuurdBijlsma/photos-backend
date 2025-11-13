@@ -1,1 +1,0 @@
-//todo: common s2s album logic here.

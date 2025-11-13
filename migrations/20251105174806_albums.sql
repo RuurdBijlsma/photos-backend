@@ -69,19 +69,6 @@ CREATE TABLE album_collaborator
             )
 );
 
--- Table to store secure, single-use invitation tokens for sharing albums.
-CREATE TABLE album_invites
-(
-    id         BIGSERIAL PRIMARY KEY,
-    album_id   VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
-    token      TEXT        NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expires_at TIMESTAMPTZ NOT NULL
-);
-
--- Index for quickly finding an invitation by its token.
-CREATE INDEX idx_album_invites_token ON album_invites (token);
-
 
 -- A table to link imported media to a target album and remote owner before ingestion is complete.
 CREATE TABLE pending_album_media_items

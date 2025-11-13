@@ -1,13 +1,12 @@
-use common_photos::{
-    JobType, alert, enqueue_file_job, enqueue_full_ingest, relative_path_abs,
-    user_from_relative_path,
-};
-use futures::channel::mpsc::{Receiver, channel};
+use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::{Pool, Postgres};
 use std::path::Path;
 use tracing::{error, info, warn};
+use common_services::alert;
+use common_services::queue::{enqueue_full_ingest, enqueue_job, JobType};
+use common_services::utils::{relative_path_abs, user_from_relative_path};
 
 /// Handles a file creation event by enqueueing the file for ingestion.
 ///
@@ -37,7 +36,11 @@ async fn handle_remove_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::R
 
     let rel_path = relative_path_abs(file)?;
     if let Some(user) = user_from_relative_path(&rel_path, pool).await? {
-        enqueue_file_job(pool, JobType::Remove, &rel_path, user.id, None).await?;
+        enqueue_job::<()>(pool, JobType::Remove)
+            .relative_path(&rel_path)
+            .user_id(user.id)
+            .call()
+            .await?;
     } else {
         alert!("[Create file event] Cannot find user from relative path.");
     }

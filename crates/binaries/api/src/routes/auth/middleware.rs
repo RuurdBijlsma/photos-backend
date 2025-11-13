@@ -6,14 +6,15 @@ use axum::{
     response::Response,
 };
 use color_eyre::eyre::eyre;
-use common_photos::{UserRole, settings};
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
+use common_services::auth::error::AuthError;
+use common_services::auth::interfaces::AuthClaims;
+use common_services::settings::settings;
+use common_types::app_user::{User, UserRole};
 
-use crate::{
-    auth::db_model::User,
-    routes::auth::{error::AuthError, interfaces::Claims},
-};
+#[derive(Clone, Debug)]
+pub struct ApiUser(pub User);
 
 /// Get `PgPool` from Parts
 async fn extract_pool<S>(parts: &mut Parts, state: &S) -> Result<PgPool, AuthError>
@@ -43,9 +44,9 @@ fn extract_token(parts: &Parts) -> Result<&str, AuthError> {
         .ok_or(AuthError::InvalidToken)
 }
 
-fn decode_token(token: &str) -> Result<Claims, AuthError> {
+fn decode_token(token: &str) -> Result<AuthClaims, AuthError> {
     let jwt_secret = &settings().auth.jwt_secret;
-    decode::<Claims>(
+    decode::<AuthClaims>(
         token,
         &DecodingKey::from_secret(jwt_secret.as_ref()),
         &Validation::default(),
@@ -67,7 +68,7 @@ async fn fetch_user(pool: &PgPool, user_id: i32) -> Result<User, AuthError> {
     .ok_or(AuthError::UserNotFound)
 }
 
-impl<S> FromRequestParts<S> for User
+impl<S> FromRequestParts<S> for ApiUser
 where
     S: Send + Sync,
     State<PgPool>: FromRequestParts<S>,
@@ -80,7 +81,7 @@ where
         let pool = extract_pool(parts, state).await?;
         let user = fetch_user(&pool, claims.sub).await?;
         parts.extensions.insert(user.clone());
-        Ok(user)
+        Ok(Self(user))
     }
 }
 
