@@ -5,6 +5,7 @@ mod db_model;
 mod queue;
 mod settings;
 mod utils;
+mod s2s;
 
 pub use common_interfaces::*;
 pub use db_model::*;

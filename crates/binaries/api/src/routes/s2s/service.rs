@@ -40,11 +40,6 @@ pub async fn get_invite_summary(
     })
 }
 
-/// A validated token and its associated `album_id`.
-pub struct ValidatedToken {
-    pub album_id: String,
-}
-
 /// Validates a token and checks that a `media_item_id` belongs to the token's album.
 /// This is a critical security check.
 #[instrument(skip(pool))]
@@ -52,7 +47,7 @@ pub async fn validate_token_for_media_item(
     pool: &PgPool,
     token: &str,
     media_item_id: &str,
-) -> Result<ValidatedToken, S2SError> {
+) -> Result<String, S2SError> {
     let token_parts: Vec<&str> = token.split('-').collect();
     if token_parts.len() < 2 || token_parts[0] != "inv" {
         return Err(S2SError::TokenInvalid);
@@ -75,9 +70,7 @@ pub async fn validate_token_for_media_item(
     .await?
     .ok_or(S2SError::PermissionDenied)?;
 
-    Ok(ValidatedToken {
-        album_id: result.album_id,
-    })
+    Ok(result.album_id)
 }
 
 /// Retrieves the relative path for a given media item owned by a user.

@@ -54,6 +54,8 @@
     * ✅ nieuwe dag is niet altijd newline in de photos grid, misschien toch weer over gaan naar maanden requesten.
     * ✅ data_url veld in db is useless denk ik (ook in alle analyzers)
     * ✅ virtual scroll waar elke maand 1 virtual scroll item is? of elke row is 1 virtual item??
+* ✅ pending_album_media_items isnt getting used
+* ✅ Change album id from uuid to niceid (no longer univerally unique requirement)
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -103,7 +105,6 @@
 * split routes/photos into timeline related and media item related
 * websocket om nieuwe foto events te sturen
 * improve OCR
-* Change album id from uuid to niceid (no longer univerally unique requirement)
 * clean up error and warn and info tracing logs
     * error for fatal boys
     * warn for user might be impacted
@@ -117,7 +118,6 @@
   * make s2s client in common code somewhere, to call s2s endpoints.
   * share reqwest client via application state and worker context so it's not made every time.
   * Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
-* pending_album_media_items isnt getting used
 
 # Features
 
