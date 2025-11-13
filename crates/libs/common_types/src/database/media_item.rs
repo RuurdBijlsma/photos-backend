@@ -1,10 +1,10 @@
+use crate::database::visual_analysis::VisualAnalysis;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
 use sqlx::types::Json;
 use utoipa::ToSchema;
-use crate::database::visual_analysis::VisualAnalysis;
 
 /// Corresponds to the 'location' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]

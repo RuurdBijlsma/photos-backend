@@ -4,10 +4,10 @@ use crate::handlers::db::helpers::get_media_item_id;
 use crate::handlers::db::store_analysis::store_visual_analysis;
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::eyre::{Result, eyre};
-use tracing::info;
-use common_services::queue::{Job};
+use common_services::queue::Job;
 use common_services::settings::{media_dir, settings, thumbnails_dir};
 use common_services::utils::{file_is_ingested, is_photo_file};
+use tracing::info;
 
 /// Handles the analysis of a given job.
 ///

@@ -1,3 +1,3 @@
 pub mod handlers;
-pub mod router;
 pub mod middleware;
+pub mod router;

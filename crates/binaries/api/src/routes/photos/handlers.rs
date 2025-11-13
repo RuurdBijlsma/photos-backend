@@ -3,14 +3,18 @@ use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
-use serde_json::Value;
 use common_services::photos::error::PhotosError;
-use common_services::photos::interfaces::{ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse};
-use common_services::photos::service::{fetch_full_media_item, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo};
+use common_services::photos::interfaces::{
+    ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse,
+};
+use common_services::photos::service::{
+    fetch_full_media_item, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo,
+};
 use common_types::app_user::User;
 use common_types::media_item::FullMediaItem;
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 use ml_analysis::get_color_theme;
+use serde_json::Value;
 
 /// Get a random photo and its associated theme.
 ///

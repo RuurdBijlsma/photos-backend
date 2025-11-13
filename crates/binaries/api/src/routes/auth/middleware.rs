@@ -6,12 +6,12 @@ use axum::{
     response::Response,
 };
 use color_eyre::eyre::eyre;
-use jsonwebtoken::{DecodingKey, Validation, decode};
-use sqlx::PgPool;
 use common_services::auth::error::AuthError;
 use common_services::auth::interfaces::AuthClaims;
 use common_services::settings::settings;
 use common_types::app_user::{User, UserRole};
+use jsonwebtoken::{DecodingKey, Validation, decode};
+use sqlx::PgPool;
 
 #[derive(Clone, Debug)]
 pub struct ApiUser(pub User);

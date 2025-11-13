@@ -1,19 +1,19 @@
 //! This module provides the core logic for handling media file downloads.
 
+use crate::download::error::DownloadError;
+use crate::settings::media_dir;
+use crate::utils::{is_media_file, relative_path_canon};
 use axum::{
     body::Body,
     http::{StatusCode, header},
 };
 use color_eyre::Report;
+use common_types::app_user::{User, UserRole};
 use http::Response;
 use std::path::Path;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
-use common_types::app_user::{User, UserRole};
-use crate::download::error::DownloadError;
-use crate::settings::media_dir;
-use crate::utils::{is_media_file, relative_path_canon};
 
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///

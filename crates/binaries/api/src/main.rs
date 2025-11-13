@@ -16,6 +16,8 @@ pub use routes::*;
 
 use crate::api_state::ApiState;
 use color_eyre::Result;
+use common_services::settings::settings;
+use common_services::utils::get_db_pool;
 use http::{HeaderValue, header};
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
@@ -25,8 +27,6 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use common_services::settings::settings;
-use common_services::utils::get_db_pool;
 
 #[tokio::main]
 async fn main() -> Result<()> {

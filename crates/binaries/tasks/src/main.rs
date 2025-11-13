@@ -1,5 +1,5 @@
 use color_eyre::Result;
-use common_services::queue::{enqueue_job, JobType};
+use common_services::queue::{JobType, enqueue_job};
 use common_services::utils::get_db_pool;
 
 #[tokio::main]
@@ -19,8 +19,12 @@ async fn main() -> Result<()> {
     let pool = get_db_pool().await?;
     enqueue_job::<()>(&pool, JobType::Scan).call().await?;
     enqueue_job::<()>(&pool, JobType::CleanDB).call().await?;
-    enqueue_job::<()>(&pool, JobType::ClusterPhotos).call().await?;
-    enqueue_job::<()>(&pool, JobType::ClusterFaces).call().await?;
+    enqueue_job::<()>(&pool, JobType::ClusterPhotos)
+        .call()
+        .await?;
+    enqueue_job::<()>(&pool, JobType::ClusterFaces)
+        .call()
+        .await?;
     Ok(())
     //         }
     //         .await;

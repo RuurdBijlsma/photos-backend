@@ -1,20 +1,20 @@
-use common_types::app_user::UserRole;
 use super::interfaces::{AlbumDetailsResponse, AlbumMediaItemSummary, CollaboratorSummary};
+use crate::album::interfaces::{AcceptInviteRequest, AlbumShareClaims};
+use crate::api::album::error::AlbumError;
+use crate::queue::{JobType, enqueue_job};
+use crate::settings::settings;
+use crate::utils::nice_id;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use common_types::ImportAlbumPayload;
+use common_types::album::{Album, AlbumRole, AlbumSummary};
+use common_types::album_collaborator::AlbumCollaborator;
+use common_types::app_user::User;
+use common_types::app_user::UserRole;
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use reqwest::Client;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
 use url::Url;
-use common_types::{ImportAlbumPayload};
-use common_types::album::{Album, AlbumRole, AlbumSummary};
-use common_types::album_collaborator::AlbumCollaborator;
-use common_types::app_user::User;
-use crate::album::interfaces::{AcceptInviteRequest, AlbumShareClaims};
-use crate::api::album::error::AlbumError;
-use crate::queue::{enqueue_job, JobType};
-use crate::settings::settings;
-use crate::utils::nice_id;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
@@ -478,10 +478,7 @@ fn extract_token_claims(token: &str) -> Result<AlbumShareClaims, AlbumError> {
 }
 
 /// Contacts the remote server to get a summary of an album invitation.
-pub async fn check_invite(
-    token: &str,
-    http_client: &Client,
-) -> Result<AlbumSummary, AlbumError> {
+pub async fn check_invite(token: &str, http_client: &Client) -> Result<AlbumSummary, AlbumError> {
     let claims = extract_token_claims(token)?;
     let mut remote_url: Url = claims.iss.parse()?;
     remote_url.set_path("/s2s/albums/invite-summary");

@@ -1,23 +1,24 @@
-
+use crate::photos::error::PhotosError;
+use common_types::media_item::CaptureDetails;
+use common_types::media_item::Details;
+use common_types::media_item::Gps;
+use common_types::media_item::Panorama;
+use common_types::media_item::TimeDetails;
 use common_types::media_item::Weather;
 use common_types::visual_analysis::VisualAnalysis;
-use common_types::media_item::TimeDetails;
-use common_types::media_item::Panorama;
-use common_types::media_item::Gps;
-use common_types::media_item::Details;
-use common_types::media_item::CaptureDetails;
-use crate::photos::error::PhotosError;
 
 use crate::photos::interfaces::RandomPhotoResponse;
 use chrono::NaiveDate;
+use common_types::app_user::User;
+use common_types::media_item::{FullMediaItem, FullMediaItemRow};
+use common_types::pb::api::{
+    ByMonthResponse, MediaItem, MediaMonth, TimelineMonth, TimelineResponse,
+};
 use rand::Rng;
 use sqlx::PgPool;
 use sqlx::types::Json;
 use std::collections::HashMap;
 use tracing::warn;
-use common_types::app_user::User;
-use common_types::media_item::{FullMediaItem, FullMediaItemRow};
-use common_types::pb::api::{ByMonthResponse, MediaItem, MediaMonth, TimelineMonth, TimelineResponse};
 
 /// Fetches a full media item with all related analyses and metadata.
 ///

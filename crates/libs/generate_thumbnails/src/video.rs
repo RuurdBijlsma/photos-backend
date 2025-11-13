@@ -1,8 +1,8 @@
 use crate::ffmpeg::{FfmpegCommand, get_video_duration};
 use color_eyre::eyre::Result;
+use common_services::settings::ThumbOptions;
 use std::path::Path;
 use tokio::fs;
-use common_services::settings::ThumbOptions;
 
 pub async fn generate_video_thumbnails(
     input: &Path,
@@ -78,6 +78,11 @@ fn generate_video_transcodes(cmd: &mut FfmpegCommand, output_dir: &Path, config:
         let scaled_v_stream = cmd.add_scale(&v_streams[i], -2, h as i32);
         let out_path = output_dir.join(format!("{h}p.{}", config.video_options.extension));
 
-        cmd.map_video_output(&scaled_v_stream, &a_streams[i], hq_config.quality, &out_path);
+        cmd.map_video_output(
+            &scaled_v_stream,
+            &a_streams[i],
+            hq_config.quality,
+            &out_path,
+        );
     }
 }

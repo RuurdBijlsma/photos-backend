@@ -45,5 +45,3 @@ pub struct AuthClaims {
     pub exp: i64, // Expiration time
     pub role: UserRole,
 }
-
-

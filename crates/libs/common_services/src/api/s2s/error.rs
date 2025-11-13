@@ -1,6 +1,7 @@
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
 use tracing::error;
@@ -18,6 +19,12 @@ pub enum S2SError {
 
     #[error("Not found: {0}")]
     NotFound(String),
+
+    #[error("internal error")]
+    Internal(#[from] eyre::Report),
+
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
 }
 
 impl IntoResponse for S2SError {
@@ -36,9 +43,22 @@ impl IntoResponse for S2SError {
             ),
             Self::PermissionDenied => (StatusCode::FORBIDDEN, "Permission denied.".to_string()),
             Self::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            Self::Internal(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An unexpected internal error occurred.".to_string(),
+            ),
+            Self::Unauthorized(message) => {
+                (StatusCode::UNAUTHORIZED, format!("Unauthorized: {message}"))
+            }
         };
 
         let body = Json(json!({ "error": error_message }));
         (status, body).into_response()
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for S2SError {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        Self::Internal(eyre::Report::new(err))
     }
 }

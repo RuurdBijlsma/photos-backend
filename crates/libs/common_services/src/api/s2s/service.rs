@@ -1,11 +1,10 @@
-use jsonwebtoken::{decode, DecodingKey, Validation};
-use sqlx::PgPool;
-use tracing::instrument;
-use common_types::album::AlbumSummary;
 use crate::album::interfaces::AlbumShareClaims;
 use crate::s2s::error::S2SError;
 use crate::settings::{media_dir, settings};
-
+use common_types::album::AlbumSummary;
+use jsonwebtoken::{DecodingKey, Validation, decode};
+use sqlx::PgPool;
+use tracing::instrument;
 
 fn extract_token_claims(token: &str) -> Result<AlbumShareClaims, S2SError> {
     decode::<AlbumShareClaims>(
@@ -13,16 +12,13 @@ fn extract_token_claims(token: &str) -> Result<AlbumShareClaims, S2SError> {
         &DecodingKey::from_secret(settings().auth.jwt_secret.as_ref()),
         &Validation::default(),
     )
-        .map(|p| p.claims)
-        .map_err(|_| S2SError::Unauthorized("Invalid token.".to_string()))
+    .map(|p| p.claims)
+    .map_err(|_| S2SError::Unauthorized("Invalid token.".to_string()))
 }
 
 /// Validates an invitation token and returns the summary of the album.
 #[instrument(skip(pool))]
-pub async fn get_invite_summary(
-    pool: &PgPool,
-    token: &str,
-) -> Result<AlbumSummary, S2SError> {
+pub async fn get_invite_summary(pool: &PgPool, token: &str) -> Result<AlbumSummary, S2SError> {
     let claims = extract_token_claims(token)?;
 
     let summary = sqlx::query_as!(AlbumSummary,

@@ -1,7 +1,7 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use color_eyre::eyre::eyre;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use common_services::queue::Job;
 use common_services::settings::{media_dir, thumbnails_dir};
 

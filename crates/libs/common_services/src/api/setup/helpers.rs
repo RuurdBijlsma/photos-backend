@@ -1,11 +1,11 @@
+use crate::setup::error::SetupError;
+use crate::setup::interfaces::PathInfoResponse;
+use crate::utils::to_posix_string;
 use fs2::{available_space, total_space};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 use tempfile::NamedTempFile;
 use tokio::task;
-use crate::setup::error::SetupError;
-use crate::setup::interfaces::PathInfoResponse;
-use crate::utils::to_posix_string;
 
 pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, SetupError> {
     let total = total_space(folder)?;
@@ -22,7 +22,7 @@ pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, SetupError> {
     })
 }
 
-#[must_use] 
+#[must_use]
 pub fn check_read_write_access(path: &Path) -> (bool, bool) {
     let can_read = fs::read_dir(path).is_ok();
     let can_write = NamedTempFile::new_in(path).is_ok();

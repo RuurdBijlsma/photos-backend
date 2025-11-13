@@ -1,8 +1,8 @@
+use common_services::settings::Variant;
 use ml_analysis::{PyInterop, get_color_data};
 use pyo3::Python;
 use std::path::Path;
 use std::time::Instant;
-use common_services::settings::Variant;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;

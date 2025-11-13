@@ -4,8 +4,15 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_services::album::error::AlbumError;
-use common_services::album::interfaces::{AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse, CheckInviteRequest, CreateAlbumRequest, UpdateAlbumRequest};
-use common_services::album::service::{accept_invite, add_collaborator, add_media_to_album, check_invite, create_album, generate_invite, get_album_details, get_user_albums, remove_collaborator, remove_media_from_album, update_album};
+use common_services::album::interfaces::{
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse,
+    CheckInviteRequest, CreateAlbumRequest, UpdateAlbumRequest,
+};
+use common_services::album::service::{
+    accept_invite, add_collaborator, add_media_to_album, check_invite, create_album,
+    generate_invite, get_album_details, get_user_albums, remove_collaborator,
+    remove_media_from_album, update_album,
+};
 use common_types::album::{Album, AlbumSummary};
 use common_types::album_collaborator::AlbumCollaborator;
 use common_types::app_user::User;
@@ -83,8 +90,7 @@ pub async fn get_album_details_handler(
     Extension(user): Extension<OptionalUser>,
     Path(album_id): Path<String>,
 ) -> Result<Json<AlbumDetailsResponse>, AlbumError> {
-    let details =
-        get_album_details(&api_state.pool, &album_id, user.0.map(|u| u.id)).await?;
+    let details = get_album_details(&api_state.pool, &album_id, user.0.map(|u| u.id)).await?;
     Ok(Json(details))
 }
 
@@ -148,8 +154,7 @@ pub async fn add_media_to_album_handler(
     Path(album_id): Path<String>,
     Json(payload): Json<AddMediaToAlbumRequest>,
 ) -> Result<StatusCode, AlbumError> {
-    add_media_to_album(&api_state.pool, &album_id, &payload.media_item_ids, user.id)
-        .await?;
+    add_media_to_album(&api_state.pool, &album_id, &payload.media_item_ids, user.id).await?;
     Ok(StatusCode::OK)
 }
 

@@ -1,17 +1,17 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use color_eyre::eyre::{eyre, Context};
 use color_eyre::Result;
+use color_eyre::eyre::{Context, eyre};
+use common_services::queue::{Job, enqueue_full_ingest};
+use common_services::settings::media_dir;
+use common_services::utils::to_posix_string;
+use common_types::ImportAlbumItemPayload;
 use futures_util::StreamExt;
 use serde_json::from_value;
 use sqlx::query;
 use std::path::Path;
-use common_services::queue::{enqueue_full_ingest, Job};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use common_services::settings::media_dir;
-use common_services::utils::to_posix_string;
-use common_types::ImportAlbumItemPayload;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(payload_value) = &job.payload else {
@@ -58,12 +58,10 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .unwrap_or("")
         .to_string(); // This makes a copy and releases the borrow
 
-    let filename = content_disposition
-        .split("filename=")
-        .last()
-        .map_or_else(|| payload.remote_media_item_id.clone(), |s| {
-            s.trim_matches('"').to_owned()
-        });
+    let filename = content_disposition.split("filename=").last().map_or_else(
+        || payload.remote_media_item_id.clone(),
+        |s| s.trim_matches('"').to_owned(),
+    );
 
     let user_media_folder = query!("SELECT media_folder FROM app_user WHERE id = $1", user_id)
         .fetch_one(&context.pool)
@@ -102,7 +100,6 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     )
     .execute(&context.pool)
     .await?;
-    
 
     // 4. Enqueue a standard ingest job
     enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;

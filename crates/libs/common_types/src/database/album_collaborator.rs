@@ -1,8 +1,8 @@
+use crate::database::album::AlbumRole;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use crate::database::album::AlbumRole;
 
 /// Represents a user's role in an album (a collaborator).
 #[derive(Debug, Serialize, FromRow, ToSchema)]

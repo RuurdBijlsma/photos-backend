@@ -3,16 +3,16 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use crate::queue::{JobType, enqueue_job};
+use crate::settings::{media_dir, settings, thumbnails_dir};
 use crate::setup::error::SetupError;
 use crate::setup::helpers::{check_drive_info, list_folders};
 use crate::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
+use crate::utils::{is_media_file, is_photo_file, relative_path_canon, to_posix_string};
 use sqlx::PgPool;
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
-use crate::queue::{enqueue_job, JobType};
-use crate::settings::{media_dir, settings, thumbnails_dir};
-use crate::utils::{is_media_file, is_photo_file, relative_path_canon, to_posix_string};
 
 /// Gathers information about the media and thumbnail directories.
 ///

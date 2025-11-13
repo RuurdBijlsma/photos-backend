@@ -1,3 +1,5 @@
+use crate::settings::{ThumbOptions, canon_media_dir, media_dir, settings, thumbnails_dir};
+use common_types::app_user::User;
 use common_types::app_user::UserRole;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Executor, Pool, Postgres};
@@ -6,8 +8,6 @@ use std::path::Path;
 use std::path::absolute;
 use std::time::Duration;
 use tracing::info;
-use common_types::app_user::User;
-use crate::settings::{canon_media_dir, media_dir, settings, thumbnails_dir, ThumbOptions};
 
 /// Converts a path to a POSIX-style string, replacing backslashes with forward slashes.
 #[must_use]
