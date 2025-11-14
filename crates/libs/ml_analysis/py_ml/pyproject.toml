@@ -1,0 +1,26 @@
+[project]
+name = "py_ml"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "~=3.12"
+dependencies = [
+    "material-color-utilities>=0.2.6",
+    "ruurd-photos-ml>=0.2.2",
+    "torch>=2.8.0",
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch_gpu", marker = "sys_platform != 'darwin'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch_gpu"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.0",
+]

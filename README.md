@@ -31,7 +31,7 @@ cd photos-backend
 ### 2. Set up `ml_analysis` environment
 
 ```bash
-cd crates/ml_analysis/py_ml
+cd crates/libs/ml_analysis/py_ml
 uv sync
 ```
 
@@ -64,10 +64,10 @@ Edit `config/settings.yaml` to adjust backend settings.
 
 There are 4 crates required for full backend functionality:
 
-1. `crates/api` – Web API
-2. `crates/indexer` – Scans media directories, enqueues ingest/remove jobs
-3. `crates/watcher` – Watches media directories and enqueues jobs for created/deleted files
-4. `crates/worker` – Processes jobs (generates thumbnails, analyzes metadata, updates database)
+1. `crates/binaries/api` – Web API
+2. `crates/binaries/indexer` – Scans media directories, enqueues ingest/remove jobs
+3. `crates/binaries/watcher` – Watches media directories and enqueues jobs for created/deleted files
+4. `crates/binaries/worker` – Processes jobs (generates thumbnails, analyzes metadata, updates database)
 
 Run each crate in a separate terminal:
 

@@ -1,4 +1,4 @@
-CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'cleandb');
+CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'clean_db', 'cluster_faces', 'cluster_photos', 'import_album', 'import_album_item');
 CREATE TYPE job_status AS ENUM ('queued', 'running', 'failed', 'done', 'cancelled');
 
 CREATE TABLE jobs
@@ -7,6 +7,7 @@ CREATE TABLE jobs
     relative_path       TEXT,                                 -- references files table
     user_id             INT REFERENCES app_user (id) ON DELETE CASCADE,
     job_type            job_type   NOT NULL,
+    payload             JSONB,                                -- For storing extra job parameters
     priority            INT        NOT NULL DEFAULT 100,      -- lower = higher priority
     status              job_status NOT NULL DEFAULT 'queued', -- queued, running, failed, done, cancelled
     attempts            INT        NOT NULL DEFAULT 0,

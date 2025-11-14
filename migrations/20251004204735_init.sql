@@ -25,6 +25,17 @@ CREATE TABLE app_user
     role         user_role   NOT NULL DEFAULT 'user'
 );
 
+CREATE TABLE remote_user
+(
+    id         SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    identity   TEXT        NOT NULL UNIQUE,
+    name       TEXT, -- Friendly name, can be set by user.
+    user_id    INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE
+);
+CREATE INDEX idx_remote_user_user_id ON remote_user (user_id);
+
 -- Create the Refresh Token table for persistent user sessions.
 CREATE TABLE refresh_token
 (
@@ -44,6 +55,7 @@ CREATE TABLE media_item
     hash                TEXT        NOT NULL,
     relative_path       TEXT        NOT NULL UNIQUE,
     user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    remote_user_id      INT         REFERENCES remote_user (id) ON DELETE SET NULL,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     width               INT         NOT NULL,
@@ -52,8 +64,10 @@ CREATE TABLE media_item
     duration_ms         BIGINT,
     taken_at_local      TIMESTAMP   NOT NULL,
     taken_at_utc        TIMESTAMPTZ,
+    sort_timestamp      TIMESTAMPTZ NOT NULL,
     use_panorama_viewer BOOLEAN     NOT NULL,
     deleted             BOOLEAN     NOT NULL DEFAULT false,
+    month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
     CONSTRAINT width_positive CHECK (width > 0),
     CONSTRAINT height_positive CHECK (height > 0)
 );
@@ -152,3 +166,10 @@ CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
 CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);
+CREATE INDEX idx_media_item_user_month_order_partial
+    ON media_item (
+                   user_id,
+                   month_id,
+                   sort_timestamp DESC
+        )
+    WHERE deleted = false;

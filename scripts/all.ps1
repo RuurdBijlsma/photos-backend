@@ -54,11 +54,11 @@ try {
 
     # Build
     Write-Host "`n=== Build ===" -ForegroundColor Cyan
-    cargo build --all-targets --all-features
+    cargo build --all-targets --all-features --examples
 
     # Clippy check
     Write-Host "`n=== Running Clippy checks ===" -ForegroundColor Cyan
-    cargo clippy --all-features -- `
+    cargo clippy --all-features --examples -- `
         -D warnings -W clippy::pedantic `
         -W clippy::nursery -W rust-2018-idioms `
         -A clippy::single-match-else

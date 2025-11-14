@@ -1,0 +1,25 @@
+[package]
+name = "common_types"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[dependencies]
+color-eyre = "0.6.5"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json"] }
+chrono = { version = "0.4.42", features = ["serde"] }
+rand = "0.10.0-rc.0"
+tracing = "0.1.41"
+serde = { version = "1.0.228", features = ["derive"] }
+config = "0.15.18"
+dotenv = "0.15.0"
+utoipa = { version = "5", features = ["axum_extras", "chrono"] }
+chrono-tz = "0.10.4"
+serde_json = "1.0.145"
+bon = "3.8.1"
+prost = "0.13.5"
+url = "2.5.7"
+pgvector = "0.4.1"
+
+[build-dependencies]
+prost-build = "0.13.5"
