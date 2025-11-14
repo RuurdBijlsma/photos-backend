@@ -1,13 +1,8 @@
-use crate::api::album::interfaces::CollaboratorSummary;
 use crate::database::album::album::AlbumRole;
-use crate::database::error::DbError;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::postgres::PgQueryResult;
-use sqlx::{Executor, FromRow, Postgres};
+use sqlx::FromRow;
 use utoipa::ToSchema;
-
-
 
 /// Represents a user's role in an album (a collaborator).
 #[derive(Debug, Serialize, FromRow, ToSchema)]

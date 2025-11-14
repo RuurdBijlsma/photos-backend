@@ -20,7 +20,7 @@
 # --- Configuration ---
 # Set the URL for your project's OpenAPI JSON specification.
 # If this is an empty string (""), the script will skip the OpenAPI prompt.
-$openApiUrl = ""
+$openApiUrl = "http://127.0.0.1:9475/openapi.json"
 
 # Add patterns to ignore beyond what's in .gitignore.
 # These use the .gitignore pattern format.
@@ -321,8 +321,10 @@ if (-not [string]::IsNullOrWhiteSpace($openApiUrl))
         try
         {
             Write-Host "Fetching OpenAPI spec..."
-            $apiSpec = Invoke-RestMethod -Uri $openApiUrl
-            $apiSpecJson = $apiSpec | ConvertTo-Json -Depth 10
+            # Use Invoke-WebRequest to get the raw content
+            $apiSpecResponse = Invoke-WebRequest -Uri $openApiUrl -UseBasicParsing
+            $apiSpecJson = $apiSpecResponse.Content
+
             $contextBuilder.AppendLine("## OpenAPI Specification") | Out-Null
             $contextBuilder.AppendLine('```json') | Out-Null
             $contextBuilder.AppendLine($apiSpecJson) | Out-Null
