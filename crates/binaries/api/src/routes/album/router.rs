@@ -12,33 +12,33 @@ use axum::{
 };
 
 pub fn album_auth_optional_router() -> Router<ApiState> {
-    Router::new().route("/albums/{album_id}", get(get_album_details_handler))
+    Router::new().route("/album/{album_id}", get(get_album_details_handler))
 }
 
 pub fn album_protected_router() -> Router<ApiState> {
     Router::new()
         .route(
-            "/albums",
+            "/album",
             post(create_album_handler).get(get_user_albums_handler),
         )
-        .route("/albums/{album_id}", put(update_album_handler))
-        .route("/albums/{album_id}/media", post(add_media_to_album_handler))
+        .route("/album/{album_id}", put(update_album_handler))
+        .route("/album/{album_id}/media", post(add_media_to_album_handler))
         .route(
-            "/albums/{album_id}/media/{media_item_id}",
+            "/album/{album_id}/media/{media_item_id}",
             delete(remove_media_from_album_handler),
         )
         .route(
-            "/albums/{album_id}/collaborators",
+            "/album/{album_id}/collaborators",
             post(add_collaborator_handler),
         )
         .route(
-            "/albums/{album_id}/collaborators/{collaborator_id}",
+            "/album/{album_id}/collaborators/{collaborator_id}",
             delete(remove_collaborator_handler),
         )
         .route(
-            "/albums/{album_id}/generate-invite",
+            "/album/{album_id}/generate-invite",
             get(generate_invite_handler),
         )
-        .route("/albums/invite/check", post(check_invite_handler))
-        .route("/albums/invite/accept", post(accept_invite_handler))
+        .route("/album/invite/check", post(check_invite_handler))
+        .route("/album/invite/accept", post(accept_invite_handler))
 }

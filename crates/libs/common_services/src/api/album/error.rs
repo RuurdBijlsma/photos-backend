@@ -111,17 +111,12 @@ impl From<DbError> for AlbumError {
     fn from(err: DbError) -> Self {
         match err {
             DbError::Sqlx(sql_err) => {
-                // Map SQLx's RowNotFound to AlbumError::NotFound
-                if let sqlx::Error::RowNotFound = sql_err {
-                    AlbumError::NotFound("row not found".into())
+                if matches!(sql_err, sqlx::Error::RowNotFound) {
+                    Self::NotFound("row not found".into())
                 } else {
-                    // direct mapping to AlbumError::Database
-                    AlbumError::Database(sql_err)
+                    Self::Database(sql_err)
                 }
             }
-            DbError::NotFound => AlbumError::NotFound("not found".into()),
-            DbError::InvalidInput(msg) => AlbumError::Internal(eyre::eyre!(msg)),
-            DbError::Internal(msg) => AlbumError::Internal(eyre::eyre!(msg)),
         }
     }
 }

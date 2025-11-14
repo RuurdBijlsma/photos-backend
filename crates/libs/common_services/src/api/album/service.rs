@@ -1,22 +1,16 @@
 use super::interfaces::{AcceptInviteRequest, AlbumDetailsResponse, AlbumShareClaims};
 use crate::api::album::error::AlbumError;
-use crate::database::album::album::{
-    Album, AlbumRole, AlbumSummary, get_album, get_user_album_role,
-};
-use crate::database::album::album_collaborator::{
-    AlbumCollaborator, get_album_collaborator, get_album_collaborators, insert_album_collaborator,
-    remove_album_collaborator,
-};
-use crate::database::album::album_media_item::{
-    get_album_media_items, insert_album_media_items, remove_album_media_items,
-};
+use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
+use crate::database::album::album_collaborator::AlbumCollaborator;
+use crate::database::album_store::AlbumStore;
 use crate::database::app_user::get_user_by_email;
 use crate::database::jobs::JobType;
 use crate::get_settings::settings;
 use crate::job_queue::enqueue_job;
+use crate::utils::nice_id;
 use chrono::{Duration, Utc};
 use common_types::ImportAlbumPayload;
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use reqwest::Client;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
@@ -30,7 +24,7 @@ async fn check_user_role(
     album_id: &str,
     required_roles: &[AlbumRole],
 ) -> Result<bool, AlbumError> {
-    let role = get_user_album_role(executor, user_id, album_id).await?;
+    let role = AlbumStore::get_user_role(executor, album_id, user_id).await?;
 
     match role {
         Some(r) if required_roles.contains(&r) => Ok(true),
@@ -59,7 +53,7 @@ pub async fn get_album_details(
     album_id: &str,
     user_id: Option<i32>,
 ) -> Result<AlbumDetailsResponse, AlbumError> {
-    let album = get_album(pool, album_id).await?;
+    let album = AlbumStore::get(pool, album_id).await?;
     if !album.is_public {
         let Some(user_id) = user_id else {
             return Err(AlbumError::NotFound(album_id.to_string()));
@@ -79,8 +73,8 @@ pub async fn get_album_details(
 
     // Fetch album details, media items, and collaborators in parallel
     let (media_items_res, collaborators_res) = tokio::join!(
-        get_album_media_items(pool, album_id),
-        get_album_collaborators(pool, album_id),
+        AlbumStore::get_media_items(pool, album_id),
+        AlbumStore::get_collaborators(pool, album_id),
     );
 
     let media_items = media_items_res?;
@@ -96,6 +90,26 @@ pub async fn get_album_details(
         media_items,
         collaborators,
     })
+}
+
+#[instrument(skip(pool))]
+pub async fn create_album(
+    pool: &PgPool,
+    user_id: i32,
+    name: &str,
+    description: Option<&str>,
+    is_public: bool,
+) -> Result<Album, AlbumError> {
+    let mut tx = pool.begin().await?;
+    let album_id = nice_id(settings().database.media_item_id_length);
+
+    let album =
+        AlbumStore::create(&mut *tx, &album_id, user_id, name, description, is_public).await?;
+    AlbumStore::insert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
+
+    tx.commit().await?;
+
+    Ok(album)
 }
 
 /// Adds one or more media items to an album.
@@ -124,7 +138,7 @@ pub async fn add_media_to_album(
     let mut tx = pool.begin().await?;
 
     for media_item_id in media_item_ids {
-        insert_album_media_items(&mut *tx, album_id, media_item_id, user_id).await?;
+        AlbumStore::insert_media_items(&mut *tx, album_id, media_item_id, user_id).await?;
     }
 
     tx.commit().await?;
@@ -153,7 +167,7 @@ pub async fn remove_media_from_album(
         ));
     }
 
-    let result = remove_album_media_items(pool, album_id, media_item_id).await?;
+    let result = AlbumStore::remove_media_items(pool, album_id, media_item_id).await?;
 
     if result.rows_affected() == 0 {
         return Err(AlbumError::NotFound(format!(
@@ -196,7 +210,8 @@ pub async fn add_collaborator(
     }
 
     // Insert the new collaborator, or update their role if they already exist.
-    let new_collaborator = insert_album_collaborator(pool, album_id, user_to_add.id, role).await?;
+    let new_collaborator =
+        AlbumStore::insert_collaborator(pool, album_id, user_to_add.id, role).await?;
 
     Ok(new_collaborator)
 }
@@ -218,7 +233,7 @@ pub async fn remove_collaborator(
     }
 
     // Get the collaborator record to check if we're trying to remove the owner.
-    let collaborator_to_remove = get_album_collaborator(pool, collaborator_id_to_remove)
+    let collaborator_to_remove = AlbumStore::get_collaborator(pool, collaborator_id_to_remove)
         .await?
         .ok_or_else(|| AlbumError::NotFound("Collaborator not found.".to_string()))?;
 
@@ -230,7 +245,7 @@ pub async fn remove_collaborator(
     }
 
     // Proceed with deletion.
-    remove_album_collaborator(pool, collaborator_id_to_remove).await?;
+    AlbumStore::remove_collaborator(pool, collaborator_id_to_remove).await?;
 
     Ok(())
 }
@@ -256,31 +271,10 @@ pub async fn update_album(
     // At least one field must be provided for the update.
     if name.is_none() && description.is_none() && is_public.is_none() {
         // If no changes are requested, just return the current album data.
-        return sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
-            .fetch_one(pool)
-            .await
-            .map_err(Into::into);
+        return Ok(AlbumStore::get(pool, album_id).await?);
     }
 
-    let updated_album = sqlx::query_as!(
-        Album,
-        r#"
-        UPDATE album
-        SET
-            name = COALESCE($1, name),
-            description = COALESCE($2, description),
-            is_public = COALESCE($3, is_public),
-            updated_at = now()
-        WHERE id = $4
-        RETURNING *
-        "#,
-        name,
-        description,
-        is_public,
-        album_id
-    )
-    .fetch_one(pool)
-    .await?;
+    let updated_album = AlbumStore::update(pool, album_id, name, description, is_public).await?;
 
     Ok(updated_album)
 }

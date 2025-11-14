@@ -8,12 +8,10 @@ use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse,
     CheckInviteRequest, CreateAlbumRequest, UpdateAlbumRequest,
 };
-use common_services::api::album::service::{
-    accept_invite, add_collaborator, add_media_to_album, check_invite, generate_invite,
-    get_album_details, remove_collaborator, remove_media_from_album, update_album,
-};
-use common_services::database::album::album::{Album, AlbumSummary, create_album, get_user_albums};
+use common_services::api::album::service::{accept_invite, add_collaborator, add_media_to_album, check_invite, create_album, generate_invite, get_album_details, remove_collaborator, remove_media_from_album, update_album};
+use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
+use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
 
 /// Create a new album.
@@ -63,7 +61,7 @@ pub async fn get_user_albums_handler(
     State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Vec<Album>>, AlbumError> {
-    let albums = get_user_albums(&api_state.pool, user.id).await?;
+    let albums = AlbumStore::get_user_albums(&api_state.pool, user.id).await?;
     Ok(Json(albums))
 }
 

@@ -2,7 +2,8 @@ use clap::Parser;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::utils::nice_id;
-use tracing::info;
+use tracing::{info, Level};
+use tracing_subscriber::FmtSubscriber;
 use worker::context::WorkerContext;
 use worker::worker::run_worker_loop;
 
@@ -15,7 +16,10 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)?;
     color_eyre::install()?;
     let args = Args::parse();
 

@@ -56,6 +56,7 @@
     * ✅ virtual scroll waar elke maand 1 virtual scroll item is? of elke row is 1 virtual item??
 * ✅ pending_album_media_items isnt getting used
 * ✅ Change album id from uuid to niceid (no longer univerally unique requirement)
+* ✅ [BUG] pending media items seems to be not used again
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -125,7 +126,6 @@
 * remove unused crates
 * rename details to media_details
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
-* [BUG] pending media items seems to be not used again
 * store_media en store_visual_analysis (met de macros) moet in common_services/database
 
 # Features
