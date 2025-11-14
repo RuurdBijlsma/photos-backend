@@ -7,7 +7,7 @@ use sqlx::FromRow;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tracing::info;
+use tracing::{error, info};
 use worker::handlers::common::clustering::run_hdbscan;
 
 /// A simple struct to hold the necessary data for clustering and file operations.
@@ -34,17 +34,16 @@ async fn main() -> Result<()> {
 
     // Fetch all photo embeddings for the user.
     // We use DISTINCT ON to get only one embedding per media item, which is crucial for videos.
-    let photos = sqlx::query_as!(
-        PhotoData,
-        r#"SELECT DISTINCT ON (media_item.id)
+    let photos = sqlx::query_as::<_, PhotoData>(
+        r"SELECT DISTINCT ON (media_item.id)
                media_item.relative_path,
-               va.embedding as "embedding!: Vector"
+               va.embedding
            FROM visual_analysis va
            JOIN media_item ON media_item.id = va.media_item_id
            WHERE media_item.user_id = $1 AND media_item.deleted = false
-           ORDER BY media_item.id, va.created_at"#,
-        USER_ID_TO_TEST
+           ORDER BY media_item.id, va.created_at",
     )
+    .bind(USER_ID_TO_TEST)
     .fetch_all(&pool)
     .await?;
 
@@ -85,7 +84,7 @@ async fn main() -> Result<()> {
         let cluster_dir_name = if cluster_id == -1 {
             "noise".to_string()
         } else {
-            format!("cluster_{:03}", cluster_id) // Padded for better sorting
+            format!("cluster_{cluster_id:03}") // Padded for better sorting
         };
 
         let cluster_path = output_path.join(&cluster_dir_name);
@@ -108,7 +107,7 @@ async fn main() -> Result<()> {
 
             // Copy the file. This is cross-platform but uses more disk space than symlinks.
             if let Err(e) = fs::copy(&source_path, &dest_path) {
-                eprintln!(
+                error!(
                     "Warning: Could not copy file from {:?} to {:?}: {}. Skipping.",
                     source_path, dest_path, e
                 );

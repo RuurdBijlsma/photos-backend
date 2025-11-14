@@ -18,7 +18,7 @@ fn main() -> PyResult<()> {
             if ocr_data.has_legible_text
                 && let Some(ocr_text) = ocr_data.ocr_text
             {
-                println!("\tOCR text: {}", ocr_text);
+                println!("\tOCR text: {ocr_text}");
             }
             println!("OCR took {:#?}.", now.elapsed());
         }

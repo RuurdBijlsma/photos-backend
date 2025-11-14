@@ -1,3 +1,11 @@
+#![allow(
+    clippy::missing_panics_doc,
+    clippy::missing_errors_doc,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+
 use color_eyre::eyre::Result;
 
 use ab_glyph::FontArc;
@@ -8,10 +16,11 @@ use common_services::utils::to_posix_string;
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
-use sqlx::{PgPool, query_as};
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use tracing::info;
 use worker::handlers::common::clustering::{group_by_cluster, run_hdbscan};
 
 // A new struct to hold more comprehensive face details for drawing
@@ -31,9 +40,8 @@ struct FaceDetails {
 async fn fetch_all_face_details(pool: &PgPool, user_id: i32) -> Result<Vec<FaceDetails>> {
     // This query assumes you have a `media_item` table with a `path` column.
     // Adjust the query if your schema is different.
-    let faces = query_as!(
-        FaceDetails,
-        r#"
+    let faces = sqlx::query_as::<_, FaceDetails>(
+        r"
         SELECT
             f.id,
             va.media_item_id,
@@ -41,15 +49,15 @@ async fn fetch_all_face_details(pool: &PgPool, user_id: i32) -> Result<Vec<FaceD
             f.position_y,
             f.width,
             f.height,
-            f.embedding as "embedding!: pgvector::Vector",
+            f.embedding,
             mi.relative_path
         FROM face f
         JOIN visual_analysis va ON f.visual_analysis_id = va.id
         JOIN media_item mi ON va.media_item_id = mi.id
         WHERE mi.user_id = $1
-        "#,
-        user_id
+        ",
     )
+    .bind(user_id)
     .fetch_all(pool)
     .await?;
     Ok(faces)
@@ -66,11 +74,11 @@ async fn main() -> Result<()> {
     let output_directory = Path::new("face_clusters_output");
 
     // --- 1. Fetch Data ---
-    println!("Fetching data for user_id: {}", user_id_to_debug);
+    info!("Fetching data for user_id: {}", user_id_to_debug);
     let all_faces = fetch_all_face_details(&pool, user_id_to_debug).await?;
 
     if all_faces.is_empty() {
-        println!("No faces found for this user.");
+        info!("No faces found for this user.");
         return Ok(());
     }
 
@@ -90,9 +98,9 @@ async fn main() -> Result<()> {
         .collect();
 
     // --- 2. Run Clustering ---
-    println!("Running HDBSCAN clustering...");
+    info!("Running HDBSCAN clustering...");
     let (labels, _new_centroids) = run_hdbscan(&embeddings, 4, 5)?;
-    println!("Clustering complete.");
+    info!("Clustering complete.");
 
     let clusters = group_by_cluster(&labels, &face_embeddings_for_clustering);
 
@@ -101,7 +109,7 @@ async fn main() -> Result<()> {
         fs::remove_dir_all(output_directory)?;
     }
     fs::create_dir_all(output_directory)?;
-    println!("Output will be saved to: {:?}", output_directory);
+    info!("Output will be saved to: {:?}", output_directory);
 
     // Load a font for drawing labels using ab_glyph
     // Update this path if it's incorrect for your system.
@@ -113,8 +121,8 @@ async fn main() -> Result<()> {
 
     // --- 4. Process Faces and Prepare for Drawing ---
     for (cluster_id, faces_in_cluster) in clusters {
-        let cluster_label = format!("Cluster {}", cluster_id);
-        println!(
+        let cluster_label = format!("Cluster {cluster_id}");
+        info!(
             "Processing {} with {} faces",
             cluster_label,
             faces_in_cluster.len()
@@ -159,7 +167,7 @@ async fn main() -> Result<()> {
 
     // --- 5. Draw Annotations and Save Images ---
     for (path_str, (mut image, annotations)) in images_to_draw {
-        println!("Drawing {} annotations on {}", annotations.len(), path_str);
+        info!("Drawing {} annotations on {}", annotations.len(), path_str);
         for (rect, label) in annotations {
             let color = Rgb([255u8, 0, 0]); // Red color for the box
             draw_hollow_rect_mut(&mut image, rect, color);
@@ -191,9 +199,9 @@ async fn main() -> Result<()> {
         // If an image has faces from multiple clusters, it will be annotated for all of them.
         let output_path = output_directory.join(file_name);
         image.save(&output_path)?;
-        println!("Saved annotated image to {:?}", output_path);
+        info!("Saved annotated image to {:?}", output_path);
     }
 
-    println!("\nDebug script finished!");
+    info!("\nDebug script finished!");
     Ok(())
 }

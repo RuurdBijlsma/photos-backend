@@ -16,7 +16,7 @@ fn main() -> color_eyre::Result<()> {
         let quality_data = get_quality_data(image)?;
         println!(
             "{} quality: {:?}",
-            image.file_name().unwrap().to_string_lossy().to_string(),
+            image.file_name().unwrap().to_string_lossy(),
             quality_data
         );
         println!("\tget_quality_data {:?}", now.elapsed());

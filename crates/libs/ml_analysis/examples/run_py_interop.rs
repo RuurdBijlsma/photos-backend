@@ -28,7 +28,7 @@ fn main() -> PyResult<()> {
         ];
 
         for file in files {
-            println!("\n\nAnalyzing file: {:?}", file);
+            println!("\n\nAnalyzing file: {}", file.display());
 
             // === EMBEDDER ===
             let now = Instant::now();
@@ -56,25 +56,25 @@ fn main() -> PyResult<()> {
             // Print the sorted results
             println!("\tText similarity scores (higher is better):");
             for (text, score) in similarities {
-                println!("\t- Score: {:.4}, Text: \"{}\"", score, text);
+                println!("\t- Score: {score:.4}, Text: \"{text}\"");
             }
             println!("Embedder took {:#?}.", now.elapsed());
 
             // === CAPTIONER ===
             let now = Instant::now();
             let caption = py_interop.caption_image(file, None)?;
-            println!("\tcaption: {}", caption);
+            println!("\tcaption: {caption}");
             let has_animal = py_interop.caption_image(
                 file,
                 Some("Question: Is there an animal in the photo? yes or no. Answer:"),
             )?;
-            println!("\thas animal: {:#?}", has_animal);
+            println!("\thas animal: {has_animal:#?}");
             if has_animal.to_lowercase().contains("yes") {
                 let animal_type = py_interop.caption_image(
                     file,
                     Some("Question: What kind of animal is shown in the photo? Answer:"),
                 )?;
-                println!("\tAnimal type: {}", animal_type);
+                println!("\tAnimal type: {animal_type}");
             }
             println!("Captioner took {:#?}.", now.elapsed());
 
@@ -105,7 +105,7 @@ fn main() -> PyResult<()> {
             if ocr_data.has_legible_text
                 && let Some(ocr_text) = ocr_data.ocr_text
             {
-                println!("\tOCR text: {}", ocr_text);
+                println!("\tOCR text: {ocr_text}");
             }
             println!("OCR took {:#?}.", now.elapsed());
         }

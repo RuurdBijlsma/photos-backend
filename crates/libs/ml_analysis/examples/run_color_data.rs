@@ -21,7 +21,7 @@ fn main() -> color_eyre::Result<()> {
             let color_data = get_color_data(&py_interop, image, &Variant::Vibrant, 3.).unwrap();
             println!(
                 "{} color: {:?} {:?} {:?} {:?}",
-                image.file_name().unwrap().to_string_lossy().to_string(),
+                image.file_name().unwrap().to_string_lossy(),
                 color_data.prominent_colors,
                 color_data.average_hue,
                 color_data.average_saturation,
