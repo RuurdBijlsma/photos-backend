@@ -1,7 +1,7 @@
-use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use rand::{RngCore, rng};
 use crate::api::auth::error::AuthError;
 use crate::api::auth::hashing::{hash_password, verify_password};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use rand::{RngCore, rng};
 
 /// Represents the components of a refresh token for secure storage and verification.
 pub struct RefreshTokenParts {

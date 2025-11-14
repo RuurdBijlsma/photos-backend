@@ -1,9 +1,3 @@
-
-use chrono::{DateTime, NaiveDateTime, Utc};
-use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
-use sqlx::types::Json;
-use utoipa::ToSchema;
 use crate::database::media_item::capture_details::CaptureDetails;
 use crate::database::media_item::details::Details;
 use crate::database::media_item::gps::Gps;
@@ -11,6 +5,11 @@ use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::VisualAnalysis;
+use chrono::{DateTime, NaiveDateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use sqlx::types::Json;
+use utoipa::ToSchema;
 
 /// The root struct representing a '`media_item`' and all its available, nested information.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]

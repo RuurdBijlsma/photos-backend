@@ -24,10 +24,10 @@ use crate::scalar_config::get_custom_html;
 use crate::setup::router::setup_admin_router;
 use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
+use common_services::database::app_user::UserRole;
 use tower_http::{LatencyUnit, trace::TraceLayer};
 use utoipa::OpenApi;
 use utoipa_scalar::{Scalar, Servable};
-use common_services::database::app_user::UserRole;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiState) -> Router {

@@ -36,9 +36,9 @@ mod video;
 
 use color_eyre::Result;
 use common_services::utils::{is_photo_file, is_video_file};
+use common_types::ThumbOptions;
 use std::path::Path;
 use temp_dir::TempDir;
-use common_types::ThumbOptions;
 
 /// Checks if all the configured thumbnails for a given media file already exist.
 ///

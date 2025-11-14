@@ -2,9 +2,9 @@ mod watcher;
 
 use crate::watcher::start_watching;
 use color_eyre::Result;
-use tracing::info;
 use common_services::database::get_db_pool;
 use common_services::get_settings::media_dir;
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {

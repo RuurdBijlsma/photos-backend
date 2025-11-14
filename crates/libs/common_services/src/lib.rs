@@ -6,6 +6,6 @@
 
 pub mod api;
 pub mod database;
+pub mod get_settings;
 pub mod job_queue;
 pub mod utils;
-pub mod get_settings;

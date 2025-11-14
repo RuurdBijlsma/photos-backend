@@ -1,12 +1,11 @@
-
+use crate::api::setup::error::SetupError;
+use crate::api::setup::interfaces::PathInfoResponse;
 use crate::utils::to_posix_string;
 use fs2::{available_space, total_space};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 use tempfile::NamedTempFile;
 use tokio::task;
-use crate::api::setup::error::SetupError;
-use crate::api::setup::interfaces::PathInfoResponse;
 
 pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, SetupError> {
     let total = total_space(folder)?;

@@ -2,14 +2,14 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use color_eyre::Result;
 use color_eyre::eyre::{Context, eyre};
-use common_services::utils::nice_id;
-use common_types::{ImportAlbumItemPayload, ImportAlbumPayload};
-use serde_json::from_value;
-use sqlx::query;
 use common_services::database::album::album::AlbumSummary;
 use common_services::database::jobs::{Job, JobType};
 use common_services::get_settings::settings;
 use common_services::job_queue::enqueue_job;
+use common_services::utils::nice_id;
+use common_types::{ImportAlbumItemPayload, ImportAlbumPayload};
+use serde_json::from_value;
+use sqlx::query;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(payload_value) = &job.payload else {

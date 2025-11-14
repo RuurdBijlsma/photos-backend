@@ -5,8 +5,14 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_services::api::setup::error::SetupError;
-use common_services::api::setup::interfaces::{DiskResponse, FolderParams, MakeFolderBody, MediaSampleResponse, StartProcessingBody, UnsupportedFilesResponse};
-use common_services::api::setup::service::{create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders, start_processing, validate_user_folder};
+use common_services::api::setup::interfaces::{
+    DiskResponse, FolderParams, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
+    UnsupportedFilesResponse,
+};
+use common_services::api::setup::service::{
+    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
+    start_processing, validate_user_folder,
+};
 use common_services::database::app_user::User;
 
 /// Retrieves information about the configured media and thumbnail disks.

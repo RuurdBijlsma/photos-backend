@@ -1,6 +1,10 @@
 use color_eyre::eyre::Result;
 
 use ab_glyph::FontArc;
+use common_services::database::get_db_pool;
+use common_services::database::visual_analysis::face::FaceEmbedding;
+use common_services::get_settings::media_dir;
+use common_services::utils::to_posix_string;
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
@@ -8,10 +12,6 @@ use sqlx::{PgPool, query_as};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use common_services::database::get_db_pool;
-use common_services::database::visual_analysis::face::FaceEmbedding;
-use common_services::get_settings::media_dir;
-use common_services::utils::to_posix_string;
 use worker::handlers::common::clustering::{group_by_cluster, run_hdbscan};
 
 // A new struct to hold more comprehensive face details for drawing

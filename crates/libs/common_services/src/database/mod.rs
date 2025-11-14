@@ -1,7 +1,7 @@
+mod error;
 mod tables;
 mod utils;
-mod error;
 
-pub use utils::*;
-pub use tables::*;
 pub use error::*;
+pub use tables::*;
+pub use utils::*;

@@ -1,11 +1,11 @@
 use crate::api::album::error::AlbumError;
 use crate::api::album::interfaces::AlbumMediaItemSummary;
+use crate::database::DbError;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, FromRow, Postgres};
 use utoipa::ToSchema;
-use crate::database::DbError;
 
 pub async fn remove_album_media_items(
     executor: impl Executor<'_, Database = Postgres>,

@@ -2,8 +2,8 @@ use crate::get_settings::{canon_media_dir, media_dir, settings, thumbnails_dir};
 use common_types::ThumbOptions;
 use sqlx::{Executor, Postgres};
 use std::fs::canonicalize;
-use std::path::absolute;
 use std::path::Path;
+use std::path::absolute;
 
 /// Converts a path to a POSIX-style string, replacing backslashes with forward slashes.
 #[must_use]

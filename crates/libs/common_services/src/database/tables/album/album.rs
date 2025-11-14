@@ -1,12 +1,12 @@
 use crate::api::album::error::AlbumError;
 use crate::database::album::album_collaborator::insert_album_collaborator;
 use crate::database::error::DbError;
+use crate::get_settings::settings;
 use crate::utils::nice_id;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{Executor, FromRow, PgPool, Postgres};
 use utoipa::ToSchema;
-use crate::get_settings::settings;
 
 pub async fn get_album(
     executor: impl Executor<'_, Database = Postgres>,

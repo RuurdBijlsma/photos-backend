@@ -1,26 +1,26 @@
 use super::interfaces::{AcceptInviteRequest, AlbumDetailsResponse, AlbumShareClaims};
 use crate::api::album::error::AlbumError;
 use crate::database::album::album::{
-    get_album, get_user_album_role, Album, AlbumRole, AlbumSummary,
+    Album, AlbumRole, AlbumSummary, get_album, get_user_album_role,
 };
 use crate::database::album::album_collaborator::{
-    get_album_collaborator, get_album_collaborators, insert_album_collaborator, remove_album_collaborator,
-    AlbumCollaborator,
+    AlbumCollaborator, get_album_collaborator, get_album_collaborators, insert_album_collaborator,
+    remove_album_collaborator,
 };
 use crate::database::album::album_media_item::{
     get_album_media_items, insert_album_media_items, remove_album_media_items,
 };
+use crate::database::app_user::get_user_by_email;
+use crate::database::jobs::JobType;
 use crate::get_settings::settings;
 use crate::job_queue::enqueue_job;
 use chrono::{Duration, Utc};
 use common_types::ImportAlbumPayload;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use reqwest::Client;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
 use url::Url;
-use crate::database::app_user::get_user_by_email;
-use crate::database::jobs::JobType;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]

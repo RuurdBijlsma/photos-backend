@@ -10,8 +10,6 @@ pub struct FaceEmbedding {
     pub embedding: Vector,
 }
 
-
-
 /// Corresponds to the 'face' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct Face {

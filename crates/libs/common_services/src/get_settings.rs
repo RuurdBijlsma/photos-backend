@@ -1,9 +1,9 @@
 use chrono_tz::Tz;
+use common_types::AppSettings;
 use std::fs;
 use std::fs::canonicalize;
 use std::path::{Path, PathBuf, absolute};
 use std::sync::LazyLock;
-use common_types::AppSettings;
 
 pub fn load_app_settings() -> color_eyre::Result<AppSettings> {
     // Need to load from dotenv to get it to overwrite the db url from env.

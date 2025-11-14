@@ -4,12 +4,12 @@ use crate::handlers::common::clustering;
 use crate::handlers::common::clustering::{Clusterable, ClusteringStrategy};
 use async_trait::async_trait;
 use color_eyre::Result;
-use pgvector::Vector;
-use sqlx::{Transaction, query, query_as, query_scalar};
-use std::collections::{HashMap, HashSet};
 use common_services::database::jobs::Job;
 use common_services::database::photo_cluster::ExistingPhotoCluster;
 use common_services::database::visual_analysis::visual_analysis::MediaEmbedding;
+use pgvector::Vector;
+use sqlx::{Transaction, query, query_as, query_scalar};
+use std::collections::{HashMap, HashSet};
 
 impl Clusterable for ExistingPhotoCluster {
     fn id(&self) -> i64 {

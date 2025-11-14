@@ -1,8 +1,8 @@
-use std::time::Duration;
-use sqlx::{Pool, Postgres};
-use sqlx::postgres::PgPoolOptions;
-use tracing::info;
 use crate::get_settings::settings;
+use sqlx::postgres::PgPoolOptions;
+use sqlx::{Pool, Postgres};
+use std::time::Duration;
+use tracing::info;
 
 /// Run migrations and get a database connection pool.
 /// # Errors

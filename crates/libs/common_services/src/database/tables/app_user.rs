@@ -1,9 +1,9 @@
+use crate::database::DbError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{Executor, FromRow, Postgres};
 use std::fmt;
 use utoipa::ToSchema;
-use crate::database::DbError;
 
 pub async fn get_user_by_email(
     executor: impl Executor<'_, Database = Postgres>,

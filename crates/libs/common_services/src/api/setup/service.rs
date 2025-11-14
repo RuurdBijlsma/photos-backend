@@ -1,15 +1,15 @@
 //! This module provides the core service logic for the setup process.
 
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use crate::get_settings::{media_dir, settings, thumbnails_dir};
-use crate::job_queue::enqueue_job;
-use crate::database::jobs::JobType;
 use crate::api::setup::error::SetupError;
 use crate::api::setup::helpers::{check_drive_info, list_folders};
 use crate::api::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
+use crate::database::jobs::JobType;
+use crate::get_settings::{media_dir, settings, thumbnails_dir};
+use crate::job_queue::enqueue_job;
 use crate::utils::{is_media_file, is_photo_file, relative_path_canon, to_posix_string};
 use sqlx::PgPool;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;

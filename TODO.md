@@ -109,7 +109,7 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* make invite check work with "localhost:9475" insted of "http://localhost:9475" and make it work with https. (it
+* make invite check work with "localhost:9475" instead of "http://localhost:9475" and make it work with https. (it
   currently assumes http).
 * repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
     * parse url stuff

@@ -1,3 +1,6 @@
+use crate::api::download::error::DownloadError;
+use crate::database::app_user::{User, UserRole};
+use crate::get_settings::media_dir;
 use crate::utils::{is_media_file, relative_path_canon};
 use axum::{
     body::Body,
@@ -9,9 +12,6 @@ use std::path::Path;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
-use crate::api::download::error::DownloadError;
-use crate::database::app_user::{User, UserRole};
-use crate::get_settings::media_dir;
 
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///
