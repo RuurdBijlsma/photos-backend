@@ -10,7 +10,7 @@ use crate::job_queue::enqueue_job;
 use crate::utils::nice_id;
 use chrono::{Duration, Utc};
 use common_types::ImportAlbumPayload;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use reqwest::Client;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
@@ -165,7 +165,8 @@ pub async fn remove_media_from_album(
         ));
     }
 
-    let result = AlbumStore::remove_media_items_by_id(pool, album_id, &[media_item_id.to_owned()]).await?;
+    let result =
+        AlbumStore::remove_media_items_by_id(pool, album_id, &[media_item_id.to_owned()]).await?;
 
     if result.rows_affected() == 0 {
         return Err(AlbumError::NotFound(format!(
@@ -231,9 +232,10 @@ pub async fn remove_collaborator(
     }
 
     // Get the collaborator record to check if we're trying to remove the owner.
-    let collaborator_to_remove = AlbumStore::find_collaborator_by_id(pool, collaborator_id_to_remove)
-        .await?
-        .ok_or_else(|| AlbumError::NotFound("Collaborator not found.".to_string()))?;
+    let collaborator_to_remove =
+        AlbumStore::find_collaborator_by_id(pool, collaborator_id_to_remove)
+            .await?
+            .ok_or_else(|| AlbumError::NotFound("Collaborator not found.".to_string()))?;
 
     // Safety check: The owner cannot be removed.
     if matches!(collaborator_to_remove.role, AlbumRole::Owner) {

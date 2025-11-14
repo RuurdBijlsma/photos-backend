@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, album_id, user_id, remote_user_id, role as \"role: AlbumRole\", added_at FROM album_collaborator WHERE id = $1",
+  "query": "\n            INSERT INTO album_collaborator (album_id, user_id, role)\n            VALUES ($1, $2, $3)\n            ON CONFLICT (album_id, user_id) DO UPDATE SET role = EXCLUDED.role\n            RETURNING id, album_id, user_id, remote_user_id, role as \"role: AlbumRole\", added_at\n            ",
   "describe": {
     "columns": [
       {
@@ -47,7 +47,20 @@
     ],
     "parameters": {
       "Left": [
-        "Int8"
+        "Varchar",
+        "Int4",
+        {
+          "Custom": {
+            "name": "album_role",
+            "kind": {
+              "Enum": [
+                "owner",
+                "contributor",
+                "viewer"
+              ]
+            }
+          }
+        }
       ]
     },
     "nullable": [
@@ -59,5 +72,5 @@
       false
     ]
   },
-  "hash": "0d3ab3a566085f7b9cc3c2acf883c4e37da6f441862cf24645afebb6a06ef1a8"
+  "hash": "b369528306c137f8369ea6a0f98c57185c48bf8e5e8be85e0f33b58585e8131e"
 }

@@ -1,8 +1,8 @@
 use crate::insert_query;
 use chrono::{TimeZone, Utc};
+use common_services::database::DbError;
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::album_store::AlbumStore;
-use common_services::database::DbError;
 use common_services::get_settings::fallback_timezone;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;

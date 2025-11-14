@@ -1,7 +1,7 @@
 use crate::api::album::interfaces::{AlbumMediaItemSummary, CollaboratorSummary};
+use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
-use crate::database::DbError;
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
 

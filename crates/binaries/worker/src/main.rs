@@ -2,7 +2,7 @@ use clap::Parser;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::utils::nice_id;
-use tracing::{info, Level};
+use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 use worker::context::WorkerContext;
 use worker::worker::run_worker_loop;
