@@ -35,7 +35,7 @@ $additionalIgnorePatterns = @(
 try
 {
     # Determine the project root, assuming the script is in a 'scripts' subdirectory.
-    $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+    $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).ProviderPath
     Set-Location $projectRoot
 
     Write-Host "Project root set to: $projectRoot"
@@ -163,7 +163,6 @@ Function Get-Tree(
 
         if ($item.PSIsContainer)
         {
-            # CORRECTED: Using a subexpression '$(...)' to ensure the 'if' is evaluated correctly.
             $newIndent = $indent + $( if ($isLast)
             {
                 "    "
@@ -187,26 +186,36 @@ $contextBuilder = New-Object System.Text.StringBuilder
 $ignorePatterns = (Get-GitIgnorePatterns -rootPath $projectRoot) + $additionalIgnorePatterns
 Write-Host "Loaded $( @($ignorePatterns).Length ) ignore patterns from .gitignore and configuration."
 
-# 1.5: Add a section to list the ignore patterns being used.
-$contextBuilder.AppendLine("## Ignored File & Directory Patterns") | Out-Null
-$contextBuilder.AppendLine("The following patterns have been excluded from the file tree below:") | Out-Null
-$contextBuilder.AppendLine('```') | Out-Null
-# Loop through the combined patterns and add them to the context
-foreach ($pattern in $ignorePatterns) {
-    $contextBuilder.AppendLine($pattern) | Out-Null
-}
-$contextBuilder.AppendLine('```') | Out-Null
-$contextBuilder.AppendLine() | Out-Null
+# 2. Generate and add the ignore patterns list and the file tree
+if ((Read-YesNoPrompt -prompt "`nAdd the file & directory structure?" -default 'y') -eq 'y')
+{
+    # MODIFIED: Both "Ignored Patterns" and "File Structure" are now inside this block.
 
-# 2. Generate and add the file tree
-$contextBuilder.AppendLine("## File & Directory Structure") | Out-Null
-$contextBuilder.AppendLine('```') | Out-Null
-$contextBuilder.AppendLine(".") | Out-Null
-$treeOutput = Get-Tree -path $projectRoot -indent "" -ignorePatterns $ignorePatterns -rootPath $projectRoot
-$contextBuilder.Append($treeOutput -join [Environment]::NewLine) | Out-Null
-$contextBuilder.AppendLine() | Out-Null # Add a newline for cleaner separation
-$contextBuilder.AppendLine('```') | Out-Null
-$contextBuilder.AppendLine() | Out-Null
+    # Add the "Ignored Patterns" section
+    $contextBuilder.AppendLine("## Ignored File & Directory Patterns") | Out-Null
+    $contextBuilder.AppendLine("The following patterns have been excluded from the file tree below:") | Out-Null
+    $contextBuilder.AppendLine('```') | Out-Null
+    foreach ($pattern in $ignorePatterns) {
+        $contextBuilder.AppendLine($pattern) | Out-Null
+    }
+    $contextBuilder.AppendLine('```') | Out-Null
+    $contextBuilder.AppendLine() | Out-Null
+
+    # Add the "File Structure" section
+    $contextBuilder.AppendLine("## File & Directory Structure") | Out-Null
+    $contextBuilder.AppendLine('```') | Out-Null
+    $contextBuilder.AppendLine(".") | Out-Null
+    $treeOutput = Get-Tree -path $projectRoot -indent "" -ignorePatterns $ignorePatterns -rootPath $projectRoot
+    $contextBuilder.Append($treeOutput -join [Environment]::NewLine) | Out-Null
+    $contextBuilder.AppendLine() | Out-Null
+    $contextBuilder.AppendLine('```') | Out-Null
+    $contextBuilder.AppendLine() | Out-Null
+    Write-Host "Added file & directory structure." -ForegroundColor Green
+}
+
+# Create a URI for the project root to be used for calculating relative paths.
+# Appending a path separator is crucial for the URI calculation to be correct.
+$baseUri = [System.Uri]([System.IO.Path]::Combine($projectRoot, " "))
 
 # 3. Process files from clipboard
 if (Get-Clipboard -Format FileDropList -ErrorAction SilentlyContinue)
@@ -219,7 +228,9 @@ if (Get-Clipboard -Format FileDropList -ErrorAction SilentlyContinue)
     {
         if (Test-Path $file.FullName)
         {
-            $relativePath = $file.FullName.Substring($projectRoot.Length + 1)
+            # Use the .NET URI method for robust relative path calculation in PS 5.1
+            $fileUri = [System.Uri]$file.FullName
+            $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
             $contextBuilder.AppendLine("## File: $relativePath") | Out-Null
             $contextBuilder.AppendLine('```') | Out-Null
             $contextBuilder.AppendLine((Get-Content $file.FullName -Raw)) | Out-Null
@@ -237,7 +248,9 @@ if ($cargoFiles)
     {
         foreach ($file in $cargoFiles)
         {
-            $relativePath = $file.FullName.Substring($projectRoot.Length + 1)
+            # Use the .NET URI method
+            $fileUri = [System.Uri]$file.FullName
+            $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
             $contextBuilder.AppendLine("## File: $relativePath") | Out-Null
             $contextBuilder.AppendLine('```toml') | Out-Null
             $contextBuilder.AppendLine((Get-Content $file.FullName -Raw)) | Out-Null
@@ -303,12 +316,15 @@ if (Test-Path $migrationsPath)
             $contextBuilder.AppendLine("## SQL Migrations") | Out-Null
             foreach ($file in $sqlFiles)
             {
-                $contextBuilder.AppendLine("### File: $( $file.Name )") | Out-Null
+                # Use the .NET URI method
+                $fileUri = [System.Uri]$file.FullName
+                $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
+                $contextBuilder.AppendLine("### File: $relativePath") | Out-Null
                 $contextBuilder.AppendLine('```sql') | Out-Null
                 $contextBuilder.AppendLine((Get-Content $file.FullName -Raw)) | Out-Null
                 $contextBuilder.AppendLine('```') | Out-Null
                 $contextBuilder.AppendLine() | Out-Null
-                Write-Host "Added content of $( $file.Name )" -ForegroundColor Green
+                Write-Host "Added content of $relativePath" -ForegroundColor Green
             }
         }
     }
