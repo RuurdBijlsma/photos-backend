@@ -5,3 +5,5 @@
 .venv
 face_clusters_output
 photo_clusters_output
+.ruff_cache
+__pycache__

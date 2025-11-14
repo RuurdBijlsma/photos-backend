@@ -8,6 +8,10 @@ use sqlx::{Executor, Postgres};
 pub struct AlbumStore;
 
 impl AlbumStore {
+    //================================================================================
+    // Core Album Management
+    //================================================================================
+
     /// Creates a new album and assigns the user as the owner.
     pub async fn create(
         executor: impl Executor<'_, Database = Postgres>,
@@ -32,18 +36,6 @@ impl AlbumStore {
         )
         .fetch_one(executor)
         .await?)
-    }
-
-    /// Retrieves a single album by its ID.
-    pub async fn find_by_id(
-        executor: impl Executor<'_, Database = Postgres>,
-        album_id: &str,
-    ) -> Result<Album, DbError> {
-        Ok(
-            sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
-                .fetch_one(executor)
-                .await?,
-        )
     }
 
     /// Updates the details of a specific album.
@@ -75,6 +67,18 @@ impl AlbumStore {
         .await?)
     }
 
+    /// Retrieves a single album by its ID.
+    pub async fn find_by_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        album_id: &str,
+    ) -> Result<Album, DbError> {
+        Ok(
+            sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
+                .fetch_one(executor)
+                .await?,
+        )
+    }
+
     /// Retrieves all albums a user is a collaborator on.
     pub async fn list_by_user_id(
         executor: impl Executor<'_, Database = Postgres>,
@@ -95,45 +99,11 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Gets the role of a user for a specific album.
-    pub async fn find_user_role(
-        executor: impl Executor<'_, Database = Postgres>,
-        album_id: &str,
-        user_id: i32,
-    ) -> Result<Option<AlbumRole>, DbError> {
-        Ok(sqlx::query_scalar!(
-            r#"
-            SELECT role as "role: AlbumRole"
-            FROM album_collaborator
-            WHERE user_id = $1 AND album_id = $2
-            "#,
-            user_id,
-            album_id
-        )
-        .fetch_optional(executor)
-        .await?)
-    }
+    //================================================================================
+    // Album Media Item Management
+    //================================================================================
 
-    /// Retrieves all media items associated with an album.
-    pub async fn list_media_items(
-        executor: impl Executor<'_, Database = Postgres>,
-        album_id: &str,
-    ) -> Result<Vec<AlbumMediaItemSummary>, DbError> {
-        Ok(sqlx::query_as!(
-            AlbumMediaItemSummary,
-            r#"
-            SELECT media_item_id as id, added_at
-            FROM album_media_item
-            WHERE album_id = $1
-            ORDER BY added_at DESC
-            "#,
-            album_id
-        )
-        .fetch_all(executor)
-        .await?)
-    }
-
-    /// Inserts multiple media items into an album.
+    /// Adds multiple media items to an album.
     /// Ignores duplicates if a media item is already in the album.
     pub async fn add_media_items(
         executor: impl Executor<'_, Database = Postgres>,
@@ -156,7 +126,7 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Removes multiple media items from an album.
+    /// Removes multiple media items from an album by their IDs.
     pub async fn remove_media_items_by_id(
         executor: impl Executor<'_, Database = Postgres>,
         album_id: &str,
@@ -165,7 +135,7 @@ impl AlbumStore {
         Ok(sqlx::query!(
             r#"
             DELETE FROM album_media_item
-            WHERE album_id = $1 AND media_item_id = ANY($2)
+            WHERE album_id = $1 AND media_item_id = ANY($2::TEXT[])
             "#,
             album_id,
             media_item_ids
@@ -174,18 +144,28 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Removes a collaborator from an album by their collaborator ID.
-    pub async fn remove_collaborator_by_id(
+    /// Retrieves all media items associated with an album.
+    pub async fn list_media_items(
         executor: impl Executor<'_, Database = Postgres>,
-        collaborator_id: i64,
-    ) -> Result<PgQueryResult, DbError> {
-        Ok(sqlx::query!(
-            "DELETE FROM album_collaborator WHERE id = $1",
-            collaborator_id
+        album_id: &str,
+    ) -> Result<Vec<AlbumMediaItemSummary>, DbError> {
+        Ok(sqlx::query_as!(
+            AlbumMediaItemSummary,
+            r#"
+            SELECT media_item_id as id, added_at
+            FROM album_media_item
+            WHERE album_id = $1
+            ORDER BY added_at DESC
+            "#,
+            album_id
         )
-        .execute(executor)
+        .fetch_all(executor)
         .await?)
     }
+
+    //================================================================================
+    // Album Collaborator Management
+    //================================================================================
 
     /// Adds a collaborator to an album or updates their role if they already exist.
     pub async fn upsert_collaborator(
@@ -207,6 +187,19 @@ impl AlbumStore {
             role as AlbumRole
         )
         .fetch_one(executor)
+        .await?)
+    }
+
+    /// Removes a collaborator from an album by their collaborator ID.
+    pub async fn remove_collaborator_by_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        collaborator_id: i64,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            "DELETE FROM album_collaborator WHERE id = $1",
+            collaborator_id
+        )
+        .execute(executor)
         .await?)
     }
 
@@ -244,6 +237,25 @@ impl AlbumStore {
             album_id
         )
         .fetch_all(executor)
+        .await?)
+    }
+
+    /// Gets the role of a user for a specific album.
+    pub async fn find_user_role(
+        executor: impl Executor<'_, Database = Postgres>,
+        album_id: &str,
+        user_id: i32,
+    ) -> Result<Option<AlbumRole>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            SELECT role as "role: AlbumRole"
+            FROM album_collaborator
+            WHERE user_id = $1 AND album_id = $2
+            "#,
+            user_id,
+            album_id
+        )
+        .fetch_optional(executor)
         .await?)
     }
 }
