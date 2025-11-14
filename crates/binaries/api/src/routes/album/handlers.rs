@@ -61,7 +61,7 @@ pub async fn get_user_albums_handler(
     State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Vec<Album>>, AlbumError> {
-    let albums = AlbumStore::get_user_albums(&api_state.pool, user.id).await?;
+    let albums = AlbumStore::list_by_user_id(&api_state.pool, user.id).await?;
     Ok(Json(albums))
 }
 

@@ -24,7 +24,7 @@ async fn check_user_role(
     album_id: &str,
     required_roles: &[AlbumRole],
 ) -> Result<bool, AlbumError> {
-    let role = AlbumStore::get_user_role(executor, album_id, user_id).await?;
+    let role = AlbumStore::find_user_role(executor, album_id, user_id).await?;
 
     match role {
         Some(r) if required_roles.contains(&r) => Ok(true),
@@ -53,7 +53,7 @@ pub async fn get_album_details(
     album_id: &str,
     user_id: Option<i32>,
 ) -> Result<AlbumDetailsResponse, AlbumError> {
-    let album = AlbumStore::get(pool, album_id).await?;
+    let album = AlbumStore::find_by_id(pool, album_id).await?;
     if !album.is_public {
         let Some(user_id) = user_id else {
             return Err(AlbumError::NotFound(album_id.to_string()));
@@ -73,8 +73,8 @@ pub async fn get_album_details(
 
     // Fetch album details, media items, and collaborators in parallel
     let (media_items_res, collaborators_res) = tokio::join!(
-        AlbumStore::get_media_items(pool, album_id),
-        AlbumStore::get_collaborators(pool, album_id),
+        AlbumStore::list_media_items(pool, album_id),
+        AlbumStore::list_collaborators(pool, album_id),
     );
 
     let media_items = media_items_res?;
@@ -105,7 +105,7 @@ pub async fn create_album(
 
     let album =
         AlbumStore::create(&mut *tx, &album_id, user_id, name, description, is_public).await?;
-    AlbumStore::insert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
+    AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
 
     tx.commit().await?;
 
@@ -137,9 +137,7 @@ pub async fn add_media_to_album(
 
     let mut tx = pool.begin().await?;
 
-    for media_item_id in media_item_ids {
-        AlbumStore::insert_media_items(&mut *tx, album_id, media_item_id, user_id).await?;
-    }
+    AlbumStore::add_media_items(&mut *tx, album_id, media_item_ids, user_id).await?;
 
     tx.commit().await?;
     Ok(())
@@ -167,7 +165,7 @@ pub async fn remove_media_from_album(
         ));
     }
 
-    let result = AlbumStore::remove_media_items(pool, album_id, media_item_id).await?;
+    let result = AlbumStore::remove_media_items_by_id(pool, album_id, &[media_item_id.to_owned()]).await?;
 
     if result.rows_affected() == 0 {
         return Err(AlbumError::NotFound(format!(
@@ -211,7 +209,7 @@ pub async fn add_collaborator(
 
     // Insert the new collaborator, or update their role if they already exist.
     let new_collaborator =
-        AlbumStore::insert_collaborator(pool, album_id, user_to_add.id, role).await?;
+        AlbumStore::upsert_collaborator(pool, album_id, user_to_add.id, role).await?;
 
     Ok(new_collaborator)
 }
@@ -233,7 +231,7 @@ pub async fn remove_collaborator(
     }
 
     // Get the collaborator record to check if we're trying to remove the owner.
-    let collaborator_to_remove = AlbumStore::get_collaborator(pool, collaborator_id_to_remove)
+    let collaborator_to_remove = AlbumStore::find_collaborator_by_id(pool, collaborator_id_to_remove)
         .await?
         .ok_or_else(|| AlbumError::NotFound("Collaborator not found.".to_string()))?;
 
@@ -245,7 +243,7 @@ pub async fn remove_collaborator(
     }
 
     // Proceed with deletion.
-    AlbumStore::remove_collaborator(pool, collaborator_id_to_remove).await?;
+    AlbumStore::remove_collaborator_by_id(pool, collaborator_id_to_remove).await?;
 
     Ok(())
 }
@@ -271,7 +269,7 @@ pub async fn update_album(
     // At least one field must be provided for the update.
     if name.is_none() && description.is_none() && is_public.is_none() {
         // If no changes are requested, just return the current album data.
-        return Ok(AlbumStore::get(pool, album_id).await?);
+        return Ok(AlbumStore::find_by_id(pool, album_id).await?);
     }
 
     let updated_album = AlbumStore::update(pool, album_id, name, description, is_public).await?;

@@ -152,8 +152,13 @@ pub async fn store_media_item(
     .await?;
 
     if let Some(pending_album) = pending_info {
-        AlbumStore::insert_media_items(&mut **tx, &pending_album.album_id, item_id, user_id)
-            .await?;
+        AlbumStore::add_media_items(
+            &mut **tx,
+            &pending_album.album_id,
+            &[item_id.to_owned()],
+            user_id,
+        )
+        .await?;
     }
 
     if let Some(gps_info) = &data.gps_info {
