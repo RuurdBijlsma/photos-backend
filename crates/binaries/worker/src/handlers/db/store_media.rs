@@ -1,9 +1,11 @@
 use crate::insert_query;
 use chrono::{TimeZone, Utc};
+use common_services::database::album::album_media_item::insert_album_media_items;
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::get_settings::fallback_timezone;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;
+use common_services::database::DbError;
 
 async fn get_or_create_remote_user(
     tx: &mut PgTransaction<'_>,
@@ -94,7 +96,7 @@ pub async fn store_media_item(
     data: &AnalyzeResult,
     item_id: &str,
     user_id: i32,
-) -> Result<String, sqlx::Error> {
+) -> Result<String, DbError> {
     // Overwrite if it already exists.
     sqlx::query_scalar!(
         "DELETE FROM media_item WHERE relative_path = $1",
@@ -148,6 +150,10 @@ pub async fn store_media_item(
         use_panorama_viewer: data.pano_info.use_panorama_viewer,
     })
     .await?;
+
+    if let Some(pending_album) = pending_info {
+        insert_album_media_items(&mut **tx, &pending_album.album_id, item_id, user_id).await?;
+    }
 
     if let Some(gps_info) = &data.gps_info {
         let location_id = get_or_create_location(tx, &gps_info.location).await?;
