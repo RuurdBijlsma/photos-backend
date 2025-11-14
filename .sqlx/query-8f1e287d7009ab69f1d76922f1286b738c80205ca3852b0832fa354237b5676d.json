@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id \n        FROM media_item \n        WHERE user_id = $1 AND deleted IS NOT TRUE \n        ORDER BY sort_timestamp DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8f1e287d7009ab69f1d76922f1286b738c80205ca3852b0832fa354237b5676d"
+}

@@ -1,4 +1,4 @@
-CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'cleandb', 'cluster_faces', 'cluster_photos', 'import_album', 'import_album_item');
+CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'clean_db', 'cluster_faces', 'cluster_photos', 'import_album', 'import_album_item');
 CREATE TYPE job_status AS ENUM ('queued', 'running', 'failed', 'done', 'cancelled');
 
 CREATE TABLE jobs
