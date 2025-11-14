@@ -4,8 +4,8 @@ use crate::handlers::db::store_media::store_media_item;
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::Result;
 use color_eyre::eyre::eyre;
-use common_services::queue::Job;
-use common_services::settings::{media_dir, settings, thumbnails_dir};
+use common_services::database::jobs::Job;
+use common_services::get_settings::{media_dir, settings, thumbnails_dir};
 use common_services::utils::{get_thumb_options, nice_id, relative_path_abs};
 use generate_thumbnails::generate_thumbnails;
 

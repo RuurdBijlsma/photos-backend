@@ -2,13 +2,14 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::clustering;
 use crate::handlers::common::clustering::{Clusterable, ClusteringStrategy};
-use crate::handlers::db::model::{ExistingPerson, FaceEmbedding};
 use async_trait::async_trait;
 use color_eyre::Result;
-use common_services::queue::Job;
+use common_services::database::jobs::Job;
 use pgvector::Vector;
 use sqlx::{Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
+use common_services::database::person::ExistingPerson;
+use common_services::database::visual_analysis::face::FaceEmbedding;
 
 impl Clusterable for ExistingPerson {
     fn id(&self) -> i64 {

@@ -1,9 +1,9 @@
 use crate::insert_query;
 use chrono::{TimeZone, Utc};
-use common_services::settings::fallback_timezone;
-use common_types::pending_album_media_item::PendingAlbumMediaItem;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;
+use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
+use common_services::get_settings::fallback_timezone;
 
 async fn get_or_create_remote_user(
     tx: &mut PgTransaction<'_>,

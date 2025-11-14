@@ -1,16 +1,16 @@
-use crate::photos::error::PhotosError;
-use common_types::media_item::CaptureDetails;
-use common_types::media_item::Details;
-use common_types::media_item::Gps;
-use common_types::media_item::Panorama;
-use common_types::media_item::TimeDetails;
-use common_types::media_item::Weather;
-use common_types::visual_analysis::VisualAnalysis;
 
-use crate::photos::interfaces::RandomPhotoResponse;
+use crate::database::media_item::weather::Weather;
+use crate::database::visual_analysis::visual_analysis::VisualAnalysis;
+use crate::database::media_item::time_details::TimeDetails;
+use crate::database::media_item::panorama::Panorama;
+use crate::database::media_item::gps::Gps;
+use crate::database::media_item::details::Details;
+use crate::database::media_item::capture_details::CaptureDetails;
+use crate::api::photos::error::PhotosError;
+
+
+use crate::api::photos::interfaces::RandomPhotoResponse;
 use chrono::NaiveDate;
-use common_types::app_user::User;
-use common_types::media_item::{FullMediaItem, FullMediaItemRow};
 use common_types::pb::api::{
     ByMonthResponse, MediaItem, MediaMonth, TimelineMonth, TimelineResponse,
 };
@@ -19,6 +19,8 @@ use sqlx::PgPool;
 use sqlx::types::Json;
 use std::collections::HashMap;
 use tracing::warn;
+use crate::database::app_user::User;
+use crate::database::media_item::media_item::{FullMediaItem, FullMediaItemRow};
 
 /// Fetches a full media item with all related analyses and metadata.
 ///

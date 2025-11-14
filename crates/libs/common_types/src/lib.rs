@@ -3,9 +3,9 @@
     clippy::missing_panics_doc,
     clippy::struct_excessive_bools
 )]
-mod database;
 pub mod pb;
+mod settings;
 mod worker_payload;
 
-pub use database::*;
+pub use settings::*;
 pub use worker_payload::*;

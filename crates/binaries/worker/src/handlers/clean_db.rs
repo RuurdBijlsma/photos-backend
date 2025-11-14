@@ -2,8 +2,8 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use chrono::Utc;
 use color_eyre::Result;
-use common_services::queue::Job;
 use std::time::Duration;
+use common_services::database::jobs::Job;
 
 /// Deletes expired refresh tokens from the database.
 ///

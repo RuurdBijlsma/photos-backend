@@ -2,7 +2,6 @@ use pyo3::prelude::*;
 use pyo3::{IntoPyObject, IntoPyObjectExt, Python};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::FromRow;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -19,11 +18,15 @@ impl<'py> IntoPyObject<'py> for ChatRole {
     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
         match self {
             Self::User => {
-                let result = "user".into_bound_py_any(py).unwrap();
+                let result = "user"
+                    .into_bound_py_any(py)
+                    .expect("Can't bind string to Python.");
                 Ok(result)
             }
             Self::Assistant => {
-                let result = "assistant".into_bound_py_any(py).unwrap();
+                let result = "assistant"
+                    .into_bound_py_any(py)
+                    .expect("Can't bind string to Python.");
                 Ok(result)
             }
         }
@@ -36,15 +39,14 @@ pub struct ChatMessage {
     pub content: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, FromRow)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct OCRData {
     pub has_legible_text: bool,
     pub ocr_text: Option<String>,
-    #[sqlx(skip)]
     pub ocr_boxes: Option<Vec<OCRBox>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, FromRow)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct OCRBox {
     pub text: String,
     pub position: (f32, f32),
@@ -53,7 +55,7 @@ pub struct OCRBox {
     pub confidence: f32,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, FromRow)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct FaceBox {
     pub position: (f32, f32),
     pub width: f32,
@@ -69,7 +71,7 @@ pub struct FaceBox {
     pub embedding: Vec<f32>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, FromRow)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct ObjectBox {
     pub position: (f32, f32),
     pub width: f32,
@@ -78,7 +80,7 @@ pub struct ObjectBox {
     pub label: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, FromRow)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct QualityData {
     pub blurriness: f64,
     pub noisiness: f64,
@@ -86,15 +88,13 @@ pub struct QualityData {
     pub quality_score: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, FromRow)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct ColorData {
-    #[sqlx(json)]
     pub themes: Vec<Value>,
     pub prominent_colors: Vec<String>,
     pub average_hue: f32,
     pub average_saturation: f32,
     pub average_lightness: f32,
-    #[sqlx(json)]
     pub histogram: ColorHistogram,
 }
 
@@ -111,7 +111,7 @@ pub struct RGBChannels {
     pub blue: Vec<i32>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, FromRow)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct CaptionData {
     pub default_caption: String,
@@ -142,7 +142,7 @@ pub struct CaptionData {
     pub activity_description: Option<String>,
 }
 
-// This top-level struct is assembled manually, so it does not need FromRow
+// This top-level struct is assembled manually
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct VisualImageData {
     pub percentage: i32,

@@ -1,5 +1,3 @@
-use crate::queue::JobType;
-use crate::settings::media_dir;
 use crate::utils::is_video_file;
 use bon::builder;
 use color_eyre::eyre::Result;
@@ -7,6 +5,8 @@ use serde::Serialize;
 use serde_json::to_value;
 use sqlx::{PgPool, PgTransaction};
 use tracing::{info, warn};
+use crate::database::jobs::JobType;
+use crate::get_settings::media_dir;
 
 /// Enqueues a job for a specific file, such as ingestion or removal.
 ///

@@ -1,10 +1,11 @@
-use crate::album::interfaces::AlbumShareClaims;
-use crate::s2s::error::S2SError;
-use crate::settings::{media_dir, settings};
-use common_types::album::AlbumSummary;
+
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
 use tracing::instrument;
+use crate::api::album::interfaces::AlbumShareClaims;
+use crate::api::s2s::error::S2SError;
+use crate::database::album::album::AlbumSummary;
+use crate::get_settings::{media_dir, settings};
 
 fn extract_token_claims(token: &str) -> Result<AlbumShareClaims, S2SError> {
     decode::<AlbumShareClaims>(

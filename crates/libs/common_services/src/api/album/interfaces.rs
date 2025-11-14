@@ -1,5 +1,5 @@
+use crate::database::album::album::AlbumRole;
 use chrono::{DateTime, Utc};
-use common_types::album::AlbumRole;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 // --- Request Payloads ---
@@ -104,7 +104,7 @@ pub struct AlbumMediaItemSummary {
 #[serde(rename_all = "camelCase")]
 pub struct CollaboratorSummary {
     pub id: i64,
-    pub name: String, // User's name for display
+    pub name: String,
     pub role: AlbumRole,
 }
 

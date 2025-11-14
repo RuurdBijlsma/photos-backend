@@ -2,12 +2,12 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-
-use crate::queue::{JobType, enqueue_job};
-use crate::settings::{media_dir, settings, thumbnails_dir};
-use crate::setup::error::SetupError;
-use crate::setup::helpers::{check_drive_info, list_folders};
-use crate::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
+use crate::get_settings::{media_dir, settings, thumbnails_dir};
+use crate::job_queue::enqueue_job;
+use crate::database::jobs::JobType;
+use crate::api::setup::error::SetupError;
+use crate::api::setup::helpers::{check_drive_info, list_folders};
+use crate::api::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
 use crate::utils::{is_media_file, is_photo_file, relative_path_canon, to_posix_string};
 use sqlx::PgPool;
 use tokio::fs as tokio_fs;

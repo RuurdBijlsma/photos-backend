@@ -1,13 +1,9 @@
-use crate::settings::{ThumbOptions, canon_media_dir, media_dir, settings, thumbnails_dir};
-use common_types::app_user::User;
-use common_types::app_user::UserRole;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::{Executor, Pool, Postgres};
+use crate::get_settings::{canon_media_dir, media_dir, settings, thumbnails_dir};
+use common_types::ThumbOptions;
+use sqlx::{Executor, Postgres};
 use std::fs::canonicalize;
-use std::path::Path;
 use std::path::absolute;
-use std::time::Duration;
-use tracing::info;
+use std::path::Path;
 
 /// Converts a path to a POSIX-style string, replacing backslashes with forward slashes.
 #[must_use]
@@ -53,28 +49,6 @@ pub fn nice_id(length: usize) -> String {
         .collect()
 }
 
-/// Run migrations and get a database connection pool.
-/// # Errors
-///
-/// * `env::var` can return an error if `DATABASE_URL` is not found in the environment.
-/// * `PgPool::connect` can return an error if the database connection fails.
-/// * `sqlx::migrate` can return an error if migrations fail.
-pub async fn get_db_pool() -> color_eyre::Result<Pool<Postgres>> {
-    let db_settings = &settings().database;
-    let database_url = &db_settings.url;
-    info!("Connecting to database.");
-    let pool = PgPoolOptions::new()
-        .max_connections(db_settings.max_connections)
-        .min_connections(db_settings.min_connection)
-        .max_lifetime(Duration::from_secs(db_settings.max_lifetime))
-        .idle_timeout(Duration::from_secs(db_settings.idle_timeout))
-        .acquire_timeout(Duration::from_secs(db_settings.acquire_timeout))
-        .test_before_acquire(true)
-        .connect(database_url)
-        .await?;
-    Ok(pool)
-}
-
 /// Checks if a file is a media file based on its extension.
 #[must_use]
 pub fn is_media_file(file: &Path) -> bool {
@@ -104,46 +78,6 @@ pub fn is_video_file(file: &Path) -> bool {
         return false;
     };
     video_extensions.contains(&extension)
-}
-
-/// Derives the user ID from a given relative path by extracting the username and querying the database.
-/// # Errors
-///
-/// * If the username cannot be extracted from the path.
-/// * If the database query to find the user by username fails.
-/// * If no user is found for the extracted username.
-pub async fn user_from_relative_path<'c, E>(
-    relative_path: &str,
-    executor: E,
-) -> color_eyre::Result<Option<User>>
-where
-    E: Executor<'c, Database = Postgres>,
-{
-    let users = sqlx::query_as!(
-        User,
-        r#"
-        SELECT id, created_at, updated_at, email, name, media_folder, role as "role: UserRole"
-        FROM app_user
-        WHERE media_folder IS NOT null
-    "#
-    )
-    .fetch_all(executor)
-    .await?;
-
-    let mut best_match: Option<User> = None;
-    let mut max_len = 0;
-
-    for user in users {
-        if let Some(media_folder) = &user.media_folder
-            && relative_path.starts_with(media_folder)
-            && media_folder.len() > max_len
-        {
-            max_len = media_folder.len();
-            best_match = Some(user);
-        }
-    }
-
-    Ok(best_match)
 }
 
 /// Constructs thumbnail generation options from the application settings.

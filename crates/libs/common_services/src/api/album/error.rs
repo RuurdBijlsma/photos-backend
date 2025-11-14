@@ -1,11 +1,12 @@
-use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
 use tracing::{error, warn};
 use url::ParseError;
+use crate::database::DbError;
 
 #[derive(Debug, Error)]
 pub enum AlbumError {
@@ -103,5 +104,24 @@ impl From<jsonwebtoken::errors::Error> for AlbumError {
 impl From<ParseError> for AlbumError {
     fn from(err: ParseError) -> Self {
         Self::Internal(eyre::Report::new(err))
+    }
+}
+
+impl From<DbError> for AlbumError {
+    fn from(err: DbError) -> Self {
+        match err {
+            DbError::Sqlx(sql_err) => {
+                // Map SQLx's RowNotFound to AlbumError::NotFound
+                if let sqlx::Error::RowNotFound = sql_err {
+                    AlbumError::NotFound("row not found".into())
+                } else {
+                    // direct mapping to AlbumError::Database
+                    AlbumError::Database(sql_err)
+                }
+            }
+            DbError::NotFound => AlbumError::NotFound("not found".into()),
+            DbError::InvalidInput(msg) => AlbumError::Internal(eyre::eyre!(msg)),
+            DbError::Internal(msg) => AlbumError::Internal(eyre::eyre!(msg)),
+        }
     }
 }

@@ -19,6 +19,7 @@ serde_json = "1.0.145"
 bon = "3.8.1"
 prost = "0.13.5"
 url = "2.5.7"
+pgvector = "0.4.1"
 
 [build-dependencies]
 prost-build = "0.13.5"

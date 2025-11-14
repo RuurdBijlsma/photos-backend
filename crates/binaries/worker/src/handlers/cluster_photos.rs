@@ -2,13 +2,14 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::clustering;
 use crate::handlers::common::clustering::{Clusterable, ClusteringStrategy};
-use crate::handlers::db::model::{ExistingPhotoCluster, PhotoEmbedding};
 use async_trait::async_trait;
 use color_eyre::Result;
-use common_services::queue::Job;
 use pgvector::Vector;
 use sqlx::{Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
+use common_services::database::jobs::Job;
+use common_services::database::photo_cluster::ExistingPhotoCluster;
+use common_services::database::visual_analysis::visual_analysis::MediaEmbedding;
 
 impl Clusterable for ExistingPhotoCluster {
     fn id(&self) -> i64 {
@@ -24,7 +25,7 @@ struct PhotoClusteringStrategy;
 #[async_trait]
 impl ClusteringStrategy for PhotoClusteringStrategy {
     type ExistingCluster = ExistingPhotoCluster;
-    type Embedding = PhotoEmbedding;
+    type Embedding = MediaEmbedding;
 
     const ENTITY_NAME: &'static str = "photo";
     const MIN_ITEMS_TO_CLUSTER: usize = 3;
@@ -52,7 +53,7 @@ impl ClusteringStrategy for PhotoClusteringStrategy {
     async fn fetch_embeddings(pool: &sqlx::PgPool, user_id: i32) -> Result<Vec<Self::Embedding>> {
         // todo: fetch visual analysis that's earliest in percentage (for videos that have multiple visual analyses)
         query_as!(
-            PhotoEmbedding,
+            MediaEmbedding,
             r#"SELECT DISTINCT ON (media_item.id)
                    media_item.id as media_item_id,
                    va.embedding as "embedding!: Vector"

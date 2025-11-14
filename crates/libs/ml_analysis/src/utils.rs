@@ -1,9 +1,9 @@
 use crate::VisualAnalyzer;
-use common_services::settings::settings;
 use serde_json::Value;
 use std::io;
 use std::path::Path;
 use tokio::process::Command;
+use common_services::get_settings::settings;
 
 /// Use ffmpeg to convert a photo or video.
 pub async fn convert_media_file(input_path: &Path, output_path: &Path) -> io::Result<()> {

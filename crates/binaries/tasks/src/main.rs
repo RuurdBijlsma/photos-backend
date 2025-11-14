@@ -1,6 +1,7 @@
 use color_eyre::Result;
-use common_services::queue::{JobType, enqueue_job};
-use common_services::utils::get_db_pool;
+use common_services::database::get_db_pool;
+use common_services::database::jobs::JobType;
+use common_services::job_queue::enqueue_job;
 
 #[tokio::main]
 async fn main() -> Result<()> {

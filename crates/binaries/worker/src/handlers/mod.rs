@@ -1,7 +1,7 @@
 use crate::context::WorkerContext;
 use crate::jobs::heartbeat::start_heartbeat_loop;
 use color_eyre::Result;
-use common_services::queue::{Job, JobType};
+use common_services::database::jobs::{Job, JobType};
 
 pub mod analyze;
 pub mod clean_db;

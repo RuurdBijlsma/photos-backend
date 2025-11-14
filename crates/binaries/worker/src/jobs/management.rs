@@ -1,13 +1,13 @@
+use common_services::database::jobs::JobType;
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::macros::backoff_seconds;
 use chrono::{Duration, Utc};
 use color_eyre::{Report, Result};
 use common_services::alert;
-use common_services::queue::JobType;
-use common_services::queue::{Job, JobStatus};
 use sqlx::{PgPool, Postgres, Transaction};
 use tracing::{info, warn};
+use common_services::database::jobs::{Job, JobStatus};
 
 /// Atomically claims the next available job from the queue.
 ///

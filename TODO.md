@@ -123,6 +123,9 @@
 * [BUG] if album name for /albums/invite/accept is already a folder in media_dir/user_folder, then it doesnt work
   properly.
 * remove unused crates
+* rename details to media_details
+* big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
+* [BUG] pending media items seems to be not used again
 
 # Features
 

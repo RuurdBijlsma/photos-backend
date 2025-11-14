@@ -3,9 +3,6 @@ use crate::handlers::JobResult;
 use color_eyre::eyre::Result;
 use color_eyre::eyre::eyre;
 use common_services::alert;
-use common_services::queue::{Job, JobType, enqueue_full_ingest, enqueue_job};
-use common_services::settings::{media_dir, settings, thumbnails_dir};
-use common_services::utils::{relative_path_abs, user_from_relative_path};
 use sqlx::{PgPool, Pool, Postgres};
 use std::collections::HashSet;
 use std::path::Path;
@@ -13,6 +10,11 @@ use tokio::fs;
 use tracing::warn;
 use tracing::{error, info};
 use walkdir::WalkDir;
+use common_services::database::app_user::user_from_relative_path;
+use common_services::database::jobs::{Job, JobType};
+use common_services::get_settings::{media_dir, settings, thumbnails_dir};
+use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
+use common_services::utils::relative_path_abs;
 
 /// Checks if a file path has an extension present in a given set of allowed extensions.
 fn has_allowed_ext(path: &Path, allowed: &HashSet<&str>) -> bool {

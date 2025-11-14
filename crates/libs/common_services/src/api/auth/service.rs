@@ -1,17 +1,16 @@
-use crate::auth::error::AuthError;
-use crate::auth::hashing::{hash_password, verify_password};
-use crate::auth::interfaces::{AuthClaims, CreateUser, Tokens};
-use crate::auth::token::{
-    RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
-};
-use crate::settings::settings;
+
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
-use common_types::app_user::{User, UserRole, UserWithPassword};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
+use crate::api::auth::error::AuthError;
+use crate::api::auth::hashing::{hash_password, verify_password};
+use crate::api::auth::interfaces::{AuthClaims, CreateUser, Tokens};
+use crate::api::auth::token::{generate_refresh_token_parts, split_refresh_token, verify_token, RefreshTokenParts};
+use crate::database::app_user::{User, UserRole, UserWithPassword};
+use crate::get_settings::settings;
 
 /// Authenticates a user based on email and password.
 ///

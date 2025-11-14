@@ -2,8 +2,8 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use color_eyre::Result;
 use color_eyre::eyre::eyre;
-use common_services::queue::Job;
-use common_services::settings::{media_dir, thumbnails_dir};
+use common_services::database::jobs::Job;
+use common_services::get_settings::{media_dir, thumbnails_dir};
 
 /// Handles the removal of a media item from the database and filesystem.
 ///
