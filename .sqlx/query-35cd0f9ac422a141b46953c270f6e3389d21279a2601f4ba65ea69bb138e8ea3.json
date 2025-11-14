@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id\n        FROM jobs\n        WHERE relative_path = $1 AND job_type = $2 AND payload = $3 AND status IN ('running', 'queued', 'failed')\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "job_type",
+            "kind": {
+              "Enum": [
+                "ingest",
+                "remove",
+                "analysis",
+                "scan",
+                "cleandb",
+                "cluster_faces",
+                "cluster_photos",
+                "import_album",
+                "import_album_item"
+              ]
+            }
+          }
+        },
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "35cd0f9ac422a141b46953c270f6e3389d21279a2601f4ba65ea69bb138e8ea3"
+}

@@ -1,0 +1,63 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, album_id, user_id, remote_user_id, role as \"role: AlbumRole\", added_at\n            FROM album_collaborator\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "album_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "remote_user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "role: AlbumRole",
+        "type_info": {
+          "Custom": {
+            "name": "album_role",
+            "kind": {
+              "Enum": [
+                "owner",
+                "contributor",
+                "viewer"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "added_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "5fde6ba8b476a35d0806b85ac1de9df7c422628b621dedcec2d951c9b2053881"
+}

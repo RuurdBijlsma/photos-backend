@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO face (\n                    visual_analysis_id, position_x, position_y, width, height, confidence, age, sex,\n                    mouth_left_x, mouth_left_y, mouth_right_x, mouth_right_y,\n                    nose_tip_x, nose_tip_y, eye_left_x, eye_left_y, eye_right_x, eye_right_y,\n                    embedding\n                )\n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Int4",
+        "Text",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Float4",
+        {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c2767fc237de5c4d7485d27b5c4c19ac04ee3505a671779c8fb06ef4bb285334"
+}
