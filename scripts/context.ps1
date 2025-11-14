@@ -8,7 +8,7 @@
     This script automates the collection of project information to create a detailed context for an LLM.
     It gathers:
     - A file and directory tree structure.
-    - Content of files selected via the clipboard.
+    - Content of files or directories selected via the clipboard.
     - Contents of all Cargo.toml files.
     - The output of 'git diff' for uncommitted changes.
     - An OpenAPI specification from a configured URL.
@@ -187,10 +187,8 @@ $ignorePatterns = (Get-GitIgnorePatterns -rootPath $projectRoot) + $additionalIg
 Write-Host "Loaded $( @($ignorePatterns).Length ) ignore patterns from .gitignore and configuration."
 
 # 2. Generate and add the ignore patterns list and the file tree
-if ((Read-YesNoPrompt -prompt "`nAdd the file & directory structure?" -default 'y') -eq 'y')
+if ((Read-YesNoPrompt -prompt "`nAdd folder structure?" -default 'n') -eq 'y')
 {
-    # MODIFIED: Both "Ignored Patterns" and "File Structure" are now inside this block.
-
     # Add the "Ignored Patterns" section
     $contextBuilder.AppendLine("## Ignored File & Directory Patterns") | Out-Null
     $contextBuilder.AppendLine("The following patterns have been excluded from the file tree below:") | Out-Null
@@ -220,35 +218,70 @@ $baseUri = [System.Uri]([System.IO.Path]::Combine($projectRoot, " "))
 # 3. Process files from clipboard
 if (Get-Clipboard -Format FileDropList -ErrorAction SilentlyContinue)
 {
-    $clipboardFiles = Get-Clipboard -Format FileDropList
-    Write-Host "`nAdding $( $clipboardFiles.Count ) file(s) from the clipboard:" -ForegroundColor Yellow
-    $clipboardFiles | ForEach-Object { Write-Host "- $( $_.Name )" -ForegroundColor Green }
+    $clipboardItems = Get-Clipboard -Format FileDropList
+    Write-Host "`nProcessing $( $clipboardItems.Count ) item(s) from the clipboard..." -ForegroundColor Yellow
 
-    foreach ($file in $clipboardFiles)
+    # --- Nested function to handle recursive file addition ---
+    function Add-FilesInDirectory($directoryPath, $baseUri, $contextBuilder, $ignorePatterns, $projectRoot)
     {
-        if (Test-Path $file.FullName)
+        $filesInDir = Get-ChildItem -Path $directoryPath -File -Recurse
+
+        foreach ($file in $filesInDir)
         {
-            # Use the .NET URI method for robust relative path calculation in PS 5.1
+            if (Test-PathAgainstPatterns -path $file.FullName -patterns $ignorePatterns -rootPath $projectRoot) {
+                continue
+            }
+
             $fileUri = [System.Uri]$file.FullName
             $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
+
             $contextBuilder.AppendLine("## File: $relativePath") | Out-Null
             $contextBuilder.AppendLine('```') | Out-Null
             $contextBuilder.AppendLine((Get-Content $file.FullName -Raw)) | Out-Null
             $contextBuilder.AppendLine('```') | Out-Null
             $contextBuilder.AppendLine() | Out-Null
+            Write-Host "- Added: $relativePath" -ForegroundColor Green
+        }
+    }
+    # --- End of nested function ---
+
+    foreach ($item in $clipboardItems)
+    {
+        $itemPath = $item.FullName
+        if (-not (Test-Path $itemPath)) {
+            continue
+        }
+
+        # MODIFIED: Use a more robust check for directories.
+        if (Test-Path -Path $itemPath -PathType Container)
+        {
+            Write-Host "`nAdding all files in directory: $( $item.Name )" -ForegroundColor Yellow
+            Add-FilesInDirectory $itemPath $baseUri $contextBuilder $ignorePatterns $projectRoot
+        }
+        else # It's a file
+        {
+            $fileUri = [System.Uri]$itemPath
+            $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
+
+            $contextBuilder.AppendLine("## File: $relativePath") | Out-Null
+            $contextBuilder.AppendLine('```') | Out-Null
+            $contextBuilder.AppendLine((Get-Content $itemPath -Raw)) | Out-Null
+            $contextBuilder.AppendLine('```') | Out-Null
+            $contextBuilder.AppendLine() | Out-Null
+            Write-Host "Added file: $( $item.Name )" -ForegroundColor Green
         }
     }
 }
+
 
 # 4. Add Cargo.toml files
 $cargoFiles = Get-ChildItem -Path $projectRoot -Recurse -Filter "Cargo.toml" | Where-Object { -not (Test-PathAgainstPatterns $_.FullName $ignorePatterns $projectRoot) }
 if ($cargoFiles)
 {
-    if ((Read-YesNoPrompt -prompt "`nFound $( $cargoFiles.Count ) Cargo.toml file(s). Add all of them?" -default 'y') -eq 'y')
+    if ((Read-YesNoPrompt -prompt "`nFound $( $cargoFiles.Count ) Cargo.toml file(s). Add all of them?" -default 'n') -eq 'y')
     {
         foreach ($file in $cargoFiles)
         {
-            # Use the .NET URI method
             $fileUri = [System.Uri]$file.FullName
             $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
             $contextBuilder.AppendLine("## File: $relativePath") | Out-Null
@@ -283,7 +316,7 @@ if ((Read-YesNoPrompt -prompt "`nAdd uncommitted changes (git diff)?" -default '
 # 6. Add OpenAPI Spec
 if (-not [string]::IsNullOrWhiteSpace($openApiUrl))
 {
-    if ((Read-YesNoPrompt -prompt "`nFetch and add OpenAPI spec from $openApiUrl?" -default 'y') -eq 'y')
+    if ((Read-YesNoPrompt -prompt "`nFetch and add OpenAPI spec from $openApiUrl?" -default 'n') -eq 'y')
     {
         try
         {
@@ -311,12 +344,11 @@ if (Test-Path $migrationsPath)
     $sqlFiles = Get-ChildItem -Path $migrationsPath -Filter "*.sql"
     if ($sqlFiles)
     {
-        if ((Read-YesNoPrompt -prompt "`nFound $( $sqlFiles.Count ) SQL migration file(s). Add all of them?" -default 'y') -eq 'y')
+        if ((Read-YesNoPrompt -prompt "`nFound $( $sqlFiles.Count ) SQL migration file(s). Add all of them?" -default 'n') -eq 'y')
         {
             $contextBuilder.AppendLine("## SQL Migrations") | Out-Null
             foreach ($file in $sqlFiles)
             {
-                # Use the .NET URI method
                 $fileUri = [System.Uri]$file.FullName
                 $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
                 $contextBuilder.AppendLine("### File: $relativePath") | Out-Null
