@@ -1,11 +1,11 @@
 use crate::insert_query;
 use chrono::{TimeZone, Utc};
-use common_services::database::album::album_media_item::insert_album_media_items;
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
+use common_services::database::album_store::AlbumStore;
+use common_services::database::DbError;
 use common_services::get_settings::fallback_timezone;
 use media_analyzer::{AnalyzeResult, LocationName};
 use sqlx::PgTransaction;
-use common_services::database::DbError;
 
 async fn get_or_create_remote_user(
     tx: &mut PgTransaction<'_>,
@@ -152,7 +152,8 @@ pub async fn store_media_item(
     .await?;
 
     if let Some(pending_album) = pending_info {
-        insert_album_media_items(&mut **tx, &pending_album.album_id, item_id, user_id).await?;
+        AlbumStore::insert_media_items(&mut **tx, &pending_album.album_id, item_id, user_id)
+            .await?;
     }
 
     if let Some(gps_info) = &data.gps_info {
