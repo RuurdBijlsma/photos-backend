@@ -268,7 +268,7 @@ if (Get-Clipboard -Format FileDropList -ErrorAction SilentlyContinue)
             $contextBuilder.AppendLine((Get-Content $itemPath -Raw)) | Out-Null
             $contextBuilder.AppendLine('```') | Out-Null
             $contextBuilder.AppendLine() | Out-Null
-            Write-Host "Added file: $( $item.Name )" -ForegroundColor Green
+            Write-Host "Added: $( $item.Name )" -ForegroundColor Green
         }
     }
 }
