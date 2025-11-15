@@ -117,6 +117,7 @@ impl From<DbError> for AlbumError {
                     Self::Database(sql_err)
                 }
             }
+            DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }
     }
 }

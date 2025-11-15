@@ -17,5 +17,5 @@ pub struct Details {
     pub video_fps: Option<f32>,
     pub is_nightsight: bool,
     pub is_timelapse: bool,
-    pub exif: Option<Value>,
+    pub exif: Value,
 }

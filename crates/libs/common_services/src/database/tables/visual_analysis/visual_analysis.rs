@@ -1,10 +1,11 @@
 use crate::database::visual_analysis::caption_data::CaptionData;
 use crate::database::visual_analysis::color_data::ColorData;
 use crate::database::visual_analysis::detect_object::DetectedObject;
-use crate::database::visual_analysis::face::Face;
+use crate::database::visual_analysis::face::{CreateFace, Face};
 use crate::database::visual_analysis::ocr_data::OcrData;
 use crate::database::visual_analysis::quality_data::QualityData;
 use chrono::{DateTime, Utc};
+use common_types::ml_analysis_types::VisualImageData;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -18,13 +19,42 @@ pub struct MediaEmbedding {
 }
 
 /// A composite struct representing a '`visual_analysis`' run and all its associated nested data.
+#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+pub struct CreateVisualAnalysis {
+    pub embedding: Vector,
+    pub percentage: i32,
+    pub ocr_data: OcrData,
+    pub faces: Vec<CreateFace>,
+    pub detected_objects: Vec<DetectedObject>,
+    pub quality: QualityData,
+    pub colors: ColorData,
+    pub caption: CaptionData,
+}
+
+impl From<VisualImageData> for CreateVisualAnalysis {
+    fn from(data: VisualImageData) -> Self {
+        Self {
+            embedding: data.embedding.into(),
+            percentage: data.percentage,
+            ocr_data: data.ocr.into(),
+            faces: data.faces.into_iter().map(Into::into).collect(),
+            detected_objects: data.objects.into_iter().map(Into::into).collect(),
+            quality: data.quality_data.into(),
+            colors: data.color_data.into(),
+            caption: data.caption_data.into(),
+        }
+    }
+}
+
+/// A composite struct representing a '`visual_analysis`' run and all its associated nested data.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-pub struct VisualAnalysis {
+pub struct ReadVisualAnalysis {
     pub created_at: DateTime<Utc>,
-    pub ocr_data: Vec<OcrData>,
+    pub percentage: i32,
+    pub ocr_data: OcrData,
     pub faces: Vec<Face>,
     pub detected_objects: Vec<DetectedObject>,
-    pub quality: Option<QualityData>,
-    pub colors: Option<ColorData>,
-    pub caption: Option<CaptionData>,
+    pub quality: QualityData,
+    pub colors: ColorData,
+    pub caption: CaptionData,
 }

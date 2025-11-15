@@ -14,7 +14,6 @@ pub mod remove;
 pub mod scan;
 
 pub mod common;
-pub mod db;
 
 /// The outcome of a job handler's execution.
 #[derive(Debug, PartialEq, Eq)]

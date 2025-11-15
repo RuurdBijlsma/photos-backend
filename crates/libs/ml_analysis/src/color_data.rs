@@ -1,5 +1,6 @@
-use crate::{ColorData, ColorHistogram, PyInterop, RGBChannels};
+use crate::PyInterop;
 use common_types::Variant;
+use common_types::ml_analysis_types::{ColorData, ColorHistogram, RGBChannels};
 use image::Rgb;
 use palette::{FromColor, Hsv, Srgb};
 use std::path::Path;

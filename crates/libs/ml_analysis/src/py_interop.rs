@@ -1,7 +1,7 @@
 use crate::ChatMessage;
-use crate::structs::{FaceBox, OCRData, ObjectBox};
 use color_eyre::eyre::Context;
 use common_types::Variant;
+use common_types::ml_analysis_types::{FaceBox, OCRData, ObjectBox};
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use serde_json::Value;

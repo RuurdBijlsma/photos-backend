@@ -4,9 +4,9 @@ CREATE TYPE user_role AS ENUM ('admin', 'user');
 CREATE TABLE location
 (
     id           SERIAL PRIMARY KEY,
-    name         TEXT,
-    admin1       TEXT,
-    admin2       TEXT,
+    name         TEXT NOT NULL,
+    admin1       TEXT NOT NULL,
+    admin2       TEXT NOT NULL,
     country_code TEXT NOT NULL,
     country_name TEXT NOT NULL
 );
@@ -78,12 +78,12 @@ CREATE TABLE media_item
 
 CREATE TABLE gps
 (
-    media_item_id   VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    location_id     INT REFERENCES location (id), -- A media item can exist without a resolved location.
-    latitude        DOUBLE PRECISION NOT NULL,
-    longitude       DOUBLE PRECISION NOT NULL,
-    altitude        DOUBLE PRECISION,
-    image_direction DOUBLE PRECISION
+    media_item_id     VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
+    location_id       INT REFERENCES location (id), -- A media item can exist without a resolved location.
+    latitude          DOUBLE PRECISION NOT NULL,
+    longitude         DOUBLE PRECISION NOT NULL,
+    altitude          DOUBLE PRECISION,
+    compass_direction DOUBLE PRECISION
 );
 
 CREATE TABLE time_details
@@ -91,9 +91,9 @@ CREATE TABLE time_details
     media_item_id           VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
     timezone_name           TEXT,
     timezone_offset_seconds INT,
-    source                  TEXT,
-    source_details          TEXT,
-    source_confidence       TEXT
+    timezone_source         TEXT,
+    source_details          TEXT NOT NULL,
+    source_confidence       TEXT NOT NULL
 );
 
 CREATE TABLE weather
@@ -131,7 +131,7 @@ CREATE TABLE details
     video_fps                           REAL,
     is_nightsight                       BOOLEAN NOT NULL,
     is_timelapse                        BOOLEAN NOT NULL,
-    exif                                JSONB
+    exif                                JSONB   NOT NULL
 );
 
 CREATE TABLE capture_details

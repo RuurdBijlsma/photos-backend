@@ -1,5 +1,5 @@
-use crate::QualityData;
 use color_eyre::eyre::Result;
+use common_types::ml_analysis_types::QualityData;
 use image::{DynamicImage, GrayImage, imageops};
 use imageproc::filter::{laplacian_filter, median_filter};
 use std::path::Path;

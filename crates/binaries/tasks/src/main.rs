@@ -2,10 +2,15 @@ use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::database::jobs::JobType;
 use common_services::job_queue::enqueue_job;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber)?;
     color_eyre::install()?;
 
     // let twenty_four_hours = Duration::from_secs(12 * 60 * 60);

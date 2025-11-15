@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO weather (\n                    media_item_id, temperature, dew_point, relative_humidity, precipitation, snow,\n                    wind_direction, wind_speed, peak_wind_gust, pressure, sunshine_minutes,\n                    condition, sunrise, sunset, dawn, dusk, is_daytime\n                )\n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Float4",
+        "Float4",
+        "Int4",
+        "Float4",
+        "Int4",
+        "Int4",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Int4",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1053f668b41c1d1467cf92d9622a3f9859b84d8c8e5506644e08cf29457edade"
+}

@@ -1,22 +1,27 @@
-use ml_analysis::VisualImageData;
-use pgvector::Vector;
+use crate::database::DbError;
+use crate::database::visual_analysis::visual_analysis::CreateVisualAnalysis;
 use sqlx::PgTransaction;
 
-/// Stores the detailed results of a visual analysis for a media item in the database.
-///
-/// # Errors
-///
-/// This function will return an error if any of the database insertion queries fail
-/// or if color histogram data cannot be serialized to JSON.
-#[allow(clippy::too_many_lines)]
-pub async fn store_visual_analysis(
-    tx: &mut PgTransaction<'_>,
-    media_item_id: &str,
-    analyses: &[VisualImageData],
-) -> color_eyre::Result<()> {
-    for analysis in analyses {
+pub struct VisualAnalysisStore;
+
+impl VisualAnalysisStore {
+    /// Stores the detailed results of a visual analysis for a media item in the database.
+    ///
+    /// This function takes a single `VisualImageData` object and persists it, including all nested
+    /// data like faces, objects, and color information. It returns the ID of the newly created
+    /// `visual_analysis` record.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if any of the database insertion queries fail
+    /// or if the color histogram data cannot be serialized to JSON.
+    #[allow(clippy::too_many_lines)]
+    pub async fn create(
+        tx: &mut PgTransaction<'_>,
+        media_item_id: &str,
+        analysis: &CreateVisualAnalysis,
+    ) -> Result<i64, DbError> {
         // Insert the main analysis record and get its new ID.
-        let embed_vector = Vector::from(analysis.embedding.clone());
         let visual_analysis_id: i64 = sqlx::query_scalar!(
             r#"
             INSERT INTO visual_analysis (media_item_id, embedding, percentage)
@@ -24,7 +29,7 @@ pub async fn store_visual_analysis(
             RETURNING id
             "#,
             media_item_id,
-            embed_vector as _,
+            analysis.embedding as _,
             analysis.percentage,
         )
         .fetch_one(&mut **tx)
@@ -38,35 +43,33 @@ pub async fn store_visual_analysis(
             RETURNING id
             "#,
             visual_analysis_id,
-            analysis.ocr.has_legible_text,
-            analysis.ocr.ocr_text,
+            analysis.ocr_data.has_legible_text,
+            analysis.ocr_data.ocr_text,
         )
         .fetch_one(&mut **tx)
         .await?;
 
         // --- OCR Box Data ---
-        if let Some(ocr_boxes) = &analysis.ocr.ocr_boxes {
-            for ocr_box in ocr_boxes {
-                sqlx::query!(
+        for ocr_box in &analysis.ocr_data.boxes {
+            sqlx::query!(
                     r#"
                     INSERT INTO ocr_box (ocr_data_id, text, position_x, position_y, width, height, confidence)
                     VALUES ($1, $2, $3, $4, $5, $6, $7)
                     "#,
                     ocr_data_id,
                     ocr_box.text,
-                    ocr_box.position.0,
-                    ocr_box.position.1,
+                    ocr_box.position_x,
+                    ocr_box.position_y,
                     ocr_box.width,
                     ocr_box.height,
                     ocr_box.confidence,
                 )
                     .execute(&mut **tx)
                     .await?;
-            }
         }
 
+        // --- Face Data ---
         for face in &analysis.faces {
-            let face_vector = Vector::from(face.embedding.clone());
             sqlx::query!(
                 r#"
                 INSERT INTO face (
@@ -78,39 +81,39 @@ pub async fn store_visual_analysis(
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                 "#,
                 visual_analysis_id,
-                face.position.0,
-                face.position.1,
+                face.position_x,
+                face.position_y,
                 face.width,
                 face.height,
                 face.confidence,
                 face.age,
                 &face.sex,
-                face.mouth_left.0,
-                face.mouth_left.1,
-                face.mouth_left.0,
-                face.mouth_left.1,
-                face.nose_tip.0,
-                face.nose_tip.1,
-                face.eye_left.0,
-                face.eye_left.1,
-                face.eye_right.0,
-                face.eye_right.1,
-                face_vector as _,
+                face.mouth_left_x,
+                face.mouth_left_y,
+                face.mouth_right_x,
+                face.mouth_right_y,
+                face.nose_tip_x,
+                face.nose_tip_y,
+                face.eye_left_x,
+                face.eye_left_y,
+                face.eye_right_x,
+                face.eye_right_y,
+                face.embedding as _,
             )
                 .execute(&mut **tx)
                 .await?;
         }
 
         // --- Detected Objects ---
-        for object in &analysis.objects {
+        for object in &analysis.detected_objects {
             sqlx::query!(
                 r#"
                 INSERT INTO detected_object (visual_analysis_id, position_x, position_y, width, height, confidence, label)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 "#,
                 visual_analysis_id,
-                object.position.0,
-                object.position.1,
+                object.position_x,
+                object.position_y,
                 object.width,
                 object.height,
                 object.confidence,
@@ -120,8 +123,8 @@ pub async fn store_visual_analysis(
                 .await?;
         }
 
-        // --- Quality Data (No changes needed) ---
-        let quality = &analysis.quality_data;
+        // --- Quality Data ---
+        let quality = &analysis.quality;
         sqlx::query!(
             r#"
             INSERT INTO quality_data (visual_analysis_id, blurriness, noisiness, exposure, quality_score)
@@ -136,8 +139,8 @@ pub async fn store_visual_analysis(
             .execute(&mut **tx)
             .await?;
 
-        // --- Color Data (Updated for JSONB[] type) ---
-        let color = &analysis.color_data;
+        // --- Color Data ---
+        let color = &analysis.colors;
         let themes_values: Vec<serde_json::Value> = color.themes.clone();
         let histogram_json = serde_json::to_value(&color.histogram)?;
 
@@ -160,8 +163,8 @@ pub async fn store_visual_analysis(
         .execute(&mut **tx)
         .await?;
 
-        // --- Caption Data (No changes needed, already matches) ---
-        let caption = &analysis.caption_data;
+        // --- Caption Data ---
+        let caption = &analysis.caption;
         sqlx::query!(
             r#"
             INSERT INTO caption_data (
@@ -206,7 +209,7 @@ pub async fn store_visual_analysis(
         )
         .execute(&mut **tx)
         .await?;
-    }
 
-    Ok(())
+        Ok(visual_analysis_id)
+    }
 }

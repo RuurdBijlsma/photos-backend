@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO details (\n                    media_item_id, mime_type, size_bytes, is_motion_photo,\n                    motion_photo_presentation_timestamp, is_hdr, is_burst, burst_id,\n                    capture_fps, video_fps, is_nightsight, is_timelapse, exif\n                )\n                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text",
+        "Int8",
+        "Bool",
+        "Int8",
+        "Bool",
+        "Bool",
+        "Text",
+        "Float4",
+        "Float4",
+        "Bool",
+        "Bool",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "38f41463ceda88c16754b384e7dd026b20323b7516e95a78d8cc712957cb9502"
+}

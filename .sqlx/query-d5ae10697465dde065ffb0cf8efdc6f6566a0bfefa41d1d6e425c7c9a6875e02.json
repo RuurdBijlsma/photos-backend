@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO location (name, admin1, admin2, country_code, country_name)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id\n            ",
+  "query": "\n                INSERT INTO location (name, admin1, admin2, country_code, country_name)\n                VALUES ($1, $2, $3, $4, $5)\n                RETURNING id\n                ",
   "describe": {
     "columns": [
       {
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "fad5567234fe54f95fe8ce67531f46455d0b94b2d79968df63f6884e6d5416e1"
+  "hash": "d5ae10697465dde065ffb0cf8efdc6f6566a0bfefa41d1d6e425c7c9a6875e02"
 }

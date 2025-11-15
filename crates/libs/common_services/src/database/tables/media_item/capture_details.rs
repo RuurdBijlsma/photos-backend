@@ -12,3 +12,17 @@ pub struct CaptureDetails {
     pub camera_make: Option<String>,
     pub camera_model: Option<String>,
 }
+
+/// Converts from the analysis result's `SourceCaptureDetails` to the database model `CaptureDetails`.
+impl From<media_analyzer::CaptureDetails> for CaptureDetails {
+    fn from(details: media_analyzer::CaptureDetails) -> Self {
+        Self {
+            iso: details.iso.map(|iso| iso as i32),
+            exposure_time: details.exposure_time.map(|et| et as f32),
+            aperture: details.aperture.map(|a| a as f32),
+            focal_length: details.focal_length.map(|fl| fl as f32),
+            camera_make: details.camera_make,
+            camera_model: details.camera_model,
+        }
+    }
+}
