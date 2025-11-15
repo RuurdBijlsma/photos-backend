@@ -16,8 +16,9 @@ use common_services::database::media_item_store::MediaItemStore;
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 use ml_analysis::get_color_theme;
 use serde_json::Value;
+use tracing::instrument;
 
-/// Get a random photo and its associated theme.
+/// Get a full media item
 ///
 /// # Errors
 ///
@@ -36,6 +37,7 @@ use serde_json::Value;
     ),
     security(("bearer_auth" = []))
 )]
+#[instrument(skip(api_state, user), err(Debug))]
 pub async fn get_full_item_handler(
     State(api_state): State<ApiState>,
     Extension(user): Extension<User>,

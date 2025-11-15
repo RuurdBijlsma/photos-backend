@@ -52,33 +52,30 @@ impl MediaItemStore {
         ocr_json AS (
             SELECT
                 o.visual_analysis_id,
-                jsonb_agg(
-                    jsonb_build_object(
-                        'id', o.id,
-                        'has_legible_text', o.has_legible_text,
-                        'ocr_text', o.ocr_text,
-                        'boxes', (
-                            SELECT COALESCE(
-                                jsonb_agg(
-                                    jsonb_build_object(
-                                        'id', b.id,
-                                        'text', b.text,
-                                        'position_x', b.position_x,
-                                        'position_y', b.position_y,
-                                        'width', b.width,
-                                        'height', b.height,
-                                        'confidence', b.confidence
-                                    )
-                                ),
-                                '[]'::jsonb
-                            )
-                            FROM ocr_box b
-                            WHERE b.ocr_data_id = o.id
+                jsonb_build_object(
+                    'id', o.id,
+                    'has_legible_text', o.has_legible_text,
+                    'ocr_text', o.ocr_text,
+                    'boxes', (
+                        SELECT COALESCE(
+                            jsonb_agg(
+                                jsonb_build_object(
+                                    'id', b.id,
+                                    'text', b.text,
+                                    'position_x', b.position_x,
+                                    'position_y', b.position_y,
+                                    'width', b.width,
+                                    'height', b.height,
+                                    'confidence', b.confidence
+                                )
+                            ),
+                            '[]'::jsonb
                         )
+                        FROM ocr_box b
+                        WHERE b.ocr_data_id = o.id
                     )
-                ) AS data
+                ) as data
             FROM ocr_data o
-            GROUP BY o.visual_analysis_id
         ),
 
         -- 2️⃣ Collect all visual analyses and nested data
@@ -89,6 +86,7 @@ impl MediaItemStore {
                     jsonb_build_object(
                         'id', va.id,
                         'created_at', va.created_at,
+                        'percentage', va.percentage,
                         'quality', (
                             SELECT to_jsonb(qd)
                             FROM quality_data qd WHERE qd.visual_analysis_id = va.id
@@ -113,7 +111,7 @@ impl MediaItemStore {
                                 '[]'::jsonb
                             ) FROM detected_object obj WHERE obj.visual_analysis_id = va.id
                         ),
-                        'ocr_data', COALESCE(ocr.data, '[]'::jsonb)
+                        'ocr_data', COALESCE(ocr.data, '{"has_legible_text": false, "boxes": []}'::jsonb)
                     )
                     ORDER BY va.created_at DESC
                 ) AS data
