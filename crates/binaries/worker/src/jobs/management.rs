@@ -6,7 +6,7 @@ use color_eyre::{Report, Result};
 use common_services::alert;
 use common_services::database::jobs::JobType;
 use common_services::database::jobs::{Job, JobStatus};
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{Executor, PgPool, Postgres};
 use tracing::{info, warn};
 
 /// Atomically claims the next available job from the queue.
@@ -183,12 +183,12 @@ async fn dependency_reschedule_job(pool: &PgPool, job_id: i64, backoff_secs: i64
 ///
 /// Returns an error if the database query fails.
 pub async fn is_job_cancelled(
-    transaction: &mut Transaction<'_, Postgres>,
+    executor: impl Executor<'_, Database = Postgres>,
     job_id: i64,
 ) -> Result<bool> {
     let status: Option<JobStatus> = sqlx::query_scalar("SELECT status FROM jobs WHERE id = $1")
         .bind(job_id)
-        .fetch_optional(&mut **transaction)
+        .fetch_optional(executor)
         .await?;
     Ok(status.is_none_or(|s| s == JobStatus::Cancelled))
 }

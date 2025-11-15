@@ -8,7 +8,6 @@ use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use color_eyre::eyre::Result;
 use common_services::database::app_user::UserRole;
 use common_services::database::get_db_pool;
-use common_services::database::media_item::media_item::FromAnalyzerResult;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::get_settings::settings;
 use common_services::utils::nice_id;
@@ -156,14 +155,11 @@ async fn seed_mock_photos_in_tx(
 
         MediaItemStore::create(
             &mut *tx,
-            &FromAnalyzerResult {
-                result: data,
-                relative_path,
-                media_item_id: item_id,
-                user_id,
-            }
-            .into(),
+            &item_id,
+            &relative_path,
+            user_id,
             None,
+            &data.into(),
         )
         .await?;
 

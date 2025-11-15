@@ -15,10 +15,7 @@ use utoipa::ToSchema;
 /// The root struct representing a '`media_item`' and all its available, nested information.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
 pub struct CreateFullMediaItem {
-    pub id: String,
-    pub user_id: i32,
     pub hash: String,
-    pub relative_path: String,
     pub width: i32,
     pub height: i32,
     pub is_video: bool,
@@ -34,16 +31,8 @@ pub struct CreateFullMediaItem {
     pub panorama: Panorama,
 }
 
-pub struct FromAnalyzerResult {
-    pub result: AnalyzeResult,
-    pub user_id: i32,
-    pub relative_path: String,
-    pub media_item_id: String,
-}
-
-impl From<FromAnalyzerResult> for CreateFullMediaItem {
-    fn from(from_result: FromAnalyzerResult) -> Self {
-        let result = from_result.result;
+impl From<AnalyzeResult> for CreateFullMediaItem {
+    fn from(result: AnalyzeResult) -> Self {
         let media_details = MediaDetails {
             mime_type: result.metadata.mime_type,
             size_bytes: result.metadata.size_bytes as i64,
@@ -60,10 +49,6 @@ impl From<FromAnalyzerResult> for CreateFullMediaItem {
         };
 
         Self {
-            // Generate a new unique ID for the media item
-            id: from_result.media_item_id,
-            user_id: from_result.user_id,
-            relative_path: from_result.relative_path,
             hash: result.hash,
             width: result.metadata.width as i32,
             height: result.metadata.height as i32,

@@ -181,9 +181,12 @@ impl MediaItemStore {
     #[allow(clippy::too_many_lines)]
     pub async fn create(
         tx: &mut PgTransaction<'_>,
-        media_item: &CreateFullMediaItem,
+        id: &str,
+        relative_path: &str,
+        user_id: i32,
         remote_user_id: Option<i32>,
-    ) -> Result<String, DbError> {
+        media_item: &CreateFullMediaItem,
+    ) -> Result<(), DbError> {
         let sort_timestamp = media_item.taken_at_utc.unwrap_or_else(|| {
             fallback_timezone().as_ref().map_or_else(
                 || media_item.taken_at_local.and_utc(),
@@ -199,17 +202,17 @@ impl MediaItemStore {
         sqlx::query!(
             r#"
             INSERT INTO media_item (
-                id, hash, relative_path, user_id, remote_user_id, width, height,
+                id, relative_path, user_id, remote_user_id, hash, width, height,
                 is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp,
                 use_panorama_viewer
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             "#,
-            &media_item.id,
-            &media_item.hash,
-            &media_item.relative_path,
-            media_item.user_id,
+            id,
+            relative_path,
+            user_id,
             remote_user_id,
+            &media_item.hash,
             media_item.width,
             media_item.height,
             media_item.is_video,
@@ -231,7 +234,7 @@ impl MediaItemStore {
                 INSERT INTO gps (media_item_id, location_id, latitude, longitude, altitude, compass_direction)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
-                &media_item.id,
+                id,
                 location_id,
                 gps_info.latitude,
                 gps_info.longitude,
@@ -252,7 +255,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                 "#,
-                &media_item.id,
+                id,
                 weather_info.temperature,
                 weather_info.dew_point,
                 weather_info.relative_humidity,
@@ -282,7 +285,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
-            &media_item.id,
+            id,
             media_item.time_details.timezone_name,
             media_item.time_details.timezone_offset_seconds,
             media_item.time_details.timezone_source,
@@ -301,7 +304,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 "#,
-            &media_item.id,
+            id,
             media_item.media_details.mime_type,
             media_item.media_details.size_bytes,
             media_item.media_details.is_motion_photo,
@@ -325,7 +328,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 "#,
-                &media_item.id,
+                id,
                 media_item.capture_details.iso,
                 media_item.capture_details.exposure_time,
                 media_item.capture_details.aperture,
@@ -344,7 +347,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 "#,
-            &media_item.id,
+            id,
             media_item.panorama.is_photosphere,
             media_item.panorama.projection_type,
             media_item.panorama.horizontal_fov_deg,
@@ -355,7 +358,7 @@ impl MediaItemStore {
         .execute(&mut **tx)
         .await?;
 
-        Ok(media_item.id.clone())
+        Ok(())
     }
 
     /// Deletes a media item by its relative path and returns the ID of the deleted item.

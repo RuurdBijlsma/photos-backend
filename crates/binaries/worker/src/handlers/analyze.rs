@@ -70,7 +70,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         );
     }
 
-    let job_result = if is_job_cancelled(&mut tx, job.id).await? {
+    let job_result = if is_job_cancelled(&mut *tx, job.id).await? {
         JobResult::Cancelled
     } else {
         for analysis in &analyses {

@@ -47,7 +47,7 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         INSERT INTO jobs (relative_path, job_type, priority, user_id, payload)
         VALUES ($1, $2, $3, $4, $5)
         -- THIS PART MUST MATCH THE INDEX DEFINITION EXACTLY
-        ON CONFLICT (job_type, user_id, coalesce(md5(payload::text), ''), coalesce(relative_path, ''))
+        ON CONFLICT (job_type, coalesce(user_id, -1), coalesce(md5(payload::text), ''), coalesce(relative_path, ''))
         WHERE (status IN ('queued', 'running'))
         DO NOTHING
         "#,

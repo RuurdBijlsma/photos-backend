@@ -26,7 +26,7 @@ CREATE TABLE jobs
 CREATE UNIQUE INDEX uq_jobs_active_job
     ON jobs (
              job_type,
-             user_id,
+             coalesce(user_id, -1),
              coalesce(md5(payload::text), ''),
              coalesce(relative_path, '')
         )

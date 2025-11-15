@@ -1,20 +1,20 @@
 use crate::context::WorkerContext;
 use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::handlers::JobResult;
-use color_eyre::eyre::{eyre};
+use color_eyre::eyre::eyre;
 use color_eyre::Result;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::get_settings::media_dir;
 use common_services::job_queue::enqueue_full_ingest;
+use common_services::utils::relative_path_abs;
 use common_types::ImportAlbumItemPayload;
 use serde_json::from_value;
 use sqlx::query;
 use std::path::Path;
 use std::slice;
 use tokio::fs;
-use common_services::utils::relative_path_abs;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let payload_value = job
@@ -42,8 +42,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let full_save_dir = media_dir().join(&relative_dir);
     let filename = payload
         .remote_relative_path
-        .split("/")
-        .last()
+        .split('/')
+        .next_back()
         .ok_or_else(|| eyre!("Invalid relative path supplied."))?;
     let full_save_path = full_save_dir.join(filename);
     let relative_path = relative_path_abs(&full_save_path)?;
