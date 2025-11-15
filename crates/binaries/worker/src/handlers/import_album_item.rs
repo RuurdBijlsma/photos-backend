@@ -1,8 +1,8 @@
 use crate::context::WorkerContext;
-use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::handlers::JobResult;
-use color_eyre::eyre::eyre;
+use crate::handlers::common::remote_user::get_or_create_remote_user;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
@@ -60,7 +60,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             slice::from_ref(&existing_id),
             user_id,
         )
-            .await?;
+        .await?;
         let remote_user_id = get_or_create_remote_user(&mut tx, user_id, &remote_identity).await?;
         MediaItemStore::update_remote_user_id(&mut *tx, &existing_id, remote_user_id).await?;
         tx.commit().await?;
@@ -69,7 +69,11 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
 
     context
         .s2s_client
-        .download_remote_file(&payload.token, &payload.remote_relative_path, &full_save_path)
+        .download_remote_file(
+            &payload.token,
+            &payload.remote_relative_path,
+            &full_save_path,
+        )
         .await?;
 
     query!(

@@ -10,8 +10,8 @@ pub async fn get_or_create_remote_user(
         remote_identity,
         local_user_id
     )
-        .fetch_optional(&mut **tx)
-        .await?;
+    .fetch_optional(&mut **tx)
+    .await?;
 
     if let Some(id) = remote_user_id {
         return Ok(id);
@@ -23,8 +23,8 @@ pub async fn get_or_create_remote_user(
         remote_identity,
         local_user_id
     )
-        .fetch_one(&mut **tx)
-        .await?;
+    .fetch_one(&mut **tx)
+    .await?;
 
     Ok(new_id)
 }

@@ -1,11 +1,11 @@
 use color_eyre::Result;
+use common_services::s2s_client::S2SClient;
 use media_analyzer::MediaAnalyzer;
 use ml_analysis::VisualAnalyzer;
+use reqwest::Client;
 use sqlx::PgPool;
 use std::sync::Arc;
-use reqwest::Client;
 use tokio::sync::Mutex;
-use common_services::s2s_client::S2SClient;
 
 pub struct WorkerContext {
     pub pool: PgPool,

@@ -2,7 +2,9 @@
 
 use crate::api::onboarding::error::OnboardingError;
 use crate::api::onboarding::helpers::{check_drive_info, list_folders};
-use crate::api::onboarding::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
+use crate::api::onboarding::interfaces::{
+    DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
+};
 use crate::database::jobs::JobType;
 use crate::get_settings::{media_dir, settings, thumbnails_dir};
 use crate::job_queue::enqueue_job;
@@ -27,7 +29,9 @@ pub fn get_disk_info() -> Result<DiskResponse, OnboardingError> {
 
     let thumbnail_path = thumbnails_dir();
     if !thumbnail_path.is_dir() {
-        return Err(OnboardingError::InvalidPath(to_posix_string(thumbnail_path)));
+        return Err(OnboardingError::InvalidPath(to_posix_string(
+            thumbnail_path,
+        )));
     }
 
     let media_folder_info = check_drive_info(media_path)?;
@@ -245,8 +249,8 @@ pub async fn start_processing(
         relative,
         user_id
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
 
     // If nothing changed → folder already set → return Unauthorized
     if updated.rows_affected() == 0 {

@@ -1,9 +1,9 @@
 use crate::context::WorkerContext;
-use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::handlers::JobResult;
+use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::jobs::management::is_job_cancelled;
 
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{Result, eyre::eyre};
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;

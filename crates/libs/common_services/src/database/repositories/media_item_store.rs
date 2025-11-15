@@ -1,3 +1,4 @@
+use crate::database::DbError;
 use crate::database::media_item::capture_details::CaptureDetails;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
@@ -9,7 +10,6 @@ use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
-use crate::database::DbError;
 use crate::get_settings::fallback_timezone;
 use chrono::{TimeZone, Utc};
 use sqlx::postgres::PgQueryResult;

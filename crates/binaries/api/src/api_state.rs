@@ -1,6 +1,6 @@
 use axum::extract::FromRef;
-use sqlx::PgPool;
 use common_services::s2s_client::S2SClient;
+use sqlx::PgPool;
 
 // The #[derive(Clone)] is crucial for Axum to share the state with all handlers.
 #[derive(Clone)]

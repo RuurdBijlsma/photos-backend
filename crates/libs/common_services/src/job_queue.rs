@@ -70,7 +70,6 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         job_type, relative_path, user_id, json_payload
     );
 
-
     Ok(true)
 }
 
@@ -111,8 +110,8 @@ async fn prepare_remove_job(tx: &mut PgTransaction<'_>, relative_path: &str) -> 
         "#,
         relative_path
     )
-        .execute(&mut **tx)
-        .await?;
+    .execute(&mut **tx)
+    .await?;
 
     if result.rows_affected() > 0 {
         info!(

@@ -1,16 +1,17 @@
 use crate::api::s2s::error::S2SError;
 use crate::database::album::album::AlbumSummary;
 use crate::get_settings::media_dir;
+use crate::s2s_client::extract_token_claims;
 use sqlx::PgPool;
 use tracing::instrument;
-use crate::s2s_client::extract_token_claims;
 
 /// Validates an invitation token and returns the summary of the album.
 #[instrument(skip(pool))]
 pub async fn get_invite_summary(pool: &PgPool, token: &str) -> Result<AlbumSummary, S2SError> {
     let claims = extract_token_claims(token)?;
 
-    let summary = sqlx::query_as!(AlbumSummary,
+    let summary = sqlx::query_as!(
+        AlbumSummary,
         r#"
         SELECT
             name,
@@ -26,9 +27,9 @@ pub async fn get_invite_summary(pool: &PgPool, token: &str) -> Result<AlbumSumma
         "#,
         claims.sub
     )
-        .fetch_optional(pool)
-        .await?
-        .ok_or(S2SError::TokenInvalid)?;
+    .fetch_optional(pool)
+    .await?
+    .ok_or(S2SError::TokenInvalid)?;
     Ok(summary)
 }
 

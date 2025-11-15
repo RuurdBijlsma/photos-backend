@@ -1,4 +1,4 @@
-use crate::routes::{album, auth, download, photos, root, onboarding};
+use crate::routes::{album, auth, download, onboarding, photos, root};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 

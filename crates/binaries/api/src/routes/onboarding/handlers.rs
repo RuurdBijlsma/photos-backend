@@ -98,7 +98,9 @@ pub async fn get_folders(
         (status = 400, description = "Invalid folder name or path"),
     )
 )]
-pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCode, OnboardingError> {
+pub async fn make_folder(
+    Json(params): Json<MakeFolderBody>,
+) -> Result<StatusCode, OnboardingError> {
     create_folder(&params.base_folder, &params.new_name).await?;
     Ok(StatusCode::NO_CONTENT)
 }

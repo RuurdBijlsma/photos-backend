@@ -18,6 +18,7 @@ use crate::api_state::ApiState;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::get_settings::settings;
+use common_services::s2s_client::S2SClient;
 use http::{HeaderValue, header};
 use reqwest::Client;
 use tower_http::compression::CompressionLayer;
@@ -28,7 +29,6 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tracing::{error, info};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use common_services::s2s_client::S2SClient;
 
 #[tokio::main]
 async fn main() -> Result<()> {

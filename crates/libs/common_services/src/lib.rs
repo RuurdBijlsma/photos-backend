@@ -12,5 +12,5 @@ pub mod api;
 pub mod database;
 pub mod get_settings;
 pub mod job_queue;
-pub mod utils;
 pub mod s2s_client;
+pub mod utils;
