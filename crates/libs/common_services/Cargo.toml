@@ -34,3 +34,4 @@ chrono-tz = "0.10.4"
 dotenv = "0.15.0"
 config = "0.15.19"
 pgvector = { version = "0.4", features = ["sqlx", "serde"] }
+futures-util = "0.3.31"

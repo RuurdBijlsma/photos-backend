@@ -9,8 +9,8 @@ use common_services::api::album::interfaces::{
     CheckInviteRequest, CreateAlbumRequest, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
-    accept_invite, add_collaborator, add_media_to_album, check_invite, create_album,
-    generate_invite, get_album_details, remove_collaborator, remove_media_from_album, update_album,
+    accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
+    get_album_details, remove_collaborator, remove_media_from_album, update_album,
 };
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
@@ -290,7 +290,10 @@ pub async fn check_invite_handler(
     State(api_state): State<ApiState>,
     Json(payload): Json<CheckInviteRequest>,
 ) -> Result<Json<AlbumSummary>, AlbumError> {
-    let summary = check_invite(&payload.token, &api_state.http_client).await?;
+    let summary = api_state
+        .s2s_client
+        .get_album_invite_summary(&payload.token)
+        .await?;
     Ok(Json(summary))
 }
 
@@ -314,7 +317,7 @@ pub async fn accept_invite_handler(
     State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Json(payload): Json<AcceptInviteRequest>,
-) -> Result<StatusCode, AlbumError> {
-    accept_invite(&api_state.pool, user.id, &payload).await?;
-    Ok(StatusCode::ACCEPTED)
+) -> Result<Json<Album>, AlbumError> {
+    let album = accept_invite(&api_state.pool, &api_state.s2s_client, user.id, payload).await?;
+    Ok(Json(album))
 }

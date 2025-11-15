@@ -11,7 +11,6 @@ use common_services::database::media_item_store::MediaItemStore;
 use common_services::get_settings::{media_dir, settings, thumbnails_dir};
 use common_services::utils::{get_thumb_options, nice_id, relative_path_abs};
 use generate_thumbnails::generate_thumbnails;
-use sqlx::PgTransaction;
 use tokio::fs;
 use crate::handlers::common::remote_user::get_or_create_remote_user;
 

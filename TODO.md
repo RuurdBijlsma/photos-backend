@@ -131,6 +131,7 @@
     * get s2s invite summary
     * make s2s client in common code somewhere, to call s2s endpoints.
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
+* rename types with similar names to db talbes, so ColorData from ml_analysis becomes PyColorData or something (look at how ml analysis ColorData is actually used)
 
 
 # Features

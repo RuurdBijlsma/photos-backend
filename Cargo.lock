@@ -931,6 +931,7 @@ dependencies = [
  "dotenv",
  "fastrand",
  "fs2",
+ "futures-util",
  "http",
  "jsonwebtoken",
  "media_analyzer",

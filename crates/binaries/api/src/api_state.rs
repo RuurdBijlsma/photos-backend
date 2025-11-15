@@ -1,11 +1,12 @@
 use axum::extract::FromRef;
 use sqlx::PgPool;
+use common_services::s2s_client::S2SClient;
 
 // The #[derive(Clone)] is crucial for Axum to share the state with all handlers.
 #[derive(Clone)]
 pub struct ApiState {
     pub pool: PgPool,
-    pub http_client: reqwest::Client,
+    pub s2s_client: S2SClient,
 }
 
 // These impls allow Axum to extract the PgPool and reqwest::Client from the AppState.
@@ -16,8 +17,8 @@ impl FromRef<ApiState> for PgPool {
     }
 }
 
-impl FromRef<ApiState> for reqwest::Client {
+impl FromRef<ApiState> for S2SClient {
     fn from_ref(state: &ApiState) -> Self {
-        state.http_client.clone()
+        state.s2s_client.clone()
     }
 }

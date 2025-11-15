@@ -6,7 +6,7 @@ pub fn s2s_public_router() -> Router<ApiState> {
     Router::new()
         .route("/s2s/albums/invite-summary", get(invite_summary_handler))
         .route(
-            "/s2s/albums/files/{media_item_id}",
+            "/s2s/albums/files",
             get(download_file_handler),
         )
 }

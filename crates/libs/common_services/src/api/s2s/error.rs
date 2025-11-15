@@ -1,4 +1,4 @@
-use crate::s2s_client::error::S2sClientError;
+use crate::database::DbError;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -64,13 +64,11 @@ impl From<jsonwebtoken::errors::Error> for S2SError {
     }
 }
 
-impl From<S2sClientError> for S2SError {
-    fn from(err: S2sClientError) -> Self {
+impl From<DbError> for S2SError {
+    fn from(err: DbError) -> Self {
         match err {
-            S2sClientError::JwtError(_) => Self::TokenInvalid,
-            S2sClientError::UrlParseError(e) => Self::Internal(eyre::Report::new(e)),
-            S2sClientError::RequestError(e) => Self::Internal(eyre::Report::new(e)),
-            S2sClientError::RemoteServerError(msg) => Self::Internal(eyre::eyre!(msg)),
+            DbError::Sqlx(sql_err) => Self::Database(sql_err),
+            DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }
     }
 }

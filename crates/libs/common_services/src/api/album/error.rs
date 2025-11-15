@@ -1,5 +1,4 @@
 use crate::database::DbError;
-use crate::s2s_client::error::S2sClientError;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -119,17 +118,6 @@ impl From<DbError> for AlbumError {
                 }
             }
             DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
-        }
-    }
-}
-
-impl From<S2sClientError> for AlbumError {
-    fn from(err: S2sClientError) -> Self {
-        match err {
-            S2sClientError::JwtError(e) => Self::InvalidInviteToken(e.to_string()),
-            S2sClientError::UrlParseError(e) => Self::Internal(eyre::Report::new(e)),
-            S2sClientError::RequestError(e) => Self::RemoteServerError(e.to_string()),
-            S2sClientError::RemoteServerError(msg) => Self::RemoteServerError(msg),
         }
     }
 }

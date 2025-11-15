@@ -33,5 +33,5 @@ pub struct Album {
 pub struct AlbumSummary {
     pub name: String,
     pub description: Option<String>,
-    pub media_item_ids: Vec<String>,
+    pub relative_paths: Vec<String>,
 }

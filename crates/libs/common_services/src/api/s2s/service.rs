@@ -1,9 +1,9 @@
 use crate::api::s2s::error::S2SError;
 use crate::database::album::album::AlbumSummary;
 use crate::get_settings::media_dir;
-use crate::s2s_client::client::extract_token_claims;
 use sqlx::PgPool;
 use tracing::instrument;
+use crate::s2s_client::extract_token_claims;
 
 /// Validates an invitation token and returns the summary of the album.
 #[instrument(skip(pool))]
@@ -15,7 +15,12 @@ pub async fn get_invite_summary(pool: &PgPool, token: &str) -> Result<AlbumSumma
         SELECT
             name,
             description,
-            (SELECT array_agg(ami.media_item_id) FROM album_media_item ami WHERE ami.album_id = $1) as "media_item_ids!"
+            (
+                SELECT array_agg(mi.relative_path) 
+                FROM album_media_item ami 
+                    JOIN media_item mi ON ami.media_item_id = mi.id 
+                WHERE ami.album_id = $1
+            ) as "relative_paths!"
         FROM album 
         WHERE album.id = $1
         "#,

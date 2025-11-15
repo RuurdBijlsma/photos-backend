@@ -7,12 +7,12 @@ use crate::database::app_user::get_user_by_email;
 use crate::database::jobs::JobType;
 use crate::get_settings::settings;
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::client::{extract_token_claims, S2sClient};
+use crate::s2s_client::{extract_token_claims, S2SClient};
 use crate::utils::nice_id;
 use chrono::{Duration, Utc};
-use common_types::ImportAlbumPayload;
+use color_eyre::eyre::Context;
+use common_types::ImportAlbumItemPayload;
 use jsonwebtoken::{encode, EncodingKey, Header};
-use reqwest::Client;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
 
@@ -313,36 +313,54 @@ pub async fn generate_invite(
     Ok(token)
 }
 
-/// Contacts the remote server to get a summary of an album invitation.
-pub async fn check_invite(token: &str, http_client: &Client) -> Result<AlbumSummary, AlbumError> {
-    let s2s_client = S2sClient::new(http_client.clone());
-    Ok(s2s_client.get_album_invite_summary(token).await?)
-}
-
 /// Accepts an album invitation and enqueues a background job to start the import.
-#[instrument(skip(pool))]
+#[instrument(skip(pool, s2s_client))]
 pub async fn accept_invite(
     pool: &PgPool,
+    s2s_client: &S2SClient,
     user_id: i32,
-    payload: &AcceptInviteRequest,
-) -> Result<(), AlbumError> {
+    payload: AcceptInviteRequest,
+) -> Result<Album, AlbumError> {
     // This now uses the client's internal token parsing.
     let claims = extract_token_claims(&payload.token)
         .map_err(|_| AlbumError::Unauthorized("Invalid token.".to_string()))?;
 
-    let payload = ImportAlbumPayload {
-        album_name: payload.name.clone(),
-        album_description: payload.description.clone(),
-        token: payload.token.clone(),
-        remote_username: claims.sharer_username,
-        remote_url: claims.iss.parse()?,
-    };
+    let summary: AlbumSummary = s2s_client
+        .get_album_invite_summary(&payload.token)
+        .await
+        .wrap_err("Failed to get album invite summary from remote server")?;
 
-    enqueue_job(pool, JobType::ImportAlbum)
-        .payload(&payload)
-        .user_id(user_id)
-        .call()
+    // 2. Create the new album locally
+    let album_id = nice_id(settings().database.album_id_length);
+    let mut tx = pool.begin().await?;
+    let album = AlbumStore::create(
+        &mut *tx,
+        &album_id,
+        user_id,
+        &payload.name,
+        payload.description,
+        false,
+    )
         .await?;
+    AlbumStore::upsert_collaborator(&mut *tx, &album_id, user_id, AlbumRole::Owner).await?;
+    tx.commit().await?;
 
-    Ok(())
+    // 3. For each media item, enqueue a download & import job
+    for relative_path in summary.relative_paths {
+        let item_payload = ImportAlbumItemPayload {
+            remote_relative_path: relative_path,
+            local_album_id: album_id.clone(),
+            remote_username: claims.sharer_username.clone(),
+            remote_url: claims.iss.parse()?,
+            token: payload.token.clone(),
+        };
+
+        enqueue_job(pool, JobType::ImportAlbumItem)
+            .user_id(user_id)
+            .payload(&item_payload)
+            .call()
+            .await?;
+    }
+
+    Ok(album)
 }
