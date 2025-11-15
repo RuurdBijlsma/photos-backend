@@ -11,11 +11,11 @@ env:
   RUSTFLAGS: -Dwarnings
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        BUILD_TARGET: [release] # refers to a cargo profile
+        BUILD_TARGET: [release]
     outputs:
       release_built: ${{ steps.set-output.outputs.release_built }}
     steps:
