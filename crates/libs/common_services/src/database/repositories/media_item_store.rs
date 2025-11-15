@@ -1,7 +1,8 @@
+use crate::database::DbError;
 use crate::database::media_item::capture_details::CaptureDetails;
-use crate::database::media_item::details::Details;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
+use crate::database::media_item::media_details::MediaDetails;
 use crate::database::media_item::media_item::{
     CreateFullMediaItem, FullMediaItem, FullMediaItemRow,
 };
@@ -9,7 +10,6 @@ use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
-use crate::database::DbError;
 use crate::get_settings::fallback_timezone;
 use chrono::{TimeZone, Utc};
 use sqlx::types::Json;
@@ -151,8 +151,8 @@ impl MediaItemStore {
             (SELECT to_jsonb(w) FROM weather w WHERE w.media_item_id = mi.id)
                 AS "weather: Json<Weather>",
 
-            (SELECT to_jsonb(d) FROM details d WHERE d.media_item_id = mi.id)
-                AS "details!: Json<Details>",
+            (SELECT to_jsonb(d) FROM media_details d WHERE d.media_item_id = mi.id)
+                AS "media_details!: Json<MediaDetails>",
 
             (SELECT to_jsonb(cd) FROM capture_details cd WHERE cd.media_item_id = mi.id)
                 AS "capture_details!: Json<CaptureDetails>",
@@ -295,7 +295,7 @@ impl MediaItemStore {
 
         sqlx::query!(
             r#"
-                INSERT INTO details (
+                INSERT INTO media_details (
                     media_item_id, mime_type, size_bytes, is_motion_photo,
                     motion_photo_presentation_timestamp, is_hdr, is_burst, burst_id,
                     capture_fps, video_fps, is_nightsight, is_timelapse, exif
@@ -303,18 +303,18 @@ impl MediaItemStore {
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 "#,
             &media_item.id,
-            media_item.details.mime_type,
-            media_item.details.size_bytes,
-            media_item.details.is_motion_photo,
-            media_item.details.motion_photo_presentation_timestamp,
-            media_item.details.is_hdr,
-            media_item.details.is_burst,
-            media_item.details.burst_id,
-            media_item.details.capture_fps,
-            media_item.details.video_fps,
-            media_item.details.is_nightsight,
-            media_item.details.is_timelapse,
-            media_item.details.exif,
+            media_item.media_details.mime_type,
+            media_item.media_details.size_bytes,
+            media_item.media_details.is_motion_photo,
+            media_item.media_details.motion_photo_presentation_timestamp,
+            media_item.media_details.is_hdr,
+            media_item.media_details.is_burst,
+            media_item.media_details.burst_id,
+            media_item.media_details.capture_fps,
+            media_item.media_details.video_fps,
+            media_item.media_details.is_nightsight,
+            media_item.media_details.is_timelapse,
+            media_item.media_details.exif,
         )
         .execute(&mut **tx)
         .await?;

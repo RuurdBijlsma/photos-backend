@@ -3,12 +3,12 @@ use common_services::database::app_user::user_from_relative_path;
 use common_services::database::jobs::JobType;
 use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
 use common_services::utils::relative_path_abs;
-use futures::channel::mpsc::{channel, Receiver};
+use futures::channel::mpsc::{Receiver, channel};
 use futures::{SinkExt, StreamExt};
+use notify::event::{CreateKind, RemoveKind};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::{Pool, Postgres};
 use std::path::Path;
-use notify::event::{CreateKind, RemoveKind};
 use tracing::{error, info, warn};
 
 /// Handles a file creation event by enqueueing the file for ingestion.

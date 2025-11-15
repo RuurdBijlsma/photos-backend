@@ -1,8 +1,8 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::eyre::eyre;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::jobs::Job;
 use common_services::database::media_item::media_item::FromAnalyzerResult;

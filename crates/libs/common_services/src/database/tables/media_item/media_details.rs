@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 
 /// Corresponds to the 'details' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-pub struct Details {
+pub struct MediaDetails {
     pub mime_type: String,
     pub size_bytes: i64,
     pub is_motion_photo: bool,

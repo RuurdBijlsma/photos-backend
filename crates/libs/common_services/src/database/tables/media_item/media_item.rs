@@ -1,6 +1,6 @@
 use crate::database::media_item::capture_details::CaptureDetails;
-use crate::database::media_item::details::Details;
 use crate::database::media_item::gps::Gps;
+use crate::database::media_item::media_details::MediaDetails;
 use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
@@ -29,7 +29,7 @@ pub struct CreateFullMediaItem {
     pub gps: Option<Gps>,
     pub time_details: TimeDetails,
     pub weather: Option<Weather>,
-    pub details: Details,
+    pub media_details: MediaDetails,
     pub capture_details: CaptureDetails,
     pub panorama: Panorama,
 }
@@ -44,7 +44,7 @@ pub struct FromAnalyzerResult {
 impl From<FromAnalyzerResult> for CreateFullMediaItem {
     fn from(from_result: FromAnalyzerResult) -> Self {
         let result = from_result.result;
-        let details = Details {
+        let media_details = MediaDetails {
             mime_type: result.metadata.mime_type,
             size_bytes: result.metadata.size_bytes as i64,
             is_motion_photo: result.tags.is_motion_photo,
@@ -78,7 +78,7 @@ impl From<FromAnalyzerResult> for CreateFullMediaItem {
             gps: result.gps_info.map(Into::into),
             time_details: result.time_info.into(),
             weather: result.weather_info.map(Into::into),
-            details,
+            media_details,
             capture_details: result.capture_details.into(),
             panorama: result.pano_info.into(),
         }
@@ -105,7 +105,7 @@ pub struct FullMediaItem {
     pub gps: Option<Gps>,
     pub time_details: TimeDetails,
     pub weather: Option<Weather>,
-    pub details: Details,
+    pub media_details: MediaDetails,
     pub capture_details: CaptureDetails,
     pub panorama: Panorama,
 }
@@ -129,7 +129,7 @@ pub struct FullMediaItemRow {
     pub gps: Option<Json<Gps>>,
     pub time_details: Json<TimeDetails>,
     pub weather: Option<Json<Weather>>,
-    pub details: Json<Details>,
+    pub media_details: Json<MediaDetails>,
     pub capture_details: Json<CaptureDetails>,
     pub panorama: Json<Panorama>,
 }
@@ -154,7 +154,7 @@ impl From<FullMediaItemRow> for FullMediaItem {
             gps: r.gps.map(|g| g.0),
             time_details: r.time_details.0,
             weather: r.weather.map(|w| w.0),
-            details: r.details.0,
+            media_details: r.media_details.0,
             capture_details: r.capture_details.0,
             panorama: r.panorama.0,
         }

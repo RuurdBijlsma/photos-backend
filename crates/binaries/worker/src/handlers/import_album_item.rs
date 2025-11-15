@@ -101,8 +101,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         payload.local_album_id,
         remote_identity,
     )
-        .execute(&context.pool)
-        .await?;
+    .execute(&context.pool)
+    .await?;
 
     // 4. Enqueue a standard ingest job for the newly saved file
     enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;
