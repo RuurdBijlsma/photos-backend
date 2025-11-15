@@ -3,11 +3,12 @@ use common_services::database::app_user::user_from_relative_path;
 use common_services::database::jobs::JobType;
 use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
 use common_services::utils::relative_path_abs;
-use futures::channel::mpsc::{Receiver, channel};
+use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::{Pool, Postgres};
 use std::path::Path;
+use notify::event::{CreateKind, RemoveKind};
 use tracing::{error, info, warn};
 
 /// Handles a file creation event by enqueueing the file for ingestion.
@@ -114,12 +115,18 @@ async fn process_event(event_result: notify::Result<Event>, pool: &Pool<Postgres
         return;
     };
 
+    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+        if file_name.starts_with('.') && file_name.contains(".tmp") {
+            info!("Ignoring temporary file event for: {:?}", path);
+            return;
+        }
+    }
+
     let result = match event.kind {
-        EventKind::Create(_) => handle_create_file(path, pool).await,
-        EventKind::Remove(_) => handle_remove_file(path, pool).await,
+        EventKind::Create(CreateKind::File) => handle_create_file(path, pool).await,
+        EventKind::Remove(RemoveKind::File) => handle_remove_file(path, pool).await,
         _ => return,
     };
-
     if let Err(e) = result {
         warn!("Error handling file event for {:?}: {:?}", path, e);
     }

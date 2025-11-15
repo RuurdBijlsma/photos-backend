@@ -13,6 +13,7 @@ use tracing::{info, warn};
 /// # Errors
 ///
 /// Returns an error if the database transaction fails.
+
 #[builder]
 pub async fn enqueue_job<T: Serialize + Send + Sync>(
     #[builder(start_fn)] pool: &PgPool,
@@ -25,10 +26,10 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
 
     let mut tx = pool.begin().await?;
 
-    if job_type == JobType::Remove
-        && let Some(path) = &relative_path
-    {
-        prepare_remove_job(&mut tx, path).await?;
+    if job_type == JobType::Remove {
+        if let Some(path) = &relative_path {
+            prepare_remove_job(&mut tx, path).await?;
+        }
     }
 
     let is_video = relative_path
@@ -36,34 +37,19 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         .is_some_and(|p| is_video_file(&media_dir().join(p)));
     let priority = job_type.get_priority(is_video);
 
-    let job_exists = sqlx::query_scalar!(
-        r#"
-        SELECT id
-        FROM jobs
-        WHERE relative_path = $1 AND job_type = $2 AND payload = $3 AND status IN ('running', 'queued', 'failed')
-        LIMIT 1
-        "#,
-        relative_path.as_deref(),
-        job_type as JobType,
-        json_payload,
-    )
-        .fetch_optional(&mut *tx)
-        .await?;
-
-    if job_exists.is_some() {
-        warn!(
-            "Not enqueueing {:?} job {:?}, it already exists.",
-            job_type, relative_path
-        );
-        return Ok(false);
-    }
-    info!("Enqueueing {:?} job {:?}", job_type, relative_path);
+    info!(
+        "Enqueueing {:?} job {:?}, user_id: {:?}, payload: {:?}",
+        job_type, relative_path, user_id, json_payload
+    );
 
     let result = sqlx::query!(
         r#"
         INSERT INTO jobs (relative_path, job_type, priority, user_id, payload)
         VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT DO NOTHING
+        -- THIS PART MUST MATCH THE INDEX DEFINITION EXACTLY
+        ON CONFLICT (job_type, user_id, coalesce(md5(payload::text), ''), coalesce(relative_path, ''))
+        WHERE (status IN ('queued', 'running'))
+        DO NOTHING
         "#,
         relative_path.as_deref(),
         job_type as JobType,
@@ -71,11 +57,20 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         user_id,
         json_payload,
     )
-    .execute(&mut *tx)
-    .await?;
+        .execute(&mut *tx)
+        .await?;
 
     tx.commit().await?;
-    Ok(result.rows_affected() > 0)
+
+    if result.rows_affected() == 0 {
+        warn!(
+            "Not enqueueing {:?} job {:?}, an active one already exists.",
+            job_type, relative_path
+        );
+        return Ok(false);
+    }
+
+    Ok(true)
 }
 
 /// Enqueues a full ingest and analysis job for a given file.

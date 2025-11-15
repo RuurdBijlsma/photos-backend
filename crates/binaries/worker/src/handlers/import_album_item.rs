@@ -1,3 +1,5 @@
+// crates/binaries/worker/src/handlers/import_album_item.rs
+
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use color_eyre::Result;
@@ -22,6 +24,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_id = job
         .user_id
         .ok_or_else(|| eyre!("ImportAlbumItem Job missing user_id"))?;
+
+    // 1. Download the file from the remote server
     let mut remote_url = payload.remote_url.clone();
     remote_url.set_path(&format!(
         "/s2s/albums/files/{}",
@@ -43,21 +47,13 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         ));
     }
 
-    // 2. Determine file name and save path
-    let album_name = query!(
-        "SELECT name FROM album WHERE id = $1",
-        payload.local_album_id
-    )
-    .fetch_one(&context.pool)
-    .await?
-    .name;
-
+    // 2. Determine file name and construct the new save path
     let content_disposition = response
         .headers()
         .get("content-disposition")
         .and_then(|val| val.to_str().ok())
         .unwrap_or("")
-        .to_string(); // This makes a copy and releases the borrow
+        .to_string();
 
     let filename = content_disposition.split("filename=").last().map_or_else(
         || payload.remote_media_item_id.clone(),
@@ -70,18 +66,25 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .media_folder
         .ok_or_else(|| eyre!("User has no media folder configured"))?;
 
-    // Sanitize album name to be a valid directory name
-    let sanitized_album_name = sanitize_filename::sanitize(&album_name);
-    let relative_dir = Path::new(&user_media_folder).join(&sanitized_album_name);
+    // Format the remote URL to be just the host (e.g., "photos.example.com")
+    let remote_host = payload
+        .remote_url
+        .host_str()
+        .ok_or_else(|| eyre!("Remote URL is missing a host"))?;
+
+    let remote_identity = format!("{}@{}", payload.remote_username, remote_host);
+    let sanitized_identity_folder = sanitize_filename::sanitize(&remote_identity);
+    let relative_dir = Path::new(&user_media_folder)
+        .join("import")
+        .join(&sanitized_identity_folder);
+
     let full_save_dir = media_dir().join(&relative_dir);
     fs::create_dir_all(&full_save_dir).await?;
 
     let full_save_path = full_save_dir.join(&filename);
     let mut dest_file = fs::File::create(&full_save_path).await?;
 
-    // This move is now valid because `response` is no longer borrowed.
     let mut stream = response.bytes_stream();
-
     while let Some(item) = stream.next().await {
         dest_file.write_all(&item?).await?;
     }
@@ -95,14 +98,13 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         VALUES ($1, $2, $3)
         "#,
         relative_path,
-        payload.local_album_id.clone(),
-        //todo: make nicer remote_user_identity (no https://)
-        format!("{}@{}", payload.remote_username, payload.remote_url),
+        payload.local_album_id,
+        remote_identity,
     )
-    .execute(&context.pool)
-    .await?;
+        .execute(&context.pool)
+        .await?;
 
-    // 4. Enqueue a standard ingest job
+    // 4. Enqueue a standard ingest job for the newly saved file
     enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;
 
     Ok(JobResult::Done)

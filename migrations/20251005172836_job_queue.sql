@@ -22,6 +22,16 @@ CREATE TABLE jobs
     last_error          TEXT
 );
 
+-- Prevent duplicate jobs that aren't finished yet.
+CREATE UNIQUE INDEX uq_jobs_active_job
+    ON jobs (
+             job_type,
+             user_id,
+             coalesce(md5(payload::text), ''),
+             coalesce(relative_path, '')
+        )
+    WHERE (status IN ('queued', 'running'));
+
 -- For the job claiming worker
 CREATE INDEX idx_jobs_claim_queued ON jobs (priority, relative_path, scheduled_at, created_at);
 CREATE INDEX idx_jobs_claim_running ON jobs (priority, relative_path, last_heartbeat);

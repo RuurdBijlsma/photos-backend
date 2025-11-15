@@ -1,8 +1,8 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::Result;
 use color_eyre::eyre::eyre;
+use color_eyre::Result;
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::jobs::Job;
 use common_services::database::media_item::media_item::FromAnalyzerResult;
@@ -11,6 +11,7 @@ use common_services::get_settings::{media_dir, settings, thumbnails_dir};
 use common_services::utils::{get_thumb_options, nice_id, relative_path_abs};
 use generate_thumbnails::generate_thumbnails;
 use sqlx::PgTransaction;
+use tokio::fs;
 
 /// Handles the ingestion of a media file, including thumbnail generation and database storage.
 ///
@@ -51,6 +52,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     }
 
     let mut tx = context.pool.begin().await?;
+    let mut old_media_item_id: Option<String> = None;
 
     let job_result = if is_job_cancelled(&mut tx, job.id).await? {
         JobResult::Cancelled
@@ -72,6 +74,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         } else {
             None
         };
+        old_media_item_id =
+            MediaItemStore::delete_by_relative_path(&mut *tx, relative_path).await?;
         MediaItemStore::create(
             &mut tx,
             &FromAnalyzerResult {
@@ -88,6 +92,14 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         JobResult::Done
     };
     tx.commit().await?;
+
+    // Clean up replaced media item's thumbs.
+    if let Some(id_to_delete) = old_media_item_id {
+        let thumb_path_to_delete = thumbnails_dir().join(id_to_delete);
+        if thumb_path_to_delete.exists() {
+            fs::remove_dir_all(thumb_path_to_delete).await?;
+        }
+    }
 
     Ok(job_result)
 }

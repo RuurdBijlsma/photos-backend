@@ -15,19 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        BUILD_TARGET: [release]
-    outputs:
-      release_built: ${{ steps.set-output.outputs.release_built }}
+        BUILD_TARGET: [dev]
     steps:
       - uses: actions/checkout@v5
 
       - name: apt install
         run: sudo apt update && sudo apt install -y protobuf-compiler libfontconfig1-dev pkg-config nasm
 
-      - name: Build binaries in "${{ matrix.BUILD_TARGET }}" mode
+      - name: Build
         run: cargo build --profile ${{ matrix.BUILD_TARGET }}
 
-      - name: Run tests in "${{ matrix.BUILD_TARGET }}" mode
+      - name: Run tests
         run: cargo test --profile ${{ matrix.BUILD_TARGET }}
 
       - name: Check formatting

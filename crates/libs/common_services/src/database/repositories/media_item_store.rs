@@ -1,4 +1,3 @@
-use crate::database::DbError;
 use crate::database::media_item::capture_details::CaptureDetails;
 use crate::database::media_item::details::Details;
 use crate::database::media_item::gps::Gps;
@@ -10,6 +9,7 @@ use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
+use crate::database::DbError;
 use crate::get_settings::fallback_timezone;
 use chrono::{TimeZone, Utc};
 use sqlx::types::Json;
@@ -185,10 +185,6 @@ impl MediaItemStore {
         media_item: &CreateFullMediaItem,
         remote_user_id: Option<i32>,
     ) -> Result<String, DbError> {
-        // todo: logic left out here:
-        // * delete if already exists
-        // * pending table stuff
-
         let sort_timestamp = media_item.taken_at_utc.unwrap_or_else(|| {
             fallback_timezone().as_ref().map_or_else(
                 || media_item.taken_at_local.and_utc(),
@@ -361,6 +357,24 @@ impl MediaItemStore {
         .await?;
 
         Ok(media_item.id.clone())
+    }
+
+    /// Deletes a media item by its relative path and returns the ID of the deleted item.
+    /// Database cascade rules are expected to clean up related data.
+    pub async fn delete_by_relative_path(
+        executor: impl Executor<'_, Database = Postgres>,
+        relative_path: &str,
+    ) -> Result<Option<String>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            DELETE FROM media_item
+            WHERE relative_path = $1
+            RETURNING id
+            "#,
+            relative_path
+        )
+        .fetch_optional(executor)
+        .await?)
     }
 
     /// Retrieves an existing location's ID or creates a new one if it doesn't exist.

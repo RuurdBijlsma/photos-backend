@@ -62,6 +62,7 @@
 * ✅ make invite check work with "localhost:9475" instead of "http://localhost:9475" and make it work with https. (it
   currently assumes http).
 * ✅ improve OCR
+* ✅ [BUG] scan enqueues duplicate jobs if the photo isn't processed yet.
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -127,7 +128,6 @@
 * rename details to media_details
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
 * add remote_user_id as collaborator to album.
-* [BUG] scan enqueues duplicate jobs if the photo isn't processed yet.
 
 # Features
 
