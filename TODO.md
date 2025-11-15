@@ -57,6 +57,11 @@
 * ✅ pending_album_media_items isnt getting used
 * ✅ Change album id from uuid to niceid (no longer univerally unique requirement)
 * ✅ [BUG] pending media items seems to be not used again
+* ✅ worker does not output logs to stdout anymore.
+* ✅ store_media en store_visual_analysis (met de macros) moet in common_services/database
+* ✅ make invite check work with "localhost:9475" instead of "http://localhost:9475" and make it work with https. (it
+  currently assumes http).
+* ✅ improve OCR
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -91,8 +96,7 @@
       already pretty good).
     * Summary table voor ratios
     * performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel
-      delay
-      toevoegt)
+      delay toevoegt)
 * make sure cache control on thumbnails are immutable/max age.
 * fun "albums" notifications & in UI frontpage
     * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
@@ -105,30 +109,25 @@
     * make sure each "fun album" is shown as notification only once. In UI it can be more often?
 * split routes/photos into timeline related and media item related
 * websocket om nieuwe foto events te sturen
-* improve OCR
 * clean up error and warn and info tracing logs
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* make invite check work with "localhost:9475" instead of "http://localhost:9475" and make it work with https. (it
-  currently assumes http).
 * repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
-    * parse url stuff
-    * parse token maybe?
+    * ✅ parse url stuff
+    * ✅ parse token maybe?
+    * ✅ share reqwest client via application state and worker context so it's not made every time.
+    * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
     * get s2s invite summary
     * make s2s client in common code somewhere, to call s2s endpoints.
-    * share reqwest client via application state and worker context so it's not made every time.
-    * Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
 * rename setup to onboarding
-* worker does not output logs to stdout anymore.
-* [BUG] if album name for /albums/invite/accept is already a folder in media_dir/user_folder, then it doesnt work
+* [BUG] if album name for /albums/invite/accept is already a folder in media_dir/user_folder, then it doesn't work
   properly.
 * remove unused crates
 * rename details to media_details
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
-* store_media en store_visual_analysis (met de macros) moet in common_services/database
 * add remote_user_id as collaborator to album.
-* [BUG] scan enqueues duplicate jobs if the photo isnt processed yet.
+* [BUG] scan enqueues duplicate jobs if the photo isn't processed yet.
 
 # Features
 
