@@ -1,7 +1,7 @@
 use crate::api::album::interfaces::{AlbumMediaItemSummary, CollaboratorSummary};
-use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
+use crate::database::DbError;
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
 
@@ -18,7 +18,7 @@ impl AlbumStore {
         album_id: &str,
         user_id: i32,
         name: &str,
-        description: Option<&str>,
+        description: Option<String>,
         is_public: bool,
     ) -> Result<Album, DbError> {
         Ok(sqlx::query_as!(
@@ -180,7 +180,7 @@ impl AlbumStore {
             INSERT INTO album_collaborator (album_id, user_id, role)
             VALUES ($1, $2, $3)
             ON CONFLICT (album_id, user_id) DO UPDATE SET role = EXCLUDED.role
-            RETURNING id, album_id, user_id, remote_user_id, role as "role: AlbumRole", added_at
+            RETURNING id, album_id, user_id, role as "role: AlbumRole", added_at
             "#,
             album_id,
             user_id,
@@ -211,7 +211,7 @@ impl AlbumStore {
         Ok(sqlx::query_as!(
             AlbumCollaborator,
             r#"
-            SELECT id, album_id, user_id, remote_user_id, role as "role: AlbumRole", added_at
+            SELECT id, album_id, user_id, role as "role: AlbumRole", added_at
             FROM album_collaborator
             WHERE id = $1
             "#,

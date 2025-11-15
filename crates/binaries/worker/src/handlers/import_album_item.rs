@@ -2,9 +2,11 @@
 
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
+use color_eyre::eyre::{eyre, Context};
 use color_eyre::Result;
-use color_eyre::eyre::{Context, eyre};
+use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
+use common_services::database::media_item_store::MediaItemStore;
 use common_services::get_settings::media_dir;
 use common_services::job_queue::enqueue_full_ingest;
 use common_services::utils::to_posix_string;
@@ -77,35 +79,47 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let relative_dir = Path::new(&user_media_folder)
         .join("import")
         .join(&sanitized_identity_folder);
-
-    let full_save_dir = media_dir().join(&relative_dir);
-    fs::create_dir_all(&full_save_dir).await?;
-
-    let full_save_path = full_save_dir.join(&filename);
-    let mut dest_file = fs::File::create(&full_save_path).await?;
-
-    let mut stream = response.bytes_stream();
-    while let Some(item) = stream.next().await {
-        dest_file.write_all(&item?).await?;
-    }
-
-    // 3. Create a pending record
     let relative_path = to_posix_string(&relative_dir.join(&filename));
 
-    query!(
-        r#"
+    if let Some(existing_id) =
+        MediaItemStore::find_id_by_relative_path(&context.pool, &relative_path).await?
+    {
+        // File to import already exists, assume it's the same file and put it in the album.
+        AlbumStore::add_media_items(
+            &context.pool,
+            &payload.local_album_id,
+            &[existing_id],
+            user_id,
+        )
+        .await?;
+    } else {
+        let full_save_dir = media_dir().join(&relative_dir);
+        fs::create_dir_all(&full_save_dir).await?;
+
+        let full_save_path = full_save_dir.join(&filename);
+        let mut dest_file = fs::File::create(&full_save_path).await?;
+
+        let mut stream = response.bytes_stream();
+        while let Some(item) = stream.next().await {
+            dest_file.write_all(&item?).await?;
+        }
+
+        // 3. Create a pending record
+        query!(
+            r#"
         INSERT INTO pending_album_media_items (relative_path, album_id, remote_user_identity)
         VALUES ($1, $2, $3)
         "#,
-        relative_path,
-        payload.local_album_id,
-        remote_identity,
-    )
-    .execute(&context.pool)
-    .await?;
+            relative_path,
+            payload.local_album_id,
+            remote_identity,
+        )
+        .execute(&context.pool)
+        .await?;
 
-    // 4. Enqueue a standard ingest job for the newly saved file
-    enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;
+        // 4. Enqueue a standard ingest job for the newly saved file
+        enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;
+    }
 
     Ok(JobResult::Done)
 }

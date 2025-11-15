@@ -97,7 +97,7 @@ pub async fn create_album(
     pool: &PgPool,
     user_id: i32,
     name: &str,
-    description: Option<&str>,
+    description: Option<String>,
     is_public: bool,
 ) -> Result<Album, AlbumError> {
     let mut tx = pool.begin().await?;

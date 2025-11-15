@@ -68,6 +68,8 @@
 * ✅ rename details to media_details
 * ✅ rename setup to onboarding
 * ✅ don't allow start onboarding endpoint if onboarding is already done.
+* ✅ remove unused crates
+* ✅ add remote_user_id as collaborator to album.
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -128,9 +130,8 @@
     * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
     * get s2s invite summary
     * make s2s client in common code somewhere, to call s2s endpoints.
-* remove unused crates
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
-* add remote_user_id as collaborator to album.
+
 
 # Features
 
