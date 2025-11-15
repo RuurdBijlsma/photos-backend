@@ -30,7 +30,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // --- Tracing & Error Handling Setup (unchanged) ---
+    // --- Tracing & Error Handling Setup ---
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()

@@ -1,4 +1,4 @@
-// crates/api/src/routes/mod.rs
+// crates/api/rc/routes/mod.rs
 
 pub mod album;
 mod api_doc;
@@ -7,7 +7,7 @@ pub mod download;
 pub mod photos;
 pub mod root;
 pub mod s2s;
-pub mod setup;
+pub mod onboarding;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::api_state::ApiState;
@@ -19,7 +19,7 @@ use crate::root::handlers::root;
 use crate::root::router::root_public_router;
 use crate::routes::api_doc::ApiDoc;
 use crate::s2s::router::s2s_public_router;
-use crate::setup::router::setup_admin_router;
+use crate::onboarding::router::onboarding_admin_routes;
 use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use common_services::database::app_user::UserRole;
@@ -71,7 +71,7 @@ fn protected_routes(api_state: ApiState) -> Router<ApiState> {
 
 fn admin_routes(api_state: ApiState) -> Router<ApiState> {
     Router::new()
-        .merge(setup_admin_router())
+        .merge(onboarding_admin_routes())
         .route_layer(from_fn_with_state(UserRole::Admin, require_role))
         .route_layer(from_extractor_with_state::<ApiUser, ApiState>(api_state))
 }

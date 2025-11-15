@@ -9,7 +9,7 @@ pub struct AppSettings {
     pub thumbnail_generation: ThumbnailGenerationSettings,
     pub api: ApiSettings,
     pub auth: AuthSettings,
-    pub setup: SetupSettings,
+    pub onboarding: OnboardingSettings,
     pub analyzer: AnalyzerSettings,
 }
 
@@ -32,7 +32,7 @@ pub struct OCRSettings {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SetupSettings {
+pub struct OnboardingSettings {
     pub n_media_samples: usize,
 }
 

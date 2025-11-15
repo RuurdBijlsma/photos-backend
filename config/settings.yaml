@@ -88,5 +88,5 @@ thumbnail_generation:
     - "tga"
     - "avif"
 
-setup:
+onboarding:
   n_media_samples: 8

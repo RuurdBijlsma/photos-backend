@@ -1,4 +1,4 @@
-use crate::routes::{album, auth, download, photos, root, setup};
+use crate::routes::{album, auth, download, photos, root, onboarding};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 
@@ -13,12 +13,12 @@ use utoipa::{Modify, OpenApi};
         auth::handlers::refresh_session,
         auth::handlers::logout,
         auth::handlers::get_me,
-        // Setup handlers
-        setup::handlers::get_disk_response,
-        setup::handlers::get_folder_media_sample,
-        setup::handlers::get_folder_unsupported,
-        setup::handlers::get_folders,
-        setup::handlers::make_folder,
+        // Onboarding handlers
+        onboarding::handlers::get_disk_response,
+        onboarding::handlers::get_folder_media_sample,
+        onboarding::handlers::get_folder_unsupported,
+        onboarding::handlers::get_folders,
+        onboarding::handlers::make_folder,
         // Download handlers
         download::handlers::download_full_file,
         // Photos handlers

@@ -25,8 +25,6 @@ image = "0.25.8"
 imageproc = "0.25.0"
 ab_glyph = "0.2.32"
 async-trait = "0.1.89"
-serde = { version = "1.0.228", features = ["derive"] }
-url = { version = "2.5.7", features = ["serde"] }
 reqwest = "0.12.24"
 futures-util = "0.3.31"
 sanitize-filename = "0.6.0"

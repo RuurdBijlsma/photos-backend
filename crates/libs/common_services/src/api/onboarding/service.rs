@@ -1,8 +1,8 @@
 //! This module provides the core service logic for the setup process.
 
-use crate::api::setup::error::SetupError;
-use crate::api::setup::helpers::{check_drive_info, list_folders};
-use crate::api::setup::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
+use crate::api::onboarding::error::OnboardingError;
+use crate::api::onboarding::helpers::{check_drive_info, list_folders};
+use crate::api::onboarding::interfaces::{DiskResponse, MediaSampleResponse, UnsupportedFilesResponse};
 use crate::database::jobs::JobType;
 use crate::get_settings::{media_dir, settings, thumbnails_dir};
 use crate::job_queue::enqueue_job;
@@ -18,16 +18,16 @@ use walkdir::WalkDir;
 ///
 /// # Errors
 ///
-/// Returns `SetupError` if the configured media or thumbnail paths are not valid directories.
-pub fn get_disk_info() -> Result<DiskResponse, SetupError> {
+/// Returns `OnboardingError` if the configured media or thumbnail paths are not valid directories.
+pub fn get_disk_info() -> Result<DiskResponse, OnboardingError> {
     let media_path = media_dir();
     if !media_path.is_dir() {
-        return Err(SetupError::InvalidPath(to_posix_string(media_path)));
+        return Err(OnboardingError::InvalidPath(to_posix_string(media_path)));
     }
 
     let thumbnail_path = thumbnails_dir();
     if !thumbnail_path.is_dir() {
-        return Err(SetupError::InvalidPath(to_posix_string(thumbnail_path)));
+        return Err(OnboardingError::InvalidPath(to_posix_string(thumbnail_path)));
     }
 
     let media_folder_info = check_drive_info(media_path)?;
@@ -43,13 +43,13 @@ pub fn get_disk_info() -> Result<DiskResponse, SetupError> {
 ///
 /// # Errors
 ///
-/// Returns `SetupError` if the folder name contains invalid characters or if an I/O error occurs.
-pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), SetupError> {
+/// Returns `OnboardingError` if the folder name contains invalid characters or if an I/O error occurs.
+pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), OnboardingError> {
     if !new_name
         .chars()
         .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     {
-        return Err(SetupError::DirectoryCreation(new_name.to_string()));
+        return Err(OnboardingError::DirectoryCreation(new_name.to_string()));
     }
 
     let user_path = validate_user_folder(base_folder).await?;
@@ -61,8 +61,8 @@ pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), Setu
 ///
 /// # Errors
 ///
-/// Returns `SetupError` if path validation or canonicalization fails.
-pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
+/// Returns `OnboardingError` if path validation or canonicalization fails.
+pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, OnboardingError> {
     let user_path = validate_user_folder(folder).await?;
     let folders = list_folders(&user_path).await?;
 
@@ -76,7 +76,7 @@ pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
                 .file_name()
                 .and_then(|name| name.to_str())
                 .map(ToOwned::to_owned)
-                .ok_or_else(|| SetupError::InvalidPath(path))
+                .ok_or_else(|| OnboardingError::InvalidPath(path))
         })
         .collect()
 }
@@ -85,8 +85,8 @@ pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, SetupError> {
 ///
 /// # Errors
 ///
-/// Returns `SetupError` if there's an I/O error reading the directory or its files.
-pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, SetupError> {
+/// Returns `OnboardingError` if there's an I/O error reading the directory or its files.
+pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, OnboardingError> {
     let media_folder_info = check_drive_info(user_folder)?;
     let folder_relative = relative_path_canon(user_folder)?;
 
@@ -94,7 +94,7 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Setup
         return Ok(MediaSampleResponse::unreadable(folder_relative));
     }
 
-    let n_samples = settings().setup.n_media_samples;
+    let n_samples = settings().onboarding.n_media_samples;
     let mut samples = Vec::with_capacity(n_samples);
     let mut photo_count = 0;
     let mut file_count = 0;
@@ -136,10 +136,10 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Setup
 ///
 /// # Errors
 ///
-/// Returns `SetupError` if there is an issue reading the directory or canonicalizing file paths.
+/// Returns `OnboardingError` if there is an issue reading the directory or canonicalizing file paths.
 pub fn get_folder_unsupported_files(
     user_folder: &Path,
-) -> Result<UnsupportedFilesResponse, SetupError> {
+) -> Result<UnsupportedFilesResponse, OnboardingError> {
     let media_folder_info = check_drive_info(user_folder)?;
     let folder_relative = relative_path_canon(user_folder)?;
 
@@ -192,8 +192,8 @@ pub fn get_folder_unsupported_files(
 ///
 /// # Errors
 ///
-/// Returns `SetupError` if the path is invalid, not a directory, or outside the media root.
-pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, SetupError> {
+/// Returns `OnboardingError` if the path is invalid, not a directory, or outside the media root.
+pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, OnboardingError> {
     let media_path = media_dir();
     let user_path = media_path.join(user_folder);
 
@@ -206,7 +206,7 @@ pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, SetupErr
             "User path {} is not a directory",
             canonical_user_path.display()
         );
-        return Err(SetupError::InvalidPath(to_posix_string(
+        return Err(OnboardingError::InvalidPath(to_posix_string(
             &canonical_user_path,
         )));
     }
@@ -217,7 +217,7 @@ pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, SetupErr
             canonical_user_path.display(),
             canonical_media_path.display()
         );
-        return Err(SetupError::InvalidPath(to_posix_string(
+        return Err(OnboardingError::InvalidPath(to_posix_string(
             &canonical_user_path,
         )));
     }
@@ -229,21 +229,29 @@ pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, SetupErr
 ///
 /// # Errors
 ///
-/// Returns `SetupError` if folder validation fails, the database update fails, or the scan job cannot be enqueued.
+/// Returns `OnboardingError` if folder validation fails, the database update fails, or the scan job cannot be enqueued.
 pub async fn start_processing(
     user_id: i32,
     pool: &PgPool,
     user_folder: String,
-) -> Result<(), SetupError> {
+) -> Result<(), OnboardingError> {
     let user_folder = validate_user_folder(&user_folder).await?;
-    let relative_user_folder = relative_path_canon(&user_folder)?;
-    sqlx::query!(
-        "UPDATE app_user SET media_folder = $1 WHERE id = $2",
-        relative_user_folder,
+    let relative = relative_path_canon(&user_folder)?;
+
+    let updated = sqlx::query!(
+        "UPDATE app_user
+         SET media_folder = $1
+         WHERE id = $2 AND media_folder IS NULL",
+        relative,
         user_id
     )
-    .execute(pool)
-    .await?;
+        .execute(pool)
+        .await?;
+
+    // If nothing changed → folder already set → return Unauthorized
+    if updated.rows_affected() == 0 {
+        return Err(OnboardingError::MediaFolderAlreadySet);
+    }
 
     enqueue_job::<()>(pool, JobType::Scan)
         .user_id(user_id)

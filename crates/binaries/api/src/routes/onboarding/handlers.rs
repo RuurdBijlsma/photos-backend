@@ -1,15 +1,15 @@
-//! This module defines the HTTP handlers for the initial application setup process.
+//! This module defines the HTTP handlers for the initial application onboarding process.
 
 use crate::api_state::ApiState;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use common_services::api::setup::error::SetupError;
-use common_services::api::setup::interfaces::{
+use common_services::api::onboarding::error::OnboardingError;
+use common_services::api::onboarding::interfaces::{
     DiskResponse, FolderParams, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
     UnsupportedFilesResponse,
 };
-use common_services::api::setup::service::{
+use common_services::api::onboarding::service::{
     create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
     start_processing, validate_user_folder,
 };
@@ -18,13 +18,13 @@ use common_services::database::app_user::User;
 /// Retrieves information about the configured media and thumbnail disks.
 #[utoipa::path(
     get,
-    path = "/setup/disks",
+    path = "/onboarding/disks",
     responses(
         (status = 200, description = "Disk information retrieved successfully", body = DiskResponse),
         (status = 500, description = "A configured path is not a valid directory"),
     )
 )]
-pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
+pub async fn get_disk_response() -> Result<Json<DiskResponse>, OnboardingError> {
     let disk_info = get_disk_info()?;
     Ok(Json(disk_info))
 }
@@ -32,7 +32,7 @@ pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
 /// Retrieves a sample of media files from a specified folder.
 #[utoipa::path(
     get,
-    path = "/setup/media-sample",
+    path = "/onboarding/media-sample",
     params(
         ("folder" = String, Query, description = "The folder to sample media from")
     ),
@@ -43,7 +43,7 @@ pub async fn get_disk_response() -> Result<Json<DiskResponse>, SetupError> {
 )]
 pub async fn get_folder_media_sample(
     Query(query): Query<FolderParams>,
-) -> Result<Json<MediaSampleResponse>, SetupError> {
+) -> Result<Json<MediaSampleResponse>, OnboardingError> {
     let user_path = validate_user_folder(&query.folder).await?;
     let response = get_media_sample(&user_path)?;
     Ok(Json(response))
@@ -52,7 +52,7 @@ pub async fn get_folder_media_sample(
 /// Scans a folder and returns a list of unsupported file types.
 #[utoipa::path(
     get,
-    path = "/setup/unsupported-files",
+    path = "/onboarding/unsupported-files",
     params(
         ("folder" = String, Query, description = "The folder to scan for unsupported files")
     ),
@@ -63,7 +63,7 @@ pub async fn get_folder_media_sample(
 )]
 pub async fn get_folder_unsupported(
     Query(query): Query<FolderParams>,
-) -> Result<Json<UnsupportedFilesResponse>, SetupError> {
+) -> Result<Json<UnsupportedFilesResponse>, OnboardingError> {
     let user_path = validate_user_folder(&query.folder).await?;
     let response = get_folder_unsupported_files(&user_path)?;
     Ok(Json(response))
@@ -72,7 +72,7 @@ pub async fn get_folder_unsupported(
 /// Lists the subfolders within a given directory.
 #[utoipa::path(
     get,
-    path = "/setup/folders",
+    path = "/onboarding/folders",
     params(
         ("folder" = String, Query, description = "The base folder to list subdirectories from")
     ),
@@ -83,7 +83,7 @@ pub async fn get_folder_unsupported(
 )]
 pub async fn get_folders(
     Query(query): Query<FolderParams>,
-) -> Result<Json<Vec<String>>, SetupError> {
+) -> Result<Json<Vec<String>>, OnboardingError> {
     let folders = get_subfolders(&query.folder).await?;
     Ok(Json(folders))
 }
@@ -91,14 +91,14 @@ pub async fn get_folders(
 /// Creates a new folder within a specified base directory.
 #[utoipa::path(
     post,
-    path = "/setup/make-folder",
+    path = "/onboarding/make-folder",
     request_body = MakeFolderBody,
     responses(
         (status = 204, description = "Folder created successfully"),
         (status = 400, description = "Invalid folder name or path"),
     )
 )]
-pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCode, SetupError> {
+pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCode, OnboardingError> {
     create_folder(&params.base_folder, &params.new_name).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -107,10 +107,10 @@ pub async fn make_folder(Json(params): Json<MakeFolderBody>) -> Result<StatusCod
 ///
 /// # Errors
 ///
-/// Returns a `SetupError` if a database connection cannot be established or the query fails.
+/// Returns a `OnboardingError` if a database connection cannot be established or the query fails.
 #[utoipa::path(
     get,
-    path = "/setup/start-processing",
+    path = "/onboarding/start-processing",
     responses(
         (status = 200, description = "Processing job enqueued successfully.", body = bool),
         (status = 500, description = "Database error"),
@@ -120,7 +120,7 @@ pub async fn post_start_processing(
     State(api_state): State<ApiState>,
     Extension(user): Extension<User>,
     Json(payload): Json<StartProcessingBody>,
-) -> Result<Json<bool>, SetupError> {
+) -> Result<Json<bool>, OnboardingError> {
     start_processing(user.id, &api_state.pool, payload.user_folder).await?;
     Ok(Json(true))
 }

@@ -16,4 +16,3 @@ tempfile = "3.23.0"
 tokio = { version = "1.47.1", features = ["full"]}
 common_types = { path = "../common_types" }
 common_services = { path = "../common_services" }
-sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json"] }

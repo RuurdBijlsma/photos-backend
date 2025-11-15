@@ -63,6 +63,11 @@
   currently assumes http).
 * ✅ improve OCR
 * ✅ [BUG] scan enqueues duplicate jobs if the photo isn't processed yet.
+* ✅ [BUG] if album name for /albums/invite/accept is already a folder in media_dir/user_folder, then it doesn't work
+  properly.
+* ✅ rename details to media_details
+* ✅ rename setup to onboarding
+* ✅ don't allow start onboarding endpoint if onboarding is already done.
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -79,9 +84,11 @@
     * axum-gate? crate voor axum auth
 * integration test
     * auth
-    * "setup"
+    * onboarding
     * ingest
     * retrieve
+    * album
+    * cross server album
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
@@ -121,11 +128,7 @@
     * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
     * get s2s invite summary
     * make s2s client in common code somewhere, to call s2s endpoints.
-* rename setup to onboarding
-* [BUG] if album name for /albums/invite/accept is already a folder in media_dir/user_folder, then it doesn't work
-  properly.
 * remove unused crates
-* rename details to media_details
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
 * add remote_user_id as collaborator to album.
 
