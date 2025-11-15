@@ -33,7 +33,6 @@
                 "clean_db",
                 "cluster_faces",
                 "cluster_photos",
-                "import_album",
                 "import_album_item"
               ]
             }
