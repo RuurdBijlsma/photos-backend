@@ -115,11 +115,12 @@ async fn process_event(event_result: notify::Result<Event>, pool: &Pool<Postgres
         return;
     };
 
-    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-        if file_name.starts_with('.') && file_name.contains(".tmp") {
-            info!("Ignoring temporary file event for: {:?}", path);
-            return;
-        }
+    if let Some(file_name) = path.file_name().and_then(|n| n.to_str())
+        && file_name.starts_with('.')
+        && file_name.contains(".tmp")
+    {
+        info!("Ignoring temporary file event for: {:?}", path);
+        return;
     }
 
     let result = match event.kind {
