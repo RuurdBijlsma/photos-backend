@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO album_collaborator (album_id, user_id, role)\n            VALUES ($1, $2, $3)\n            ON CONFLICT (album_id, user_id) DO UPDATE SET role = EXCLUDED.role\n            RETURNING id, album_id, user_id, role as \"role: AlbumRole\", added_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "album_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "role: AlbumRole",
+        "type_info": {
+          "Custom": {
+            "name": "album_role",
+            "kind": {
+              "Enum": [
+                "owner",
+                "contributor",
+                "viewer"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "added_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int4",
+        {
+          "Custom": {
+            "name": "album_role",
+            "kind": {
+              "Enum": [
+                "owner",
+                "contributor",
+                "viewer"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b40eb9992bf481fdca8adbf2a96e1ea7c530321e505ee6c4809e4d299cb37b53"
+}

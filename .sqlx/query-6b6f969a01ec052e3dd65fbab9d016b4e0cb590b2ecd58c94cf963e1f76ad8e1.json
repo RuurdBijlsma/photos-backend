@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO media_item (\n                id, relative_path, user_id, remote_user_id, hash, width, height,\n                is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp,\n                use_panorama_viewer\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text",
+        "Int4",
+        "Int4",
+        "Text",
+        "Int4",
+        "Int4",
+        "Bool",
+        "Int8",
+        "Timestamp",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b6f969a01ec052e3dd65fbab9d016b4e0cb590b2ecd58c94cf963e1f76ad8e1"
+}
