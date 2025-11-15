@@ -3,7 +3,9 @@
     clippy::missing_panics_doc,
     clippy::cast_sign_loss,
     clippy::module_inception,
-    clippy::struct_excessive_bools
+    clippy::struct_excessive_bools,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
 )]
 
 pub mod api;

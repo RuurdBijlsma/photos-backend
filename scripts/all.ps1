@@ -64,7 +64,7 @@ try
 
     # Clippy check
     Write-Host "`n=== Running Clippy checks ===" -ForegroundColor Cyan
-    cargo cargo clippy --no-deps --all-features -- `
+    cargo clippy --no-deps --all-features -- `
         -D clippy::all -D clippy::pedantic -D clippy::nursery
     if ($LASTEXITCODE -ne 0)
     {
