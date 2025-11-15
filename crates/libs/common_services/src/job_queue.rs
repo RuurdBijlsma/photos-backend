@@ -26,11 +26,10 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
 
     let mut tx = pool.begin().await?;
 
-    if job_type == JobType::Remove {
-        if let Some(path) = &relative_path {
+    if job_type == JobType::Remove
+        && let Some(path) = &relative_path {
             prepare_remove_job(&mut tx, path).await?;
         }
-    }
 
     let is_video = relative_path
         .as_ref()

@@ -31,6 +31,7 @@ pub struct S2SClient {
 }
 
 impl S2SClient {
+    #[must_use] 
     pub const fn new(http_client: Client) -> Self {
         Self { http_client }
     }
