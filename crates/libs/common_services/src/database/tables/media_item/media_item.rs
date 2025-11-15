@@ -8,8 +8,8 @@ use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use media_analyzer::AnalyzeResult;
 use serde::{Deserialize, Serialize};
-use sqlx::types::Json;
 use sqlx::FromRow;
+use sqlx::types::Json;
 use utoipa::ToSchema;
 
 /// The root struct representing a '`media_item`' and all its available, nested information.
@@ -36,9 +36,9 @@ pub struct CreateFullMediaItem {
 
 pub struct FromAnalyzerResult {
     pub result: AnalyzeResult,
-    pub  user_id: i32,
-     pub relative_path: String,
-    pub   media_item_id: String,
+    pub user_id: i32,
+    pub relative_path: String,
+    pub media_item_id: String,
 }
 
 impl From<FromAnalyzerResult> for CreateFullMediaItem {

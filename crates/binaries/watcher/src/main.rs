@@ -4,7 +4,7 @@ use crate::watcher::start_watching;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::get_settings::media_dir;
-use tracing::{info, Level};
+use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]

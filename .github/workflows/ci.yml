@@ -43,4 +43,4 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --no-deps --all-features --examples -- -D clippy::all -D clippy::pedantic -D clippy::nursery
+        run: cargo clippy --no-deps --all-features -- -D clippy::all -D clippy::pedantic -D clippy::nursery

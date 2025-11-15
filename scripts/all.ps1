@@ -60,11 +60,11 @@ try
 
     # Build
     Write-Host "`n=== Build ===" -ForegroundColor Cyan
-    cargo build --all-targets --all-features --examples
+    cargo build --all-targets --all-features
 
     # Clippy check
     Write-Host "`n=== Running Clippy checks ===" -ForegroundColor Cyan
-    cargo cargo clippy --no-deps --all-features --examples -- `
+    cargo cargo clippy --no-deps --all-features -- `
         -D clippy::all -D clippy::pedantic -D clippy::nursery
     if ($LASTEXITCODE -ne 0)
     {

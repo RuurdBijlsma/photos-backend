@@ -1,7 +1,7 @@
+use common_types::ml_analysis_types::ObjectBox;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use common_types::ml_analysis_types::ObjectBox;
 
 /// Corresponds to the '`detected_object`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]

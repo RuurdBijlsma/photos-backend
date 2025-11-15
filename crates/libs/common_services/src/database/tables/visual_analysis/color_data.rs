@@ -1,8 +1,8 @@
+use common_types::ml_analysis_types;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use common_types::ml_analysis_types;
 
 /// Corresponds to the '`color_data`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]

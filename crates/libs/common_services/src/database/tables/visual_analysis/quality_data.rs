@@ -1,7 +1,7 @@
+use common_types::ml_analysis_types;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use common_types::ml_analysis_types;
 
 /// Corresponds to the '`quality_data`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]

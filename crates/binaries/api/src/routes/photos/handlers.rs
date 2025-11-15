@@ -12,10 +12,10 @@ use common_services::api::photos::service::{
 };
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
+use common_services::database::media_item_store::MediaItemStore;
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 use ml_analysis::get_color_theme;
 use serde_json::Value;
-use common_services::database::media_item_store::MediaItemStore;
 
 /// Get a random photo and its associated theme.
 ///
@@ -42,7 +42,9 @@ pub async fn get_full_item_handler(
     Query(params): Query<GetMediaItemParams>,
 ) -> Result<Json<FullMediaItem>, PhotosError> {
     let item = MediaItemStore::find_by_id(&api_state.pool, &params.id).await?;
-    if let Some(item) = item && item.user_id == user.id {
+    if let Some(item) = item
+        && item.user_id == user.id
+    {
         Ok(Json(item))
     } else {
         Err(PhotosError::MediaNotFound(params.id))

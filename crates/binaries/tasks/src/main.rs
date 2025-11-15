@@ -1,9 +1,9 @@
 use color_eyre::Result;
-use tracing::Level;
-use tracing_subscriber::FmtSubscriber;
 use common_services::database::get_db_pool;
 use common_services::database::jobs::JobType;
 use common_services::job_queue::enqueue_job;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {

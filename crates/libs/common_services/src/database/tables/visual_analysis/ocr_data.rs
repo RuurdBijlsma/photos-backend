@@ -1,8 +1,8 @@
 use crate::database::visual_analysis::ocr_box::OcrBox;
+use common_types::ml_analysis_types::OCRData;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
-use common_types::ml_analysis_types::OCRData;
 
 /// A composite struct representing data from the '`ocr_data`' table, with its associated OCR boxes nested inside.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]

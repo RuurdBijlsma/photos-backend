@@ -1,5 +1,5 @@
-use media_analyzer::GpsInfo;
 use crate::database::media_item::location::Location;
+use media_analyzer::GpsInfo;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;

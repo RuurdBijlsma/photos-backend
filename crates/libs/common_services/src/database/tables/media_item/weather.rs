@@ -30,15 +30,21 @@ impl From<WeatherInfo> for Weather {
     fn from(weather_info: WeatherInfo) -> Self {
         let hourly = weather_info.hourly;
         Self {
-            temperature: hourly.as_ref().and_then(|h| h.temperature.map(|t| t as f32)),
-            dew_point: hourly.as_ref().and_then(|h| h.dew_point.map(|dp| dp as f32)),
+            temperature: hourly
+                .as_ref()
+                .and_then(|h| h.temperature.map(|t| t as f32)),
+            dew_point: hourly
+                .as_ref()
+                .and_then(|h| h.dew_point.map(|dp| dp as f32)),
             relative_humidity: hourly.as_ref().and_then(|h| h.relative_humidity),
             precipitation: hourly
                 .as_ref()
                 .and_then(|h| h.precipitation.map(|p| p as f32)),
             snow: hourly.as_ref().and_then(|h| h.snow),
             wind_direction: hourly.as_ref().and_then(|h| h.wind_direction),
-            wind_speed: hourly.as_ref().and_then(|h| h.wind_speed.map(|ws| ws as f32)),
+            wind_speed: hourly
+                .as_ref()
+                .and_then(|h| h.wind_speed.map(|ws| ws as f32)),
             peak_wind_gust: hourly
                 .as_ref()
                 .and_then(|h| h.peak_wind_gust.map(|pwg| pwg as f32)),

@@ -32,9 +32,7 @@ impl From<PanoInfo> for Panorama {
                 .view_info
                 .as_ref()
                 .map(|vi| vi.center_yaw_deg as f32),
-            center_pitch_deg: pano_info
-                .view_info
-                .map(|vi| vi.center_pitch_deg as f32),
+            center_pitch_deg: pano_info.view_info.map(|vi| vi.center_pitch_deg as f32),
         }
     }
 }

@@ -1,5 +1,5 @@
-use crate::database::visual_analysis::visual_analysis::CreateVisualAnalysis;
 use crate::database::DbError;
+use crate::database::visual_analysis::visual_analysis::CreateVisualAnalysis;
 use sqlx::PgTransaction;
 
 pub struct VisualAnalysisStore;
