@@ -1,4 +1,3 @@
-use crate::database::DbError;
 use crate::database::media_item::capture_details::CaptureDetails;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
@@ -10,8 +9,10 @@ use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
+use crate::database::DbError;
 use crate::get_settings::fallback_timezone;
 use chrono::{TimeZone, Utc};
+use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
 
@@ -372,6 +373,24 @@ impl MediaItemStore {
             relative_path
         )
         .fetch_optional(executor)
+        .await?)
+    }
+
+    pub async fn update_remote_user_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        id: &str,
+        remote_user_id: i32,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            r#"
+            UPDATE media_item
+            SET remote_user_id = $1
+            WHERE id = $2
+            "#,
+            remote_user_id,
+            id
+        )
+        .execute(executor)
         .await?)
     }
 

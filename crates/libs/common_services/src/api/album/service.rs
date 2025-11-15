@@ -7,14 +7,14 @@ use crate::database::app_user::get_user_by_email;
 use crate::database::jobs::JobType;
 use crate::get_settings::settings;
 use crate::job_queue::enqueue_job;
+use crate::s2s_client::client::{extract_token_claims, S2sClient};
 use crate::utils::nice_id;
 use chrono::{Duration, Utc};
 use common_types::ImportAlbumPayload;
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use reqwest::Client;
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
-use url::Url;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
@@ -313,38 +313,10 @@ pub async fn generate_invite(
     Ok(token)
 }
 
-/// Parses an invite token to extract the remote server URL.
-fn extract_token_claims(token: &str) -> Result<AlbumShareClaims, AlbumError> {
-    decode::<AlbumShareClaims>(
-        token,
-        &DecodingKey::from_secret(settings().auth.jwt_secret.as_ref()),
-        &Validation::default(),
-    )
-    .map(|p| p.claims)
-    .map_err(|_| AlbumError::Unauthorized("Invalid token.".to_string()))
-}
-
 /// Contacts the remote server to get a summary of an album invitation.
 pub async fn check_invite(token: &str, http_client: &Client) -> Result<AlbumSummary, AlbumError> {
-    let claims = extract_token_claims(token)?;
-    let mut remote_url: Url = claims.iss.parse()?;
-    remote_url.set_path("/s2s/albums/invite-summary");
-
-    let response = http_client
-        .get(remote_url.clone())
-        .bearer_auth(token)
-        .send()
-        .await?;
-
-    if !response.status().is_success() {
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(AlbumError::RemoteServerError(format!(
-            "Remote server {remote_url} returned an error: {error_text}"
-        )));
-    }
-
-    let summary: AlbumSummary = response.json().await?;
-    Ok(summary)
+    let s2s_client = S2sClient::new(http_client.clone());
+    Ok(s2s_client.get_album_invite_summary(token).await?)
 }
 
 /// Accepts an album invitation and enqueues a background job to start the import.
@@ -354,7 +326,9 @@ pub async fn accept_invite(
     user_id: i32,
     payload: &AcceptInviteRequest,
 ) -> Result<(), AlbumError> {
-    let claims = extract_token_claims(&payload.token)?;
+    // This now uses the client's internal token parsing.
+    let claims = extract_token_claims(&payload.token)
+        .map_err(|_| AlbumError::Unauthorized("Invalid token.".to_string()))?;
 
     let payload = ImportAlbumPayload {
         album_name: payload.name.clone(),

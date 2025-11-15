@@ -1,9 +1,10 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::Result;
 use color_eyre::eyre::eyre;
+use color_eyre::Result;
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
+use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item::media_item::FromAnalyzerResult;
 use common_services::database::media_item_store::MediaItemStore;
@@ -12,6 +13,7 @@ use common_services::utils::{get_thumb_options, nice_id, relative_path_abs};
 use generate_thumbnails::generate_thumbnails;
 use sqlx::PgTransaction;
 use tokio::fs;
+use crate::handlers::common::remote_user::get_or_create_remote_user;
 
 /// Handles the ingestion of a media file, including thumbnail generation and database storage.
 ///
@@ -80,7 +82,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             &mut tx,
             &FromAnalyzerResult {
                 result: media_info,
-                media_item_id,
+                media_item_id: media_item_id.clone(),
                 user_id,
                 relative_path: relative_path_abs(&file_path)?,
             }
@@ -88,6 +90,10 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             remote_user_id,
         )
         .await?;
+        if let Some(info) = &pending_info {
+            AlbumStore::add_media_items(&mut *tx, &info.album_id, &[media_item_id], user_id)
+                .await?;
+        }
 
         JobResult::Done
     };
@@ -102,33 +108,4 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     }
 
     Ok(job_result)
-}
-
-async fn get_or_create_remote_user(
-    tx: &mut PgTransaction<'_>,
-    local_user_id: i32,
-    remote_identity: &str,
-) -> std::result::Result<i32, sqlx::Error> {
-    let remote_user_id = sqlx::query_scalar!(
-        "SELECT id FROM remote_user WHERE identity = $1 AND user_id = $2",
-        remote_identity,
-        local_user_id
-    )
-    .fetch_optional(&mut **tx)
-    .await?;
-
-    if let Some(id) = remote_user_id {
-        return Ok(id);
-    }
-
-    // Not found, so create it
-    let new_id = sqlx::query_scalar!(
-        "INSERT INTO remote_user (identity, user_id) VALUES ($1, $2) RETURNING id",
-        remote_identity,
-        local_user_id
-    )
-    .fetch_one(&mut **tx)
-    .await?;
-
-    Ok(new_id)
 }

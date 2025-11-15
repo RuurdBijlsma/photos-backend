@@ -1,20 +1,9 @@
-use crate::api::album::interfaces::AlbumShareClaims;
 use crate::api::s2s::error::S2SError;
 use crate::database::album::album::AlbumSummary;
-use crate::get_settings::{media_dir, settings};
-use jsonwebtoken::{DecodingKey, Validation, decode};
+use crate::get_settings::media_dir;
+use crate::s2s_client::client::extract_token_claims;
 use sqlx::PgPool;
 use tracing::instrument;
-
-fn extract_token_claims(token: &str) -> Result<AlbumShareClaims, S2SError> {
-    decode::<AlbumShareClaims>(
-        token,
-        &DecodingKey::from_secret(settings().auth.jwt_secret.as_ref()),
-        &Validation::default(),
-    )
-    .map(|p| p.claims)
-    .map_err(|_| S2SError::Unauthorized("Invalid token.".to_string()))
-}
 
 /// Validates an invitation token and returns the summary of the album.
 #[instrument(skip(pool))]

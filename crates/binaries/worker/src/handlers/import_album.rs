@@ -7,6 +7,7 @@ use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::{Job, JobType};
 use common_services::get_settings::settings;
 use common_services::job_queue::enqueue_job;
+use common_services::s2s_client::client::S2sClient;
 use common_services::utils::nice_id;
 use common_types::{ImportAlbumItemPayload, ImportAlbumPayload};
 use serde_json::from_value;
@@ -19,28 +20,15 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_id = job
         .user_id
         .ok_or_else(|| eyre!("ImportAlbum Job missing user_id"))?;
-    let mut remote_url = payload.remote_url.clone();
-    remote_url.set_path("/s2s/albums/invite-summary");
 
-    let client = reqwest::Client::new();
-    let response = client
-        .get(remote_url.clone())
-        .bearer_auth(&payload.token)
-        .send()
+    // 1. Contact the remote server for the album summary
+    let http_client = reqwest::Client::new();
+    let s2s_client = S2sClient::new(http_client);
+
+    let summary: AlbumSummary = s2s_client
+        .get_album_invite_summary(&payload.token)
         .await
-        .wrap_err(format!(
-            "Failed to contact remote server {remote_url} for invite summary."
-        ))?;
-
-    if !response.status().is_success() {
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(eyre!("Remote server returned an error: {}", error_text));
-    }
-
-    let summary: AlbumSummary = response
-        .json()
-        .await
-        .wrap_err("Failed to parse summary from remote server")?;
+        .wrap_err("Failed to get album invite summary from remote server")?;
 
     // 2. Create the new album locally
     let album_id = nice_id(settings().database.album_id_length);
@@ -53,8 +41,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         payload.album_description,
         false,
     )
-    .await?;
-    AlbumStore::upsert_collaborator(&mut *tx, &album_id, user_id, AlbumRole::Owner).await?;
+        .await?;
     AlbumStore::upsert_collaborator(&mut *tx, &album_id, user_id, AlbumRole::Owner).await?;
     tx.commit().await?;
 

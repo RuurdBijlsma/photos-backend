@@ -7314,6 +7314,7 @@ dependencies = [
  "sanitize-filename",
  "serde_json",
  "sqlx",
+ "tempfile",
  "tokio",
  "tracing",
  "tracing-subscriber",

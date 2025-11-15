@@ -40,7 +40,7 @@ pub async fn create_album_handler(
         &api_state.pool,
         user.id,
         &payload.name,
-        payload.description.as_deref(),
+        payload.description,
         payload.is_public,
     )
     .await?;

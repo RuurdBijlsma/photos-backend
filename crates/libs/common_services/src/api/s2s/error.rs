@@ -1,6 +1,7 @@
-use axum::Json;
+use crate::s2s_client::error::S2sClientError;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
@@ -60,5 +61,16 @@ impl IntoResponse for S2SError {
 impl From<jsonwebtoken::errors::Error> for S2SError {
     fn from(err: jsonwebtoken::errors::Error) -> Self {
         Self::Internal(eyre::Report::new(err))
+    }
+}
+
+impl From<S2sClientError> for S2SError {
+    fn from(err: S2sClientError) -> Self {
+        match err {
+            S2sClientError::JwtError(_) => Self::TokenInvalid,
+            S2sClientError::UrlParseError(e) => Self::Internal(eyre::Report::new(e)),
+            S2sClientError::RequestError(e) => Self::Internal(eyre::Report::new(e)),
+            S2sClientError::RemoteServerError(msg) => Self::Internal(eyre::eyre!(msg)),
+        }
     }
 }

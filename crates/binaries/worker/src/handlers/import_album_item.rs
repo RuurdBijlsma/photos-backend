@@ -1,6 +1,5 @@
-// crates/binaries/worker/src/handlers/import_album_item.rs
-
 use crate::context::WorkerContext;
+use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::handlers::JobResult;
 use color_eyre::eyre::{eyre, Context};
 use color_eyre::Result;
@@ -14,7 +13,9 @@ use common_types::ImportAlbumItemPayload;
 use futures_util::StreamExt;
 use serde_json::from_value;
 use sqlx::query;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::slice;
+use tempfile::NamedTempFile;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
@@ -31,7 +32,10 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
 
     let remote_url = {
         let mut url = payload.remote_url.clone();
-        url.set_path(&format!("/s2s/albums/files/{}", payload.remote_media_item_id));
+        url.set_path(&format!(
+            "/s2s/albums/files/{}",
+            payload.remote_media_item_id
+        ));
         url
     };
 
@@ -58,53 +62,55 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .map(|s| s.trim_matches('"').to_string())
         .unwrap_or_else(|| payload.remote_media_item_id.clone());
 
-    let user_media_folder = query!(
-        "SELECT media_folder FROM app_user WHERE id = $1",
-        user_id
-    )
+    let user_media_folder = query!("SELECT media_folder FROM app_user WHERE id = $1", user_id)
         .fetch_one(&context.pool)
         .await?
         .media_folder
         .ok_or_else(|| eyre!("User has no media folder configured"))?;
-
     let remote_host = payload
         .remote_url
         .host_str()
         .ok_or_else(|| eyre!("Remote URL is missing a host"))?;
-
     let remote_identity = format!("{}@{}", payload.remote_username, remote_host);
     let sanitized_identity = sanitize_filename::sanitize(&remote_identity);
-
     let relative_dir = Path::new(&user_media_folder)
         .join("import")
         .join(&sanitized_identity);
-
     let relative_path = to_posix_string(&relative_dir.join(&filename));
 
     if let Some(existing_id) =
         MediaItemStore::find_id_by_relative_path(&context.pool, &relative_path).await?
     {
-        // File to import already exists, assume it's the same file and put it in the album.
+        let mut tx = context.pool.begin().await?;
         AlbumStore::add_media_items(
-            &context.pool,
+            &mut *tx,
             &payload.local_album_id,
-            &[existing_id],
+            slice::from_ref(&existing_id),
             user_id,
         )
-            .await?;
+        .await?;
+        let remote_user_id = get_or_create_remote_user(&mut tx, user_id, &remote_identity).await?;
+        MediaItemStore::update_remote_user_id(&mut *tx, &existing_id, remote_user_id).await?;
+        tx.commit().await?;
         return Ok(JobResult::Done);
     }
 
     let full_save_dir = media_dir().join(&relative_dir);
     fs::create_dir_all(&full_save_dir).await?;
-
     let full_save_path = full_save_dir.join(&filename);
-    let mut dest_file = fs::File::create(&full_save_path).await?;
 
+    // --- temp file ---
+    let temp = NamedTempFile::new()?;
+    let temp_path: PathBuf = temp.path().to_path_buf();
+    let mut temp_file = fs::File::create(&temp_path).await?;
     let mut stream = response.bytes_stream();
     while let Some(chunk) = stream.next().await {
-        dest_file.write_all(&chunk?).await?;
+        temp_file.write_all(&chunk?).await?;
     }
+    temp_file.flush().await?;
+
+    // --- move temp → destination ---
+    fs::rename(&temp_path, &full_save_path).await?;
 
     query!(
         r#"
@@ -115,8 +121,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         payload.local_album_id,
         remote_identity,
     )
-        .execute(&context.pool)
-        .await?;
+    .execute(&context.pool)
+    .await?;
 
     enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;
 
