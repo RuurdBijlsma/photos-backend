@@ -6,6 +6,7 @@
 pub mod pb;
 mod settings;
 mod worker_payload;
+pub mod ml_analysis_types;
 
 pub use settings::*;
 pub use worker_payload::*;

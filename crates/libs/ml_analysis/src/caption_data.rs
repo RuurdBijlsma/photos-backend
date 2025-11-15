@@ -1,6 +1,7 @@
-use crate::{CaptionData, PyInterop};
+use crate::{ PyInterop};
 use pyo3::PyResult;
 use std::path::Path;
+use common_types::ml_analysis_types::CaptionData;
 
 fn ask(analyzer: &PyInterop, file: &Path, question: &str) -> PyResult<String> {
     analyzer.caption_image(file, Some(question))

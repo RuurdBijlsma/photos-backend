@@ -1,10 +1,10 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::db::helpers::get_media_item_id;
-use crate::handlers::db::store_analysis::store_visual_analysis;
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::eyre::{Result, eyre};
+use color_eyre::eyre::{eyre, Result};
 use common_services::database::jobs::Job;
+use common_services::database::media_item_store::MediaItemStore;
+use common_services::database::visual_analysis_store::VisualAnalysisStore;
 use common_services::get_settings::{media_dir, settings, thumbnails_dir};
 use common_services::utils::{file_is_ingested, is_photo_file};
 use tracing::info;
@@ -30,7 +30,11 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     }
 
     let mut tx = context.pool.begin().await?;
-    let media_item_id = get_media_item_id(&mut tx, relative_path).await?;
+    let Some(media_item_id) =
+        MediaItemStore::find_id_by_relative_path(&mut *tx, relative_path).await?
+    else {
+        return Err(eyre!("Could not find media item by relative_path."));
+    };
     let thumb_dir = thumbnails_dir().join(&media_item_id);
 
     let images_to_analyze = if is_photo_file(&file_path) {
@@ -69,7 +73,10 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let job_result = if is_job_cancelled(&mut tx, job.id).await? {
         JobResult::Cancelled
     } else {
-        store_visual_analysis(&mut tx, &media_item_id, &analyses).await?;
+        for analysis in &analyses {
+            VisualAnalysisStore::create(&mut tx, &media_item_id, &analysis.to_owned().into())
+                .await?;
+        }
         JobResult::Done
     };
 

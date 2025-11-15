@@ -17,7 +17,8 @@ use rand::Rng;
 use sqlx::{PgPool, PgTransaction};
 use std::time::Instant;
 use tracing::info;
-use worker::handlers::db::store_media::store_media_item;
+use common_services::database::media_item::media_item::FromAnalyzerResult;
+use common_services::database::media_item_store::MediaItemStore;
 
 /// The main entry point for seeding the database.
 pub async fn seed_database_for_dev(pool: &PgPool, num_items: u32) -> Result<()> {
@@ -153,9 +154,12 @@ async fn seed_mock_photos_in_tx(
             weather_info: None,
         };
 
-        store_media_item(&mut *tx, &relative_path, &data, &item_id, user_id)
-            .await
-            .expect("Failed to store media item");
+        MediaItemStore::create(&mut *tx, &FromAnalyzerResult{
+            result: data,
+            relative_path,
+            media_item_id: item_id,
+            user_id,
+        }.into(), None).await?;
 
         if (i + 1) % 1000 == 0 {
             info!("... inserted {}/{} photos", i + 1, num_items);

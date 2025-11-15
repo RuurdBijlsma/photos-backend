@@ -1,0 +1,401 @@
+use crate::database::media_item::capture_details::CaptureDetails;
+use crate::database::media_item::details::Details;
+use crate::database::media_item::gps::Gps;
+use crate::database::media_item::location::Location;
+use crate::database::media_item::media_item::{
+    CreateFullMediaItem, FullMediaItem, FullMediaItemRow,
+};
+use crate::database::media_item::panorama::Panorama;
+use crate::database::media_item::time_details::TimeDetails;
+use crate::database::media_item::weather::Weather;
+use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
+use crate::database::DbError;
+use crate::get_settings::fallback_timezone;
+use chrono::{TimeZone, Utc};
+use sqlx::types::Json;
+use sqlx::{Executor, PgTransaction, Postgres};
+
+pub struct MediaItemStore;
+
+impl MediaItemStore {
+    pub async fn find_id_by_relative_path(
+        executor: impl Executor<'_, Database = Postgres>,
+        relative_path: &str,
+    ) -> Result<Option<String>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            SELECT id
+            FROM media_item
+            WHERE relative_path = $1
+            "#,
+            relative_path
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
+    /// Fetches a full media item with all related analyses and metadata.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database query fails or the connection pool is invalid.
+    #[allow(clippy::too_many_lines)]
+    pub async fn find_by_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        id: &str,
+    ) -> Result<Option<FullMediaItem>, DbError> {
+        let row_result = sqlx::query_as!(
+            FullMediaItemRow,
+            r#"
+        WITH
+        -- 1️⃣ Collect OCR data and their boxes
+        ocr_json AS (
+            SELECT
+                o.visual_analysis_id,
+                jsonb_agg(
+                    jsonb_build_object(
+                        'id', o.id,
+                        'has_legible_text', o.has_legible_text,
+                        'ocr_text', o.ocr_text,
+                        'boxes', (
+                            SELECT COALESCE(
+                                jsonb_agg(
+                                    jsonb_build_object(
+                                        'id', b.id,
+                                        'text', b.text,
+                                        'position_x', b.position_x,
+                                        'position_y', b.position_y,
+                                        'width', b.width,
+                                        'height', b.height,
+                                        'confidence', b.confidence
+                                    )
+                                ),
+                                '[]'::jsonb
+                            )
+                            FROM ocr_box b
+                            WHERE b.ocr_data_id = o.id
+                        )
+                    )
+                ) AS data
+            FROM ocr_data o
+            GROUP BY o.visual_analysis_id
+        ),
+
+        -- 2️⃣ Collect all visual analyses and nested data
+        visual_analyses AS (
+            SELECT
+                va.media_item_id,
+                jsonb_agg(
+                    jsonb_build_object(
+                        'id', va.id,
+                        'created_at', va.created_at,
+                        'quality', (
+                            SELECT to_jsonb(qd)
+                            FROM quality_data qd WHERE qd.visual_analysis_id = va.id
+                        ),
+                        'colors', (
+                            SELECT to_jsonb(cld)
+                            FROM color_data cld WHERE cld.visual_analysis_id = va.id
+                        ),
+                        'caption', (
+                            SELECT to_jsonb(cpd)
+                            FROM caption_data cpd WHERE cpd.visual_analysis_id = va.id
+                        ),
+                        'faces', (
+                            SELECT COALESCE(
+                                jsonb_agg(to_jsonb(f)),
+                                '[]'::jsonb
+                            ) FROM face f WHERE f.visual_analysis_id = va.id
+                        ),
+                        'detected_objects', (
+                            SELECT COALESCE(
+                                jsonb_agg(to_jsonb(obj)),
+                                '[]'::jsonb
+                            ) FROM detected_object obj WHERE obj.visual_analysis_id = va.id
+                        ),
+                        'ocr_data', COALESCE(ocr.data, '[]'::jsonb)
+                    )
+                    ORDER BY va.created_at DESC
+                ) AS data
+            FROM visual_analysis va
+            LEFT JOIN ocr_json ocr ON ocr.visual_analysis_id = va.id
+            GROUP BY va.media_item_id
+        )
+
+        SELECT
+            mi.id,
+            mi.user_id,
+            mi.hash,
+            mi.relative_path,
+            mi.created_at,
+            mi.updated_at,
+            mi.width,
+            mi.height,
+            mi.is_video,
+            mi.duration_ms,
+            mi.taken_at_local,
+            mi.taken_at_utc,
+            mi.use_panorama_viewer,
+
+            COALESCE(va.data, '[]'::jsonb) AS "visual_analyses!: Json<Vec<ReadVisualAnalysis>>",
+
+            (SELECT to_jsonb(g)
+                    || jsonb_build_object('location',
+                        (SELECT to_jsonb(l.*) FROM location l WHERE l.id = g.location_id))
+                FROM gps g WHERE g.media_item_id = mi.id
+            ) AS "gps: Json<Gps>",
+
+            (SELECT to_jsonb(td) FROM time_details td WHERE td.media_item_id = mi.id)
+                AS "time_details!: Json<TimeDetails>",
+
+            (SELECT to_jsonb(w) FROM weather w WHERE w.media_item_id = mi.id)
+                AS "weather: Json<Weather>",
+
+            (SELECT to_jsonb(d) FROM details d WHERE d.media_item_id = mi.id)
+                AS "details!: Json<Details>",
+
+            (SELECT to_jsonb(cd) FROM capture_details cd WHERE cd.media_item_id = mi.id)
+                AS "capture_details!: Json<CaptureDetails>",
+
+            (SELECT to_jsonb(p) FROM panorama p WHERE p.media_item_id = mi.id)
+                AS "panorama!: Json<Panorama>"
+
+        FROM media_item mi
+        LEFT JOIN visual_analyses va ON mi.id = va.media_item_id
+        WHERE mi.id = $1 AND mi.deleted = false;
+        "#,
+            id,
+        )
+        .fetch_optional(executor)
+        .await?;
+
+        Ok(row_result.map(FullMediaItem::from))
+    }
+
+    /// Inserts a full media item and all its associated metadata into the database.
+    /// This function will first delete any existing media item with the same `relative_path`
+    /// to ensure a clean insert.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any of the database deletion or insertion queries fail.
+    #[allow(clippy::too_many_lines)]
+    pub async fn create(
+        tx: &mut PgTransaction<'_>,
+        media_item: &CreateFullMediaItem,
+        remote_user_id: Option<i32>,
+    ) -> Result<String, DbError> {
+        // todo: logic left out here:
+        // * delete if already exists
+        // * pending table stuff
+
+        let sort_timestamp = media_item.taken_at_utc.unwrap_or_else(|| {
+            fallback_timezone().as_ref().map_or_else(
+                || media_item.taken_at_local.and_utc(),
+                |tz| {
+                    tz.from_local_datetime(&media_item.taken_at_local)
+                        .unwrap()
+                        .with_timezone(&Utc)
+                },
+            )
+        });
+
+        // Insert into the main media_item table
+        sqlx::query!(
+            r#"
+            INSERT INTO media_item (
+                id, hash, relative_path, user_id, remote_user_id, width, height,
+                is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp,
+                use_panorama_viewer
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            "#,
+            &media_item.id,
+            &media_item.hash,
+            &media_item.relative_path,
+            media_item.user_id,
+            remote_user_id,
+            media_item.width,
+            media_item.height,
+            media_item.is_video,
+            media_item.duration_ms,
+            media_item.taken_at_local,
+            media_item.taken_at_utc,
+            sort_timestamp,
+            media_item.use_panorama_viewer
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        // Insert into related tables
+        if let Some(gps_info) = &media_item.gps {
+            let location_id = Self::get_or_create_location(tx, &gps_info.location).await?;
+
+            sqlx::query!(
+                r#"
+                INSERT INTO gps (media_item_id, location_id, latitude, longitude, altitude, compass_direction)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#,
+                &media_item.id,
+                location_id,
+                gps_info.latitude,
+                gps_info.longitude,
+                gps_info.altitude,
+                gps_info.compass_direction,
+            )
+                .execute(&mut **tx)
+                .await?;
+        }
+
+        if let Some(weather_info) = &media_item.weather {
+            sqlx::query!(
+                r#"
+                INSERT INTO weather (
+                    media_item_id, temperature, dew_point, relative_humidity, precipitation, snow,
+                    wind_direction, wind_speed, peak_wind_gust, pressure, sunshine_minutes,
+                    condition, sunrise, sunset, dawn, dusk, is_daytime
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                "#,
+                &media_item.id,
+                weather_info.temperature,
+                weather_info.dew_point,
+                weather_info.relative_humidity,
+                weather_info.precipitation,
+                weather_info.snow,
+                weather_info.wind_direction,
+                weather_info.wind_speed,
+                weather_info.peak_wind_gust,
+                weather_info.pressure,
+                weather_info.sunshine_minutes,
+                weather_info.condition,
+                weather_info.sunrise,
+                weather_info.sunset,
+                weather_info.dawn,
+                weather_info.dusk,
+                weather_info.is_daytime,
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
+
+        sqlx::query!(
+            r#"
+                INSERT INTO time_details (
+                    media_item_id, timezone_name, timezone_offset_seconds,
+                    timezone_source, source_details, source_confidence
+                )
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#,
+            &media_item.id,
+            media_item.time_details.timezone_name,
+            media_item.time_details.timezone_offset_seconds,
+            media_item.time_details.timezone_source,
+            &media_item.time_details.source_details,
+            &media_item.time_details.source_confidence,
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+                INSERT INTO details (
+                    media_item_id, mime_type, size_bytes, is_motion_photo,
+                    motion_photo_presentation_timestamp, is_hdr, is_burst, burst_id,
+                    capture_fps, video_fps, is_nightsight, is_timelapse, exif
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                "#,
+            &media_item.id,
+            media_item.details.mime_type,
+            media_item.details.size_bytes,
+            media_item.details.is_motion_photo,
+            media_item.details.motion_photo_presentation_timestamp,
+            media_item.details.is_hdr,
+            media_item.details.is_burst,
+            media_item.details.burst_id,
+            media_item.details.capture_fps,
+            media_item.details.video_fps,
+            media_item.details.is_nightsight,
+            media_item.details.is_timelapse,
+            media_item.details.exif,
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        sqlx::query!(
+                r#"
+                INSERT INTO capture_details (
+                    media_item_id, iso, exposure_time, aperture, focal_length, camera_make, camera_model
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                "#,
+                &media_item.id,
+                media_item.capture_details.iso,
+                media_item.capture_details.exposure_time,
+                media_item.capture_details.aperture,
+                media_item.capture_details.focal_length,
+                media_item.capture_details.camera_make,
+                media_item.capture_details.camera_model,
+            )
+                .execute(&mut **tx)
+                .await?;
+
+        sqlx::query!(
+            r#"
+                INSERT INTO panorama (
+                    media_item_id, is_photosphere, projection_type, horizontal_fov_deg,
+                    vertical_fov_deg, center_yaw_deg, center_pitch_deg
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                "#,
+            &media_item.id,
+            media_item.panorama.is_photosphere,
+            media_item.panorama.projection_type,
+            media_item.panorama.horizontal_fov_deg,
+            media_item.panorama.vertical_fov_deg,
+            media_item.panorama.center_yaw_deg,
+            media_item.panorama.center_pitch_deg,
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(media_item.id.clone())
+    }
+
+    /// Retrieves an existing location's ID or creates a new one if it doesn't exist.
+    async fn get_or_create_location(
+        tx: &mut PgTransaction<'_>,
+        location_data: &Location,
+    ) -> Result<i32, DbError> {
+        //todo: can be done in 1 query? is better?
+        let existing_id: Option<i32> = sqlx::query_scalar!(
+            "SELECT id FROM location WHERE name = $1 AND admin1 = $2 AND country_code = $3",
+            &location_data.name,
+            &location_data.admin1,
+            &location_data.country_code,
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if let Some(id) = existing_id {
+            Ok(id)
+        } else {
+            let new_id: i32 = sqlx::query_scalar!(
+                r#"
+                INSERT INTO location (name, admin1, admin2, country_code, country_name)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id
+                "#,
+                &location_data.name,
+                &location_data.admin1,
+                &location_data.admin2,
+                &location_data.country_code,
+                &location_data.country_name,
+            )
+            .fetch_one(&mut **tx)
+            .await?;
+            Ok(new_id)
+        }
+    }
+}

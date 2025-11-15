@@ -1,8 +1,8 @@
-use crate::QualityData;
 use color_eyre::eyre::Result;
 use image::{DynamicImage, GrayImage, imageops};
 use imageproc::filter::{laplacian_filter, median_filter};
 use std::path::Path;
+use common_types::ml_analysis_types::QualityData;
 
 /// Analyzes an image to determine its overall quality score based on blurriness, noisiness, and exposure.
 ///

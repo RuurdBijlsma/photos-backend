@@ -8,13 +8,14 @@ use common_services::api::photos::interfaces::{
     ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse,
 };
 use common_services::api::photos::service::{
-    fetch_full_media_item, get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo,
+    get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo,
 };
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 use ml_analysis::get_color_theme;
 use serde_json::Value;
+use common_services::database::media_item_store::MediaItemStore;
 
 /// Get a random photo and its associated theme.
 ///
@@ -40,8 +41,8 @@ pub async fn get_full_item_handler(
     Extension(user): Extension<User>,
     Query(params): Query<GetMediaItemParams>,
 ) -> Result<Json<FullMediaItem>, PhotosError> {
-    let item = fetch_full_media_item(&user, &api_state.pool, &params.id).await?;
-    if let Some(item) = item {
+    let item = MediaItemStore::find_by_id(&api_state.pool, &params.id).await?;
+    if let Some(item) = item && item.user_id == user.id {
         Ok(Json(item))
     } else {
         Err(PhotosError::MediaNotFound(params.id))

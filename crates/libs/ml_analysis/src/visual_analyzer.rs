@@ -2,7 +2,6 @@ use crate::caption_data::get_caption_data;
 use crate::color_data::get_color_data;
 use crate::quality_data::get_quality_data;
 use crate::utils::convert_media_file;
-use crate::{ChatMessage, PyInterop, VisualImageData};
 use color_eyre::eyre::eyre;
 use common_services::get_settings::settings;
 use common_types::Variant;
@@ -10,6 +9,8 @@ use pyo3::Python;
 use serde_json::Value;
 use std::path::Path;
 use tempfile::Builder;
+use common_types::ml_analysis_types::VisualImageData;
+use crate::{ChatMessage, PyInterop};
 
 pub struct VisualAnalyzer {
     py_interop: PyInterop,
