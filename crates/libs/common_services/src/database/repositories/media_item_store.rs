@@ -368,7 +368,7 @@ impl MediaItemStore {
         tx: &mut PgTransaction<'_>,
         location_data: &Location,
     ) -> Result<i32, DbError> {
-        //todo: can be done in 1 query? is better?
+        //todo: can this be done in 1 query? is better?
         let existing_id: Option<i32> = sqlx::query_scalar!(
             "SELECT id FROM location WHERE name = $1 AND admin1 = $2 AND country_code = $3",
             &location_data.name,

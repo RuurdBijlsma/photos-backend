@@ -55,6 +55,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let job_result = if is_job_cancelled(&mut tx, job.id).await? {
         JobResult::Cancelled
     } else {
+        // todo: modularize this pending album media item logic more.
         let pending_info: Option<PendingAlbumMediaItem> = sqlx::query_as!(
             PendingAlbumMediaItem,
             r#"
