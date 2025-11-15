@@ -37,11 +37,6 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         .is_some_and(|p| is_video_file(&media_dir().join(p)));
     let priority = job_type.get_priority(is_video);
 
-    info!(
-        "Enqueueing {:?} job {:?}, user_id: {:?}, payload: {:?}",
-        job_type, relative_path, user_id, json_payload
-    );
-
     let result = sqlx::query!(
         r#"
         INSERT INTO jobs (relative_path, job_type, priority, user_id, payload)
@@ -69,6 +64,12 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         );
         return Ok(false);
     }
+
+    info!(
+        "Enqueued {:?} job {:?}, user_id: {:?}, payload: {:?}",
+        job_type, relative_path, user_id, json_payload
+    );
+
 
     Ok(true)
 }
@@ -99,11 +100,27 @@ pub async fn enqueue_full_ingest(pool: &PgPool, relative_path: &str, user_id: i3
 ///
 /// Returns an error if any of the database queries or the transaction commit fails.
 async fn prepare_remove_job(tx: &mut PgTransaction<'_>, relative_path: &str) -> Result<()> {
-    sqlx::query!(
-        "UPDATE jobs SET status = 'cancelled' WHERE relative_path = $1 AND status = 'queued' AND job_type IN ('ingest', 'analysis')",
+    let result = sqlx::query!(
+        r#"
+        UPDATE jobs
+        SET status = 'cancelled'
+        WHERE
+            relative_path = $1
+            AND status IN ('queued', 'running')
+            AND job_type IN ('ingest', 'analysis')
+        "#,
         relative_path
     )
         .execute(&mut **tx)
         .await?;
+
+    if result.rows_affected() > 0 {
+        info!(
+            "Cancelled {} queued/running ingest/analysis job(s) for file: {}",
+            result.rows_affected(),
+            relative_path
+        );
+    }
+
     Ok(())
 }

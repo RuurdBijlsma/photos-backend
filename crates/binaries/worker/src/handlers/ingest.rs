@@ -15,7 +15,6 @@ use sqlx::PgPool;
 
 use generate_thumbnails::generate_thumbnails;
 use tokio::fs;
-use tracing::info;
 
 /// Process pending album entry, delete old media, create new media entry
 async fn store_media_item(
