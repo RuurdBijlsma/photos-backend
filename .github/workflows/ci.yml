@@ -1,46 +1,37 @@
-name: Rust CI
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
 
 jobs:
-  build-and-test:
-    name: build-and-test
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        BUILD_TARGET: [release] # refers to a cargo profile
+    outputs:
+      release_built: ${{ steps.set-output.outputs.release_built }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Install NASM
-        uses: ilammy/setup-nasm@v1
+      - name: apt install
+        run: sudo apt update && sudo apt install -y protobuf-compiler libfontconfig1-dev pkg-config nasm
 
-      - name: Install Protobuf Compiler
-        uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build binaries in "${{ matrix.BUILD_TARGET }}" mode
+        run: cargo build --profile ${{ matrix.BUILD_TARGET }}
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build
-        run: cargo build --workspace
-
-      - name: Test
-        run: cargo test --workspace
+      - name: Run tests in "${{ matrix.BUILD_TARGET }}" mode
+        run: cargo test --profile ${{ matrix.BUILD_TARGET }}
 
       - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --no-deps --all-features -- -D clippy::all -D clippy::pedantic -D clippy::nursery
+        run: cargo clippy --no-deps -- -D clippy::all -D clippy::pedantic -D clippy::nursery
