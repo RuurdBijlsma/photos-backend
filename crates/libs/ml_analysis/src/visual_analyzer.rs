@@ -6,7 +6,7 @@ use crate::{ChatMessage, PyInterop};
 use color_eyre::eyre::eyre;
 use common_services::get_settings::settings;
 use common_types::Variant;
-use common_types::ml_analysis_types::VisualImageData;
+use common_types::ml_analysis_types::PyVisualAnalysis;
 use pyo3::Python;
 use serde_json::Value;
 use std::path::Path;
@@ -65,7 +65,7 @@ impl VisualAnalyzer {
         &self,
         file: &Path,
         percentage: i32,
-    ) -> color_eyre::Result<VisualImageData> {
+    ) -> color_eyre::Result<PyVisualAnalysis> {
         let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_string()) else {
             return Err(eyre!("Can't get extension from file"));
         };
@@ -104,7 +104,7 @@ impl VisualAnalyzer {
         // delete the tempfile
         tokio::fs::remove_file(&analysis_file).await?;
 
-        Ok(VisualImageData {
+        Ok(PyVisualAnalysis {
             percentage,
             color_data,
             quality_data,

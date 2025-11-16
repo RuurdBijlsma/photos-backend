@@ -1,4 +1,4 @@
-use common_types::ml_analysis_types::FaceBox;
+use common_types::ml_analysis_types::PyFace;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -56,8 +56,8 @@ pub struct CreateFace {
     pub eye_right_y: f32,
 }
 
-impl From<FaceBox> for CreateFace {
-    fn from(face_box: FaceBox) -> Self {
+impl From<PyFace> for CreateFace {
+    fn from(face_box: PyFace) -> Self {
         Self {
             embedding: face_box.embedding.into(),
             position_x: face_box.position.0,

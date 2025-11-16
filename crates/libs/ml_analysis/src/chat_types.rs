@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, PyAny, Python};
 use serde::{Deserialize, Serialize};
 
@@ -10,8 +11,8 @@ pub enum ChatRole {
 
 impl<'py> IntoPyObject<'py> for ChatRole {
     type Target = PyAny; // the Python type
-    type Output = Bound<'py, Self::Target>; // in most cases this will be `Bound`
-    type Error = std::convert::Infallible; // the conversion error type, has to be convertible to `PyErr`
+    type Output = Bound<'py, Self::Target>;
+    type Error = Infallible;
 
     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
         match self {

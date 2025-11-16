@@ -13,7 +13,6 @@ use tracing::{info, warn};
 /// # Errors
 ///
 /// Returns an error if the database transaction fails.
-
 #[builder]
 pub async fn enqueue_job<T: Serialize + Send + Sync>(
     #[builder(start_fn)] pool: &PgPool,
@@ -26,10 +25,8 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
 
     let mut tx = pool.begin().await?;
 
-    if job_type == JobType::Remove
-        && let Some(path) = &relative_path
-    {
-        prepare_remove_job(&mut tx, path).await?;
+    if let Some(rel_path) = &relative_path {
+        per_job_logic(&mut tx, job_type, rel_path).await?;
     }
 
     let is_video = relative_path
@@ -93,12 +90,60 @@ pub async fn enqueue_full_ingest(pool: &PgPool, relative_path: &str, user_id: i3
     Ok(())
 }
 
+/// Applies some job logic specific to each job type.
+///
+/// * Enqueueing a remove job means existing ingest/analysis jobs for that file are be cancelled.
+/// * Enqueueing an ingest/analysis job means existing remove jobs for that file are cancelled.
+pub async fn per_job_logic(
+    tx: &mut PgTransaction<'_>,
+    job_type: JobType,
+    relative_path: &str,
+) -> Result<()> {
+    match job_type {
+        JobType::Remove => cancel_ingest_analysis_jobs(tx, relative_path).await?,
+        JobType::Ingest | JobType::Analysis => cancel_remove_jobs(tx, relative_path).await?,
+        _ => (),
+    }
+
+    Ok(())
+}
+
+/// Cancel remove jobs for given `relative_path`.
+async fn cancel_remove_jobs(tx: &mut PgTransaction<'_>, relative_path: &str) -> Result<()> {
+    let result = sqlx::query!(
+        r#"
+        UPDATE jobs
+        SET status = 'cancelled'
+        WHERE
+            relative_path = $1
+            AND status IN ('queued', 'running')
+            AND job_type IN ('remove')
+        "#,
+        relative_path
+    )
+    .execute(&mut **tx)
+    .await?;
+
+    if result.rows_affected() > 0 {
+        info!(
+            "Cancelled {} queued/running remove job(s) for file: {}",
+            result.rows_affected(),
+            relative_path
+        );
+    }
+
+    Ok(())
+}
+
 /// Cancels any queued ingest or analysis jobs.
 ///
 /// # Errors
 ///
 /// Returns an error if any of the database queries or the transaction commit fails.
-async fn prepare_remove_job(tx: &mut PgTransaction<'_>, relative_path: &str) -> Result<()> {
+async fn cancel_ingest_analysis_jobs(
+    tx: &mut PgTransaction<'_>,
+    relative_path: &str,
+) -> Result<()> {
     let result = sqlx::query!(
         r#"
         UPDATE jobs

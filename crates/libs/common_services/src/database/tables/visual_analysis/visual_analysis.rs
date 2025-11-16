@@ -2,10 +2,10 @@ use crate::database::visual_analysis::caption_data::CaptionData;
 use crate::database::visual_analysis::color_data::ColorData;
 use crate::database::visual_analysis::detect_object::DetectedObject;
 use crate::database::visual_analysis::face::{CreateFace, Face};
-use crate::database::visual_analysis::ocr_data::OcrData;
+use crate::database::visual_analysis::ocr_data::OCRData;
 use crate::database::visual_analysis::quality_data::QualityData;
 use chrono::{DateTime, Utc};
-use common_types::ml_analysis_types::VisualImageData;
+use common_types::ml_analysis_types::PyVisualAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -23,7 +23,7 @@ pub struct MediaEmbedding {
 pub struct CreateVisualAnalysis {
     pub embedding: Vector,
     pub percentage: i32,
-    pub ocr_data: OcrData,
+    pub ocr_data: OCRData,
     pub faces: Vec<CreateFace>,
     pub detected_objects: Vec<DetectedObject>,
     pub quality: QualityData,
@@ -31,8 +31,8 @@ pub struct CreateVisualAnalysis {
     pub caption: CaptionData,
 }
 
-impl From<VisualImageData> for CreateVisualAnalysis {
-    fn from(data: VisualImageData) -> Self {
+impl From<PyVisualAnalysis> for CreateVisualAnalysis {
+    fn from(data: PyVisualAnalysis) -> Self {
         Self {
             embedding: data.embedding.into(),
             percentage: data.percentage,
@@ -51,7 +51,7 @@ impl From<VisualImageData> for CreateVisualAnalysis {
 pub struct ReadVisualAnalysis {
     pub created_at: DateTime<Utc>,
     pub percentage: i32,
-    pub ocr_data: OcrData,
+    pub ocr_data: OCRData,
     pub faces: Vec<Face>,
     pub detected_objects: Vec<DetectedObject>,
     pub quality: QualityData,

@@ -1,5 +1,5 @@
 use crate::PyInterop;
-use common_types::ml_analysis_types::CaptionData;
+use common_types::ml_analysis_types::PyCaptionData;
 use pyo3::PyResult;
 use std::path::Path;
 
@@ -8,7 +8,7 @@ fn ask(analyzer: &PyInterop, file: &Path, question: &str) -> PyResult<String> {
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn get_caption_data(analyzer: &PyInterop, file: &Path) -> PyResult<CaptionData> {
+pub fn get_caption_data(analyzer: &PyInterop, file: &Path) -> PyResult<PyCaptionData> {
     let default_caption = analyzer.caption_image(file, None)?;
 
     let main_subject = ask(
@@ -217,7 +217,7 @@ pub fn get_caption_data(analyzer: &PyInterop, file: &Path) -> PyResult<CaptionDa
         None
     };
 
-    Ok(CaptionData {
+    Ok(PyCaptionData {
         default_caption,
         main_subject,
         contains_pets,

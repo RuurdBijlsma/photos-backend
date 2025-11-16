@@ -2,14 +2,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct OCRData {
+pub struct PyOCRData {
     pub has_legible_text: bool,
     pub ocr_text: Option<String>,
-    pub ocr_boxes: Option<Vec<OCRBox>>,
+    pub ocr_boxes: Option<Vec<PyOCRBox>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct OCRBox {
+pub struct PyOCRBox {
     pub text: String,
     pub position: (f32, f32),
     pub width: f32,
@@ -18,7 +18,7 @@ pub struct OCRBox {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct FaceBox {
+pub struct PyFace {
     pub position: (f32, f32),
     pub width: f32,
     pub height: f32,
@@ -34,7 +34,7 @@ pub struct FaceBox {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct ObjectBox {
+pub struct PyDetectedObject {
     pub position: (f32, f32),
     pub width: f32,
     pub height: f32,
@@ -43,7 +43,7 @@ pub struct ObjectBox {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct QualityData {
+pub struct PyQualityData {
     pub blurriness: f64,
     pub noisiness: f64,
     pub exposure: f64,
@@ -51,23 +51,23 @@ pub struct QualityData {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct ColorData {
+pub struct PyColorData {
     pub themes: Vec<Value>,
     pub prominent_colors: Vec<String>,
     pub average_hue: f32,
     pub average_saturation: f32,
     pub average_lightness: f32,
-    pub histogram: ColorHistogram,
+    pub histogram: PyColorHistogram,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct ColorHistogram {
+pub struct PyColorHistogram {
     pub bins: i32,
-    pub channels: RGBChannels,
+    pub channels: PyRGBChannels,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct RGBChannels {
+pub struct PyRGBChannels {
     pub red: Vec<i32>,
     pub green: Vec<i32>,
     pub blue: Vec<i32>,
@@ -75,7 +75,7 @@ pub struct RGBChannels {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct CaptionData {
+pub struct PyCaptionData {
     pub default_caption: String,
     pub main_subject: String,
     pub contains_pets: bool,
@@ -106,13 +106,13 @@ pub struct CaptionData {
 
 // This top-level struct is assembled manually
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct VisualImageData {
+pub struct PyVisualAnalysis {
     pub percentage: i32,
-    pub color_data: ColorData,
-    pub quality_data: QualityData,
-    pub caption_data: CaptionData,
+    pub color_data: PyColorData,
+    pub quality_data: PyQualityData,
+    pub caption_data: PyCaptionData,
     pub embedding: Vec<f32>,
-    pub faces: Vec<FaceBox>,
-    pub objects: Vec<ObjectBox>,
-    pub ocr: OCRData,
+    pub faces: Vec<PyFace>,
+    pub objects: Vec<PyDetectedObject>,
+    pub ocr: PyOCRData,
 }

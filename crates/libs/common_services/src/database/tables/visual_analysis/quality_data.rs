@@ -12,8 +12,8 @@ pub struct QualityData {
     pub quality_score: f64,
 }
 
-impl From<ml_analysis_types::QualityData> for QualityData {
-    fn from(quality_data: ml_analysis_types::QualityData) -> Self {
+impl From<ml_analysis_types::PyQualityData> for QualityData {
+    fn from(quality_data: ml_analysis_types::PyQualityData) -> Self {
         Self {
             blurriness: quality_data.blurriness,
             noisiness: quality_data.noisiness,

@@ -69,14 +69,15 @@
 * ✅ rename setup to onboarding
 * ✅ don't allow start onboarding endpoint if onboarding is already done.
 * ✅ remove unused crates
+* ✅ If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
 * ✅ add remote_user_id as collaborator to album.
 * ✅ repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
-  * ✅ parse url stuff
-  * ✅ parse token maybe?
-  * ✅ share reqwest client via application state and worker context so it's not made every time.
-  * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
-  * ✅ get s2s invite summary
-  * ✅ make s2s client in common code somewhere, to call s2s endpoints.
+    * ✅ parse url stuff
+    * ✅ parse token maybe?
+    * ✅ share reqwest client via application state and worker context so it's not made every time.
+    * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
+    * ✅ get s2s invite summary
+    * ✅ make s2s client in common code somewhere, to call s2s endpoints.
 * ✅ pretty sure the watcher doesn't do anything if a folder is deleted.
 * api:
     * ✅ add random image + theme endpoint
@@ -92,13 +93,6 @@
       db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
       user account)
     * axum-gate? crate voor axum auth
-* integration test
-    * auth
-    * onboarding
-    * ingest
-    * retrieve
-    * album
-    * cross server album
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
@@ -132,9 +126,26 @@
     * warn for user might be impacted
     * info for info
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
-* rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at how ml analysis ColorData is actually used)
-* If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
+* rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at
+  how ml analysis ColorData is actually used)
 
+# integration test
+
+* Tests:
+    * auth
+    * onboarding
+    * ingest
+    * retrieve
+    * album
+    * cross server album
+* Create integration-tests crate:
+    * runs all binary crates in 1 binary, so tests can be run properly.
+    * have test specific database, that's fresh at start of test.
+    * have test folder for media items, make fresh before each test (tests/original_test_images copied to
+      tests/tmp_folder/media_dir before integration tests are run) The tmp folder can be deleted after tests.
+    * Thumbnails dir also for test in tmp folder.
+    * simulate user interactions by calling api with reqwest.
+    * check state after each interaction or after important interactions
 
 # Features
 

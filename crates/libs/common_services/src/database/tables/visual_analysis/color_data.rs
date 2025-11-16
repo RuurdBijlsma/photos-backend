@@ -1,6 +1,6 @@
-use common_types::ml_analysis_types;
+use common_types::ml_analysis_types::PyColorData;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sqlx::FromRow;
 use utoipa::ToSchema;
 
@@ -15,8 +15,8 @@ pub struct ColorData {
     pub histogram: Value,
 }
 
-impl From<ml_analysis_types::ColorData> for ColorData {
-    fn from(color_data: ml_analysis_types::ColorData) -> Self {
+impl From<PyColorData> for ColorData {
+    fn from(color_data: PyColorData) -> Self {
         Self {
             themes: color_data.themes,
             prominent_colors: color_data.prominent_colors,

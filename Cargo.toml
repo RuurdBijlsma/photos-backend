@@ -1,14 +1,16 @@
 [workspace]
 resolver = "3"
 members = [
-    # Binaries
-    "crates/binaries/api",
-    "crates/binaries/worker",
-    "crates/binaries/tasks",
-    "crates/binaries/watcher",
+    # Apps
+    "crates/apps/api",
+    "crates/apps/worker",
+    "crates/apps/tasks",
+    "crates/apps/watcher",
     # Libs
     "crates/libs/common_types",
     "crates/libs/common_services",
     "crates/libs/ml_analysis",
-    "crates/libs/generate_thumbnails"
+    "crates/libs/generate_thumbnails",
+    # Integration tests
+    "crates/test_integration"
 ]
