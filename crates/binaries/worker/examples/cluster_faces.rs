@@ -113,7 +113,7 @@ async fn main() -> Result<()> {
 
     // Load a font for drawing labels using ab_glyph
     // Update this path if it's incorrect for your system.
-    let font_data = include_bytes!("DejaVuSans.ttf");
+    let font_data = include_bytes!("assets/DejaVuSans.ttf");
     let font = FontArc::try_from_slice(font_data)?;
 
     // This map will store images that need to be modified. We process them at the end.

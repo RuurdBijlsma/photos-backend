@@ -1,13 +1,13 @@
 mod handlers;
 mod watcher;
 
-use tracing::warn;
 use color_eyre::Result;
+use common_services::alert;
 use common_services::database::get_db_pool;
 use common_services::get_settings::media_dir;
-use tracing::{Level};
+use tracing::Level;
+use tracing::warn;
 use tracing_subscriber::FmtSubscriber;
-use common_services::alert;
 
 #[tokio::main]
 async fn main() -> Result<()> {
