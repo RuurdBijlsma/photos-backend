@@ -70,6 +70,14 @@
 * ✅ don't allow start onboarding endpoint if onboarding is already done.
 * ✅ remove unused crates
 * ✅ add remote_user_id as collaborator to album.
+* ✅ repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
+  * ✅ parse url stuff
+  * ✅ parse token maybe?
+  * ✅ share reqwest client via application state and worker context so it's not made every time.
+  * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
+  * ✅ get s2s invite summary
+  * ✅ make s2s client in common code somewhere, to call s2s endpoints.
+* ✅ pretty sure the watcher doesn't do anything if a folder is deleted.
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -77,9 +85,9 @@
     * ✅ Show photos in ui
     * ✅ only allow register if no user exists
     * ✅ frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
+    * ✅ add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
     * password reset flow (email) (make mail optional)
-    * add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
       db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
       user account)
@@ -123,16 +131,8 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
-    * ✅ parse url stuff
-    * ✅ parse token maybe?
-    * ✅ share reqwest client via application state and worker context so it's not made every time.
-    * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
-    * ✅ get s2s invite summary
-    * ✅ make s2s client in common code somewhere, to call s2s endpoints.
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
 * rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at how ml analysis ColorData is actually used)
-* pretty sure the watcher doesn't do anything if a folder is deleted.
 * If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
 
 
