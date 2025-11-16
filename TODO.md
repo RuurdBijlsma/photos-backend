@@ -133,6 +133,7 @@
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
 * rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at how ml analysis ColorData is actually used)
 * pretty sure the watcher doesn't do anything if a folder is deleted.
+* If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
 
 
 # Features

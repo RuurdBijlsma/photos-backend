@@ -1,4 +1,3 @@
-use common_services::alert;
 use common_services::database::app_user::user_from_relative_path;
 use common_services::database::jobs::JobType;
 use common_services::get_settings::media_dir;
@@ -6,11 +5,95 @@ use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
 use common_services::utils::relative_path_abs;
 use sqlx::PgPool;
 use std::path::Path;
-use tracing::info;
-use tracing::warn;
+use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
-async fn is_file_in_db(path: &Path, pool: &PgPool) -> color_eyre::Result<bool> {
+/// Handles a create event from the watcher.
+pub async fn handle_create(path: &Path, pool: &PgPool) -> color_eyre::Result<()> {
+    if path.is_file() {
+        enqueue_file_job(path, JobType::Ingest, pool).await?;
+    } else {
+        info!("Directory created: {:?}. Scanning for new files.", path);
+        for entry in WalkDir::new(path).into_iter().filter_map(Result::ok) {
+            if entry.file_type().is_file() {
+                enqueue_file_job(entry.path(), JobType::Ingest, pool).await?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Handles a remove event from the watcher.
+pub async fn handle_remove(path: &Path, pool: &PgPool) -> color_eyre::Result<()> {
+    // This logic is preserved as per your request to differentiate file from folder deletes.
+    if is_path_in_db(path, pool).await? {
+        enqueue_file_job(path, JobType::Remove, pool).await?;
+    } else {
+        info!(
+            "Directory removed: {:?}. Removing all media items within.",
+            path
+        );
+        handle_remove_folder(path, pool).await?;
+    }
+    Ok(())
+}
+
+/// A helper function to enqueue a job for a given file path.
+async fn enqueue_file_job(path: &Path, job_type: JobType, pool: &PgPool) -> color_eyre::Result<()> {
+    let relative_path = relative_path_abs(path)?;
+    let Some(user) = user_from_relative_path(&relative_path, pool).await? else {
+        warn!(
+            "Could not find user for path: {}. Cannot enqueue job.",
+            relative_path
+        );
+        return Ok(());
+    };
+
+    match job_type {
+        JobType::Ingest => enqueue_full_ingest(pool, &relative_path, user.id).await?,
+        JobType::Remove => {
+            enqueue_job::<()>(pool, JobType::Remove)
+                .relative_path(&relative_path)
+                .user_id(user.id)
+                .call()
+                .await?;
+        }
+        _ => warn!("Unsupported job type for watcher: {:?}", job_type),
+    }
+
+    Ok(())
+}
+
+/// Handles removing a folder by finding all its items in the DB and enqueuing their removal.
+async fn handle_remove_folder(folder: &Path, pool: &PgPool) -> color_eyre::Result<()> {
+    let relative_dir = relative_path_abs(folder)?;
+    let pattern = format!("{relative_dir}%");
+
+    let relative_paths = sqlx::query_scalar!(
+        r"SELECT relative_path FROM media_item WHERE relative_path LIKE $1",
+        pattern
+    )
+    .fetch_all(pool)
+    .await?;
+
+    if relative_paths.is_empty() {
+        debug!(
+            "No media items found in DB for removed directory: {:?}",
+            folder
+        );
+        return Ok(());
+    }
+
+    for path in relative_paths {
+        let absolute_path = media_dir().join(path);
+        enqueue_file_job(&absolute_path, JobType::Remove, pool).await?;
+    }
+
+    Ok(())
+}
+
+/// Checks if a given path exists in either the `media_item` or `jobs` table.
+async fn is_path_in_db(path: &Path, pool: &PgPool) -> color_eyre::Result<bool> {
     let relative_path = relative_path_abs(path)?;
     let exists = sqlx::query_scalar!(
         r#"
@@ -23,99 +106,8 @@ async fn is_file_in_db(path: &Path, pool: &PgPool) -> color_eyre::Result<bool> {
         relative_path
     )
     .fetch_one(pool)
-    .await?;
+    .await?
+    .unwrap_or(false);
 
-    Ok(exists.unwrap_or(false))
-}
-
-pub async fn handle_create_event(path: &Path, pool: &PgPool) -> color_eyre::Result<()> {
-    if path.is_file() {
-        handle_create_file(path, pool).await?;
-    } else {
-        handle_create_folder(path, pool).await?;
-    }
-    Ok(())
-}
-
-pub async fn handle_remove_event(path: &Path, pool: &PgPool) -> color_eyre::Result<()> {
-    if is_file_in_db(path, pool).await? {
-        handle_remove_file(path, pool).await?;
-    } else {
-        handle_remove_folder(path, pool).await?;
-    }
-    Ok(())
-}
-
-/// Handles a file creation event by enqueueing the file for ingestion.
-///
-/// # Errors
-///
-/// * Returns an error if `enqueue_file_ingest` fails, typically due to a database issue.
-async fn handle_create_file(file: &Path, pool: &PgPool) -> color_eyre::Result<()> {
-    info!("File created {:?}", file);
-
-    let rel_path = relative_path_abs(file)?;
-    if let Some(user) = user_from_relative_path(&rel_path, pool).await? {
-        enqueue_full_ingest(pool, &rel_path, user.id).await?;
-    } else {
-        alert!("[Create file event] Cannot find user from relative path.");
-    }
-
-    Ok(())
-}
-
-/// Handles a file removal event by enqueueing the file for removal.
-///
-/// # Errors
-///
-/// * Returns an error if `enqueue_file_remove` fails, typically due to a database issue.
-async fn handle_remove_file(file: &Path, pool: &PgPool) -> color_eyre::Result<()> {
-    info!("File removed {:?}", file);
-
-    let rel_path = relative_path_abs(file)?;
-    if let Some(user) = user_from_relative_path(&rel_path, pool).await? {
-        enqueue_job::<()>(pool, JobType::Remove)
-            .relative_path(&rel_path)
-            .user_id(user.id)
-            .call()
-            .await?;
-    } else {
-        alert!("[Create file event] Cannot find user from relative path.");
-    }
-
-    Ok(())
-}
-
-async fn handle_create_folder(folder: &Path, pool: &PgPool) -> color_eyre::Result<()> {
-    println!("[handle_create_folder] {:?}", folder);
-    for entry in WalkDir::new(folder).into_iter().filter_map(Result::ok) {
-        println!("{:?}", entry);
-        if entry.metadata()?.is_file() {
-            handle_create_file(entry.path(), pool).await?
-        }
-    }
-
-    Ok(())
-}
-
-async fn handle_remove_folder(folder: &Path, pool: &PgPool) -> color_eyre::Result<()> {
-    println!("[handle_remove_folder] {:?}", folder);
-    let relative_dir = relative_path_abs(folder)?;
-
-    let relative_paths = sqlx::query_scalar!(
-        r"
-        SELECT relative_path
-        FROM media_item
-        WHERE relative_path LIKE $1
-    ",
-        format!("{relative_dir}%")
-    )
-    .fetch_all(pool)
-    .await?;
-
-    for relative_path in relative_paths {
-        handle_remove_file(&media_dir().join(relative_path), pool).await?;
-    }
-
-    Ok(())
+    Ok(exists)
 }
