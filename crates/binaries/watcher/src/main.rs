@@ -1,4 +1,5 @@
 mod watcher;
+mod handlers;
 
 use crate::watcher::start_watching;
 use color_eyre::Result;

@@ -1,58 +1,13 @@
-use common_services::alert;
-use common_services::database::app_user::user_from_relative_path;
-use common_services::database::jobs::JobType;
-use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
-use common_services::utils::relative_path_abs;
-use futures::channel::mpsc::{Receiver, channel};
+use futures::channel::mpsc::{channel, Receiver};
 use futures::{SinkExt, StreamExt};
-use notify::event::{CreateKind, RemoveKind};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use sqlx::{Pool, Postgres};
+use sqlx::PgPool;
 use std::path::Path;
 use tracing::{error, info, warn};
-
-/// Handles a file creation event by enqueueing the file for ingestion.
-///
-/// # Errors
-///
-/// * Returns an error if `enqueue_file_ingest` fails, typically due to a database issue.
-async fn handle_create_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    info!("File created {:?}", file);
-
-    let rel_path = relative_path_abs(file)?;
-    if let Some(user) = user_from_relative_path(&rel_path, pool).await? {
-        enqueue_full_ingest(pool, &rel_path, user.id).await?;
-    } else {
-        alert!("[Create file event] Cannot find user from relative path.");
-    }
-
-    Ok(())
-}
-
-/// Handles a file removal event by enqueueing the file for removal.
-///
-/// # Errors
-///
-/// * Returns an error if `enqueue_file_remove` fails, typically due to a database issue.
-async fn handle_remove_file(file: &Path, pool: &Pool<Postgres>) -> color_eyre::Result<()> {
-    info!("File removed {:?}", file);
-
-    let rel_path = relative_path_abs(file)?;
-    if let Some(user) = user_from_relative_path(&rel_path, pool).await? {
-        enqueue_job::<()>(pool, JobType::Remove)
-            .relative_path(&rel_path)
-            .user_id(user.id)
-            .call()
-            .await?;
-    } else {
-        alert!("[Create file event] Cannot find user from relative path.");
-    }
-
-    Ok(())
-}
+use crate::handlers::{handle_create_event, handle_remove_event};
 
 /// Starts the file system watcher for the specified media directory in a blocking manner.
-pub fn start_watching(media_dir: &Path, pool: &Pool<Postgres>) {
+pub fn start_watching(media_dir: &Path, pool: &PgPool) {
     futures::executor::block_on(async {
         if let Err(e) = async_watch(media_dir, pool).await {
             error!("async_watch error: {:?}", e);
@@ -89,7 +44,7 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, Receiver<notify::Resul
 /// # Errors
 ///
 /// * Returns a `notify::Error` if the watcher fails to start watching the specified path.
-async fn async_watch(media_dir: &Path, pool: &Pool<Postgres>) -> notify::Result<()> {
+async fn async_watch(media_dir: &Path, pool: &PgPool) -> notify::Result<()> {
     let (mut watcher, mut rx) = async_watcher()?;
     watcher.watch(media_dir.as_ref(), RecursiveMode::Recursive)?;
 
@@ -102,7 +57,7 @@ async fn async_watch(media_dir: &Path, pool: &Pool<Postgres>) -> notify::Result<
 }
 
 /// Processes a single file system event from the watcher.
-async fn process_event(event_result: notify::Result<Event>, pool: &Pool<Postgres>) {
+async fn process_event(event_result: notify::Result<Event>, pool: &PgPool) {
     let event = match event_result {
         Ok(evt) => evt,
         Err(err) => {
@@ -124,8 +79,8 @@ async fn process_event(event_result: notify::Result<Event>, pool: &Pool<Postgres
     }
 
     let result = match event.kind {
-        EventKind::Create(CreateKind::File) => handle_create_file(path, pool).await,
-        EventKind::Remove(RemoveKind::File) => handle_remove_file(path, pool).await,
+        EventKind::Create(_) => handle_create_event(path, pool).await,
+        EventKind::Remove(_) => handle_remove_event(path, pool).await,
         _ => return,
     };
     if let Err(e) = result {
