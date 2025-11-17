@@ -99,6 +99,7 @@
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
+* big refactor: make all crud functions for every db table, in common_services/database/repositories/{table_the_funcs_are_for}
 * monitoring/alerting
     * prometheus
     * grafana
@@ -128,7 +129,6 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* big refactor: make all crud functions for every db table, in common_services/database/repositories/{table_the_funcs_are_for}
 
 # integration test
 

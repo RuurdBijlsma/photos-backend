@@ -1,5 +1,7 @@
 use api::serve;
+use app_state::load_app_settings;
 use color_eyre::Result;
+use common_services::database::get_db_pool;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -14,7 +16,9 @@ async fn main() -> Result<()> {
         .init();
     color_eyre::install()?;
 
-    serve().await?;
+    let settings = load_app_settings()?;
+    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    serve(pool, settings).await?;
 
     Ok(())
 }

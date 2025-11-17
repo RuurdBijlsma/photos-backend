@@ -1,4 +1,5 @@
 use app_state::constants;
+use color_eyre::eyre::Result;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use std::time::Duration;
@@ -10,8 +11,8 @@ use tracing::info;
 /// * `env::var` can return an error if `DATABASE_URL` is not found in the environment.
 /// * `PgPool::connect` can return an error if the database connection fails.
 /// * `sqlx::migrate` can return an error if migrations fail.
-pub async fn get_db_pool(database_url: &str) -> color_eyre::Result<Pool<Postgres>> {
-    info!("Connecting to database.");
+pub async fn get_db_pool(database_url: &str) -> Result<Pool<Postgres>> {
+    info!("Connecting to database. {database_url}");
     let db_config = &constants().database;
     let pool = PgPoolOptions::new()
         .max_connections(db_config.max_connections)

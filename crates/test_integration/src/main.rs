@@ -1,6 +1,17 @@
+// crates/test_integration/src/main.rs
+
+extern crate core;
+
+use crate::test_context::TestContext;
 use color_eyre::Result;
+use rand::Rng;
+use sqlx::Executor;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
+
+mod test_context;
+mod tests;
+mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -10,7 +21,11 @@ async fn main() -> Result<()> {
     tracing::subscriber::set_global_default(subscriber)?;
     color_eyre::install()?;
 
-    // todo
+    let ctx = TestContext::new().await?;
 
+    // Run our tests
+    tests::run_all(&ctx).await?;
+
+    // The `ctx` will be dropped here, triggering the cleanup.
     Ok(())
 }

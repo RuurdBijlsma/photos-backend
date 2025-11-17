@@ -8,10 +8,7 @@ use sqlx::PgPool;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-pub async fn start_watching() -> Result<()> {
-    let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
-
+pub async fn start_watching(pool: PgPool,settings: AppSettings) -> Result<()> {
     if let Err(e) = run(&pool, &settings).await {
         alert!("Watcher failed with an error: {}", e);
     }

@@ -10,13 +10,14 @@
 
 use crate::api_state::ApiContext;
 use crate::create_router;
-use app_state::load_app_settings;
+use app_state::{load_app_settings, AppSettings};
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::s2s_client::S2SClient;
 use http::{HeaderValue, header};
 use reqwest::Client;
+use sqlx::PgPool;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
 use tower_http::cors::CorsLayer;
@@ -24,11 +25,9 @@ use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tracing::{error, info};
 
-pub async fn serve() -> Result<()> {
+pub async fn serve(pool: PgPool,settings: AppSettings) -> Result<()> {
     // --- Server Startup ---
     info!("🚀 Initializing server...");
-    let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
     let api_state = ApiContext {
         pool,
         s2s_client: S2SClient::new(Client::new()),
