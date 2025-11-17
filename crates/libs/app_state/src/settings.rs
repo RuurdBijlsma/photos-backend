@@ -1,4 +1,6 @@
-use crate::{ApiSettings, IngestSettings, LoggingSettings, RawSettings, SecretSettings, MakeRelativePath};
+use crate::{
+    ApiSettings, IngestSettings, LoggingSettings, MakeRelativePath, RawSettings, SecretSettings,
+};
 use color_eyre::Result;
 use serde::Deserialize;
 use sqlx::{Executor, Postgres};

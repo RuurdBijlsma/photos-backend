@@ -3,7 +3,7 @@ use crate::database::app_user::{User, UserRole};
 use app_state::{IngestSettings, MakeRelativePath};
 use axum::{
     body::Body,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
 };
 use color_eyre::Report;
 use http::Response;

@@ -1,9 +1,9 @@
 use crate::context::WorkerContext;
-use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::handlers::JobResult;
+use crate::handlers::common::remote_user::get_or_create_remote_user;
 use app_state::MakeRelativePath;
-use color_eyre::eyre::eyre;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;

@@ -82,7 +82,7 @@ async fn handle_remove_folder(
     settings: &AppSettings,
     folder: &Path,
 ) -> color_eyre::Result<()> {
-    let relative_dir =folder.make_relative(&settings.ingest.media_folder)?;
+    let relative_dir = folder.make_relative(&settings.ingest.media_folder)?;
     let pattern = format!("{relative_dir}%");
 
     let relative_paths = sqlx::query_scalar!(
@@ -114,7 +114,7 @@ async fn is_path_in_db(
     settings: &AppSettings,
     path: &Path,
 ) -> color_eyre::Result<bool> {
-    let relative_path =path.make_relative(&settings.ingest.media_folder)?;
+    let relative_path = path.make_relative(&settings.ingest.media_folder)?;
     let exists = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (

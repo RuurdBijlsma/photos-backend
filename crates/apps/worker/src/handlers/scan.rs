@@ -9,7 +9,7 @@ use common_services::database::jobs::{Job, JobType};
 use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
 use sqlx::PgPool;
 use std::collections::HashSet;
-use std::path::{Path};
+use std::path::Path;
 use tokio::fs;
 use tracing::warn;
 use tracing::{error, info};
@@ -59,7 +59,7 @@ pub async fn sync_user_files_to_db(
     let all_files = get_media_files(user_folder, &allowed);
     let fs_paths: HashSet<String> = all_files
         .into_iter()
-        .flat_map(|p|p.make_relative(&settings.ingest.media_folder))
+        .flat_map(|p| p.make_relative(&settings.ingest.media_folder))
         .collect();
 
     let db_paths: HashSet<String> = sqlx::query_scalar!(

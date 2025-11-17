@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 use std::fs::canonicalize;
-use std::path::{absolute, Path};
+use std::path::{Path, absolute};
 
 /// Converts a path to a POSIX-style string, replacing backslashes with forward slashes.
 #[must_use]
