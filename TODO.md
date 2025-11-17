@@ -71,6 +71,9 @@
 * ✅ remove unused crates
 * ✅ If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
 * ✅ add remote_user_id as collaborator to album.
+* ✅ rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at
+  how ml analysis ColorData is actually used)
+* ✅ [BUG] accept invite is broken.
 * ✅ repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
     * ✅ parse url stuff
     * ✅ parse token maybe?
@@ -125,10 +128,7 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
-* rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at
-  how ml analysis ColorData is actually used)
-* [BUG] accept invite is broken.
+* big refactor: make all crud functions for every db table, in common_services/database/repositories/{table_the_funcs_are_for}
 
 # integration test
 
