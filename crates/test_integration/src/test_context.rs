@@ -5,7 +5,7 @@ use app_state::{
 use color_eyre::eyre::{eyre, Result};
 use reqwest::Client;
 use sqlx::PgPool;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::task::JoinHandle;
@@ -18,7 +18,6 @@ pub fn init_test_constants(constants: AppConstants) {
 }
 
 /// The main context for our integration tests.
-#[allow(dead_code)]
 pub struct TestContext {
     pub pool: PgPool,
     pub settings: AppSettings,

@@ -4,7 +4,6 @@ use config::{Config, File};
 use std::fs;
 use std::path::Path;
 use std::sync::OnceLock;
-use tracing::info;
 
 pub fn load_settings_from_path(path: &Path, include_env: bool) -> Result<AppSettings> {
     // Need to load from dotenv to get it to overwrite the secrets from env.

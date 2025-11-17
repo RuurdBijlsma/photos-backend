@@ -1,9 +1,8 @@
 use std::net::TcpListener;
-use app_state::{load_settings_from_path, AppSettings};
+use app_state::{AppSettings};
 use color_eyre::eyre::Result;
 use common_services::database::get_db_pool;
 use sqlx::{Executor, PgPool};
-use std::path::Path;
 use tempfile::TempDir;
 use tracing::info;
 use url::Url;
