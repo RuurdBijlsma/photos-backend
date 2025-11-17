@@ -37,8 +37,19 @@ pub async fn download_file_handler(
     else {
         return Err(S2SError::NotFound("File does not exist in db".to_owned()));
     };
-    validate_token_for_media_item(&context.pool, token, &context.settings.secrets.jwt, &media_item_id).await?;
-    let file_path = get_media_item_path(&context.pool, &context.settings.ingestion.media_folder, &media_item_id).await?;
+    validate_token_for_media_item(
+        &context.pool,
+        token,
+        &context.settings.secrets.jwt,
+        &media_item_id,
+    )
+    .await?;
+    let file_path = get_media_item_path(
+        &context.pool,
+        &context.settings.ingest.media_folder,
+        &media_item_id,
+    )
+    .await?;
     let file_name = file_path
         .file_name()
         .unwrap_or_default()

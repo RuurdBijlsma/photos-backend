@@ -1,10 +1,10 @@
 use crate::context::WorkerContext;
-use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::handlers::JobResult;
+use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::jobs::management::is_job_cancelled;
 use std::path::Path;
 
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{Result, eyre::eyre};
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
@@ -85,8 +85,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_id = job
         .user_id
         .ok_or_else(|| eyre!("Ingest job has no associated user_id"))?;
-    let media_root = &context.settings.ingestion.media_folder;
-    let thumbnail_root = &context.settings.ingestion.thumbnail_folder;
+    let media_root = &context.settings.ingest.media_folder;
+    let thumbnail_root = &context.settings.ingest.thumbnail_folder;
     let file_path = media_root.join(relative_path);
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
@@ -99,7 +99,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let media_item_id = nice_id(constants().database.media_item_id_length);
 
     generate_thumbnails(
-        &context.settings.ingestion,
+        &context.settings.ingest,
         &file_path,
         &thumbnail_root.join(&media_item_id),
         media_info.metadata.orientation,

@@ -15,7 +15,6 @@ use url::Url;
 
 /// Parses an invite token to extract the claims, including the remote server URL.
 pub fn extract_token_claims(token: &str, jwt_secret: &str) -> Result<AlbumShareClaims> {
-    println!("TOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKEN {}", jwt_secret);
     decode::<AlbumShareClaims>(
         token,
         &DecodingKey::from_secret(jwt_secret.as_ref()),
@@ -37,7 +36,11 @@ impl S2SClient {
     }
 
     /// Fetches the summary of a shared album from a remote server using an invite token.
-    pub async fn get_album_invite_summary(&self, token: &str, jwt_secret: &str) -> Result<AlbumSummary> {
+    pub async fn get_album_invite_summary(
+        &self,
+        token: &str,
+        jwt_secret: &str,
+    ) -> Result<AlbumSummary> {
         let claims = extract_token_claims(token, jwt_secret)?;
         let remote_url = {
             let mut url: Url = claims.iss.parse()?;
@@ -66,7 +69,7 @@ impl S2SClient {
     pub async fn download_remote_file(
         &self,
         token: &str,
-        jwt_secret:&str,
+        jwt_secret: &str,
         remote_relative_path: &str,
         destination: &Path,
     ) -> Result<()> {

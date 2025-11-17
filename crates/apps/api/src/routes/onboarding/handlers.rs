@@ -1,7 +1,7 @@
 //! This module defines the HTTP handlers for the initial application onboarding process.
 
 use crate::api_state::ApiContext;
-use app_state::IngestionSettings;
+use app_state::IngestSettings;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
@@ -26,7 +26,7 @@ use common_services::database::app_user::User;
     )
 )]
 pub async fn get_disk_response(
-    State(ingestion): State<IngestionSettings>,
+    State(ingestion): State<IngestSettings>,
 ) -> Result<Json<DiskResponse>, OnboardingError> {
     let disk_info = get_disk_info(&ingestion.media_folder, &ingestion.thumbnail_folder)?;
     Ok(Json(disk_info))
@@ -45,7 +45,7 @@ pub async fn get_disk_response(
     )
 )]
 pub async fn get_folder_media_sample(
-    State(ingestion): State<IngestionSettings>,
+    State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<MediaSampleResponse>, OnboardingError> {
     let user_path = validate_user_folder(&ingestion.media_folder, &query.folder).await?;
@@ -66,7 +66,7 @@ pub async fn get_folder_media_sample(
     )
 )]
 pub async fn get_folder_unsupported(
-    State(ingestion): State<IngestionSettings>,
+    State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<UnsupportedFilesResponse>, OnboardingError> {
     let user_path = validate_user_folder(&ingestion.media_folder, &query.folder).await?;
@@ -87,7 +87,7 @@ pub async fn get_folder_unsupported(
     )
 )]
 pub async fn get_folders(
-    State(ingestion): State<IngestionSettings>,
+    State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<Vec<String>>, OnboardingError> {
     let folders = get_subfolders(&ingestion, &query.folder).await?;
@@ -105,7 +105,7 @@ pub async fn get_folders(
     )
 )]
 pub async fn make_folder(
-    State(ingestion): State<IngestionSettings>,
+    State(ingestion): State<IngestSettings>,
     Json(params): Json<MakeFolderBody>,
 ) -> Result<StatusCode, OnboardingError> {
     create_folder(

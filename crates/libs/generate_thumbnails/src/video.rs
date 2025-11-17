@@ -1,8 +1,8 @@
-use crate::ffmpeg::{get_video_duration, FfmpegCommand};
+use crate::ffmpeg::{FfmpegCommand, get_video_duration};
+use app_state::ThumbnailSettings;
 use color_eyre::eyre::Result;
 use std::path::Path;
 use tokio::fs;
-use app_state::ThumbnailSettings;
 
 pub async fn generate_video_thumbnails(
     input: &Path,

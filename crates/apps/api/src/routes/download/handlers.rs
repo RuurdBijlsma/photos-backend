@@ -1,9 +1,9 @@
 //! This module provides the HTTP handler for downloading media files.
 
+use app_state::IngestSettings;
 use axum::Extension;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use app_state::IngestionSettings;
 use common_services::api::download::error::DownloadError;
 use common_services::api::download::interfaces::DownloadMediaParams;
 use common_services::api::download::service::download_media_file;
@@ -34,7 +34,7 @@ use common_services::database::app_user::User;
     )
 )]
 pub async fn download_full_file(
-    State(ingestion): State<IngestionSettings>,
+    State(ingestion): State<IngestSettings>,
     Extension(user): Extension<User>,
     Query(query): Query<DownloadMediaParams>,
 ) -> Result<impl IntoResponse, DownloadError> {

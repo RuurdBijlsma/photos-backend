@@ -1,9 +1,9 @@
 use crate::VisualAnalyzer;
+use common_types::variant::Variant;
 use serde_json::Value;
 use std::io;
 use std::path::Path;
 use tokio::process::Command;
-use common_types::variant::Variant;
 
 /// Use ffmpeg to convert a photo or video.
 pub async fn convert_media_file(input_path: &Path, output_path: &Path) -> io::Result<()> {
@@ -23,7 +23,11 @@ pub async fn convert_media_file(input_path: &Path, output_path: &Path) -> io::Re
 }
 
 /// Generate material color theme from a color.
-pub fn get_color_theme(color: &str, variant: &Variant, contrast_level: f32) -> color_eyre::Result<Value> {
+pub fn get_color_theme(
+    color: &str,
+    variant: &Variant,
+    contrast_level: f32,
+) -> color_eyre::Result<Value> {
     let visual_analyzer = VisualAnalyzer::new()?;
     let theme = visual_analyzer.theme_from_color(color, variant, contrast_level)?;
     Ok(theme)

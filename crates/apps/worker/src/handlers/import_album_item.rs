@@ -15,8 +15,8 @@ use std::slice;
 use tokio::fs;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
-    let media_root = &context.settings.ingestion.media_folder;
-    
+    let media_root = &context.settings.ingest.media_folder;
+
     let payload_value = job
         .payload
         .as_ref()
@@ -46,7 +46,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .next_back()
         .ok_or_else(|| eyre!("Invalid relative path supplied."))?;
     let full_save_path = full_save_dir.join(filename);
-    let relative_path = context.settings.ingestion.relative_path(&full_save_path)?;
+    let relative_path = context.settings.ingest.relative_path(&full_save_path)?;
     fs::create_dir_all(&full_save_dir).await?;
 
     // Check if file already exists before downloading.

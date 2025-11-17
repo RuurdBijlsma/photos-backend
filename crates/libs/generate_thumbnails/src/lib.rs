@@ -34,11 +34,11 @@ mod photo;
 mod utils;
 mod video;
 
-use color_eyre::eyre::bail;
+use app_state::IngestSettings;
 use color_eyre::Result;
+use color_eyre::eyre::bail;
 use std::path::Path;
 use temp_dir::TempDir;
-use app_state::IngestionSettings;
 
 /// Generates thumbnails for a given media file (image or video) based on the provided configuration.
 ///
@@ -56,7 +56,7 @@ use app_state::IngestionSettings;
 ///
 /// Returns an error if paths are invalid, `FFmpeg` commands fail, or file I/O operations fail.
 pub async fn generate_thumbnails(
-    ingestion: &IngestionSettings,
+    ingestion: &IngestSettings,
     file: &Path,
     thumb_sub_folder: &Path,
     orientation: Option<u64>,
@@ -68,7 +68,7 @@ pub async fn generate_thumbnails(
     else {
         bail!("Thumbnail subfolder must have a subfolder name");
     };
-    
+
     if ingestion.thumbnails.recreate_if_exists && ingestion.thumbs_exist(file, &sub_folder_name)? {
         return Ok(());
     }

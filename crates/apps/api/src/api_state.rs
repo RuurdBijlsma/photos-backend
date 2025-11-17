@@ -1,7 +1,7 @@
+use app_state::{AppSettings, IngestSettings};
 use axum::extract::FromRef;
 use common_services::s2s_client::S2SClient;
 use sqlx::PgPool;
-use app_state::{AppSettings, IngestionSettings};
 
 #[derive(Clone)]
 pub struct ApiContext {
@@ -30,8 +30,8 @@ impl FromRef<ApiContext> for AppSettings {
     }
 }
 
-impl FromRef<ApiContext> for IngestionSettings {
+impl FromRef<ApiContext> for IngestSettings {
     fn from_ref(state: &ApiContext) -> Self {
-        state.settings.ingestion.clone()
+        state.settings.ingest.clone()
     }
 }

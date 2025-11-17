@@ -1,7 +1,7 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{Result, eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
@@ -17,14 +17,19 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(relative_path) = &job.relative_path else {
         return Err(eyre!("Ingest job has no associated relative_path"));
     };
-    let media_root = &context.settings.ingestion.media_folder;
-    let thumbnail_root = &context.settings.ingestion.thumbnail_folder;
+    let media_root = &context.settings.ingest.media_folder;
+    let thumbnail_root = &context.settings.ingest.thumbnail_folder;
     let file_path = media_root.join(relative_path);
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
 
-    if !context.settings.ingestion.file_is_ingested(&context.pool,&file_path).await? {
+    if !context
+        .settings
+        .ingest
+        .file_is_ingested(&context.pool, &file_path)
+        .await?
+    {
         info!(
             "File {} is not ingested yet, rescheduling analysis.",
             &relative_path
@@ -40,17 +45,21 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     };
     let thumb_dir = thumbnail_root.join(&media_item_id);
 
-    let images_to_analyze = if context.settings.ingestion.is_photo_file(&file_path) {
-        let max_thumb = context.settings
-            .ingestion.thumbnails
+    let images_to_analyze = if context.settings.ingest.is_photo_file(&file_path) {
+        let max_thumb = context
+            .settings
+            .ingest
+            .thumbnails
             .heights
             .iter()
             .max()
             .ok_or_else(|| eyre!("Cannot find max thumbnail size"))?;
         vec![(0, thumb_dir.join(format!("{max_thumb}p.avif")))]
     } else {
-        context.settings
-            .ingestion.thumbnails
+        context
+            .settings
+            .ingest
+            .thumbnails
             .video_options
             .percentages
             .iter()
@@ -68,7 +77,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         analyses.push(
             context
                 .visual_analyzer
-                .analyze_image(&context.settings.ingestion.analyzer, &image_path, percentage)
+                .analyze_image(&context.settings.ingest.analyzer, &image_path, percentage)
                 .await?,
         );
     }

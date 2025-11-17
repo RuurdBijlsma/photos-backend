@@ -9,6 +9,7 @@
 use color_eyre::eyre::Result;
 
 use ab_glyph::FontArc;
+use app_state::{load_app_settings, to_posix_string};
 use common_services::database::get_db_pool;
 use common_services::database::visual_analysis::face::FaceEmbedding;
 use image::{Rgb, RgbImage};
@@ -19,7 +20,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use tracing::info;
-use app_state::{load_app_settings, to_posix_string};
 use worker::handlers::common::clustering::{group_by_cluster, run_hdbscan};
 
 // A new struct to hold more comprehensive face details for drawing
@@ -133,8 +133,12 @@ async fn main() -> Result<()> {
                 .iter()
                 .find(|f| f.id == face_embedding.id)
                 .unwrap();
-            let original_image_path =
-                to_posix_string(&settings.ingestion.media_folder.join(&face_details.relative_path));
+            let original_image_path = to_posix_string(
+                &settings
+                    .ingest
+                    .media_folder
+                    .join(&face_details.relative_path),
+            );
 
             // Load the image if it's not already in our map
             let (image, _annotations) = images_to_draw

@@ -6,13 +6,13 @@ use crate::database::album_store::AlbumStore;
 use crate::database::app_user::get_user_by_email;
 use crate::database::jobs::JobType;
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::{extract_token_claims, S2SClient};
+use crate::s2s_client::{S2SClient, extract_token_claims};
 use crate::utils::nice_id;
-use app_state::{constants, AppSettings};
+use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
 

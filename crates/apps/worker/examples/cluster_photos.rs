@@ -1,3 +1,4 @@
+use app_state::load_app_settings;
 use color_eyre::Result;
 use color_eyre::eyre::{Context, eyre};
 use common_services::database::get_db_pool;
@@ -7,7 +8,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
-use app_state::load_app_settings;
 use worker::handlers::common::clustering::run_hdbscan;
 
 /// A simple struct to hold the necessary data for clustering and file operations.
@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
         );
 
         for photo in photos_in_cluster {
-            let source_path = &settings.ingestion.media_folder.join(&photo.relative_path);
+            let source_path = &settings.ingest.media_folder.join(&photo.relative_path);
 
             let file_name = Path::new(&photo.relative_path)
                 .file_name()
@@ -107,7 +107,7 @@ async fn main() -> Result<()> {
             let dest_path = cluster_path.join(file_name);
 
             // Copy the file. This is cross-platform but uses more disk space than symlinks.
-            if let Err(e) = fs::copy(&source_path, &dest_path) {
+            if let Err(e) = fs::copy(source_path, &dest_path) {
                 error!(
                     "Warning: Could not copy file from {:?} to {:?}: {}. Skipping.",
                     source_path, dest_path, e

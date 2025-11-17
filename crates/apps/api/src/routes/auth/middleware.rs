@@ -2,7 +2,7 @@ use crate::api_state::ApiContext;
 use axum::{
     body::Body,
     extract::{FromRequestParts, State},
-    http::{header, request::Parts, Request},
+    http::{Request, header, request::Parts},
     middleware::Next,
     response::Response,
 };
@@ -10,7 +10,7 @@ use color_eyre::eyre::eyre;
 use common_services::api::auth::error::AuthError;
 use common_services::api::auth::interfaces::AuthClaims;
 use common_services::database::app_user::{User, UserRole};
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use sqlx::PgPool;
 
 #[derive(Clone, Debug)]
@@ -37,7 +37,7 @@ fn extract_token(parts: &Parts) -> Result<String, AuthError> {
 
     auth_header
         .strip_prefix("Bearer ")
-        .map(|s| s.to_owned())
+        .map(ToOwned::to_owned)
         .ok_or(AuthError::InvalidToken)
 }
 

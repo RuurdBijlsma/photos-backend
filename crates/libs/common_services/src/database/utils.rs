@@ -1,8 +1,8 @@
+use app_state::constants;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use std::time::Duration;
 use tracing::info;
-use app_state::constants;
 
 /// Run migrations and get a database connection pool.
 /// # Errors

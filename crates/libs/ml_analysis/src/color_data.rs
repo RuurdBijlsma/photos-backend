@@ -1,9 +1,9 @@
 use crate::PyInterop;
 use common_types::ml_analysis::{PyColorData, PyColorHistogram, PyRGBChannels};
+use common_types::variant::Variant;
 use image::Rgb;
 use palette::{FromColor, Hsv, Srgb};
 use std::path::Path;
-use common_types::variant::Variant;
 
 fn average_hue_from_sums(x_sum: f32, y_sum: f32) -> f32 {
     let mut avg = y_sum.atan2(x_sum).to_degrees();

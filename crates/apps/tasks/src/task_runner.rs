@@ -1,4 +1,4 @@
-use app_state::{load_app_settings};
+use app_state::load_app_settings;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::database::jobs::JobType;
@@ -16,8 +16,12 @@ pub async fn run_tasks() -> Result<()> {
     //         let result: Result<()> = async {
     let settings = load_app_settings()?;
     let pool = get_db_pool(&settings.secrets.database_url).await?;
-    enqueue_job::<()>(&pool, &settings, JobType::Scan).call().await?;
-    enqueue_job::<()>(&pool, &settings, JobType::CleanDB).call().await?;
+    enqueue_job::<()>(&pool, &settings, JobType::Scan)
+        .call()
+        .await?;
+    enqueue_job::<()>(&pool, &settings, JobType::CleanDB)
+        .call()
+        .await?;
     enqueue_job::<()>(&pool, &settings, JobType::ClusterPhotos)
         .call()
         .await?;

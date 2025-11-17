@@ -1,7 +1,7 @@
 use crate::context::WorkerContext;
 use crate::handlers::handle_job;
 use crate::jobs::management::{claim_next_job, update_job_on_completion, update_job_on_failure};
-use app_state::{load_app_settings};
+use app_state::load_app_settings;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::utils::nice_id;

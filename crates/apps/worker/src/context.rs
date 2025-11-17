@@ -1,4 +1,4 @@
-use app_state::{AppSettings};
+use app_state::AppSettings;
 use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
 use media_analyzer::MediaAnalyzer;

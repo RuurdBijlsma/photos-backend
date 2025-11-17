@@ -1,10 +1,10 @@
 use crate::database::DbError;
 use chrono::{DateTime, Utc};
+use color_eyre::eyre::Result;
 use serde::{Deserialize, Serialize};
 use sqlx::{Executor, FromRow, Postgres};
 use std::fmt;
 use utoipa::ToSchema;
-use color_eyre::eyre::Result;
 
 pub async fn get_user_by_email(
     executor: impl Executor<'_, Database = Postgres>,

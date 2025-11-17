@@ -1,13 +1,15 @@
-use crate::{to_posix_string, ApiSettings, IngestionSettings, LoggingSettings, RawSettings, SecretSettings};
+use crate::{
+    ApiSettings, IngestSettings, LoggingSettings, RawSettings, SecretSettings, to_posix_string,
+};
 use color_eyre::Result;
 use serde::Deserialize;
 use sqlx::{Executor, Postgres};
 use std::fs::canonicalize;
-use std::path::{absolute, Path};
+use std::path::{Path, absolute};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppSettings {
-    pub ingestion: IngestionSettings,
+    pub ingest: IngestSettings,
     pub logging: LoggingSettings,
     pub api: ApiSettings,
     pub secrets: SecretSettings,
@@ -16,18 +18,18 @@ pub struct AppSettings {
 impl From<RawSettings> for AppSettings {
     fn from(raw: RawSettings) -> Self {
         let thumbnails_root =
-            absolute(&raw.ingestion.thumbnail_folder).expect("Invalid thumbnail_folder");
-        let media_root = absolute(&raw.ingestion.media_folder).expect("Invalid media_folder");
-        let ingestion = IngestionSettings {
+            absolute(&raw.ingest.thumbnail_folder).expect("Invalid thumbnail_folder");
+        let media_root = absolute(&raw.ingest.media_folder).expect("Invalid media_folder");
+        let ingest = IngestSettings {
             media_folder: media_root,
             thumbnail_folder: thumbnails_root,
-            analyzer: raw.ingestion.analyzer,
-            file_detection: raw.ingestion.file_detection,
-            thumbnails: raw.ingestion.thumbnails,
+            analyzer: raw.ingest.analyzer,
+            file_detection: raw.ingest.file_detection,
+            thumbnails: raw.ingest.thumbnails,
         };
 
         Self {
-            ingestion,
+            ingest,
             logging: raw.logging,
             api: raw.api,
             secrets: raw.secrets,
@@ -35,7 +37,7 @@ impl From<RawSettings> for AppSettings {
     }
 }
 
-impl IngestionSettings {
+impl IngestSettings {
     // stuff that needs multiple settings (otherwise just make it a standalone function).
 
     #[must_use]

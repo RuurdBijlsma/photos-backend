@@ -1,5 +1,5 @@
 use crate::api_state::ApiContext;
-use app_state::IngestionSettings;
+use app_state::IngestSettings;
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
@@ -181,7 +181,7 @@ pub async fn get_random_photo(
     security(("bearer_auth" = []))
 )]
 pub async fn get_color_theme_handler(
-    State(ingestion): State<IngestionSettings>,
+    State(ingestion): State<IngestSettings>,
     Query(params): Query<ColorThemeParams>,
 ) -> Result<Json<Value>, PhotosError> {
     let variant = &ingestion.analyzer.theme_generation.variant;

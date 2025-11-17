@@ -1,6 +1,6 @@
-use std::convert::Infallible;
 use pyo3::{Bound, IntoPyObject, IntoPyObjectExt, PyAny, Python};
 use serde::{Deserialize, Serialize};
+use std::convert::Infallible;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]

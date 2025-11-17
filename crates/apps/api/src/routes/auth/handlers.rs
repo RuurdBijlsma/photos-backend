@@ -31,7 +31,8 @@ pub async fn login(
     Json(payload): Json<LoginUser>,
 ) -> Result<Json<Tokens>, AuthError> {
     let user = authenticate_user(&context.pool, &payload.email, &payload.password).await?;
-    let (access_token, expiry) = create_access_token(&context.settings.secrets.jwt, user.id, user.role)?;
+    let (access_token, expiry) =
+        create_access_token(&context.settings.secrets.jwt, user.id, user.role)?;
     let token_parts = generate_refresh_token_parts()?;
     store_refresh_token(&context.pool, user.id, &token_parts).await?;
 
@@ -83,7 +84,12 @@ pub async fn refresh_session(
     State(context): State<ApiContext>,
     Json(payload): Json<RefreshTokenPayload>,
 ) -> Result<Json<Tokens>, AuthError> {
-    refresh_tokens(&context.pool,&context.settings.secrets.jwt, &payload.refresh_token).await
+    refresh_tokens(
+        &context.pool,
+        &context.settings.secrets.jwt,
+        &payload.refresh_token,
+    )
+    .await
 }
 
 /// Handles user logout by invalidating the provided refresh token.

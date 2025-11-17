@@ -1,4 +1,5 @@
 use crate::ffmpeg::FfmpegCommand;
+use app_state::ThumbnailSettings;
 use color_eyre::eyre::{Result, eyre};
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};
@@ -10,7 +11,6 @@ use rgb::RGBA;
 use std::fs;
 use std::num::NonZeroU32;
 use std::path::Path;
-use app_state::ThumbnailSettings;
 
 /// Generates photo thumbnails using a native Rust image processing library.
 /// This is optimized for AVIF output and supports EXIF orientation correction.

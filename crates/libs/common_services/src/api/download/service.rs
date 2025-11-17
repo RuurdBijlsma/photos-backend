@@ -1,8 +1,9 @@
 use crate::api::download::error::DownloadError;
 use crate::database::app_user::{User, UserRole};
+use app_state::IngestSettings;
 use axum::{
     body::Body,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
 };
 use color_eyre::Report;
 use http::Response;
@@ -10,7 +11,6 @@ use std::path::Path;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
-use app_state::IngestionSettings;
 
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///
@@ -20,7 +20,7 @@ use app_state::IngestionSettings;
 /// the file is not found, the media type is unsupported, or if any file system
 /// or response building error occurs.
 pub async fn download_media_file(
-    ingestion: &IngestionSettings,
+    ingestion: &IngestSettings,
     user: &User,
     path: &str,
 ) -> Result<Response<Body>, DownloadError> {
@@ -50,7 +50,7 @@ pub async fn download_media_file(
     }
 
     // --- 2. Authorization ---
-    let relative_path =ingestion.canon_relative_path(&file_canon)?;
+    let relative_path = ingestion.canon_relative_path(&file_canon)?;
     if user.role != UserRole::Admin {
         let Some(user_media_folder) = &user.media_folder else {
             warn!(

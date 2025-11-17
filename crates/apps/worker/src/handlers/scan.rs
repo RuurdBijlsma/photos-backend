@@ -1,13 +1,13 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use app_state::{AppSettings};
-use color_eyre::eyre::eyre;
+use app_state::AppSettings;
 use color_eyre::eyre::Result;
+use color_eyre::eyre::eyre;
 use common_services::alert;
 use common_services::database::app_user::user_from_relative_path;
 use common_services::database::jobs::{Job, JobType};
 use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
-use sqlx::{PgPool};
+use sqlx::PgPool;
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
@@ -48,7 +48,7 @@ pub async fn sync_user_files_to_db(
     user_folder: &Path,
     user_id: i32,
 ) -> Result<()> {
-    let detection = &settings.ingestion.file_detection;
+    let detection = &settings.ingest.file_detection;
     let allowed: HashSet<_> = detection
         .photo_extensions
         .iter()
@@ -59,7 +59,7 @@ pub async fn sync_user_files_to_db(
     let all_files = get_media_files(user_folder, &allowed);
     let fs_paths: HashSet<String> = all_files
         .into_iter()
-        .flat_map(|p| settings.ingestion.relative_path(&p))
+        .flat_map(|p| settings.ingest.relative_path(&p))
         .collect();
 
     let db_paths: HashSet<String> = sqlx::query_scalar!(
@@ -128,8 +128,8 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
         return Ok(()); // skip if ingest jobs are pending
     }
 
-    let thumbnails_root = &settings.ingestion.thumbnail_folder;
-    let media_root = &settings.ingestion.media_folder;
+    let thumbnails_root = &settings.ingest.thumbnail_folder;
+    let media_root = &settings.ingest.media_folder;
 
     let (thumb_ids, db_ids) = tokio::try_join!(get_thumbnail_folders(thumbnails_root), async {
         let rows: Vec<String> = sqlx::query_scalar!("SELECT id FROM media_item")
@@ -183,7 +183,7 @@ pub async fn run_scan(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     )
     .fetch_all(pool)
     .await?;
-    let media_root = &settings.ingestion.media_folder;
+    let media_root = &settings.ingest.media_folder;
     info!("Scanning \"{}\" ...", &media_root.display());
     for user in users {
         let Some(media_folder) = user.media_folder else {

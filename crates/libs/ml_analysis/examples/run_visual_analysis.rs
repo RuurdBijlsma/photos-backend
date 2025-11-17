@@ -1,8 +1,8 @@
+use app_state::load_app_settings;
 use ml_analysis::{ChatMessage, ChatRole, VisualAnalyzer};
 use std::fs::File;
 use std::path::Path;
 use std::time::Instant;
-use app_state::load_app_settings;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -28,7 +28,7 @@ async fn main() -> color_eyre::Result<()> {
         println!("analyze image {image_filename}");
         let now = Instant::now();
         let analysis = analyzer
-            .analyze_image(&settings.ingestion.analyzer, image, 0)
+            .analyze_image(&settings.ingest.analyzer, image, 0)
             .await?;
         let filename = format!("{image_filename}-analysis.json");
         let file = File::create(Path::new(&filename))?;

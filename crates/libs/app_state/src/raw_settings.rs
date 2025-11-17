@@ -1,11 +1,11 @@
+use common_types::variant::Variant;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use common_types::variant::Variant;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct RawSettings {
     /// Folder with source photos and video
-    pub ingestion: IngestionSettings,
+    pub ingest: IngestSettings,
     pub logging: LoggingSettings,
     pub api: ApiSettings,
     pub secrets: SecretSettings,
@@ -14,7 +14,7 @@ pub struct RawSettings {
 
 /// Defines paths for media and thumbnail storage.
 #[derive(Debug, Deserialize, Clone)]
-pub struct IngestionSettings {
+pub struct IngestSettings {
     pub media_folder: PathBuf,
     pub thumbnail_folder: PathBuf,
     pub analyzer: AnalyzerSettings,

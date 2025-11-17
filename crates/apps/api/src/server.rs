@@ -10,11 +10,12 @@
 
 use crate::api_state::ApiContext;
 use crate::create_router;
+use app_state::load_app_settings;
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::s2s_client::S2SClient;
-use http::{header, HeaderValue};
+use http::{HeaderValue, header};
 use reqwest::Client;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
@@ -22,7 +23,6 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tracing::{error, info};
-use app_state::load_app_settings;
 
 pub async fn serve() -> Result<()> {
     // --- Server Startup ---
@@ -36,7 +36,8 @@ pub async fn serve() -> Result<()> {
     };
 
     // --- CORS Configuration ---
-    let allowed_origins: Vec<HeaderValue> = settings.api
+    let allowed_origins: Vec<HeaderValue> = settings
+        .api
         .allowed_origins
         .iter()
         .filter_map(|s| match s.parse() {

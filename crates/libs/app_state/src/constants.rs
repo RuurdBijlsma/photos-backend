@@ -1,6 +1,6 @@
+use crate::{AuthConstants, DatabaseConstants, RawSettings};
 use chrono_tz::Tz;
 use serde::Deserialize;
-use crate::{AuthConstants, DatabaseConstants, RawSettings};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConstants {
@@ -29,7 +29,7 @@ fn get_fallback_timezone(tz_string: &str) -> Option<Tz> {
     }
     let parsed_tz = tz_string
         .parse::<Tz>()
-        .expect(&format!("Invalid fallback timezone: {tz_string}"));
+        .unwrap_or_else(|_| panic!("Invalid fallback timezone: {tz_string}"));
 
     Some(parsed_tz)
 }

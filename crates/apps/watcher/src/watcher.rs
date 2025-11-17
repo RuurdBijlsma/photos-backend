@@ -1,11 +1,10 @@
 use crate::handlers::{handle_create, handle_remove};
-use app_state::{load_app_settings, AppSettings};
+use app_state::{AppSettings, load_app_settings};
 use color_eyre::eyre::Result;
 use common_services::alert;
 use common_services::database::get_db_pool;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::PgPool;
-use std::path::Path;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
@@ -36,11 +35,8 @@ async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
         Config::default(),
     )?;
 
-    watcher.watch(&settings.ingestion.media_folder, RecursiveMode::Recursive)?;
-    info!(
-        "👁️ Watcher started on: {:?}",
-        &settings.ingestion.media_folder
-    );
+    watcher.watch(&settings.ingest.media_folder, RecursiveMode::Recursive)?;
+    info!("👁️ Watcher started on: {:?}", &settings.ingest.media_folder);
 
     while let Some(result) = rx.recv().await {
         let pool = pool.clone();

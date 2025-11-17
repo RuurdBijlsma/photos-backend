@@ -1,13 +1,17 @@
-use std::path::Path;
 use crate::api::s2s::error::S2SError;
 use crate::database::album::album::AlbumSummary;
 use crate::s2s_client::extract_token_claims;
 use sqlx::PgPool;
+use std::path::Path;
 use tracing::instrument;
 
 /// Validates an invitation token and returns the summary of the album.
 #[instrument(skip(pool))]
-pub async fn get_invite_summary(pool: &PgPool, token: &str, jwt_secret: &str) -> Result<AlbumSummary, S2SError> {
+pub async fn get_invite_summary(
+    pool: &PgPool,
+    token: &str,
+    jwt_secret: &str,
+) -> Result<AlbumSummary, S2SError> {
     let claims = extract_token_claims(token, jwt_secret)?;
 
     let summary = sqlx::query_as!(
