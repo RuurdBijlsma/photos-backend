@@ -46,7 +46,7 @@ pub async fn download_file_handler(
     .await?;
     let file_path = get_media_item_path(
         &context.pool,
-        &context.settings.ingest.media_folder,
+        &context.settings.ingest.media_root,
         &media_item_id,
     )
     .await?;

@@ -13,6 +13,8 @@ pub trait MakeRelativePath {
     fn make_relative(&self, file: impl AsRef<Path>) -> Result<String>;
 
     /// Get the relative path string for a given file, using canonicalized media root and file.
+    ///
+    /// ⚠️ The media root has to be canonicalized already before calling this function.
     fn make_relative_canon(&self, file: impl AsRef<Path>) -> Result<String>;
 }
 
@@ -24,9 +26,8 @@ impl<P: AsRef<Path>> MakeRelativePath for P {
     }
 
     fn make_relative_canon(&self, file: impl AsRef<Path>) -> Result<String> {
-        let media_root_canon = canonicalize(self)?;
         let file_canon = canonicalize(file)?;
-        let relative_path = file_canon.strip_prefix(media_root_canon)?;
+        let relative_path = file_canon.strip_prefix(self)?;
         Ok(to_posix_string(relative_path))
     }
 }

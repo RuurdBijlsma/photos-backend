@@ -98,7 +98,7 @@ async fn main() -> Result<()> {
         );
 
         for photo in photos_in_cluster {
-            let source_path = &settings.ingest.media_folder.join(&photo.relative_path);
+            let source_path = &settings.ingest.media_root.join(&photo.relative_path);
 
             let file_name = Path::new(&photo.relative_path)
                 .file_name()

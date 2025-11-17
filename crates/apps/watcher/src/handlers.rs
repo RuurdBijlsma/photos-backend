@@ -52,7 +52,7 @@ async fn enqueue_file_job(
     path: &Path,
     job_type: JobType,
 ) -> color_eyre::Result<()> {
-    let relative_path = &path.make_relative(&settings.ingest.media_folder)?;
+    let relative_path = &path.make_relative(&settings.ingest.media_root)?;
     let Some(user) = user_from_relative_path(relative_path, pool).await? else {
         warn!(
             "Could not find user for path: {}. Cannot enqueue job.",
@@ -82,7 +82,7 @@ async fn handle_remove_folder(
     settings: &AppSettings,
     folder: &Path,
 ) -> color_eyre::Result<()> {
-    let relative_dir = folder.make_relative(&settings.ingest.media_folder)?;
+    let relative_dir = folder.make_relative(&settings.ingest.media_root)?;
     let pattern = format!("{relative_dir}%");
 
     let relative_paths = sqlx::query_scalar!(
@@ -101,7 +101,7 @@ async fn handle_remove_folder(
     }
 
     for path in relative_paths {
-        let absolute_path = settings.ingest.media_folder.join(path);
+        let absolute_path = settings.ingest.media_root.join(path);
         enqueue_file_job(pool, settings, &absolute_path, JobType::Remove).await?;
     }
 
@@ -114,7 +114,7 @@ async fn is_path_in_db(
     settings: &AppSettings,
     path: &Path,
 ) -> color_eyre::Result<bool> {
-    let relative_path = path.make_relative(&settings.ingest.media_folder)?;
+    let relative_path = path.make_relative(&settings.ingest.media_root)?;
     let exists = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (

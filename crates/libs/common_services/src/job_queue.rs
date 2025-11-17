@@ -32,7 +32,7 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
     let is_video = relative_path.as_ref().is_some_and(|p| {
         settings
             .ingest
-            .is_video_file(&settings.ingest.media_folder.join(p))
+            .is_video_file(&settings.ingest.media_root.join(p))
     });
     let priority = job_type.get_priority(is_video);
 

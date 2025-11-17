@@ -28,7 +28,7 @@ use common_services::database::app_user::User;
 pub async fn get_disk_response(
     State(ingestion): State<IngestSettings>,
 ) -> Result<Json<DiskResponse>, OnboardingError> {
-    let disk_info = get_disk_info(&ingestion.media_folder, &ingestion.thumbnail_folder)?;
+    let disk_info = get_disk_info(&ingestion.media_root, &ingestion.thumbnail_root)?;
     Ok(Json(disk_info))
 }
 
@@ -48,7 +48,7 @@ pub async fn get_folder_media_sample(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<MediaSampleResponse>, OnboardingError> {
-    let user_path = validate_user_folder(&ingestion.media_folder, &query.folder).await?;
+    let user_path = validate_user_folder(&ingestion.media_root, &query.folder).await?;
     let response = get_media_sample(&ingestion, &user_path)?;
     Ok(Json(response))
 }
@@ -69,7 +69,7 @@ pub async fn get_folder_unsupported(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<UnsupportedFilesResponse>, OnboardingError> {
-    let user_path = validate_user_folder(&ingestion.media_folder, &query.folder).await?;
+    let user_path = validate_user_folder(&ingestion.media_root, &query.folder).await?;
     let response = get_folder_unsupported_files(&ingestion, &user_path)?;
     Ok(Json(response))
 }
@@ -108,12 +108,7 @@ pub async fn make_folder(
     State(ingestion): State<IngestSettings>,
     Json(params): Json<MakeFolderBody>,
 ) -> Result<StatusCode, OnboardingError> {
-    create_folder(
-        &ingestion.media_folder,
-        &params.base_folder,
-        &params.new_name,
-    )
-    .await?;
+    create_folder(&ingestion.media_root, &params.base_folder, &params.new_name).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

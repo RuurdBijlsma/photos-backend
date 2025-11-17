@@ -20,7 +20,7 @@ pub fn load_app_settings() -> Result<AppSettings> {
     let raw_settings = builder.build()?.try_deserialize::<RawSettings>()?;
     let settings: AppSettings = raw_settings.into();
 
-    fs::create_dir_all(&settings.ingest.thumbnail_folder).expect("Cannot create thumbnails folder");
+    fs::create_dir_all(&settings.ingest.thumbnail_root).expect("Cannot create thumbnails folder");
 
     Ok(settings)
 }

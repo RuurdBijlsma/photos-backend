@@ -35,8 +35,8 @@ async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
         Config::default(),
     )?;
 
-    watcher.watch(&settings.ingest.media_folder, RecursiveMode::Recursive)?;
-    info!("👁️ Watcher started on: {:?}", &settings.ingest.media_folder);
+    watcher.watch(&settings.ingest.media_root, RecursiveMode::Recursive)?;
+    info!("👁️ Watcher started on: {:?}", &settings.ingest.media_root);
 
     while let Some(result) = rx.recv().await {
         let pool = pool.clone();

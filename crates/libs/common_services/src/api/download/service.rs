@@ -26,11 +26,11 @@ pub async fn download_media_file(
 ) -> Result<Response<Body>, DownloadError> {
     // --- 1. Security & Path Validation ---
     let media_dir_canon = ingestion
-        .media_folder
+        .media_root
         .canonicalize()
         .map_err(|e| Report::new(e).wrap_err("Failed to canonicalize media directory"))?;
 
-    let file_path = ingestion.media_folder.join(path);
+    let file_path = ingestion.media_root.join(path);
     let file_canon = match file_path.canonicalize() {
         Ok(path) => path,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -50,7 +50,7 @@ pub async fn download_media_file(
     }
 
     // --- 2. Authorization ---
-    let relative_path = file_canon.make_relative_canon(&ingestion.media_folder)?;
+    let relative_path = file_canon.make_relative_canon(&ingestion.media_root_canon)?;
     if user.role != UserRole::Admin {
         let Some(user_media_folder) = &user.media_folder else {
             warn!(

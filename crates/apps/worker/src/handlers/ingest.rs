@@ -85,8 +85,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_id = job
         .user_id
         .ok_or_else(|| eyre!("Ingest job has no associated user_id"))?;
-    let media_root = &context.settings.ingest.media_folder;
-    let thumbnail_root = &context.settings.ingest.thumbnail_folder;
+    let media_root = &context.settings.ingest.media_root;
+    let thumbnail_root = &context.settings.ingest.thumbnail_root;
     let file_path = media_root.join(relative_path);
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[derive(Debug, Deserialize, Clone)]
 pub struct RawSettings {
     /// Folder with source photos and video
-    pub ingest: IngestSettings,
+    pub ingest: RawIngestSettings,
     pub logging: LoggingSettings,
     pub api: ApiSettings,
     pub secrets: SecretSettings,
@@ -14,7 +14,7 @@ pub struct RawSettings {
 
 /// Defines paths for media and thumbnail storage.
 #[derive(Debug, Deserialize, Clone)]
-pub struct IngestSettings {
+pub struct RawIngestSettings {
     pub media_folder: PathBuf,
     pub thumbnail_folder: PathBuf,
     pub analyzer: AnalyzerSettings,

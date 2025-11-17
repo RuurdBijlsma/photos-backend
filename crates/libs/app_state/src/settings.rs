@@ -1,10 +1,12 @@
 use crate::{
-    ApiSettings, IngestSettings, LoggingSettings, MakeRelativePath, RawSettings, SecretSettings,
+    AnalyzerSettings, ApiSettings, FileDetectionSettings, LoggingSettings, MakeRelativePath,
+    RawSettings, SecretSettings, ThumbnailSettings,
 };
 use color_eyre::Result;
 use serde::Deserialize;
 use sqlx::{Executor, Postgres};
-use std::path::{Path, absolute};
+use std::fs::canonicalize;
+use std::path::{Path, PathBuf, absolute};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppSettings {
@@ -14,14 +16,28 @@ pub struct AppSettings {
     pub secrets: SecretSettings,
 }
 
+/// Defines paths for media and thumbnail storage.
+#[derive(Debug, Deserialize, Clone)]
+pub struct IngestSettings {
+    pub media_root: PathBuf,
+    pub media_root_canon: PathBuf,
+    pub thumbnail_root: PathBuf,
+    pub analyzer: AnalyzerSettings,
+    pub file_detection: FileDetectionSettings,
+    pub thumbnails: ThumbnailSettings,
+}
+
 impl From<RawSettings> for AppSettings {
     fn from(raw: RawSettings) -> Self {
-        let thumbnails_root =
+        let thumbnail_root =
             absolute(&raw.ingest.thumbnail_folder).expect("Invalid thumbnail_folder");
         let media_root = absolute(&raw.ingest.media_folder).expect("Invalid media_folder");
+        let media_root_canon =
+            canonicalize(&raw.ingest.media_folder).expect("Invalid media_folder");
         let ingest = IngestSettings {
-            media_folder: media_root,
-            thumbnail_folder: thumbnails_root,
+            media_root_canon,
+            media_root,
+            thumbnail_root,
             analyzer: raw.ingest.analyzer,
             file_detection: raw.ingest.file_detection,
             thumbnails: raw.ingest.thumbnails,
@@ -92,7 +108,7 @@ impl IngestSettings {
             }
         }
 
-        let thumb_dir = self.thumbnail_folder.join(thumb_sub_folder);
+        let thumb_dir = self.thumbnail_root.join(thumb_sub_folder);
         for thumb_filename in should_exist {
             let thumb_file_path = thumb_dir.join(thumb_filename.clone());
             if !thumb_file_path.exists() {
@@ -113,7 +129,7 @@ impl IngestSettings {
         file: &Path,
     ) -> Result<bool> {
         // Media item existence check:
-        let Ok(relative_path_str) = file.make_relative(&self.media_folder) else {
+        let Ok(relative_path_str) = file.make_relative(&self.media_root) else {
             return Ok(false);
         };
         let Ok(media_item_id) = sqlx::query_scalar!(

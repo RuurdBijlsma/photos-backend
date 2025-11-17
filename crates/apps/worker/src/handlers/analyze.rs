@@ -17,8 +17,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(relative_path) = &job.relative_path else {
         return Err(eyre!("Ingest job has no associated relative_path"));
     };
-    let media_root = &context.settings.ingest.media_folder;
-    let thumbnail_root = &context.settings.ingest.thumbnail_folder;
+    let media_root = &context.settings.ingest.media_root;
+    let thumbnail_root = &context.settings.ingest.thumbnail_root;
     let file_path = media_root.join(relative_path);
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);

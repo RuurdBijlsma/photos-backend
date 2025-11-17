@@ -134,12 +134,8 @@ async fn main() -> Result<()> {
                 .iter()
                 .find(|f| f.id == face_embedding.id)
                 .unwrap();
-            let original_image_path = to_posix_string(
-                &settings
-                    .ingest
-                    .media_folder
-                    .join(&face_details.relative_path),
-            );
+            let original_image_path =
+                to_posix_string(&settings.ingest.media_root.join(&face_details.relative_path));
 
             // Load the image if it's not already in our map
             let (image, _annotations) = images_to_draw

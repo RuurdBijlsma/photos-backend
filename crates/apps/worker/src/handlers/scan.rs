@@ -59,7 +59,7 @@ pub async fn sync_user_files_to_db(
     let all_files = get_media_files(user_folder, &allowed);
     let fs_paths: HashSet<String> = all_files
         .into_iter()
-        .flat_map(|p| p.make_relative(&settings.ingest.media_folder))
+        .flat_map(|p| p.make_relative(&settings.ingest.media_root))
         .collect();
 
     let db_paths: HashSet<String> = sqlx::query_scalar!(
@@ -128,8 +128,8 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
         return Ok(()); // skip if ingest jobs are pending
     }
 
-    let thumbnails_root = &settings.ingest.thumbnail_folder;
-    let media_root = &settings.ingest.media_folder;
+    let thumbnails_root = &settings.ingest.thumbnail_root;
+    let media_root = &settings.ingest.media_root;
 
     let (thumb_ids, db_ids) = tokio::try_join!(get_thumbnail_folders(thumbnails_root), async {
         let rows: Vec<String> = sqlx::query_scalar!("SELECT id FROM media_item")
@@ -183,7 +183,7 @@ pub async fn run_scan(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     )
     .fetch_all(pool)
     .await?;
-    let media_root = &settings.ingest.media_folder;
+    let media_root = &settings.ingest.media_root;
     info!("Scanning \"{}\" ...", &media_root.display());
     for user in users {
         let Some(media_folder) = user.media_folder else {
