@@ -1,5 +1,3 @@
-// crates/test_integration/src/main.rs
-
 extern crate core;
 
 use crate::test_context::TestContext;
@@ -24,6 +22,5 @@ async fn main() -> Result<()> {
     // Run our tests
     tests::run_all(&ctx).await?;
 
-    // The `ctx` will be dropped here, triggering the cleanup.
     Ok(())
 }
