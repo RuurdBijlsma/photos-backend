@@ -1,4 +1,4 @@
-use common_types::ml_analysis_types;
+use common_types::ml_analysis::PyCaptionData;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
@@ -34,8 +34,8 @@ pub struct CaptionData {
     pub activity_description: Option<String>,
 }
 
-impl From<ml_analysis_types::CaptionData> for CaptionData {
-    fn from(caption_data: ml_analysis_types::CaptionData) -> Self {
+impl From<PyCaptionData> for CaptionData {
+    fn from(caption_data: PyCaptionData) -> Self {
         Self {
             default_caption: Some(caption_data.default_caption),
             main_subject: Some(caption_data.main_subject),

@@ -1,11 +1,11 @@
-use common_types::ml_analysis_types::OCRBox;
+use common_types::ml_analysis::PyOCRBox;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`ocr_box`' table.
 #[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
-pub struct OcrBox {
+pub struct OCRBox {
     pub text: String,
     pub position_x: f32,
     pub position_y: f32,
@@ -14,8 +14,8 @@ pub struct OcrBox {
     pub confidence: f32,
 }
 /// Converts from the analysis result's `SourceOCRBox` to the database model `OcrBox`.
-impl From<OCRBox> for OcrBox {
-    fn from(box_data: OCRBox) -> Self {
+impl From<PyOCRBox> for OCRBox {
+    fn from(box_data: PyOCRBox) -> Self {
         Self {
             text: box_data.text,
             position_x: box_data.position.0,

@@ -26,7 +26,7 @@ pub enum PhotosError {
 fn log_error(error: &PhotosError) {
     match error {
         PhotosError::Database(e) => error!("Database query failed: {}", e),
-        PhotosError::Internal(e) => error!("Internal error: {:?}", e),
+        PhotosError::Internal(e) => error!("Internal error: {}", e),
         PhotosError::InvalidMonthFormat(month) => {
             error!("Invalid month format provided: {}", month);
         }

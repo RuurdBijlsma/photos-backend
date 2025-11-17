@@ -1,6 +1,6 @@
 use crate::PyInterop;
-use common_types::Variant;
-use common_types::ml_analysis_types::{ColorData, ColorHistogram, RGBChannels};
+use common_types::ml_analysis::{PyColorData, PyColorHistogram, PyRGBChannels};
+use common_types::variant::Variant;
 use image::Rgb;
 use palette::{FromColor, Hsv, Srgb};
 use std::path::Path;
@@ -23,7 +23,7 @@ pub fn get_color_data(
     file: &Path,
     theme_variant: &Variant,
     theme_contrast_level: f32,
-) -> color_eyre::Result<ColorData> {
+) -> color_eyre::Result<PyColorData> {
     let rgb_image = image::open(file)?.to_rgb8();
     let (width, height) = rgb_image.dimensions();
     let pixel_count = (width * height) as f32;
@@ -67,16 +67,16 @@ pub fn get_color_data(
         .map(|c| py_interop.get_theme_from_color(c, theme_variant, theme_contrast_level))
         .collect::<Result<Vec<_>, _>>()?;
 
-    let histogram = ColorHistogram {
+    let histogram = PyColorHistogram {
         bins: 256,
-        channels: RGBChannels {
+        channels: PyRGBChannels {
             red: hist_r.to_vec(),
             green: hist_g.to_vec(),
             blue: hist_b.to_vec(),
         },
     };
 
-    Ok(ColorData {
+    Ok(PyColorData {
         themes,
         prominent_colors,
         average_hue,

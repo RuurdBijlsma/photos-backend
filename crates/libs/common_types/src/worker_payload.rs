@@ -12,7 +12,7 @@ pub struct ImportAlbumPayload {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ImportAlbumItemPayload {
-    pub remote_media_item_id: String,
+    pub remote_relative_path: String,
     pub local_album_id: String,
     pub remote_username: String,
     pub remote_url: Url,

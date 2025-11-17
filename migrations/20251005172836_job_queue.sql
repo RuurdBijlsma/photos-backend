@@ -1,4 +1,4 @@
-CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'clean_db', 'cluster_faces', 'cluster_photos', 'import_album', 'import_album_item');
+CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'clean_db', 'cluster_faces', 'cluster_photos', 'import_album_item');
 CREATE TYPE job_status AS ENUM ('queued', 'running', 'failed', 'done', 'cancelled');
 
 CREATE TABLE jobs
@@ -21,6 +21,16 @@ CREATE TABLE jobs
     last_heartbeat      TIMESTAMPTZ         DEFAULT now(),
     last_error          TEXT
 );
+
+-- Prevent duplicate jobs that aren't finished yet.
+CREATE UNIQUE INDEX uq_jobs_active_job
+    ON jobs (
+             job_type,
+             coalesce(user_id, -1),
+             coalesce(md5(payload::text), ''),
+             coalesce(relative_path, '')
+        )
+    WHERE (status IN ('queued', 'running'));
 
 -- For the job claiming worker
 CREATE INDEX idx_jobs_claim_queued ON jobs (priority, relative_path, scheduled_at, created_at);

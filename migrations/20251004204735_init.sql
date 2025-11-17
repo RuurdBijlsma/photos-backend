@@ -117,7 +117,7 @@ CREATE TABLE weather
     is_daytime        BOOLEAN
 );
 
-CREATE TABLE details
+CREATE TABLE media_details
 (
     media_item_id                       VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
     mime_type                           TEXT    NOT NULL,

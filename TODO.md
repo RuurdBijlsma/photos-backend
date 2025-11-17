@@ -62,6 +62,23 @@
 * ✅ make invite check work with "localhost:9475" instead of "http://localhost:9475" and make it work with https. (it
   currently assumes http).
 * ✅ improve OCR
+* ✅ [BUG] scan enqueues duplicate jobs if the photo isn't processed yet.
+* ✅ [BUG] if album name for /albums/invite/accept is already a folder in media_dir/user_folder, then it doesn't work
+  properly.
+* ✅ rename details to media_details
+* ✅ rename setup to onboarding
+* ✅ don't allow start onboarding endpoint if onboarding is already done.
+* ✅ remove unused crates
+* ✅ If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
+* ✅ add remote_user_id as collaborator to album.
+* ✅ repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
+    * ✅ parse url stuff
+    * ✅ parse token maybe?
+    * ✅ share reqwest client via application state and worker context so it's not made every time.
+    * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
+    * ✅ get s2s invite summary
+    * ✅ make s2s client in common code somewhere, to call s2s endpoints.
+* ✅ pretty sure the watcher doesn't do anything if a folder is deleted.
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -69,18 +86,13 @@
     * ✅ Show photos in ui
     * ✅ only allow register if no user exists
     * ✅ frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
+    * ✅ add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
     * password reset flow (email) (make mail optional)
-    * add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
       db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
       user account)
     * axum-gate? crate voor axum auth
-* integration test
-    * auth
-    * "setup"
-    * ingest
-    * retrieve
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
@@ -113,21 +125,28 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
-    * ✅ parse url stuff
-    * ✅ parse token maybe?
-    * ✅ share reqwest client via application state and worker context so it's not made every time.
-    * ✅ Improve structure of common structs in common photos. (job_payloads.rs ofzo erbij?)
-    * get s2s invite summary
-    * make s2s client in common code somewhere, to call s2s endpoints.
-* rename setup to onboarding
-* [BUG] if album name for /albums/invite/accept is already a folder in media_dir/user_folder, then it doesn't work
-  properly.
-* remove unused crates
-* rename details to media_details
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
-* add remote_user_id as collaborator to album.
-* [BUG] scan enqueues duplicate jobs if the photo isn't processed yet.
+* rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at
+  how ml analysis ColorData is actually used)
+* [BUG] accept invite is broken.
+
+# integration test
+
+* Tests:
+    * auth
+    * onboarding
+    * ingest
+    * retrieve
+    * album
+    * cross server album
+* Create integration-tests crate:
+    * runs all binary crates in 1 binary, so tests can be run properly.
+    * have test specific database, that's fresh at start of test.
+    * have test folder for media items, make fresh before each test (tests/original_test_images copied to
+      tests/tmp_folder/media_dir before integration tests are run) The tmp folder can be deleted after tests.
+    * Thumbnails dir also for test in tmp folder.
+    * simulate user interactions by calling api with reqwest.
+    * check state after each interaction or after important interactions
 
 # Features
 

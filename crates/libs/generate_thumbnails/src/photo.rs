@@ -1,6 +1,6 @@
 use crate::ffmpeg::FfmpegCommand;
+use app_state::ThumbnailSettings;
 use color_eyre::eyre::{Result, eyre};
-use common_types::ThumbOptions;
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};
 use image::{ImageBuffer, ImageReader, Rgba};
@@ -17,7 +17,7 @@ use std::path::Path;
 pub fn generate_native_photo_thumbnails(
     input_path: &Path,
     output_dir: &Path,
-    config: &ThumbOptions,
+    config: &ThumbnailSettings,
     orientation: u64,
 ) -> Result<()> {
     fs::create_dir_all(output_dir)?;
@@ -109,7 +109,7 @@ pub fn generate_native_photo_thumbnails(
 pub async fn generate_ffmpeg_photo_thumbnails(
     input: &Path,
     output_dir: &Path,
-    config: &ThumbOptions,
+    config: &ThumbnailSettings,
 ) -> Result<()> {
     if config.heights.is_empty() {
         return Ok(());

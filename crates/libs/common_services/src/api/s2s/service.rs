@@ -1,40 +1,39 @@
-use crate::api::album::interfaces::AlbumShareClaims;
 use crate::api::s2s::error::S2SError;
 use crate::database::album::album::AlbumSummary;
-use crate::get_settings::{media_dir, settings};
-use jsonwebtoken::{DecodingKey, Validation, decode};
+use crate::s2s_client::extract_token_claims;
 use sqlx::PgPool;
+use std::path::Path;
 use tracing::instrument;
-
-fn extract_token_claims(token: &str) -> Result<AlbumShareClaims, S2SError> {
-    decode::<AlbumShareClaims>(
-        token,
-        &DecodingKey::from_secret(settings().auth.jwt_secret.as_ref()),
-        &Validation::default(),
-    )
-    .map(|p| p.claims)
-    .map_err(|_| S2SError::Unauthorized("Invalid token.".to_string()))
-}
 
 /// Validates an invitation token and returns the summary of the album.
 #[instrument(skip(pool))]
-pub async fn get_invite_summary(pool: &PgPool, token: &str) -> Result<AlbumSummary, S2SError> {
-    let claims = extract_token_claims(token)?;
+pub async fn get_invite_summary(
+    pool: &PgPool,
+    token: &str,
+    jwt_secret: &str,
+) -> Result<AlbumSummary, S2SError> {
+    let claims = extract_token_claims(token, jwt_secret)?;
 
-    let summary = sqlx::query_as!(AlbumSummary,
+    let summary = sqlx::query_as!(
+        AlbumSummary,
         r#"
         SELECT
             name,
             description,
-            (SELECT array_agg(ami.media_item_id) FROM album_media_item ami WHERE ami.album_id = $1) as "media_item_ids!"
+            (
+                SELECT array_agg(mi.relative_path) 
+                FROM album_media_item ami 
+                    JOIN media_item mi ON ami.media_item_id = mi.id 
+                WHERE ami.album_id = $1
+            ) as "relative_paths!"
         FROM album 
         WHERE album.id = $1
         "#,
         claims.sub
     )
-        .fetch_optional(pool)
-        .await?
-        .ok_or(S2SError::TokenInvalid)?;
+    .fetch_optional(pool)
+    .await?
+    .ok_or(S2SError::TokenInvalid)?;
     Ok(summary)
 }
 
@@ -44,9 +43,10 @@ pub async fn get_invite_summary(pool: &PgPool, token: &str) -> Result<AlbumSumma
 pub async fn validate_token_for_media_item(
     pool: &PgPool,
     token: &str,
+    jwt_secret: &str,
     media_item_id: &str,
 ) -> Result<String, S2SError> {
-    let claims = extract_token_claims(token)?;
+    let claims = extract_token_claims(token, jwt_secret)?;
 
     let album_id = sqlx::query_scalar!(
         r#"
@@ -68,6 +68,7 @@ pub async fn validate_token_for_media_item(
 #[instrument(skip(pool))]
 pub async fn get_media_item_path(
     pool: &PgPool,
+    media_root: &Path,
     media_item_id: &str,
 ) -> Result<std::path::PathBuf, S2SError> {
     let relative_path = sqlx::query_scalar!(
@@ -83,5 +84,5 @@ pub async fn get_media_item_path(
     .await?
     .ok_or_else(|| S2SError::NotFound(format!("Media item {media_item_id} not found.")))?;
 
-    Ok(media_dir().join(relative_path))
+    Ok(media_root.join(relative_path))
 }

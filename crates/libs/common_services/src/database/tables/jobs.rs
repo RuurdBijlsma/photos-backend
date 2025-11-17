@@ -25,7 +25,6 @@ pub enum JobType {
     CleanDB,
     ClusterFaces,
     ClusterPhotos,
-    ImportAlbum,
     ImportAlbumItem,
 }
 
@@ -52,8 +51,7 @@ impl JobType {
             Self::CleanDB => 20,
             Self::ClusterFaces => 30,
             Self::ClusterPhotos => 35,
-            Self::ImportAlbum => 25,
-            Self::ImportAlbumItem => 24,
+            Self::ImportAlbumItem => 25,
         }
     }
 }

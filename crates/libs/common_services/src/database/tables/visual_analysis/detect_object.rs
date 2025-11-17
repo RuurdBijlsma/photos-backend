@@ -1,4 +1,4 @@
-use common_types::ml_analysis_types::ObjectBox;
+use common_types::ml_analysis::PyDetectedObject;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
@@ -14,8 +14,8 @@ pub struct DetectedObject {
     pub label: String,
 }
 
-impl From<ObjectBox> for DetectedObject {
-    fn from(object_box: ObjectBox) -> Self {
+impl From<PyDetectedObject> for DetectedObject {
+    fn from(object_box: PyDetectedObject) -> Self {
         Self {
             position_x: object_box.position.0,
             position_y: object_box.position.1,

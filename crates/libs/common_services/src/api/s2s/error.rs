@@ -1,3 +1,4 @@
+use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -60,5 +61,14 @@ impl IntoResponse for S2SError {
 impl From<jsonwebtoken::errors::Error> for S2SError {
     fn from(err: jsonwebtoken::errors::Error) -> Self {
         Self::Internal(eyre::Report::new(err))
+    }
+}
+
+impl From<DbError> for S2SError {
+    fn from(err: DbError) -> Self {
+        match err {
+            DbError::Sqlx(sql_err) => Self::Database(sql_err),
+            DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
+        }
     }
 }

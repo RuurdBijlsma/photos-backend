@@ -1,8 +1,8 @@
 use crate::database::DbError;
 use crate::database::media_item::capture_details::CaptureDetails;
-use crate::database::media_item::details::Details;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
+use crate::database::media_item::media_details::MediaDetails;
 use crate::database::media_item::media_item::{
     CreateFullMediaItem, FullMediaItem, FullMediaItemRow,
 };
@@ -10,8 +10,9 @@ use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
-use crate::get_settings::fallback_timezone;
+use app_state::constants;
 use chrono::{TimeZone, Utc};
+use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
 
@@ -52,33 +53,30 @@ impl MediaItemStore {
         ocr_json AS (
             SELECT
                 o.visual_analysis_id,
-                jsonb_agg(
-                    jsonb_build_object(
-                        'id', o.id,
-                        'has_legible_text', o.has_legible_text,
-                        'ocr_text', o.ocr_text,
-                        'boxes', (
-                            SELECT COALESCE(
-                                jsonb_agg(
-                                    jsonb_build_object(
-                                        'id', b.id,
-                                        'text', b.text,
-                                        'position_x', b.position_x,
-                                        'position_y', b.position_y,
-                                        'width', b.width,
-                                        'height', b.height,
-                                        'confidence', b.confidence
-                                    )
-                                ),
-                                '[]'::jsonb
-                            )
-                            FROM ocr_box b
-                            WHERE b.ocr_data_id = o.id
+                jsonb_build_object(
+                    'id', o.id,
+                    'has_legible_text', o.has_legible_text,
+                    'ocr_text', o.ocr_text,
+                    'boxes', (
+                        SELECT COALESCE(
+                            jsonb_agg(
+                                jsonb_build_object(
+                                    'id', b.id,
+                                    'text', b.text,
+                                    'position_x', b.position_x,
+                                    'position_y', b.position_y,
+                                    'width', b.width,
+                                    'height', b.height,
+                                    'confidence', b.confidence
+                                )
+                            ),
+                            '[]'::jsonb
                         )
+                        FROM ocr_box b
+                        WHERE b.ocr_data_id = o.id
                     )
-                ) AS data
+                ) as data
             FROM ocr_data o
-            GROUP BY o.visual_analysis_id
         ),
 
         -- 2️⃣ Collect all visual analyses and nested data
@@ -89,6 +87,7 @@ impl MediaItemStore {
                     jsonb_build_object(
                         'id', va.id,
                         'created_at', va.created_at,
+                        'percentage', va.percentage,
                         'quality', (
                             SELECT to_jsonb(qd)
                             FROM quality_data qd WHERE qd.visual_analysis_id = va.id
@@ -113,7 +112,7 @@ impl MediaItemStore {
                                 '[]'::jsonb
                             ) FROM detected_object obj WHERE obj.visual_analysis_id = va.id
                         ),
-                        'ocr_data', COALESCE(ocr.data, '[]'::jsonb)
+                        'ocr_data', COALESCE(ocr.data, '{"has_legible_text": false, "boxes": []}'::jsonb)
                     )
                     ORDER BY va.created_at DESC
                 ) AS data
@@ -151,8 +150,8 @@ impl MediaItemStore {
             (SELECT to_jsonb(w) FROM weather w WHERE w.media_item_id = mi.id)
                 AS "weather: Json<Weather>",
 
-            (SELECT to_jsonb(d) FROM details d WHERE d.media_item_id = mi.id)
-                AS "details!: Json<Details>",
+            (SELECT to_jsonb(d) FROM media_details d WHERE d.media_item_id = mi.id)
+                AS "media_details!: Json<MediaDetails>",
 
             (SELECT to_jsonb(cd) FROM capture_details cd WHERE cd.media_item_id = mi.id)
                 AS "capture_details!: Json<CaptureDetails>",
@@ -182,15 +181,14 @@ impl MediaItemStore {
     #[allow(clippy::too_many_lines)]
     pub async fn create(
         tx: &mut PgTransaction<'_>,
-        media_item: &CreateFullMediaItem,
+        id: &str,
+        relative_path: &str,
+        user_id: i32,
         remote_user_id: Option<i32>,
-    ) -> Result<String, DbError> {
-        // todo: logic left out here:
-        // * delete if already exists
-        // * pending table stuff
-
+        media_item: &CreateFullMediaItem,
+    ) -> Result<(), DbError> {
         let sort_timestamp = media_item.taken_at_utc.unwrap_or_else(|| {
-            fallback_timezone().as_ref().map_or_else(
+            constants().fallback_timezone.as_ref().map_or_else(
                 || media_item.taken_at_local.and_utc(),
                 |tz| {
                     tz.from_local_datetime(&media_item.taken_at_local)
@@ -204,17 +202,17 @@ impl MediaItemStore {
         sqlx::query!(
             r#"
             INSERT INTO media_item (
-                id, hash, relative_path, user_id, remote_user_id, width, height,
+                id, relative_path, user_id, remote_user_id, hash, width, height,
                 is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp,
                 use_panorama_viewer
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             "#,
-            &media_item.id,
-            &media_item.hash,
-            &media_item.relative_path,
-            media_item.user_id,
+            id,
+            relative_path,
+            user_id,
             remote_user_id,
+            &media_item.hash,
             media_item.width,
             media_item.height,
             media_item.is_video,
@@ -236,7 +234,7 @@ impl MediaItemStore {
                 INSERT INTO gps (media_item_id, location_id, latitude, longitude, altitude, compass_direction)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
-                &media_item.id,
+                id,
                 location_id,
                 gps_info.latitude,
                 gps_info.longitude,
@@ -257,7 +255,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                 "#,
-                &media_item.id,
+                id,
                 weather_info.temperature,
                 weather_info.dew_point,
                 weather_info.relative_humidity,
@@ -287,7 +285,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
-            &media_item.id,
+            id,
             media_item.time_details.timezone_name,
             media_item.time_details.timezone_offset_seconds,
             media_item.time_details.timezone_source,
@@ -299,26 +297,26 @@ impl MediaItemStore {
 
         sqlx::query!(
             r#"
-                INSERT INTO details (
+                INSERT INTO media_details (
                     media_item_id, mime_type, size_bytes, is_motion_photo,
                     motion_photo_presentation_timestamp, is_hdr, is_burst, burst_id,
                     capture_fps, video_fps, is_nightsight, is_timelapse, exif
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 "#,
-            &media_item.id,
-            media_item.details.mime_type,
-            media_item.details.size_bytes,
-            media_item.details.is_motion_photo,
-            media_item.details.motion_photo_presentation_timestamp,
-            media_item.details.is_hdr,
-            media_item.details.is_burst,
-            media_item.details.burst_id,
-            media_item.details.capture_fps,
-            media_item.details.video_fps,
-            media_item.details.is_nightsight,
-            media_item.details.is_timelapse,
-            media_item.details.exif,
+            id,
+            media_item.media_details.mime_type,
+            media_item.media_details.size_bytes,
+            media_item.media_details.is_motion_photo,
+            media_item.media_details.motion_photo_presentation_timestamp,
+            media_item.media_details.is_hdr,
+            media_item.media_details.is_burst,
+            media_item.media_details.burst_id,
+            media_item.media_details.capture_fps,
+            media_item.media_details.video_fps,
+            media_item.media_details.is_nightsight,
+            media_item.media_details.is_timelapse,
+            media_item.media_details.exif,
         )
         .execute(&mut **tx)
         .await?;
@@ -330,7 +328,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 "#,
-                &media_item.id,
+                id,
                 media_item.capture_details.iso,
                 media_item.capture_details.exposure_time,
                 media_item.capture_details.aperture,
@@ -349,7 +347,7 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 "#,
-            &media_item.id,
+            id,
             media_item.panorama.is_photosphere,
             media_item.panorama.projection_type,
             media_item.panorama.horizontal_fov_deg,
@@ -360,7 +358,43 @@ impl MediaItemStore {
         .execute(&mut **tx)
         .await?;
 
-        Ok(media_item.id.clone())
+        Ok(())
+    }
+
+    /// Deletes a media item by its relative path and returns the ID of the deleted item.
+    /// Database cascade rules are expected to clean up related data.
+    pub async fn delete_by_relative_path(
+        executor: impl Executor<'_, Database = Postgres>,
+        relative_path: &str,
+    ) -> Result<Option<String>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            DELETE FROM media_item
+            WHERE relative_path = $1
+            RETURNING id
+            "#,
+            relative_path
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
+    pub async fn update_remote_user_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        id: &str,
+        remote_user_id: i32,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            r#"
+            UPDATE media_item
+            SET remote_user_id = $1
+            WHERE id = $2
+            "#,
+            remote_user_id,
+            id
+        )
+        .execute(executor)
+        .await?)
     }
 
     /// Retrieves an existing location's ID or creates a new one if it doesn't exist.

@@ -1,0 +1,15 @@
+[package]
+name = "test_integration"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+api = { path = "../apps/api" }
+tasks = { path = "../apps/tasks" }
+watcher = { path = "../apps/watcher" }
+worker = { path = "../apps/worker" }
+clap = { version = "4.5.51", features = ["derive"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.20"
+tokio = "1.48.0"
+color-eyre = "0.6.5"

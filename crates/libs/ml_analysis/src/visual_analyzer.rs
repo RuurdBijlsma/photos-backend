@@ -3,10 +3,10 @@ use crate::color_data::get_color_data;
 use crate::quality_data::get_quality_data;
 use crate::utils::convert_media_file;
 use crate::{ChatMessage, PyInterop};
+use app_state::AnalyzerSettings;
 use color_eyre::eyre::eyre;
-use common_services::get_settings::settings;
-use common_types::Variant;
-use common_types::ml_analysis_types::VisualImageData;
+use common_types::ml_analysis::PyVisualAnalysis;
+use common_types::variant::Variant;
 use pyo3::Python;
 use serde_json::Value;
 use std::path::Path;
@@ -63,9 +63,10 @@ impl VisualAnalyzer {
     /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
     pub async fn analyze_image(
         &self,
+        config: &AnalyzerSettings,
         file: &Path,
         percentage: i32,
-    ) -> color_eyre::Result<VisualImageData> {
+    ) -> color_eyre::Result<PyVisualAnalysis> {
         let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_string()) else {
             return Err(eyre!("Can't get extension from file"));
         };
@@ -78,13 +79,12 @@ impl VisualAnalyzer {
             analysis_file = temp_file.path().to_path_buf();
             convert_media_file(file, &analysis_file).await?;
         }
-        let analyzer_settings = &settings().analyzer;
 
         let color_data = get_color_data(
             &self.py_interop,
             &analysis_file,
-            &analyzer_settings.theme_generation.variant,
-            analyzer_settings.theme_generation.contrast_level as f32,
+            &config.theme_generation.variant,
+            config.theme_generation.contrast_level as f32,
         )?;
 
         let quality_data = get_quality_data(&analysis_file)?;
@@ -99,12 +99,12 @@ impl VisualAnalyzer {
 
         let ocr = self
             .py_interop
-            .ocr(&analysis_file, analyzer_settings.ocr.languages.clone())?;
+            .ocr(&analysis_file, config.ocr_languages.clone())?;
 
         // delete the tempfile
         tokio::fs::remove_file(&analysis_file).await?;
 
-        Ok(VisualImageData {
+        Ok(PyVisualAnalysis {
             percentage,
             color_data,
             quality_data,

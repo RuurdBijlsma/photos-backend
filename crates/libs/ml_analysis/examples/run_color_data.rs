@@ -1,4 +1,4 @@
-use common_types::Variant;
+use common_types::variant::Variant;
 use ml_analysis::{PyInterop, get_color_data};
 use pyo3::Python;
 use std::path::Path;

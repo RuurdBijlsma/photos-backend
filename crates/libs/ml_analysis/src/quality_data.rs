@@ -1,5 +1,5 @@
 use color_eyre::eyre::Result;
-use common_types::ml_analysis_types::QualityData;
+use common_types::ml_analysis::PyQualityData;
 use image::{DynamicImage, GrayImage, imageops};
 use imageproc::filter::{laplacian_filter, median_filter};
 use std::path::Path;
@@ -9,7 +9,7 @@ use std::path::Path;
 /// # Errors
 ///
 /// This function will return an error if the image path is invalid or the image cannot be decoded.
-pub fn get_quality_data(image_path: &Path) -> Result<QualityData> {
+pub fn get_quality_data(image_path: &Path) -> Result<PyQualityData> {
     let img = image::ImageReader::open(image_path)?.decode()?;
     let gray_img = resize_if_large(img, 2000).to_luma8();
 
@@ -20,7 +20,7 @@ pub fn get_quality_data(image_path: &Path) -> Result<QualityData> {
 
     let final_score = (blurriness * 0.5 + noisiness * 0.3 + exposure * 0.2) / 1.0 * 100.0;
 
-    Ok(QualityData {
+    Ok(PyQualityData {
         quality_score: final_score,
         blurriness,
         noisiness,

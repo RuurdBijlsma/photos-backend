@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO jobs (relative_path, job_type, priority, user_id, payload)\n        VALUES ($1, $2, $3, $4, $5)\n        -- THIS PART MUST MATCH THE INDEX DEFINITION EXACTLY\n        ON CONFLICT (job_type, coalesce(user_id, -1), coalesce(md5(payload::text), ''), coalesce(relative_path, ''))\n        WHERE (status IN ('queued', 'running'))\n        DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "job_type",
+            "kind": {
+              "Enum": [
+                "ingest",
+                "remove",
+                "analysis",
+                "scan",
+                "clean_db",
+                "cluster_faces",
+                "cluster_photos",
+                "import_album_item"
+              ]
+            }
+          }
+        },
+        "Int4",
+        "Int4",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f219ea7314f5cb743ea185aba379999fdb41017ec40f8676120a3e994e0b8f13"
+}

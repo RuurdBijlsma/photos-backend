@@ -1,7 +1,7 @@
 use crate::ChatMessage;
 use color_eyre::eyre::Context;
-use common_types::Variant;
-use common_types::ml_analysis_types::{FaceBox, OCRData, ObjectBox};
+use common_types::ml_analysis::{PyDetectedObject, PyFace, PyOCRData};
+use common_types::variant::Variant;
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use serde_json::Value;
@@ -243,14 +243,14 @@ impl PyInterop {
     /// This function will panic if the JSON string returned from the Python function does not
     /// correctly deserialize into the `Vec<FaceBox>` struct, indicating a mismatch between
     /// the Python and Rust data structures.
-    pub fn facial_recognition(&self, image: &Path) -> Result<Vec<FaceBox>, PyErr> {
+    pub fn facial_recognition(&self, image: &Path) -> Result<Vec<PyFace>, PyErr> {
         Python::attach(|py| {
             let func = self.facial_recognition_func.bind(py);
             let dumps = self.json_dumps.bind(py);
 
             let result = func.call1((image,))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let faces: Vec<FaceBox> = serde_json::from_str(&json_str).unwrap();
+            let faces: Vec<PyFace> = serde_json::from_str(&json_str).unwrap();
             Ok(faces)
         })
     }
@@ -267,14 +267,14 @@ impl PyInterop {
     /// This function will panic if the JSON string returned from the Python function does not
     /// correctly deserialize into the `Vec<ObjectBox>` struct, indicating a mismatch between
     /// the Python and Rust data structures.
-    pub fn object_detection(&self, image: &Path) -> Result<Vec<ObjectBox>, PyErr> {
+    pub fn object_detection(&self, image: &Path) -> Result<Vec<PyDetectedObject>, PyErr> {
         Python::attach(|py| {
             let func = self.object_detection_func.bind(py);
             let dumps = self.json_dumps.bind(py);
 
             let result = func.call1((image,))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let objects: Vec<ObjectBox> = serde_json::from_str(&json_str).unwrap();
+            let objects: Vec<PyDetectedObject> = serde_json::from_str(&json_str).unwrap();
             Ok(objects)
         })
     }
@@ -292,14 +292,14 @@ impl PyInterop {
     /// This function will panic if the JSON string returned from the Python function does not
     /// correctly deserialize into the `OCRData` struct, indicating a mismatch between the Python
     /// and Rust data structures.
-    pub fn ocr(&self, image: &Path, languages: Vec<String>) -> Result<OCRData, PyErr> {
+    pub fn ocr(&self, image: &Path, languages: Vec<String>) -> Result<PyOCRData, PyErr> {
         Python::attach(|py| {
             let func = self.ocr_func.bind(py);
             let dumps = self.json_dumps.bind(py);
 
             let result = func.call1((image, languages))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let ocr_data: OCRData = serde_json::from_str(&json_str).unwrap();
+            let ocr_data: PyOCRData = serde_json::from_str(&json_str).unwrap();
             Ok(ocr_data)
         })
     }

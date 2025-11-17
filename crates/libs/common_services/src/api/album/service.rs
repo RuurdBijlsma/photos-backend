@@ -5,16 +5,16 @@ use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::app_user::get_user_by_email;
 use crate::database::jobs::JobType;
-use crate::get_settings::settings;
 use crate::job_queue::enqueue_job;
+use crate::s2s_client::{S2SClient, extract_token_claims};
 use crate::utils::nice_id;
+use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
-use common_types::ImportAlbumPayload;
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use reqwest::Client;
+use color_eyre::eyre::Context;
+use common_types::ImportAlbumItemPayload;
+use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
-use url::Url;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
@@ -97,11 +97,11 @@ pub async fn create_album(
     pool: &PgPool,
     user_id: i32,
     name: &str,
-    description: Option<&str>,
+    description: Option<String>,
     is_public: bool,
 ) -> Result<Album, AlbumError> {
     let mut tx = pool.begin().await?;
-    let album_id = nice_id(settings().database.media_item_id_length);
+    let album_id = nice_id(constants().database.media_item_id_length);
 
     let album =
         AlbumStore::create(&mut *tx, &album_id, user_id, name, description, is_public).await?;
@@ -282,6 +282,8 @@ pub async fn update_album(
 #[instrument(skip(pool))]
 pub async fn generate_invite(
     pool: &PgPool,
+    public_url: String,
+    jwt_secret: String,
     album_id: &str,
     user_id: i32,
     user_name: &str,
@@ -293,12 +295,12 @@ pub async fn generate_invite(
         ));
     }
 
-    let settings = settings();
-    let expires_at =
-        (Utc::now() + Duration::minutes(settings.auth.album_invitation_expiry_minutes)).timestamp();
+    let expires_at = (Utc::now()
+        + Duration::minutes(constants().auth.album_invitation_expiry_minutes))
+    .timestamp();
 
     let claims = AlbumShareClaims {
-        iss: settings.api.public_url.clone(),
+        iss: public_url.clone(),
         sub: album_id.to_owned(),
         exp: expires_at,
         sharer_username: user_name.to_owned(),
@@ -307,68 +309,62 @@ pub async fn generate_invite(
     let token = encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(settings.auth.jwt_secret.as_ref()),
+        &EncodingKey::from_secret(jwt_secret.as_ref()),
     )?;
 
     Ok(token)
 }
 
-/// Parses an invite token to extract the remote server URL.
-fn extract_token_claims(token: &str) -> Result<AlbumShareClaims, AlbumError> {
-    decode::<AlbumShareClaims>(
-        token,
-        &DecodingKey::from_secret(settings().auth.jwt_secret.as_ref()),
-        &Validation::default(),
-    )
-    .map(|p| p.claims)
-    .map_err(|_| AlbumError::Unauthorized("Invalid token.".to_string()))
-}
-
-/// Contacts the remote server to get a summary of an album invitation.
-pub async fn check_invite(token: &str, http_client: &Client) -> Result<AlbumSummary, AlbumError> {
-    let claims = extract_token_claims(token)?;
-    let mut remote_url: Url = claims.iss.parse()?;
-    remote_url.set_path("/s2s/albums/invite-summary");
-
-    let response = http_client
-        .get(remote_url.clone())
-        .bearer_auth(token)
-        .send()
-        .await?;
-
-    if !response.status().is_success() {
-        let error_text = response.text().await.unwrap_or_default();
-        return Err(AlbumError::RemoteServerError(format!(
-            "Remote server {remote_url} returned an error: {error_text}"
-        )));
-    }
-
-    let summary: AlbumSummary = response.json().await?;
-    Ok(summary)
-}
-
 /// Accepts an album invitation and enqueues a background job to start the import.
-#[instrument(skip(pool))]
+#[instrument(skip(pool, settings, s2s_client))]
 pub async fn accept_invite(
     pool: &PgPool,
+    settings: &AppSettings,
+    s2s_client: &S2SClient,
     user_id: i32,
-    payload: &AcceptInviteRequest,
-) -> Result<(), AlbumError> {
-    let claims = extract_token_claims(&payload.token)?;
+    payload: AcceptInviteRequest,
+) -> Result<Album, AlbumError> {
+    // This now uses the client's internal token parsing.
+    let jwt_secret = &settings.secrets.jwt;
+    let claims = extract_token_claims(&payload.token, jwt_secret)
+        .map_err(|_| AlbumError::Unauthorized("Invalid token.".to_string()))?;
 
-    let payload = ImportAlbumPayload {
-        album_name: payload.name.clone(),
-        album_description: payload.description.clone(),
-        token: payload.token.clone(),
-        remote_username: claims.sharer_username,
-        remote_url: claims.iss.parse()?,
-    };
+    let summary: AlbumSummary = s2s_client
+        .get_album_invite_summary(&payload.token, jwt_secret)
+        .await
+        .wrap_err("Failed to get album invite summary from remote server")?;
 
-    enqueue_job(pool, JobType::ImportAlbum)
-        .payload(&payload)
-        .user_id(user_id)
-        .call()
-        .await?;
+    // 2. Create the new album locally
+    let album_id = nice_id(constants().database.album_id_length);
+    let mut tx = pool.begin().await?;
+    let album = AlbumStore::create(
+        &mut *tx,
+        &album_id,
+        user_id,
+        &payload.name,
+        payload.description,
+        false,
+    )
+    .await?;
+    AlbumStore::upsert_collaborator(&mut *tx, &album_id, user_id, AlbumRole::Owner).await?;
+    tx.commit().await?;
 
-    Ok(())
+    // 3. For each media item, enqueue a download & import job
+    for relative_path in summary.relative_paths {
+        let item_payload = ImportAlbumItemPayload {
+            remote_relative_path: relative_path,
+            local_album_id: album_id.clone(),
+            remote_username: claims.sharer_username.clone(),
+            remote_url: claims.iss.parse()?,
+            token: payload.token.clone(),
+        };
+
+        enqueue_job(pool, settings, JobType::ImportAlbumItem)
+            .user_id(user_id)
+            .payload(&item_payload)
+            .call()
+            .await?;
+    }
+
+    Ok(album)
 }

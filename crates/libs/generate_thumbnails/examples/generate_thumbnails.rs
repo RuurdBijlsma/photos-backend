@@ -1,4 +1,4 @@
-use common_services::utils::get_thumb_options;
+use app_state::load_app_settings;
 use generate_thumbnails::generate_thumbnails;
 use std::fs;
 use std::path::Path;
@@ -10,7 +10,8 @@ async fn main() -> color_eyre::Result<()> {
     let file = Path::new("media_dir/rutenl/vids/jellyfish.mp4");
     let out_folder = Path::new("test_out");
     fs::create_dir_all(out_folder)?;
-    generate_thumbnails(file, out_folder, &get_thumb_options(), Some(5)).await?;
+    let settings = load_app_settings()?;
+    generate_thumbnails(&settings.ingest, file, out_folder, Some(5)).await?;
 
     Ok(())
 }

@@ -5,7 +5,7 @@ use crate::api::auth::token::{
     RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
 use crate::database::app_user::{User, UserRole, UserWithPassword};
-use crate::get_settings::settings;
+use app_state::constants;
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
@@ -120,7 +120,7 @@ pub async fn store_refresh_token<'c, E>(
 where
     E: Executor<'c, Database = Postgres>,
 {
-    let exp = Utc::now() + Duration::days(settings().auth.refresh_token_expiry_days);
+    let exp = Utc::now() + Duration::days(constants().auth.refresh_token_expiry_days);
     sqlx::query!(
         "INSERT INTO refresh_token (user_id, selector, verifier_hash, expires_at)
          VALUES ($1, $2, $3, $4)",
@@ -139,9 +139,13 @@ where
 /// # Errors
 ///
 /// * `jsonwebtoken::Error` if token encoding fails.
-pub fn create_access_token(user_id: i32, role: UserRole) -> Result<(String, u64), AuthError> {
-    let cfg = settings();
-    let exp = (Utc::now() + Duration::minutes(cfg.auth.access_token_expiry_minutes)).timestamp();
+pub fn create_access_token(
+    jwt_secret: &str,
+    user_id: i32,
+    role: UserRole,
+) -> Result<(String, u64), AuthError> {
+    let exp =
+        (Utc::now() + Duration::minutes(constants().auth.access_token_expiry_minutes)).timestamp();
     let claims = AuthClaims {
         sub: user_id,
         role,
@@ -150,7 +154,7 @@ pub fn create_access_token(user_id: i32, role: UserRole) -> Result<(String, u64)
     let access_token = encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(cfg.auth.jwt_secret.as_ref()),
+        &EncodingKey::from_secret(jwt_secret.as_ref()),
     )
     .map_err(Into::<AuthError>::into)?;
 
@@ -164,7 +168,11 @@ pub fn create_access_token(user_id: i32, role: UserRole) -> Result<(String, u64)
 /// * `AuthError::RefreshTokenExpiredOrNotFound` if the refresh token is not found or has expired.
 /// * `AuthError::UserNotFound` if the user associated with the token cannot be found.
 /// * `sqlx::Error` for database transaction issues.
-pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Tokens>, AuthError> {
+pub async fn refresh_tokens(
+    pool: &PgPool,
+    jwt_secret: &str,
+    raw_token: &str,
+) -> Result<Json<Tokens>, AuthError> {
     let (selector, verifier_bytes) = split_refresh_token(raw_token)?;
     let record = sqlx::query!(
         "SELECT user_id, verifier_hash FROM refresh_token
@@ -206,7 +214,7 @@ pub async fn refresh_tokens(pool: &PgPool, raw_token: &str) -> Result<Json<Token
 
     tx.commit().await?;
 
-    let (access_token, expiry) = create_access_token(record.user_id, user_role)?;
+    let (access_token, expiry) = create_access_token(jwt_secret, record.user_id, user_role)?;
     Ok(Json(Tokens {
         expiry,
         access_token,
