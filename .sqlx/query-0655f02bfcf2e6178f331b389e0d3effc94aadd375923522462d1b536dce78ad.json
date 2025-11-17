@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE jobs\n        SET status = 'cancelled'\n        WHERE\n            relative_path = $1\n            AND status IN ('queued', 'running')\n            AND job_type IN ('remove')\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0655f02bfcf2e6178f331b389e0d3effc94aadd375923522462d1b536dce78ad"
+}
