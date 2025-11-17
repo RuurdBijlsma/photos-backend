@@ -1,9 +1,9 @@
 use crate::api::download::error::DownloadError;
 use crate::database::app_user::{User, UserRole};
-use app_state::IngestSettings;
+use app_state::{IngestSettings, MakeRelativePath};
 use axum::{
     body::Body,
-    http::{StatusCode, header},
+    http::{header, StatusCode},
 };
 use color_eyre::Report;
 use http::Response;
@@ -50,7 +50,7 @@ pub async fn download_media_file(
     }
 
     // --- 2. Authorization ---
-    let relative_path = ingestion.canon_relative_path(&file_canon)?;
+    let relative_path = file_canon.make_relative_canon(&ingestion.media_folder)?;
     if user.role != UserRole::Admin {
         let Some(user_media_folder) = &user.media_folder else {
             warn!(

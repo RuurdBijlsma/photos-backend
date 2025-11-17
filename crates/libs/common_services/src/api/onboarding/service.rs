@@ -7,7 +7,7 @@ use crate::api::onboarding::interfaces::{
 };
 use crate::database::jobs::JobType;
 use crate::job_queue::enqueue_job;
-use app_state::{AppSettings, IngestSettings, constants, to_posix_string};
+use app_state::{constants, to_posix_string, AppSettings, IngestSettings, MakeRelativePath};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -79,7 +79,7 @@ pub async fn get_subfolders(
 
     folders
         .iter()
-        .map(|i| ingestion.canon_relative_path(i))
+        .map(|i| i.make_relative_canon(&ingestion.media_folder))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .map(|path| {
@@ -102,7 +102,7 @@ pub fn get_media_sample(
     user_folder: &Path,
 ) -> Result<MediaSampleResponse, OnboardingError> {
     let media_folder_info = check_drive_info(user_folder)?;
-    let folder_relative = ingestion.canon_relative_path(user_folder)?;
+    let folder_relative = user_folder.make_relative_canon(&ingestion.media_folder)?;
 
     if !media_folder_info.read_access {
         return Ok(MediaSampleResponse::unreadable(folder_relative));
@@ -134,7 +134,7 @@ pub fn get_media_sample(
 
     let relative_samples = samples
         .iter()
-        .map(|i| ingestion.canon_relative_path(i))
+        .map(|i| i.make_relative_canon(&ingestion.media_folder))
         .collect::<Result<_, _>>()?;
 
     Ok(MediaSampleResponse {
@@ -156,7 +156,7 @@ pub fn get_folder_unsupported_files(
     user_folder: &Path,
 ) -> Result<UnsupportedFilesResponse, OnboardingError> {
     let media_folder_info = check_drive_info(user_folder)?;
-    let folder_relative = ingestion.canon_relative_path(user_folder)?;
+    let folder_relative = user_folder.make_relative_canon(&ingestion.media_folder)?;
 
     if !media_folder_info.read_access {
         return Ok(UnsupportedFilesResponse::unreadable(folder_relative));
@@ -171,7 +171,7 @@ pub fn get_folder_unsupported_files(
             Ok(entry) => entry,
             Err(e) => {
                 if let Some(path) = e.path() {
-                    inaccessible_entries.push(ingestion.canon_relative_path(path)?);
+                    inaccessible_entries.push(path.make_relative_canon(&ingestion.media_folder)?);
                 }
                 debug!("Skipping inaccessible entry: {}", e);
                 continue;
@@ -185,7 +185,7 @@ pub fn get_folder_unsupported_files(
                 .and_then(|s| s.to_str())
                 .unwrap_or("unknown")
                 .to_string();
-            let relative_path = ingestion.canon_relative_path(entry.path())?;
+            let relative_path = entry.path().make_relative_canon(&ingestion.media_folder)?;
             unsupported_files
                 .entry(ext)
                 .or_default()
@@ -252,7 +252,7 @@ pub async fn start_processing(
 ) -> Result<(), OnboardingError> {
     let media_root = &settings.ingest.media_folder;
     let user_folder = validate_user_folder(media_root, &user_folder).await?;
-    let relative = settings.ingest.canon_relative_path(&user_folder)?;
+    let relative = user_folder.make_relative_canon(&settings.ingest.media_folder)?;
 
     let updated = sqlx::query!(
         "UPDATE app_user

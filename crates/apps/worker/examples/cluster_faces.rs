@@ -63,6 +63,7 @@ async fn fetch_all_face_details(pool: &PgPool, user_id: i32) -> Result<Vec<FaceD
 }
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;

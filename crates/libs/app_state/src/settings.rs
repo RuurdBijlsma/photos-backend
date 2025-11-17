@@ -1,10 +1,7 @@
-use crate::{
-    ApiSettings, IngestSettings, LoggingSettings, RawSettings, SecretSettings, to_posix_string,
-};
+use crate::{ApiSettings, IngestSettings, LoggingSettings, RawSettings, SecretSettings, MakeRelativePath};
 use color_eyre::Result;
 use serde::Deserialize;
 use sqlx::{Executor, Postgres};
-use std::fs::canonicalize;
 use std::path::{Path, absolute};
 
 #[derive(Debug, Deserialize, Clone)]
@@ -104,21 +101,6 @@ impl IngestSettings {
         Ok(true)
     }
 
-    /// Get the relative path string for a given file.
-    pub fn relative_path(&self, file: impl AsRef<Path>) -> Result<String> {
-        let file_abs = absolute(file)?;
-        let relative_path = file_abs.strip_prefix(&self.media_folder)?;
-        Ok(to_posix_string(relative_path))
-    }
-
-    /// Get the relative path string for a given file, using canonicalized media root and file.
-    pub fn canon_relative_path(&self, file: &Path) -> Result<String> {
-        let media_root_canon = canonicalize(&self.media_folder)?;
-        let file_canon = canonicalize(file)?;
-        let relative_path = file_canon.strip_prefix(media_root_canon)?;
-        Ok(to_posix_string(relative_path))
-    }
-
     /// Checks if a file has already been ingested by verifying its database record and thumbnail existence.
     /// # Errors
     ///
@@ -129,7 +111,7 @@ impl IngestSettings {
         file: &Path,
     ) -> Result<bool> {
         // Media item existence check:
-        let Ok(relative_path_str) = self.relative_path(file) else {
+        let Ok(relative_path_str) = file.make_relative(&self.media_folder) else {
             return Ok(false);
         };
         let Ok(media_item_id) = sqlx::query_scalar!(

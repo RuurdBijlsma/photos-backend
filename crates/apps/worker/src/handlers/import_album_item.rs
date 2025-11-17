@@ -1,8 +1,9 @@
 use crate::context::WorkerContext;
-use crate::handlers::JobResult;
 use crate::handlers::common::remote_user::get_or_create_remote_user;
-use color_eyre::Result;
+use crate::handlers::JobResult;
+use app_state::MakeRelativePath;
 use color_eyre::eyre::eyre;
+use color_eyre::Result;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
@@ -46,7 +47,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .next_back()
         .ok_or_else(|| eyre!("Invalid relative path supplied."))?;
     let full_save_path = full_save_dir.join(filename);
-    let relative_path = context.settings.ingest.relative_path(&full_save_path)?;
+    let relative_path = full_save_path.make_relative(&context.settings.ingest.media_folder)?;
     fs::create_dir_all(&full_save_dir).await?;
 
     // Check if file already exists before downloading.
