@@ -1,3 +1,4 @@
+use app_state::{AppSettings};
 use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
 use media_analyzer::MediaAnalyzer;
@@ -8,11 +9,12 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub struct WorkerContext {
-    pub pool: PgPool,
     pub worker_id: String,
+    pub handle_analysis: bool,
+    pub pool: PgPool,
+    pub settings: AppSettings,
     pub media_analyzer: Arc<Mutex<MediaAnalyzer>>,
     pub visual_analyzer: VisualAnalyzer,
-    pub handle_analysis: bool,
     pub s2s_client: S2SClient,
 }
 
@@ -22,14 +24,20 @@ impl WorkerContext {
     /// # Errors
     ///
     /// This function will return an error if the creation of `MediaAnalyzer` or `VisualAnalyzer` fails.
-    pub async fn new(pool: PgPool, worker_id: String, handle_analysis: bool) -> Result<Self> {
+    pub async fn new(
+        pool: PgPool,
+        settings: AppSettings,
+        worker_id: String,
+        handle_analysis: bool,
+    ) -> Result<Self> {
         Ok(Self {
-            pool,
             worker_id,
+            handle_analysis,
+            pool,
+            settings,
             media_analyzer: Arc::new(Mutex::new(MediaAnalyzer::builder().build().await?)),
             visual_analyzer: VisualAnalyzer::new()?,
             s2s_client: S2SClient::new(Client::new()),
-            handle_analysis,
         })
     }
 }

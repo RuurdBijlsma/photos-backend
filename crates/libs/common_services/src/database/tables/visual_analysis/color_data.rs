@@ -1,4 +1,4 @@
-use common_types::ml_analysis_types::PyColorData;
+use common_types::ml_analysis::PyColorData;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::FromRow;

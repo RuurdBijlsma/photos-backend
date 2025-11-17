@@ -1,3 +1,4 @@
+use app_state::{load_app_settings};
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use common_services::database::jobs::JobType;
@@ -13,13 +14,14 @@ pub async fn run_tasks() -> Result<()> {
     //
     //     tokio::spawn(async {
     //         let result: Result<()> = async {
-    let pool = get_db_pool().await?;
-    enqueue_job::<()>(&pool, JobType::Scan).call().await?;
-    enqueue_job::<()>(&pool, JobType::CleanDB).call().await?;
-    enqueue_job::<()>(&pool, JobType::ClusterPhotos)
+    let settings = load_app_settings()?;
+    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    enqueue_job::<()>(&pool, &settings, JobType::Scan).call().await?;
+    enqueue_job::<()>(&pool, &settings, JobType::CleanDB).call().await?;
+    enqueue_job::<()>(&pool, &settings, JobType::ClusterPhotos)
         .call()
         .await?;
-    enqueue_job::<()>(&pool, JobType::ClusterFaces)
+    enqueue_job::<()>(&pool, &settings, JobType::ClusterFaces)
         .call()
         .await?;
     Ok(())

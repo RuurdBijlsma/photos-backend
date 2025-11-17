@@ -6,9 +6,8 @@ use crate::api::onboarding::interfaces::{
     DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
 use crate::database::jobs::JobType;
-use crate::get_settings::{media_dir, settings, thumbnails_dir};
 use crate::job_queue::enqueue_job;
-use crate::utils::{is_media_file, is_photo_file, relative_path_canon, to_posix_string};
+use app_state::{constants, to_posix_string, AppSettings, IngestionSettings};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -21,21 +20,22 @@ use walkdir::WalkDir;
 /// # Errors
 ///
 /// Returns `OnboardingError` if the configured media or thumbnail paths are not valid directories.
-pub fn get_disk_info() -> Result<DiskResponse, OnboardingError> {
-    let media_path = media_dir();
-    if !media_path.is_dir() {
-        return Err(OnboardingError::InvalidPath(to_posix_string(media_path)));
+pub fn get_disk_info(
+    media_root: &Path,
+    thumbnails_root: &Path,
+) -> Result<DiskResponse, OnboardingError> {
+    if !media_root.is_dir() {
+        return Err(OnboardingError::InvalidPath(to_posix_string(media_root)));
     }
 
-    let thumbnail_path = thumbnails_dir();
-    if !thumbnail_path.is_dir() {
+    if !thumbnails_root.is_dir() {
         return Err(OnboardingError::InvalidPath(to_posix_string(
-            thumbnail_path,
+            thumbnails_root,
         )));
     }
 
-    let media_folder_info = check_drive_info(media_path)?;
-    let thumbnail_folder_info = check_drive_info(thumbnail_path)?;
+    let media_folder_info = check_drive_info(media_root)?;
+    let thumbnail_folder_info = check_drive_info(thumbnails_root)?;
 
     Ok(DiskResponse {
         media_folder: media_folder_info,
@@ -48,7 +48,11 @@ pub fn get_disk_info() -> Result<DiskResponse, OnboardingError> {
 /// # Errors
 ///
 /// Returns `OnboardingError` if the folder name contains invalid characters or if an I/O error occurs.
-pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), OnboardingError> {
+pub async fn create_folder(
+    media_root: &Path,
+    base_folder: &str,
+    new_name: &str,
+) -> Result<(), OnboardingError> {
     if !new_name
         .chars()
         .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
@@ -56,7 +60,7 @@ pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), Onbo
         return Err(OnboardingError::DirectoryCreation(new_name.to_string()));
     }
 
-    let user_path = validate_user_folder(base_folder).await?;
+    let user_path = validate_user_folder(media_root, base_folder).await?;
     tokio_fs::create_dir_all(user_path.join(new_name)).await?;
     Ok(())
 }
@@ -66,13 +70,16 @@ pub async fn create_folder(base_folder: &str, new_name: &str) -> Result<(), Onbo
 /// # Errors
 ///
 /// Returns `OnboardingError` if path validation or canonicalization fails.
-pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, OnboardingError> {
-    let user_path = validate_user_folder(folder).await?;
+pub async fn get_subfolders(
+    ingestion: &IngestionSettings,
+    folder: &str,
+) -> Result<Vec<String>, OnboardingError> {
+    let user_path = validate_user_folder(&ingestion.media_folder, folder).await?;
     let folders = list_folders(&user_path).await?;
 
     folders
         .iter()
-        .map(relative_path_canon)
+        .map(|i| ingestion.canon_relative_path(i))
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .map(|path| {
@@ -90,15 +97,18 @@ pub async fn get_subfolders(folder: &str) -> Result<Vec<String>, OnboardingError
 /// # Errors
 ///
 /// Returns `OnboardingError` if there's an I/O error reading the directory or its files.
-pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, OnboardingError> {
+pub fn get_media_sample(
+    ingestion: &IngestionSettings,
+    user_folder: &Path,
+) -> Result<MediaSampleResponse, OnboardingError> {
     let media_folder_info = check_drive_info(user_folder)?;
-    let folder_relative = relative_path_canon(user_folder)?;
+    let folder_relative = ingestion.canon_relative_path(user_folder)?;
 
     if !media_folder_info.read_access {
         return Ok(MediaSampleResponse::unreadable(folder_relative));
     }
 
-    let n_samples = settings().onboarding.n_media_samples;
+    let n_samples = constants().onboarding_n_media_samples;
     let mut samples = Vec::with_capacity(n_samples);
     let mut photo_count = 0;
     let mut file_count = 0;
@@ -109,7 +119,7 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Onboa
         }
         file_count += 1;
 
-        if is_photo_file(entry.path()) {
+        if ingestion.is_photo_file(entry.path()) {
             photo_count += 1;
             if samples.len() < n_samples {
                 samples.push(entry.into_path());
@@ -124,7 +134,7 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Onboa
 
     let relative_samples = samples
         .iter()
-        .map(relative_path_canon)
+        .map(|i| ingestion.canon_relative_path(i))
         .collect::<Result<_, _>>()?;
 
     Ok(MediaSampleResponse {
@@ -142,10 +152,11 @@ pub fn get_media_sample(user_folder: &Path) -> Result<MediaSampleResponse, Onboa
 ///
 /// Returns `OnboardingError` if there is an issue reading the directory or canonicalizing file paths.
 pub fn get_folder_unsupported_files(
+    ingestion: &IngestionSettings,
     user_folder: &Path,
 ) -> Result<UnsupportedFilesResponse, OnboardingError> {
     let media_folder_info = check_drive_info(user_folder)?;
-    let folder_relative = relative_path_canon(user_folder)?;
+    let folder_relative = ingestion.canon_relative_path(user_folder)?;
 
     if !media_folder_info.read_access {
         return Ok(UnsupportedFilesResponse::unreadable(folder_relative));
@@ -160,21 +171,21 @@ pub fn get_folder_unsupported_files(
             Ok(entry) => entry,
             Err(e) => {
                 if let Some(path) = e.path() {
-                    inaccessible_entries.push(relative_path_canon(path)?);
+                    inaccessible_entries.push(ingestion.canon_relative_path(path)?);
                 }
                 debug!("Skipping inaccessible entry: {}", e);
                 continue;
             }
         };
 
-        if entry.file_type().is_file() && !is_media_file(entry.path()) {
+        if entry.file_type().is_file() && !ingestion.is_media_file(entry.path()) {
             let ext = entry
                 .path()
                 .extension()
                 .and_then(|s| s.to_str())
                 .unwrap_or("unknown")
                 .to_string();
-            let relative_path = relative_path_canon(entry.path())?;
+            let relative_path = ingestion.canon_relative_path(entry.path())?;
             unsupported_files
                 .entry(ext)
                 .or_default()
@@ -197,36 +208,35 @@ pub fn get_folder_unsupported_files(
 /// # Errors
 ///
 /// Returns `OnboardingError` if the path is invalid, not a directory, or outside the media root.
-pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, OnboardingError> {
-    let media_path = media_dir();
-    let user_path = media_path.join(user_folder);
+pub async fn validate_user_folder(
+    media_root: &Path,
+    user_folder: &str,
+) -> Result<PathBuf, OnboardingError> {
+    let user_path = media_root.join(user_folder);
 
-    let canonical_user_path = tokio_fs::canonicalize(&user_path).await?;
-    let canonical_media_path = tokio_fs::canonicalize(&media_path).await?;
+    let canon_user_path = tokio_fs::canonicalize(&user_path).await?;
+    let canon_media_root = tokio_fs::canonicalize(&media_root).await?;
 
-    let metadata = tokio_fs::metadata(&canonical_user_path).await?;
+    let metadata = tokio_fs::metadata(&canon_user_path).await?;
     if !metadata.is_dir() {
-        warn!(
-            "User path {} is not a directory",
-            canonical_user_path.display()
-        );
+        warn!("User path {} is not a directory", canon_user_path.display());
         return Err(OnboardingError::InvalidPath(to_posix_string(
-            &canonical_user_path,
+            &canon_user_path,
         )));
     }
 
-    if !canonical_user_path.starts_with(&canonical_media_path) {
+    if !canon_user_path.starts_with(&canon_media_root) {
         warn!(
             "User path {} escapes media directory {}",
-            canonical_user_path.display(),
-            canonical_media_path.display()
+            canon_user_path.display(),
+            canon_media_root.display()
         );
         return Err(OnboardingError::InvalidPath(to_posix_string(
-            &canonical_user_path,
+            &canon_user_path,
         )));
     }
 
-    Ok(canonical_user_path)
+    Ok(canon_user_path)
 }
 
 /// Updates the user's media folder and triggers a system-wide media scan.
@@ -235,12 +245,14 @@ pub async fn validate_user_folder(user_folder: &str) -> Result<PathBuf, Onboardi
 ///
 /// Returns `OnboardingError` if folder validation fails, the database update fails, or the scan job cannot be enqueued.
 pub async fn start_processing(
-    user_id: i32,
     pool: &PgPool,
+    settings: &AppSettings,
+    user_id: i32,
     user_folder: String,
 ) -> Result<(), OnboardingError> {
-    let user_folder = validate_user_folder(&user_folder).await?;
-    let relative = relative_path_canon(&user_folder)?;
+    let media_root = &settings.ingestion.media_folder;
+    let user_folder = validate_user_folder(media_root, &user_folder).await?;
+    let relative = settings.ingestion.canon_relative_path(&user_folder)?;
 
     let updated = sqlx::query!(
         "UPDATE app_user
@@ -257,7 +269,7 @@ pub async fn start_processing(
         return Err(OnboardingError::MediaFolderAlreadySet);
     }
 
-    enqueue_job::<()>(pool, JobType::Scan)
+    enqueue_job::<()>(pool, settings, JobType::Scan)
         .user_id(user_id)
         .call()
         .await?;

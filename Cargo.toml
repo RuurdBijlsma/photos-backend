@@ -7,6 +7,7 @@ members = [
     "crates/apps/tasks",
     "crates/apps/watcher",
     # Libs
+    "crates/libs/app_state",
     "crates/libs/common_types",
     "crates/libs/common_services",
     "crates/libs/ml_analysis",

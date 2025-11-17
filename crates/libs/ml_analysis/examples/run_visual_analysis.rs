@@ -2,11 +2,13 @@ use ml_analysis::{ChatMessage, ChatRole, VisualAnalyzer};
 use std::fs::File;
 use std::path::Path;
 use std::time::Instant;
+use app_state::load_app_settings;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
+    let settings = load_app_settings()?;
     let now = Instant::now();
     let analyzer = VisualAnalyzer::new()?;
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
@@ -25,7 +27,9 @@ async fn main() -> color_eyre::Result<()> {
         let image_filename = image.file_name().unwrap().to_string_lossy().to_string();
         println!("analyze image {image_filename}");
         let now = Instant::now();
-        let analysis = analyzer.analyze_image(image, 0).await?;
+        let analysis = analyzer
+            .analyze_image(&settings.ingestion.analyzer, image, 0)
+            .await?;
         let filename = format!("{image_filename}-analysis.json");
         let file = File::create(Path::new(&filename))?;
         serde_json::to_writer_pretty(file, &analysis)?;

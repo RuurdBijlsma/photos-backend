@@ -5,7 +5,7 @@ use crate::database::visual_analysis::face::{CreateFace, Face};
 use crate::database::visual_analysis::ocr_data::OCRData;
 use crate::database::visual_analysis::quality_data::QualityData;
 use chrono::{DateTime, Utc};
-use common_types::ml_analysis_types::PyVisualAnalysis;
+use common_types::ml_analysis::PyVisualAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;

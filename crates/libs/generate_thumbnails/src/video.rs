@@ -1,13 +1,13 @@
-use crate::ffmpeg::{FfmpegCommand, get_video_duration};
+use crate::ffmpeg::{get_video_duration, FfmpegCommand};
 use color_eyre::eyre::Result;
-use common_types::ThumbOptions;
 use std::path::Path;
 use tokio::fs;
+use app_state::ThumbnailSettings;
 
 pub async fn generate_video_thumbnails(
     input: &Path,
     output_dir: &Path,
-    config: &ThumbOptions,
+    config: &ThumbnailSettings,
 ) -> Result<()> {
     fs::create_dir_all(output_dir).await?;
 
@@ -26,7 +26,11 @@ pub async fn generate_video_thumbnails(
     cmd.run().await
 }
 
-fn generate_fixed_time_stills(cmd: &mut FfmpegCommand, output_dir: &Path, config: &ThumbOptions) {
+fn generate_fixed_time_stills(
+    cmd: &mut FfmpegCommand,
+    output_dir: &Path,
+    config: &ThumbnailSettings,
+) {
     if config.heights.is_empty() {
         return;
     }
@@ -43,7 +47,7 @@ fn generate_fixed_time_stills(cmd: &mut FfmpegCommand, output_dir: &Path, config
 fn generate_percentage_stills(
     cmd: &mut FfmpegCommand,
     output_dir: &Path,
-    config: &ThumbOptions,
+    config: &ThumbnailSettings,
     duration: f64,
 ) {
     if config.video_options.percentages.is_empty() {
@@ -61,7 +65,11 @@ fn generate_percentage_stills(
     }
 }
 
-fn generate_video_transcodes(cmd: &mut FfmpegCommand, output_dir: &Path, config: &ThumbOptions) {
+fn generate_video_transcodes(
+    cmd: &mut FfmpegCommand,
+    output_dir: &Path,
+    config: &ThumbnailSettings,
+) {
     if config.video_options.transcode_outputs.is_empty() {
         return;
     }

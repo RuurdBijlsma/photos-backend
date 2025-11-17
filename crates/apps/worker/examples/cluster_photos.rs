@@ -1,13 +1,13 @@
 use color_eyre::Result;
 use color_eyre::eyre::{Context, eyre};
 use common_services::database::get_db_pool;
-use common_services::get_settings::media_dir;
 use pgvector::Vector;
 use sqlx::FromRow;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
+use app_state::load_app_settings;
 use worker::handlers::common::clustering::run_hdbscan;
 
 /// A simple struct to hold the necessary data for clustering and file operations.
@@ -22,11 +22,12 @@ async fn main() -> Result<()> {
     // --- Configuration ---
     const USER_ID_TO_TEST: i32 = 1;
     const OUTPUT_DIR: &str = "photo_clusters_output";
+    let settings = load_app_settings()?;
 
     // --- Setup ---
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
-    let pool = get_db_pool().await?;
+    let pool = get_db_pool(&settings.secrets.database_url).await?;
     let output_path = PathBuf::from(OUTPUT_DIR);
 
     // --- 1. Fetch User and Photo Data ---
@@ -97,7 +98,7 @@ async fn main() -> Result<()> {
         );
 
         for photo in photos_in_cluster {
-            let source_path = media_dir().join(&photo.relative_path);
+            let source_path = &settings.ingestion.media_folder.join(&photo.relative_path);
 
             let file_name = Path::new(&photo.relative_path)
                 .file_name()

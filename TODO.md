@@ -128,6 +128,7 @@
 * big refactor: make all crud functions for every db table, in common_services/database/tables/{table_the_funcs_are_for}
 * rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at
   how ml analysis ColorData is actually used)
+* [BUG] accept invite is broken.
 
 # integration test
 

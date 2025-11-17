@@ -1,4 +1,4 @@
-use common_types::ml_analysis_types::PyDetectedObject;
+use common_types::ml_analysis::PyDetectedObject;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;

@@ -1,4 +1,4 @@
-use common_types::ml_analysis_types::PyCaptionData;
+use common_types::ml_analysis::PyCaptionData;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;

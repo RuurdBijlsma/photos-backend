@@ -163,6 +163,7 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 name = "api"
 version = "0.1.0"
 dependencies = [
+ "app_state",
  "axum",
  "axum-extra",
  "chrono",
@@ -183,6 +184,19 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "utoipa-swagger-ui",
+]
+
+[[package]]
+name = "app_state"
+version = "0.1.0"
+dependencies = [
+ "chrono-tz",
+ "color-eyre",
+ "common_types",
+ "config",
+ "dotenv",
+ "serde",
+ "sqlx",
 ]
 
 [[package]]
@@ -801,6 +815,7 @@ checksum = "a6139a8597ed92cf816dfb33f5dd6cf0bb93a6adc938f11039f371bc5bcd26c3"
 dependencies = [
  "chrono",
  "phf 0.12.1",
+ "serde",
 ]
 
 [[package]]
@@ -897,6 +912,7 @@ dependencies = [
 name = "common_services"
 version = "0.1.0"
 dependencies = [
+ "app_state",
  "argon2",
  "axum",
  "base64",
@@ -905,8 +921,6 @@ dependencies = [
  "chrono-tz",
  "color-eyre",
  "common_types",
- "config",
- "dotenv",
  "fastrand",
  "fs2",
  "futures-util",
@@ -934,6 +948,8 @@ dependencies = [
 name = "common_types"
 version = "0.1.0"
 dependencies = [
+ "chrono-tz",
+ "color-eyre",
  "prost 0.13.5",
  "prost-build 0.13.5",
  "serde",
@@ -1956,6 +1972,7 @@ dependencies = [
 name = "generate_thumbnails"
 version = "0.1.0"
 dependencies = [
+ "app_state",
  "color-eyre",
  "common_services",
  "common_types",
@@ -3091,6 +3108,7 @@ dependencies = [
 name = "ml_analysis"
 version = "0.1.0"
 dependencies = [
+ "app_state",
  "color-eyre",
  "common_services",
  "common_types",
@@ -5858,6 +5876,7 @@ checksum = "df7f62577c25e07834649fc3b39fafdc597c0a3527dc1c60129201ccfcbaa50c"
 name = "tasks"
 version = "0.1.0"
 dependencies = [
+ "app_state",
  "color-eyre",
  "common_services",
  "tokio",
@@ -6631,8 +6650,10 @@ dependencies = [
 name = "watcher"
 version = "0.1.0"
 dependencies = [
+ "app_state",
  "color-eyre",
  "common_services",
+ "common_types",
  "futures",
  "notify",
  "sqlx",
@@ -7172,6 +7193,7 @@ name = "worker"
 version = "0.1.0"
 dependencies = [
  "ab_glyph",
+ "app_state",
  "async-trait",
  "chrono",
  "clap",

@@ -10,7 +10,7 @@ pub mod root;
 pub mod s2s;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
-use crate::api_state::ApiState;
+use crate::api_state::ApiContext;
 use crate::auth::middleware::{ApiUser, OptionalUser, require_role};
 use crate::auth::router::{auth_protected_router, auth_public_router};
 use crate::download::router::download_protected_router;
@@ -28,7 +28,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 // --- Router Construction ---
-pub fn create_router(api_state: ApiState) -> Router {
+pub fn create_router(api_state: ApiContext) -> Router {
     Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", ApiDoc::openapi()))
         .merge(public_routes())
@@ -45,33 +45,33 @@ pub fn create_router(api_state: ApiState) -> Router {
         )
 }
 
-fn public_routes() -> Router<ApiState> {
+fn public_routes() -> Router<ApiContext> {
     Router::new()
         .merge(auth_public_router())
         .merge(root_public_router())
         .merge(s2s_public_router())
 }
 
-fn auth_optional_routes(api_state: ApiState) -> Router<ApiState> {
+fn auth_optional_routes(api_state: ApiContext) -> Router<ApiContext> {
     Router::new()
         .merge(album_auth_optional_router())
-        .route_layer(from_extractor_with_state::<OptionalUser, ApiState>(
+        .route_layer(from_extractor_with_state::<OptionalUser, ApiContext>(
             api_state,
         ))
 }
 
-fn protected_routes(api_state: ApiState) -> Router<ApiState> {
+fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
     Router::new()
         .merge(auth_protected_router())
         .merge(download_protected_router())
         .merge(photos_protected_router())
         .merge(album_protected_router())
-        .route_layer(from_extractor_with_state::<ApiUser, ApiState>(api_state))
+        .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }
 
-fn admin_routes(api_state: ApiState) -> Router<ApiState> {
+fn admin_routes(api_state: ApiContext) -> Router<ApiContext> {
     Router::new()
         .merge(onboarding_admin_routes())
         .route_layer(from_fn_with_state(UserRole::Admin, require_role))
-        .route_layer(from_extractor_with_state::<ApiUser, ApiState>(api_state))
+        .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }

@@ -1,18 +1,19 @@
 use crate::context::WorkerContext;
-use crate::handlers::JobResult;
 use crate::handlers::common::remote_user::get_or_create_remote_user;
+use crate::handlers::JobResult;
 use crate::jobs::management::is_job_cancelled;
+use std::path::Path;
 
-use color_eyre::{Result, eyre::eyre};
+use color_eyre::{eyre::eyre, Result};
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
-use common_services::get_settings::{media_dir, settings, thumbnails_dir};
-use common_services::utils::{get_thumb_options, nice_id};
+use common_services::utils::nice_id;
 use media_analyzer::AnalyzeResult;
 use sqlx::PgPool;
 
+use app_state::constants;
 use generate_thumbnails::generate_thumbnails;
 use tokio::fs;
 
@@ -66,9 +67,9 @@ async fn store_media_item(
 }
 
 /// Delete replaced thumbnails
-async fn cleanup_old_thumbnails(old_id: Option<String>) -> Result<()> {
+async fn cleanup_old_thumbnails(thumbnail_root: &Path, old_id: Option<String>) -> Result<()> {
     if let Some(id) = old_id {
-        let path = thumbnails_dir().join(id);
+        let path = thumbnail_root.join(id);
         if path.exists() {
             fs::remove_dir_all(path).await?;
         }
@@ -84,7 +85,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_id = job
         .user_id
         .ok_or_else(|| eyre!("Ingest job has no associated user_id"))?;
-    let file_path = media_dir().join(relative_path);
+    let media_root = &context.settings.ingestion.media_folder;
+    let thumbnail_root = &context.settings.ingestion.thumbnail_folder;
+    let file_path = media_root.join(relative_path);
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
@@ -93,12 +96,12 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         let mut analyzer = context.media_analyzer.lock().await;
         analyzer.analyze_media(&file_path).await?
     };
-    let media_item_id = nice_id(settings().database.media_item_id_length);
+    let media_item_id = nice_id(constants().database.media_item_id_length);
 
     generate_thumbnails(
+        &context.settings.ingestion,
         &file_path,
-        &thumbnails_dir().join(&media_item_id),
-        &get_thumb_options(),
+        &thumbnail_root.join(&media_item_id),
         media_info.metadata.orientation,
     )
     .await?;
@@ -115,7 +118,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         &media_item_id,
     )
     .await?;
-    cleanup_old_thumbnails(deleted_id).await?;
+    cleanup_old_thumbnails(thumbnail_root, deleted_id).await?;
 
     Ok(JobResult::Done)
 }

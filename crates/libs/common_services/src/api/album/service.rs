@@ -5,14 +5,14 @@ use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::app_user::get_user_by_email;
 use crate::database::jobs::JobType;
-use crate::get_settings::settings;
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::{S2SClient, extract_token_claims};
+use crate::s2s_client::{extract_token_claims, S2SClient};
 use crate::utils::nice_id;
+use app_state::{constants, AppSettings};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use jsonwebtoken::{EncodingKey, Header, encode};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
 
@@ -101,7 +101,7 @@ pub async fn create_album(
     is_public: bool,
 ) -> Result<Album, AlbumError> {
     let mut tx = pool.begin().await?;
-    let album_id = nice_id(settings().database.media_item_id_length);
+    let album_id = nice_id(constants().database.media_item_id_length);
 
     let album =
         AlbumStore::create(&mut *tx, &album_id, user_id, name, description, is_public).await?;
@@ -282,6 +282,8 @@ pub async fn update_album(
 #[instrument(skip(pool))]
 pub async fn generate_invite(
     pool: &PgPool,
+    public_url: String,
+    jwt_secret: String,
     album_id: &str,
     user_id: i32,
     user_name: &str,
@@ -293,12 +295,12 @@ pub async fn generate_invite(
         ));
     }
 
-    let settings = settings();
-    let expires_at =
-        (Utc::now() + Duration::minutes(settings.auth.album_invitation_expiry_minutes)).timestamp();
+    let expires_at = (Utc::now()
+        + Duration::minutes(constants().auth.album_invitation_expiry_minutes))
+    .timestamp();
 
     let claims = AlbumShareClaims {
-        iss: settings.api.public_url.clone(),
+        iss: public_url.clone(),
         sub: album_id.to_owned(),
         exp: expires_at,
         sharer_username: user_name.to_owned(),
@@ -307,31 +309,33 @@ pub async fn generate_invite(
     let token = encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(settings.auth.jwt_secret.as_ref()),
+        &EncodingKey::from_secret(jwt_secret.as_ref()),
     )?;
 
     Ok(token)
 }
 
 /// Accepts an album invitation and enqueues a background job to start the import.
-#[instrument(skip(pool, s2s_client))]
+#[instrument(skip(pool, settings, s2s_client))]
 pub async fn accept_invite(
     pool: &PgPool,
+    settings: &AppSettings,
     s2s_client: &S2SClient,
     user_id: i32,
     payload: AcceptInviteRequest,
 ) -> Result<Album, AlbumError> {
     // This now uses the client's internal token parsing.
-    let claims = extract_token_claims(&payload.token)
+    let jwt_secret = &settings.secrets.jwt;
+    let claims = extract_token_claims(&payload.token, jwt_secret)
         .map_err(|_| AlbumError::Unauthorized("Invalid token.".to_string()))?;
 
     let summary: AlbumSummary = s2s_client
-        .get_album_invite_summary(&payload.token)
+        .get_album_invite_summary(&payload.token, jwt_secret)
         .await
         .wrap_err("Failed to get album invite summary from remote server")?;
 
     // 2. Create the new album locally
-    let album_id = nice_id(settings().database.album_id_length);
+    let album_id = nice_id(constants().database.album_id_length);
     let mut tx = pool.begin().await?;
     let album = AlbumStore::create(
         &mut *tx,
@@ -355,7 +359,7 @@ pub async fn accept_invite(
             token: payload.token.clone(),
         };
 
-        enqueue_job(pool, JobType::ImportAlbumItem)
+        enqueue_job(pool, settings, JobType::ImportAlbumItem)
             .user_id(user_id)
             .payload(&item_payload)
             .call()

@@ -1,7 +1,6 @@
 use crate::alert;
 use crate::api::album::interfaces::AlbumShareClaims;
 use crate::database::album::album::AlbumSummary;
-use crate::get_settings::settings;
 use color_eyre::Result;
 use color_eyre::eyre::eyre;
 use futures_util::StreamExt;
@@ -15,10 +14,11 @@ use tracing::warn;
 use url::Url;
 
 /// Parses an invite token to extract the claims, including the remote server URL.
-pub fn extract_token_claims(token: &str) -> Result<AlbumShareClaims> {
+pub fn extract_token_claims(token: &str, jwt_secret: &str) -> Result<AlbumShareClaims> {
+    println!("TOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKENTOKEN {}", jwt_secret);
     decode::<AlbumShareClaims>(
         token,
-        &DecodingKey::from_secret(settings().auth.jwt_secret.as_ref()),
+        &DecodingKey::from_secret(jwt_secret.as_ref()),
         &Validation::default(),
     )
     .map(|t| t.claims)
@@ -37,11 +37,11 @@ impl S2SClient {
     }
 
     /// Fetches the summary of a shared album from a remote server using an invite token.
-    pub async fn get_album_invite_summary(&self, token: &str) -> Result<AlbumSummary> {
-        let claims = extract_token_claims(token)?;
+    pub async fn get_album_invite_summary(&self, token: &str, jwt_secret: &str) -> Result<AlbumSummary> {
+        let claims = extract_token_claims(token, jwt_secret)?;
         let remote_url = {
             let mut url: Url = claims.iss.parse()?;
-            url.set_path("/s2s/albums/invite-summary");
+            url.set_path("/s2s/album/invite-summary");
             url
         };
 
@@ -66,13 +66,14 @@ impl S2SClient {
     pub async fn download_remote_file(
         &self,
         token: &str,
+        jwt_secret:&str,
         remote_relative_path: &str,
         destination: &Path,
     ) -> Result<()> {
-        let claims = extract_token_claims(token)?;
+        let claims = extract_token_claims(token, jwt_secret)?;
         let remote_url = {
             let mut url: Url = claims.iss.parse()?;
-            url.set_path("/s2s/albums/files");
+            url.set_path("/s2s/album/files");
             url.query_pairs_mut()
                 .append_pair("relativePath", remote_relative_path);
             url

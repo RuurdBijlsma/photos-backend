@@ -1,4 +1,4 @@
-use crate::api_state::ApiState;
+use crate::api_state::ApiContext;
 use crate::onboarding::handlers::{
     get_disk_response, get_folder_media_sample, get_folder_unsupported, get_folders, make_folder,
     post_start_processing,
@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
 };
 
-pub fn onboarding_admin_routes() -> Router<ApiState> {
+pub fn onboarding_admin_routes() -> Router<ApiContext> {
     Router::new()
         .route("/onboarding/disk-info", get(get_disk_response))
         .route("/onboarding/media-sample", get(get_folder_media_sample))

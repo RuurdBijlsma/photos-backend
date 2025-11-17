@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Executor, FromRow, Postgres};
 use std::fmt;
 use utoipa::ToSchema;
+use color_eyre::eyre::Result;
 
 pub async fn get_user_by_email(
     executor: impl Executor<'_, Database = Postgres>,
@@ -32,7 +33,7 @@ pub async fn get_user_by_email(
 pub async fn user_from_relative_path<'c, E>(
     relative_path: &str,
     executor: E,
-) -> color_eyre::Result<Option<User>>
+) -> Result<Option<User>>
 where
     E: Executor<'c, Database = Postgres>,
 {

@@ -11,8 +11,6 @@ use color_eyre::eyre::Result;
 use ab_glyph::FontArc;
 use common_services::database::get_db_pool;
 use common_services::database::visual_analysis::face::FaceEmbedding;
-use common_services::get_settings::media_dir;
-use common_services::utils::to_posix_string;
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
@@ -21,6 +19,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use tracing::info;
+use app_state::{load_app_settings, to_posix_string};
 use worker::handlers::common::clustering::{group_by_cluster, run_hdbscan};
 
 // A new struct to hold more comprehensive face details for drawing
@@ -67,7 +66,8 @@ async fn fetch_all_face_details(pool: &PgPool, user_id: i32) -> Result<Vec<FaceD
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
-    let pool = get_db_pool().await?;
+    let settings = load_app_settings()?;
+    let pool = get_db_pool(&settings.secrets.database_url).await?;
 
     // --- Configuration ---
     let user_id_to_debug = 1;
@@ -134,7 +134,7 @@ async fn main() -> Result<()> {
                 .find(|f| f.id == face_embedding.id)
                 .unwrap();
             let original_image_path =
-                to_posix_string(&media_dir().join(&face_details.relative_path));
+                to_posix_string(&settings.ingestion.media_folder.join(&face_details.relative_path));
 
             // Load the image if it's not already in our map
             let (image, _annotations) = images_to_draw

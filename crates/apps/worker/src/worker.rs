@@ -1,19 +1,21 @@
 use crate::context::WorkerContext;
 use crate::handlers::handle_job;
 use crate::jobs::management::{claim_next_job, update_job_on_completion, update_job_on_failure};
+use app_state::{load_app_settings};
 use color_eyre::Result;
+use common_services::database::get_db_pool;
+use common_services::utils::nice_id;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
-use common_services::database::get_db_pool;
-use common_services::utils::nice_id;
 
-pub async fn create_worker(handle_analysis: bool) ->Result<()>{
+pub async fn create_worker(handle_analysis: bool) -> Result<()> {
     let worker_id = nice_id(8);
     info!("[Worker ID: {}] Starting.", worker_id);
 
-    let pool = get_db_pool().await?;
-    let context = WorkerContext::new(pool, worker_id.clone(), handle_analysis).await?;
+    let settings = load_app_settings()?;
+    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    let context = WorkerContext::new(pool, settings, worker_id.clone(), handle_analysis).await?;
 
     run_worker_loop(&context).await
 }

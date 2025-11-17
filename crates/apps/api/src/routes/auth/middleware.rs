@@ -1,7 +1,8 @@
+use crate::api_state::ApiContext;
 use axum::{
     body::Body,
     extract::{FromRequestParts, State},
-    http::{Request, header, request::Parts},
+    http::{header, request::Parts, Request},
     middleware::Next,
     response::Response,
 };
@@ -9,30 +10,25 @@ use color_eyre::eyre::eyre;
 use common_services::api::auth::error::AuthError;
 use common_services::api::auth::interfaces::AuthClaims;
 use common_services::database::app_user::{User, UserRole};
-use common_services::get_settings::settings;
-use jsonwebtoken::{DecodingKey, Validation, decode};
+use jsonwebtoken::{decode, DecodingKey, Validation};
 use sqlx::PgPool;
 
 #[derive(Clone, Debug)]
 pub struct ApiUser(pub User);
 
-/// Get `PgPool` from Parts
-async fn extract_pool<S>(parts: &mut Parts, state: &S) -> Result<PgPool, AuthError>
+async fn extract_context<S>(parts: &mut Parts, state: &S) -> Result<ApiContext, AuthError>
 where
     S: Send + Sync,
-    State<PgPool>: FromRequestParts<S>,
+    State<ApiContext>: FromRequestParts<S>,
 {
-    let State(pool) = State::<PgPool>::from_request_parts(parts, state)
+    let State(context) = State::<ApiContext>::from_request_parts(parts, state)
         .await
-        .map_err(|_| {
-            tracing::error!("FATAL: Could not extract PgPool state. Missing `.with_state(pool)`?");
-            AuthError::Internal(eyre!("Server state is not configured correctly."))
-        })?;
-    Ok(pool)
+        .map_err(|_| AuthError::Internal(eyre!("Server state is not configured correctly.")))?;
+    Ok(context)
 }
 
 /// Get auth token from Parts.
-fn extract_token(parts: &Parts) -> Result<&str, AuthError> {
+fn extract_token(parts: &Parts) -> Result<String, AuthError> {
     let auth_header = parts
         .headers
         .get(header::AUTHORIZATION)
@@ -41,11 +37,11 @@ fn extract_token(parts: &Parts) -> Result<&str, AuthError> {
 
     auth_header
         .strip_prefix("Bearer ")
+        .map(|s| s.to_owned())
         .ok_or(AuthError::InvalidToken)
 }
 
-fn decode_token(token: &str) -> Result<AuthClaims, AuthError> {
-    let jwt_secret = &settings().auth.jwt_secret;
+fn decode_token(token: &str, jwt_secret: &str) -> Result<AuthClaims, AuthError> {
     decode::<AuthClaims>(
         token,
         &DecodingKey::from_secret(jwt_secret.as_ref()),
@@ -71,15 +67,15 @@ async fn fetch_user(pool: &PgPool, user_id: i32) -> Result<User, AuthError> {
 impl<S> FromRequestParts<S> for ApiUser
 where
     S: Send + Sync,
-    State<PgPool>: FromRequestParts<S>,
+    State<ApiContext>: FromRequestParts<S>,
 {
     type Rejection = AuthError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let token = extract_token(parts)?;
-        let claims = decode_token(token)?;
-        let pool = extract_pool(parts, state).await?;
-        let user = fetch_user(&pool, claims.sub).await?;
+        let context = extract_context(parts, state).await?;
+        let claims = decode_token(&token, &context.settings.secrets.jwt)?;
+        let user = fetch_user(&context.pool, claims.sub).await?;
         parts.extensions.insert(user.clone());
         Ok(Self(user))
     }
@@ -91,27 +87,25 @@ pub struct OptionalUser(pub Option<User>);
 impl<S> FromRequestParts<S> for OptionalUser
 where
     S: Send + Sync,
-    State<PgPool>: FromRequestParts<S>,
+    State<ApiContext>: FromRequestParts<S>,
 {
     type Rejection = AuthError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let token = parts
-            .headers
-            .get(header::AUTHORIZATION)
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| s.strip_prefix("Bearer "));
-
-        let Some(token) = token else {
-            parts.extensions.insert(Self(None));
-            return Ok(Self(None));
-        };
-
-        let claims = decode_token(token)?;
-        let pool = extract_pool(parts, state).await?;
-        let user = fetch_user(&pool, claims.sub).await?;
-        parts.extensions.insert(Self(Some(user.clone())));
-        Ok(Self(Some(user)))
+        match extract_token(parts) {
+            Ok(token) => {
+                let context = extract_context(parts, state).await?;
+                let claims = decode_token(&token, &context.settings.secrets.jwt)?;
+                let user = fetch_user(&context.pool, claims.sub).await?;
+                parts.extensions.insert(Self(Some(user.clone())));
+                Ok(Self(Some(user)))
+            }
+            Err(AuthError::MissingToken) => {
+                parts.extensions.insert(Self(None));
+                Ok(Self(None))
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 

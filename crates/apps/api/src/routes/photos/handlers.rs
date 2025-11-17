@@ -1,4 +1,5 @@
-use crate::api_state::ApiState;
+use crate::api_state::ApiContext;
+use app_state::IngestionSettings;
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
@@ -37,13 +38,13 @@ use tracing::instrument;
     ),
     security(("bearer_auth" = []))
 )]
-#[instrument(skip(api_state, user), err(Debug))]
+#[instrument(skip(context, user), err(Debug))]
 pub async fn get_full_item_handler(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<GetMediaItemParams>,
 ) -> Result<Json<FullMediaItem>, PhotosError> {
-    let item = MediaItemStore::find_by_id(&api_state.pool, &params.id).await?;
+    let item = MediaItemStore::find_by_id(&context.pool, &params.id).await?;
     if let Some(item) = item
         && item.user_id == user.id
     {
@@ -69,10 +70,10 @@ pub async fn get_full_item_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_timeline_ratios_handler(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
 ) -> Result<Protobuf<TimelineResponse>, PhotosError> {
-    let timeline = get_timeline_ratios(&user, &api_state.pool).await?;
+    let timeline = get_timeline_ratios(&user, &context.pool).await?;
     Ok(Protobuf(timeline))
 }
 
@@ -92,10 +93,10 @@ pub async fn get_timeline_ratios_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_timeline_ids_handler(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Vec<String>>, PhotosError> {
-    let timeline = get_timeline_ids(&user, &api_state.pool).await?;
+    let timeline = get_timeline_ids(&user, &context.pool).await?;
     Ok(Json(timeline))
 }
 
@@ -118,7 +119,7 @@ pub async fn get_timeline_ids_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_photos_by_month_handler(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<GetMediaByMonthParams>,
 ) -> Result<Protobuf<ByMonthResponse>, PhotosError> {
@@ -134,7 +135,7 @@ pub async fn get_photos_by_month_handler(
                 "Invalid date format in 'months' parameter. Please use 'YYYY-MM-DD'.".to_string(),
             )
         })?;
-    let photos = get_photos_by_month(&user, &api_state.pool, &month_ids).await?;
+    let photos = get_photos_by_month(&user, &context.pool, &month_ids).await?;
     Ok(Protobuf(photos))
 }
 
@@ -154,10 +155,10 @@ pub async fn get_photos_by_month_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_random_photo(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Option<RandomPhotoResponse>>, PhotosError> {
-    let result = random_photo(&user, &api_state.pool).await?;
+    let result = random_photo(&user, &context.pool).await?;
     Ok(Json(result))
 }
 
@@ -180,7 +181,14 @@ pub async fn get_random_photo(
     security(("bearer_auth" = []))
 )]
 pub async fn get_color_theme_handler(
+    State(ingestion): State<IngestionSettings>,
     Query(params): Query<ColorThemeParams>,
 ) -> Result<Json<Value>, PhotosError> {
-    Ok(Json(get_color_theme(&params.color)?))
+    let variant = &ingestion.analyzer.theme_generation.variant;
+    let contrast_level = ingestion.analyzer.theme_generation.contrast_level;
+    Ok(Json(get_color_theme(
+        &params.color,
+        variant,
+        contrast_level as f32,
+    )?))
 }

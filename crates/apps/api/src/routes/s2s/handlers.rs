@@ -1,4 +1,4 @@
-use crate::api_state::ApiState;
+use crate::api_state::ApiContext;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::header;
@@ -13,30 +13,32 @@ use common_services::api::s2s::service::{
 };
 use common_services::database::media_item_store::MediaItemStore;
 use tokio_util::io::ReaderStream;
+use tracing::instrument;
 
 pub async fn invite_summary_handler(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
 ) -> Result<impl IntoResponse, S2SError> {
     let token = authorization.token();
-    let summary = get_invite_summary(&api_state.pool, token).await?;
+    let summary = get_invite_summary(&context.pool, token, &context.settings.secrets.jwt).await?;
     Ok(Json(summary))
 }
 
+#[instrument(skip(context), err(Debug))]
 pub async fn download_file_handler(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Query(query): Query<DownloadParams>,
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
 ) -> Result<impl IntoResponse, S2SError> {
     // The full token is passed in the bearer token
     let token = authorization.token();
     let Some(media_item_id) =
-        MediaItemStore::find_id_by_relative_path(&api_state.pool, &query.relative_path).await?
+        MediaItemStore::find_id_by_relative_path(&context.pool, &query.relative_path).await?
     else {
         return Err(S2SError::NotFound("File does not exist in db".to_owned()));
     };
-    validate_token_for_media_item(&api_state.pool, token, &media_item_id).await?;
-    let file_path = get_media_item_path(&api_state.pool, &media_item_id).await?;
+    validate_token_for_media_item(&context.pool, token, &context.settings.secrets.jwt, &media_item_id).await?;
+    let file_path = get_media_item_path(&context.pool, &context.settings.ingestion.media_folder, &media_item_id).await?;
     let file_name = file_path
         .file_name()
         .unwrap_or_default()

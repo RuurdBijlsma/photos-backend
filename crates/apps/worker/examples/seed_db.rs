@@ -9,7 +9,6 @@ use color_eyre::eyre::Result;
 use common_services::database::app_user::UserRole;
 use common_services::database::get_db_pool;
 use common_services::database::media_item_store::MediaItemStore;
-use common_services::get_settings::settings;
 use common_services::utils::nice_id;
 use media_analyzer::{
     AnalyzeResult, CaptureDetails, FileMetadata, PanoInfo, SourceDetails, TagData, TimeInfo,
@@ -18,6 +17,7 @@ use rand::Rng;
 use sqlx::{PgPool, PgTransaction};
 use std::time::Instant;
 use tracing::info;
+use app_state::{constants, load_app_settings};
 
 /// The main entry point for seeding the database.
 pub async fn seed_database_for_dev(pool: &PgPool, num_items: u32) -> Result<()> {
@@ -95,7 +95,7 @@ async fn seed_mock_photos_in_tx(
     let seconds_in_five_years = 5 * 365 * 24 * 60 * 60;
 
     for i in 0..num_items {
-        let item_id = nice_id(settings().database.media_item_id_length);
+        let item_id = nice_id(constants().database.media_item_id_length);
         let relative_path = format!("/mock/{}.jpg", &item_id);
 
         let random_seconds_ago = rng.random_range(0..seconds_in_five_years);
@@ -175,7 +175,8 @@ async fn seed_mock_photos_in_tx(
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
-    let pool = get_db_pool().await?;
+    let settings = load_app_settings()?;
+    let pool = get_db_pool(&settings.secrets.database_url).await?;
     seed_database_for_dev(&pool, 100_000).await?;
 
     Ok(())

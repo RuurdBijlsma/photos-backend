@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+app_state = { path = "../../libs/app_state" }
 common_types = { path = "../common_types" }
 common_services = { path = "../common_services" }
 tokio = { version = "1.47.1", features = ["full"] }

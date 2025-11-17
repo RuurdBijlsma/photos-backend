@@ -1,5 +1,5 @@
 use crate::database::visual_analysis::ocr_box::OCRBox;
-use common_types::ml_analysis_types::PyOCRData;
+use common_types::ml_analysis::PyOCRData;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;

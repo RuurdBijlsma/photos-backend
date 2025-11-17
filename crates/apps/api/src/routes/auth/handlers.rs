@@ -1,6 +1,6 @@
 //! This module defines the HTTP handlers for authentication-related routes.
 
-use crate::api_state::ApiState;
+use crate::api_state::ApiContext;
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use common_services::api::auth::error::AuthError;
 use common_services::api::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
@@ -27,13 +27,13 @@ use common_services::database::app_user::User;
     )
 )]
 pub async fn login(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Json(payload): Json<LoginUser>,
 ) -> Result<Json<Tokens>, AuthError> {
-    let user = authenticate_user(&api_state.pool, &payload.email, &payload.password).await?;
-    let (access_token, expiry) = create_access_token(user.id, user.role)?;
+    let user = authenticate_user(&context.pool, &payload.email, &payload.password).await?;
+    let (access_token, expiry) = create_access_token(&context.settings.secrets.jwt, user.id, user.role)?;
     let token_parts = generate_refresh_token_parts()?;
-    store_refresh_token(&api_state.pool, user.id, &token_parts).await?;
+    store_refresh_token(&context.pool, user.id, &token_parts).await?;
 
     Ok(Json(Tokens {
         expiry,
@@ -58,10 +58,10 @@ pub async fn login(
     )
 )]
 pub async fn register(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Json(payload): Json<CreateUser>,
 ) -> Result<Json<User>, AuthError> {
-    let user = create_user(&api_state.pool, &payload).await?;
+    let user = create_user(&context.pool, &payload).await?;
     Ok(Json(user))
 }
 
@@ -80,10 +80,10 @@ pub async fn register(
     )
 )]
 pub async fn refresh_session(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Json(payload): Json<RefreshTokenPayload>,
 ) -> Result<Json<Tokens>, AuthError> {
-    refresh_tokens(&api_state.pool, &payload.refresh_token).await
+    refresh_tokens(&context.pool,&context.settings.secrets.jwt, &payload.refresh_token).await
 }
 
 /// Handles user logout by invalidating the provided refresh token.
@@ -101,10 +101,10 @@ pub async fn refresh_session(
     )
 )]
 pub async fn logout(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Json(payload): Json<RefreshTokenPayload>,
 ) -> Result<StatusCode, AuthError> {
-    logout_user(&api_state.pool, &payload.refresh_token).await
+    logout_user(&context.pool, &payload.refresh_token).await
 }
 
 /// Get current user info.

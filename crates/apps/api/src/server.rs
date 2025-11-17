@@ -8,12 +8,11 @@
     clippy::cast_possible_truncation
 )]
 
-use crate::api_state::ApiState;
+use crate::api_state::ApiContext;
 use crate::create_router;
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
-use common_services::get_settings::settings;
 use common_services::s2s_client::S2SClient;
 use http::{header, HeaderValue};
 use reqwest::Client;
@@ -23,19 +22,21 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tracing::{error, info};
+use app_state::load_app_settings;
 
 pub async fn serve() -> Result<()> {
     // --- Server Startup ---
     info!("🚀 Initializing server...");
-    let pool = get_db_pool().await?;
-    let api_state = ApiState {
+    let settings = load_app_settings()?;
+    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    let api_state = ApiContext {
         pool,
         s2s_client: S2SClient::new(Client::new()),
+        settings: settings.clone(),
     };
-    let api_settings = &settings().api;
 
     // --- CORS Configuration ---
-    let allowed_origins: Vec<HeaderValue> = api_settings
+    let allowed_origins: Vec<HeaderValue> = settings.api
         .allowed_origins
         .iter()
         .filter_map(|s| match s.parse() {
@@ -74,7 +75,7 @@ pub async fn serve() -> Result<()> {
         .layer(cors)
         .layer(CompressionLayer::new())
         .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
-    let listen_address = format!("{}:{}", api_settings.host, api_settings.port);
+    let listen_address = format!("{}:{}", settings.api.host, settings.api.port);
     let listener = tokio::net::TcpListener::bind(&listen_address).await?;
 
     info!("📚 Docs available at http://{listen_address}/docs");

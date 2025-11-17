@@ -1,6 +1,5 @@
 use crate::database::jobs::JobType;
-use crate::get_settings::media_dir;
-use crate::utils::is_video_file;
+use app_state::AppSettings;
 use bon::builder;
 use color_eyre::eyre::Result;
 use serde::Serialize;
@@ -16,6 +15,7 @@ use tracing::{info, warn};
 #[builder]
 pub async fn enqueue_job<T: Serialize + Send + Sync>(
     #[builder(start_fn)] pool: &PgPool,
+    #[builder(start_fn)] settings: &AppSettings,
     #[builder(start_fn)] job_type: JobType,
     #[builder(into)] relative_path: Option<String>,
     user_id: Option<i32>,
@@ -29,9 +29,11 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         per_job_logic(&mut tx, job_type, rel_path).await?;
     }
 
-    let is_video = relative_path
-        .as_ref()
-        .is_some_and(|p| is_video_file(&media_dir().join(p)));
+    let is_video = relative_path.as_ref().is_some_and(|p| {
+        settings
+            .ingestion
+            .is_video_file(&settings.ingestion.media_folder.join(p))
+    });
     let priority = job_type.get_priority(is_video);
 
     let result = sqlx::query!(
@@ -75,13 +77,18 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
 /// # Errors
 ///
 /// Returns an error if any of the database operations fail.
-pub async fn enqueue_full_ingest(pool: &PgPool, relative_path: &str, user_id: i32) -> Result<()> {
-    enqueue_job::<()>(pool, JobType::Ingest)
+pub async fn enqueue_full_ingest(
+    pool: &PgPool,
+    settings: &AppSettings,
+    relative_path: &str,
+    user_id: i32,
+) -> Result<()> {
+    enqueue_job::<()>(pool, settings, JobType::Ingest)
         .relative_path(relative_path)
         .user_id(user_id)
         .call()
         .await?;
-    enqueue_job::<()>(pool, JobType::Analysis)
+    enqueue_job::<()>(pool, settings, JobType::Analysis)
         .relative_path(relative_path)
         .user_id(user_id)
         .call()

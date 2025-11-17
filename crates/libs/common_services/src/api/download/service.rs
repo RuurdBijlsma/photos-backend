@@ -1,10 +1,8 @@
 use crate::api::download::error::DownloadError;
 use crate::database::app_user::{User, UserRole};
-use crate::get_settings::media_dir;
-use crate::utils::{is_media_file, relative_path_canon};
 use axum::{
     body::Body,
-    http::{StatusCode, header},
+    http::{header, StatusCode},
 };
 use color_eyre::Report;
 use http::Response;
@@ -12,6 +10,7 @@ use std::path::Path;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
+use app_state::IngestionSettings;
 
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///
@@ -20,13 +19,18 @@ use tracing::{debug, warn};
 /// Returns a `DownloadError` if path validation fails, the user is not authorized,
 /// the file is not found, the media type is unsupported, or if any file system
 /// or response building error occurs.
-pub async fn download_media_file(user: &User, path: &str) -> Result<Response<Body>, DownloadError> {
+pub async fn download_media_file(
+    ingestion: &IngestionSettings,
+    user: &User,
+    path: &str,
+) -> Result<Response<Body>, DownloadError> {
     // --- 1. Security & Path Validation ---
-    let media_dir_canon = media_dir()
+    let media_dir_canon = ingestion
+        .media_folder
         .canonicalize()
         .map_err(|e| Report::new(e).wrap_err("Failed to canonicalize media directory"))?;
 
-    let file_path = media_dir().join(path);
+    let file_path = ingestion.media_folder.join(path);
     let file_canon = match file_path.canonicalize() {
         Ok(path) => path,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -46,7 +50,7 @@ pub async fn download_media_file(user: &User, path: &str) -> Result<Response<Bod
     }
 
     // --- 2. Authorization ---
-    let relative_path = relative_path_canon(&file_canon)?;
+    let relative_path =ingestion.canon_relative_path(&file_canon)?;
     if user.role != UserRole::Admin {
         let Some(user_media_folder) = &user.media_folder else {
             warn!(
@@ -65,7 +69,7 @@ pub async fn download_media_file(user: &User, path: &str) -> Result<Response<Bod
     }
 
     // --- 3. Media Type Validation ---
-    if !is_media_file(&file_canon) {
+    if !ingestion.is_media_file(&file_canon) {
         warn!("Unsupported media type requested: {}", file_canon.display());
         return Err(DownloadError::UnsupportedMediaType);
     }

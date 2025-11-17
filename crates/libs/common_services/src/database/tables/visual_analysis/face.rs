@@ -1,4 +1,4 @@
-use common_types::ml_analysis_types::PyFace;
+use common_types::ml_analysis::PyFace;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;

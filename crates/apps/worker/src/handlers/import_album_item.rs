@@ -6,9 +6,7 @@ use color_eyre::eyre::eyre;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
-use common_services::get_settings::media_dir;
 use common_services::job_queue::enqueue_full_ingest;
-use common_services::utils::relative_path_abs;
 use common_types::ImportAlbumItemPayload;
 use serde_json::from_value;
 use sqlx::query;
@@ -17,6 +15,8 @@ use std::slice;
 use tokio::fs;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
+    let media_root = &context.settings.ingestion.media_folder;
+    
     let payload_value = job
         .payload
         .as_ref()
@@ -39,14 +39,14 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let relative_dir = Path::new(&user_media_folder)
         .join("import")
         .join(&sanitized_identity);
-    let full_save_dir = media_dir().join(&relative_dir);
+    let full_save_dir = media_root.join(&relative_dir);
     let filename = payload
         .remote_relative_path
         .split('/')
         .next_back()
         .ok_or_else(|| eyre!("Invalid relative path supplied."))?;
     let full_save_path = full_save_dir.join(filename);
-    let relative_path = relative_path_abs(&full_save_path)?;
+    let relative_path = context.settings.ingestion.relative_path(&full_save_path)?;
     fs::create_dir_all(&full_save_dir).await?;
 
     // Check if file already exists before downloading.
@@ -71,6 +71,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .s2s_client
         .download_remote_file(
             &payload.token,
+            &context.settings.secrets.jwt,
             &payload.remote_relative_path,
             &full_save_path,
         )
@@ -88,7 +89,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     .execute(&context.pool)
     .await?;
 
-    enqueue_full_ingest(&context.pool, &relative_path, user_id).await?;
+    enqueue_full_ingest(&context.pool, &context.settings, &relative_path, user_id).await?;
 
     Ok(JobResult::Done)
 }

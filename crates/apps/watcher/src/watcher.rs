@@ -1,8 +1,8 @@
 use crate::handlers::{handle_create, handle_remove};
+use app_state::{load_app_settings, AppSettings};
 use color_eyre::eyre::Result;
 use common_services::alert;
 use common_services::database::get_db_pool;
-use common_services::get_settings::media_dir;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::PgPool;
 use std::path::Path;
@@ -10,10 +10,10 @@ use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
 pub async fn start_watching() -> Result<()> {
-    let pool = get_db_pool().await?;
-    let media_path = media_dir();
+    let settings = load_app_settings()?;
+    let pool = get_db_pool(&settings.secrets.database_url).await?;
 
-    if let Err(e) = run(media_path, pool).await {
+    if let Err(e) = run(&pool, &settings).await {
         alert!("Watcher failed with an error: {}", e);
     }
 
@@ -24,7 +24,7 @@ pub async fn start_watching() -> Result<()> {
 ///
 /// This function sets up a channel to receive file system events and processes them
 /// in a loop. Each event is handled in a separate asynchronous task.
-async fn run(media_dir: &Path, pool: PgPool) -> notify::Result<()> {
+async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
     let (tx, mut rx) = mpsc::channel(100);
 
     let mut watcher = RecommendedWatcher::new(
@@ -36,11 +36,15 @@ async fn run(media_dir: &Path, pool: PgPool) -> notify::Result<()> {
         Config::default(),
     )?;
 
-    watcher.watch(media_dir, RecursiveMode::Recursive)?;
-    info!("👁️ Watcher started on: {:?}", media_dir);
+    watcher.watch(&settings.ingestion.media_folder, RecursiveMode::Recursive)?;
+    info!(
+        "👁️ Watcher started on: {:?}",
+        &settings.ingestion.media_folder
+    );
 
     while let Some(result) = rx.recv().await {
         let pool = pool.clone();
+        let settings = settings.clone();
         tokio::spawn(async move {
             let event = match result {
                 Ok(evt) => evt,
@@ -49,7 +53,7 @@ async fn run(media_dir: &Path, pool: PgPool) -> notify::Result<()> {
                     return;
                 }
             };
-            process_event(event, &pool).await;
+            process_event(&pool, &settings, event).await;
         });
     }
 
@@ -57,7 +61,7 @@ async fn run(media_dir: &Path, pool: PgPool) -> notify::Result<()> {
 }
 
 /// Processes a single file system event from the watcher.
-async fn process_event(event: Event, pool: &PgPool) {
+async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) {
     println!("{:?}", event.paths);
     let Some(path) = event.paths.first() else {
         return;
@@ -74,8 +78,8 @@ async fn process_event(event: Event, pool: &PgPool) {
     }
 
     let result = match event.kind {
-        EventKind::Create(_) => handle_create(path, pool).await,
-        EventKind::Remove(_) => handle_remove(path, pool).await,
+        EventKind::Create(_) => handle_create(pool, settings, path).await,
+        EventKind::Remove(_) => handle_remove(pool, settings, path).await,
         _ => return,
     };
 

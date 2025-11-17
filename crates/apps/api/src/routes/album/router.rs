@@ -1,4 +1,4 @@
-use crate::api_state::ApiState;
+use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
     accept_invite_handler, add_collaborator_handler, add_media_to_album_handler,
     check_invite_handler, create_album_handler, generate_invite_handler, get_album_details_handler,
@@ -11,11 +11,11 @@ use axum::{
     routing::{delete, get, post},
 };
 
-pub fn album_auth_optional_router() -> Router<ApiState> {
+pub fn album_auth_optional_router() -> Router<ApiContext> {
     Router::new().route("/album/{album_id}", get(get_album_details_handler))
 }
 
-pub fn album_protected_router() -> Router<ApiState> {
+pub fn album_protected_router() -> Router<ApiContext> {
     Router::new()
         .route(
             "/album",

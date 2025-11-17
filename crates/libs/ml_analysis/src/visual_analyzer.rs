@@ -4,13 +4,13 @@ use crate::quality_data::get_quality_data;
 use crate::utils::convert_media_file;
 use crate::{ChatMessage, PyInterop};
 use color_eyre::eyre::eyre;
-use common_services::get_settings::settings;
-use common_types::Variant;
-use common_types::ml_analysis_types::PyVisualAnalysis;
+use common_types::ml_analysis::PyVisualAnalysis;
 use pyo3::Python;
 use serde_json::Value;
 use std::path::Path;
 use tempfile::Builder;
+use app_state::AnalyzerSettings;
+use common_types::variant::Variant;
 
 pub struct VisualAnalyzer {
     py_interop: PyInterop,
@@ -63,6 +63,7 @@ impl VisualAnalyzer {
     /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
     pub async fn analyze_image(
         &self,
+        config: &AnalyzerSettings,
         file: &Path,
         percentage: i32,
     ) -> color_eyre::Result<PyVisualAnalysis> {
@@ -78,13 +79,12 @@ impl VisualAnalyzer {
             analysis_file = temp_file.path().to_path_buf();
             convert_media_file(file, &analysis_file).await?;
         }
-        let analyzer_settings = &settings().analyzer;
 
         let color_data = get_color_data(
             &self.py_interop,
             &analysis_file,
-            &analyzer_settings.theme_generation.variant,
-            analyzer_settings.theme_generation.contrast_level as f32,
+            &config.theme_generation.variant,
+            config.theme_generation.contrast_level as f32,
         )?;
 
         let quality_data = get_quality_data(&analysis_file)?;
@@ -99,7 +99,7 @@ impl VisualAnalyzer {
 
         let ocr = self
             .py_interop
-            .ocr(&analysis_file, analyzer_settings.ocr.languages.clone())?;
+            .ocr(&analysis_file, config.ocr_languages.clone())?;
 
         // delete the tempfile
         tokio::fs::remove_file(&analysis_file).await?;

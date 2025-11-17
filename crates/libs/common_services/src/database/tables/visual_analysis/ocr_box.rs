@@ -1,4 +1,4 @@
-use common_types::ml_analysis_types::PyOCRBox;
+use common_types::ml_analysis::PyOCRBox;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;

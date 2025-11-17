@@ -1,6 +1,64 @@
-directories:
+ingestion:
   media_folder: C:\Users\Ruurd\Pictures\deleteme
-  thumbnails_folder: thumbnails
+  thumbnail_folder: thumbnails
+
+  analyzer:
+    theme_generation:
+      variant: Vibrant
+      contrast_level: 0.5
+    ocr_languages:
+      - nld
+      - eng
+
+  file_detection:
+    video_extensions:
+      - "mp4"
+      - "webm"
+      - "av1"
+      - "3gp"
+      - "mov"
+      - "mkv"
+      - "flv"
+      - "m4v"
+      - "m4p"
+    photo_extensions:
+      - "jpg"
+      - "jpeg"
+      - "png"
+      - "gif"
+      - "tiff"
+      - "tga"
+      - "avif"
+
+  thumbnails:
+    recreate_if_exists: false
+    heights:
+      - 144
+      - 240
+      - 360
+      - 480
+      - 720
+      - 1080
+      - 1440
+    thumbnail_extension: "avif"
+    avif_options:
+      quality: 80
+      alpha_quality: 80
+      speed: 4
+    video_options:
+      extension: "webm"
+      thumb_time: 0.5
+      percentages:
+        - 0
+        - 33
+        - 66
+        - 99
+      height: 720
+      transcode_outputs:
+        - height: 480
+          quality: 35
+        - height: 144
+          quality: 40
 
 logging:
   level: "info"
@@ -15,78 +73,24 @@ api:
     - "https://ruurdbijlsma.github.io"
   public_url: "http://localhost:9475"
 
-auth:
-  jwt_secret: "overwrite-me-with-env"
-  access_token_expiry_minutes: 30
-  refresh_token_expiry_days: 7
-  album_invitation_expiry_minutes: 1440 # 24 hours
+secrets:
+  jwt: "overwrite-me-with-env"
+  database_url: postgres://user:overwritemewithenv@localhost/photos
 
-database:
-  url: postgres://user:overwritemewithenv@localhost/photos
-  max_connections: 20
-  min_connection: 3
-  max_lifetime: 1800
-  idle_timeout: 600
-  acquire_timeout: 30
-  media_item_id_length: 10
-  album_id_length: 10
-
-analyzer:
+constants:
   fallback_timezone: Europe/Amsterdam
-  theme_generation:
-    variant: Vibrant
-    contrast_level: 0.5
-  ocr:
-    languages:
-      - nld
-      - eng
+  onboarding_n_media_samples: 8
+  
+  database:
+    max_connections: 20
+    min_connection: 3
+    max_lifetime: 1800
+    idle_timeout: 600
+    acquire_timeout: 30
+    media_item_id_length: 10
+    album_id_length: 10
 
-thumbnail_generation:
-  heights:
-    - 144
-    - 240
-    - 360
-    - 480
-    - 720
-    - 1080
-    - 1440
-  thumbnail_extension: "avif"
-  avif_options:
-    quality: 80
-    alpha_quality: 80
-    speed: 4
-  video_options:
-    extension: "webm"
-    thumb_time: 0.5
-    percentages:
-      - 0
-      - 33
-      - 66
-      - 99
-    height: 720
-    transcode_outputs:
-      - height: 480
-        quality: 35
-      - height: 144
-        quality: 40
-  video_extensions:
-    - "mp4"
-    - "webm"
-    - "av1"
-    - "3gp"
-    - "mov"
-    - "mkv"
-    - "flv"
-    - "m4v"
-    - "m4p"
-  photo_extensions:
-    - "jpg"
-    - "jpeg"
-    - "png"
-    - "gif"
-    - "tiff"
-    - "tga"
-    - "avif"
-
-onboarding:
-  n_media_samples: 8
+  auth:
+    access_token_expiry_minutes: 30
+    refresh_token_expiry_days: 7
+    album_invitation_expiry_minutes: 1440 # 24 hours

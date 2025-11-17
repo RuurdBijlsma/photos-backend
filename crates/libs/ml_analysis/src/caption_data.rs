@@ -1,5 +1,5 @@
 use crate::PyInterop;
-use common_types::ml_analysis_types::PyCaptionData;
+use common_types::ml_analysis::PyCaptionData;
 use pyo3::PyResult;
 use std::path::Path;
 

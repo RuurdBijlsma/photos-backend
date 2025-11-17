@@ -1,6 +1,7 @@
 //! This module defines the HTTP handlers for the initial application onboarding process.
 
-use crate::api_state::ApiState;
+use crate::api_state::ApiContext;
+use app_state::IngestionSettings;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
@@ -24,8 +25,10 @@ use common_services::database::app_user::User;
         (status = 500, description = "A configured path is not a valid directory"),
     )
 )]
-pub async fn get_disk_response() -> Result<Json<DiskResponse>, OnboardingError> {
-    let disk_info = get_disk_info()?;
+pub async fn get_disk_response(
+    State(ingestion): State<IngestionSettings>,
+) -> Result<Json<DiskResponse>, OnboardingError> {
+    let disk_info = get_disk_info(&ingestion.media_folder, &ingestion.thumbnail_folder)?;
     Ok(Json(disk_info))
 }
 
@@ -42,10 +45,11 @@ pub async fn get_disk_response() -> Result<Json<DiskResponse>, OnboardingError> 
     )
 )]
 pub async fn get_folder_media_sample(
+    State(ingestion): State<IngestionSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<MediaSampleResponse>, OnboardingError> {
-    let user_path = validate_user_folder(&query.folder).await?;
-    let response = get_media_sample(&user_path)?;
+    let user_path = validate_user_folder(&ingestion.media_folder, &query.folder).await?;
+    let response = get_media_sample(&ingestion, &user_path)?;
     Ok(Json(response))
 }
 
@@ -62,10 +66,11 @@ pub async fn get_folder_media_sample(
     )
 )]
 pub async fn get_folder_unsupported(
+    State(ingestion): State<IngestionSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<UnsupportedFilesResponse>, OnboardingError> {
-    let user_path = validate_user_folder(&query.folder).await?;
-    let response = get_folder_unsupported_files(&user_path)?;
+    let user_path = validate_user_folder(&ingestion.media_folder, &query.folder).await?;
+    let response = get_folder_unsupported_files(&ingestion, &user_path)?;
     Ok(Json(response))
 }
 
@@ -82,9 +87,10 @@ pub async fn get_folder_unsupported(
     )
 )]
 pub async fn get_folders(
+    State(ingestion): State<IngestionSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<Vec<String>>, OnboardingError> {
-    let folders = get_subfolders(&query.folder).await?;
+    let folders = get_subfolders(&ingestion, &query.folder).await?;
     Ok(Json(folders))
 }
 
@@ -99,9 +105,15 @@ pub async fn get_folders(
     )
 )]
 pub async fn make_folder(
+    State(ingestion): State<IngestionSettings>,
     Json(params): Json<MakeFolderBody>,
 ) -> Result<StatusCode, OnboardingError> {
-    create_folder(&params.base_folder, &params.new_name).await?;
+    create_folder(
+        &ingestion.media_folder,
+        &params.base_folder,
+        &params.new_name,
+    )
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -119,10 +131,16 @@ pub async fn make_folder(
     )
 )]
 pub async fn post_start_processing(
-    State(api_state): State<ApiState>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Json(payload): Json<StartProcessingBody>,
 ) -> Result<Json<bool>, OnboardingError> {
-    start_processing(user.id, &api_state.pool, payload.user_folder).await?;
+    start_processing(
+        &context.pool,
+        &context.settings,
+        user.id,
+        payload.user_folder,
+    )
+    .await?;
     Ok(Json(true))
 }
