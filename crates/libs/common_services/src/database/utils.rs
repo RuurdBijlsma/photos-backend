@@ -12,7 +12,14 @@ use tracing::info;
 /// * `PgPool::connect` can return an error if the database connection fails.
 /// * `sqlx::migrate` can return an error if migrations fail.
 pub async fn get_db_pool(database_url: &str) -> Result<Pool<Postgres>> {
-    info!("Connecting to database. {database_url}");
+    info!(
+        "Connecting to database: {}",
+        database_url.split("/").last().unwrap_or("DB NOT FOUND")
+    );
+    println!(
+        "Connecting to database: {}",
+        database_url
+    );
     let db_config = &constants().database;
     let pool = PgPoolOptions::new()
         .max_connections(db_config.max_connections)

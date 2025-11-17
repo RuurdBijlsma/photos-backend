@@ -10,10 +10,10 @@ use url::Url;
 
 pub fn create_test_settings(
     database_name: &str,
-    settings_path: &Path,
+    base_settings: &AppSettings,
 ) -> Result<(AppSettings, TempDir, TempDir)> {
     // 1. Load base settings from the test configuration file.
-    let mut settings = load_settings_from_path(settings_path, false)?;
+    let mut settings = base_settings.clone();
 
     // 2. Create temporary directories for media and thumbnails.
     let media_dir = TempDir::new()?;
@@ -29,6 +29,8 @@ pub fn create_test_settings(
     let mut db_url = Url::parse(&settings.secrets.database_url)?;
     db_url.set_path(&format!("/{database_name}"));
     settings.secrets.database_url = db_url.to_string();
+
+    println!("DB URL: {}", settings.secrets.database_url);
 
     Ok((settings, media_dir, thumbnail_dir))
 }
@@ -49,7 +51,6 @@ pub async fn create_test_database(
     management_pool
         .execute(format!("CREATE DATABASE \"{database_name}\"").as_str())
         .await?;
-    info!("Created test database: {}", database_name);
 
     // 3. Connect to the newly created test database.
     let mut test_db_url = Url::parse(base_database_url)?;
@@ -57,9 +58,6 @@ pub async fn create_test_database(
     let main_pool = get_db_pool(test_db_url.as_str()).await?;
 
     // 4. Run migrations on the test database.
-    sqlx::query("CREATE EXTENSION IF NOT EXISTS vector")
-        .execute(&main_pool)
-        .await?;
     sqlx::migrate!("../../migrations").run(&main_pool).await?;
     info!("Finished database migrations for {}", database_name);
 
@@ -67,7 +65,6 @@ pub async fn create_test_database(
 }
 
 pub async fn force_drop_db(management_pool: &PgPool, db_name: &str) -> Result<()> {
-    info!("Dropping test database: {}", db_name);
     let _ = management_pool
         .execute(format!("DROP DATABASE \"{db_name}\" WITH (FORCE)").as_str())
         .await;

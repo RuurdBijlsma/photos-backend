@@ -3,7 +3,8 @@ use color_eyre::eyre::Result;
 use config::{Config, File};
 use std::fs;
 use std::path::Path;
-use std::sync::LazyLock;
+use std::sync::OnceLock;
+use tracing::info;
 
 pub fn load_settings_from_path(path: &Path, include_env: bool) -> Result<AppSettings> {
     // Need to load from dotenv to get it to overwrite the secrets from env.
@@ -31,6 +32,15 @@ pub fn load_settings_from_path(path: &Path, include_env: bool) -> Result<AppSett
     Ok(settings)
 }
 
+pub fn load_constants_from_path(path: &Path) -> Result<AppConstants> {
+    let builder = Config::builder().add_source(File::from(path));
+    let raw_constants = builder.build()?.try_deserialize::<RawSettings>()?;
+    let app_constants: AppConstants = raw_constants.into();
+
+    Ok(app_constants)
+}
+
+
 pub fn load_app_settings() -> Result<AppSettings> {
     let config_path = Path::new("config/settings.yaml").canonicalize()?;
     load_settings_from_path(&config_path, true)
@@ -38,17 +48,12 @@ pub fn load_app_settings() -> Result<AppSettings> {
 
 fn load_app_constants() -> Result<AppConstants> {
     let config_path = Path::new("config/settings.yaml").canonicalize()?;
-    let builder = Config::builder().add_source(File::from(config_path));
-    let raw_constants = builder.build()?.try_deserialize::<RawSettings>()?;
-    let app_constants: AppConstants = raw_constants.into();
-
-    Ok(app_constants)
+    load_constants_from_path(&config_path)
 }
 
-pub static CONSTANTS: LazyLock<AppConstants> =
-    LazyLock::new(|| load_app_constants().expect("Cannot load app settings."));
+pub static CONSTANTS: OnceLock<AppConstants> = OnceLock::new();
 
 #[must_use]
 pub fn constants() -> &'static AppConstants {
-    &CONSTANTS
+    CONSTANTS.get_or_init(|| load_app_constants().expect("Cannot load app settings."))
 }

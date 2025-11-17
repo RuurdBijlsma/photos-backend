@@ -129,6 +129,9 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
+* copy pics to temp folder on test start
+* fix test tracing subscriber
+* fix test py_analyze
 
 # integration test
 

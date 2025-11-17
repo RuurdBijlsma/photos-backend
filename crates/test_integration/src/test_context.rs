@@ -1,13 +1,21 @@
 use crate::utils::{create_test_database, create_test_settings, force_drop_db};
-use app_state::{load_settings_from_path, AppSettings};
+use app_state::{
+    load_constants_from_path, load_settings_from_path, AppConstants, AppSettings, CONSTANTS,
+};
 use color_eyre::eyre::{eyre, Result};
 use reqwest::Client;
-use sqlx::{PgPool};
-use std::path::Path;
+use sqlx::PgPool;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::task::JoinHandle;
 use tracing::{error, info, warn};
+
+pub fn init_test_constants(constants: AppConstants) {
+    if CONSTANTS.set(constants).is_err() {
+        info!("AppConstants were already initialized by another test.");
+    }
+}
 
 /// The main context for our integration tests.
 #[allow(dead_code)]
@@ -31,8 +39,12 @@ impl TestContext {
         info!("Setting up test environment...");
 
         // Load base settings to get initial database connection info
-        let settings_path = Path::new("crates/test_integration/assets/settings.yaml");
-        let base_settings = load_settings_from_path(settings_path, true)?;
+        let settings_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("assets/settings.yaml")
+            .canonicalize()?;
+        let base_settings = load_settings_from_path(&settings_path, false)?;
+        let test_constants = load_constants_from_path(&settings_path)?;
+        init_test_constants(test_constants);
 
         // 1. Set up the dedicated test database
         let db_name = "test_db".to_owned();
@@ -40,7 +52,7 @@ impl TestContext {
             create_test_database(&base_settings.secrets.database_url, &db_name).await?;
 
         // 2. Generate the final settings for this test run
-        let (settings, media_dir, thumbnail_dir) = create_test_settings(&db_name, settings_path)?;
+        let (settings, media_dir, thumbnail_dir) = create_test_settings(&db_name, &base_settings)?;
 
         // 3. Spawn application components as background tasks
         let (api_handle, worker_handle, watcher_handle) =
@@ -141,6 +153,7 @@ impl Drop for TestContext {
         let db_name = self.db_name.clone();
         let pool = self.management_pool.clone();
         tokio::spawn(async move {
+            info!("Dropping test database: {}", db_name);
             force_drop_db(&pool, &db_name)
                 .await
                 .expect("Failed to clean up DB.");

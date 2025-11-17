@@ -75,7 +75,7 @@ api:
 
 secrets:
   jwt: "overwrite-me-with-env"
-  database_url: postgres://user:overwritemewithenv@localhost/photos
+  database_url: postgres://photos_user:dev-password@localhost/photos
 
 constants:
   fallback_timezone: Europe/Amsterdam
