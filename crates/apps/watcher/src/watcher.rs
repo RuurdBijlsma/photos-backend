@@ -1,8 +1,7 @@
 use crate::handlers::{handle_create, handle_remove};
-use app_state::{AppSettings, load_app_settings};
+use app_state::{AppSettings};
 use color_eyre::eyre::Result;
 use common_services::alert;
-use common_services::database::get_db_pool;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::PgPool;
 use tokio::sync::mpsc;

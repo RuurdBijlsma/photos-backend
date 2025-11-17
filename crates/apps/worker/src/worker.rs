@@ -1,9 +1,8 @@
 use crate::context::WorkerContext;
 use crate::handlers::handle_job;
 use crate::jobs::management::{claim_next_job, update_job_on_completion, update_job_on_failure};
-use app_state::{load_app_settings, AppSettings};
+use app_state::{AppSettings};
 use color_eyre::Result;
-use common_services::database::get_db_pool;
 use common_services::utils::nice_id;
 use std::time::Duration;
 use sqlx::PgPool;

@@ -20,7 +20,7 @@ pub fn create_test_settings(database_name: &str, settings_path: &Path) -> Result
 
     // 3. Update the database URL to point to our unique test database.
     let mut db_url = Url::parse(&settings.secrets.database_url)?;
-    db_url.set_path(&format!("/{}", database_name));
+    db_url.set_path(&format!("/{database_name}"));
     settings.secrets.database_url = db_url.to_string();
 
     Ok((settings, media_dir, thumbnail_dir))
@@ -37,13 +37,13 @@ pub async fn create_test_database(
 
     // 2. Create the new test database.
     management_pool
-        .execute(format!("CREATE DATABASE \"{}\"", database_name).as_str())
+        .execute(format!("CREATE DATABASE \"{database_name}\"").as_str())
         .await?;
     info!("Created test database: {}", database_name);
 
     // 3. Connect to the newly created test database.
     let mut test_db_url = Url::parse(base_database_url)?;
-    test_db_url.set_path(&format!("/{}", database_name));
+    test_db_url.set_path(&format!("/{database_name}"));
     let main_pool = get_db_pool(test_db_url.as_str()).await?;
 
     // 4. Run migrations on the test database.

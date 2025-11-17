@@ -10,10 +10,9 @@
 
 use crate::api_state::ApiContext;
 use crate::create_router;
-use app_state::{load_app_settings, AppSettings};
+use app_state::{AppSettings};
 use axum::routing::get_service;
 use color_eyre::Result;
-use common_services::database::get_db_pool;
 use common_services::s2s_client::S2SClient;
 use http::{HeaderValue, header};
 use reqwest::Client;

@@ -1,11 +1,10 @@
 use crate::TestContext;
 use color_eyre::eyre::Result;
-use sqlx::Row;
-use tokio::time::{Duration};
 use tracing::info;
 
 pub async fn run_all(ctx: &TestContext) -> Result<()> {
     info!("--- Running Test: test_file_ingestion ---");
+    test_auth(ctx).await?;
     test_file_ingestion(ctx).await?;
     info!("--- Test Passed: test_file_ingestion ---");
 
@@ -17,9 +16,12 @@ pub async fn run_all(ctx: &TestContext) -> Result<()> {
     Ok(())
 }
 
-async fn test_file_ingestion(ctx: &TestContext) -> Result<()> {
-    // ARRANGE
+async fn test_auth(ctx: &TestContext) -> Result<()> {
+    Ok(())
+}
 
+async fn test_file_ingestion(_ctx: &TestContext) -> Result<()> {
+    // ARRANGE
     // ACT
     // ASSERT
 

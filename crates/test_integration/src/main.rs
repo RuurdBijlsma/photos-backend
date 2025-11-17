@@ -4,8 +4,6 @@ extern crate core;
 
 use crate::test_context::TestContext;
 use color_eyre::Result;
-use rand::Rng;
-use sqlx::Executor;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
