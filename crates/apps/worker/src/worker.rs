@@ -11,7 +11,7 @@ use tracing::info;
 
 pub async fn create_worker(pool: PgPool,settings: AppSettings, handle_analysis: bool) -> Result<()> {
     let worker_id = nice_id(8);
-    info!("[Worker ID: {}] Starting.", worker_id);
+    info!("🛠️ [Worker ID: {}] Starting.", worker_id);
     
     let context = WorkerContext::new(pool, settings, worker_id.clone(), handle_analysis).await?;
 

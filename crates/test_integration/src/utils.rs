@@ -19,7 +19,7 @@ pub fn create_test_settings(
     let thumbnail_dir = TempDir::new()?;
     let port = get_free_port();
     settings.api.port = port as u32;
-    settings.api.public_url = format!("http://localhost:{}", port);
+    settings.api.public_url = format!("http://127.0.0.1:{}", port);
     settings.ingest.media_root = media_dir.path().to_path_buf();
     settings.ingest.media_root_canon = media_dir.path().to_path_buf(); // Also set the canonical path
     settings.ingest.thumbnail_root = thumbnail_dir.path().to_path_buf();
@@ -28,8 +28,6 @@ pub fn create_test_settings(
     let mut db_url = Url::parse(&settings.secrets.database_url)?;
     db_url.set_path(&format!("/{database_name}"));
     settings.secrets.database_url = db_url.to_string();
-
-    println!("DB URL: {}", settings.secrets.database_url);
 
     Ok((settings, media_dir, thumbnail_dir))
 }

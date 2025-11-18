@@ -1,0 +1,27 @@
+# Rust build artifacts and caches
+target/
+
+# Python virtual environments and caches
+**/.venv
+**/__pycache__
+**/.ruff_cache
+
+# User-generated media, thumbnails, and analysis output
+media_dir/
+thumbnails/
+face_clusters_output/
+photo_clusters_output/
+
+# IDE configuration
+.idea/
+
+# Development scripts not needed in the container image
+scripts/
+
+# Logs and environment files
+*.log
+.env
+example.env
+
+# Git directory
+.git/
