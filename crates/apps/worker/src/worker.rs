@@ -1,18 +1,22 @@
 use crate::context::WorkerContext;
 use crate::handlers::handle_job;
 use crate::jobs::management::{claim_next_job, update_job_on_completion, update_job_on_failure};
-use app_state::{AppSettings};
+use app_state::AppSettings;
 use color_eyre::Result;
 use common_services::utils::nice_id;
-use std::time::Duration;
 use sqlx::PgPool;
+use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
 
-pub async fn create_worker(pool: PgPool,settings: AppSettings, handle_analysis: bool) -> Result<()> {
+pub async fn create_worker(
+    pool: PgPool,
+    settings: AppSettings,
+    handle_analysis: bool,
+) -> Result<()> {
     let worker_id = nice_id(8);
     info!("🛠️ [Worker ID: {}] Starting.", worker_id);
-    
+
     let context = WorkerContext::new(pool, settings, worker_id.clone(), handle_analysis).await?;
 
     run_worker_loop(&context).await

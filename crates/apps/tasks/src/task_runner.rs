@@ -4,7 +4,7 @@ use common_services::database::jobs::JobType;
 use common_services::job_queue::enqueue_job;
 use sqlx::PgPool;
 
-pub async fn run_tasks(pool: PgPool,settings: AppSettings) -> Result<()> {
+pub async fn run_tasks(pool: PgPool, settings: AppSettings) -> Result<()> {
     // let twenty_four_hours = Duration::from_secs(12 * 60 * 60);
     // let mut interval = time::interval(twenty_four_hours);
     //

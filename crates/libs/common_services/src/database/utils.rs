@@ -1,11 +1,10 @@
 use app_state::constants;
 use color_eyre::eyre::{Result, WrapErr};
-use sqlx::__rt::sleep;
 use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::time::Duration;
 use tracing::info;
 

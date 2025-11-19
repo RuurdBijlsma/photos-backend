@@ -39,7 +39,6 @@ pub fn load_constants_from_path(path: &Path) -> Result<AppConstants> {
     Ok(app_constants)
 }
 
-
 pub fn load_app_settings() -> Result<AppSettings> {
     let config_path = Path::new("config/settings.yaml").canonicalize()?;
     load_settings_from_path(&config_path, true)

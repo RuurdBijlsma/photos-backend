@@ -10,7 +10,7 @@
 
 use crate::api_state::ApiContext;
 use crate::create_router;
-use app_state::{AppSettings};
+use app_state::AppSettings;
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
@@ -24,7 +24,7 @@ use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tracing::{error, info};
 
-pub async fn serve(pool: PgPool,settings: AppSettings) -> Result<()> {
+pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let api_state = ApiContext {

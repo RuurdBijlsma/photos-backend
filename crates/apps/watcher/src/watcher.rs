@@ -1,5 +1,5 @@
 use crate::handlers::{handle_create, handle_remove};
-use app_state::{AppSettings};
+use app_state::AppSettings;
 use color_eyre::eyre::Result;
 use common_services::alert;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-pub async fn start_watching(pool: PgPool,settings: AppSettings) -> Result<()> {
+pub async fn start_watching(pool: PgPool, settings: AppSettings) -> Result<()> {
     if let Err(e) = run(&pool, &settings).await {
         alert!("Watcher failed with an error: {}", e);
     }

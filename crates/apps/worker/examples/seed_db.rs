@@ -176,7 +176,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
     let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
     seed_database_for_dev(&pool, 100_000).await?;
 
     Ok(())

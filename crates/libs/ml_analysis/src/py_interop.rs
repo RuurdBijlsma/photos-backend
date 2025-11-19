@@ -1,4 +1,3 @@
-use std::env;
 use crate::ChatMessage;
 use color_eyre::eyre::Context;
 use common_types::ml_analysis::{PyDetectedObject, PyFace, PyOCRData};
@@ -6,6 +5,7 @@ use common_types::variant::Variant;
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use serde_json::Value;
+use std::env;
 use std::path::{Path, PathBuf};
 
 pub struct PyInterop {
@@ -39,8 +39,16 @@ impl PyInterop {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let py_ml_path = manifest_dir.join("py_ml");
         let site_packages_path = py_ml_path.join(".venv/Lib/site-packages");
-        sys_path.call_method1("append", (py_ml_path.to_str().expect("Path is not valid UTF-8"),))?;
-        sys_path.call_method1("append", (site_packages_path.to_str().expect("Path is not valid UTF-8"),))?;
+        sys_path.call_method1(
+            "append",
+            (py_ml_path.to_str().expect("Path is not valid UTF-8"),),
+        )?;
+        sys_path.call_method1(
+            "append",
+            (site_packages_path
+                .to_str()
+                .expect("Path is not valid UTF-8"),),
+        )?;
 
         // --- Python log suppression code ---
         let builtins = py.import("builtins")?;

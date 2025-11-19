@@ -1,6 +1,6 @@
 use crate::api_state::ApiContext;
 use crate::root::handlers::{health_check, root};
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 
 pub fn root_public_router() -> Router<ApiContext> {
     Router::new()

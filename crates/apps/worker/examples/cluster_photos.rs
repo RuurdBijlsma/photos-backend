@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     // --- Setup ---
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
     let output_path = PathBuf::from(OUTPUT_DIR);
 
     // --- 1. Fetch User and Photo Data ---
