@@ -17,16 +17,16 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # -- Python Layer --
-WORKDIR /usr/src/app
-ENV VENV_PATH="/usr/src/app/crates/libs/ml_analysis/py_ml/.venv"
+WORKDIR /app
+ENV VENV_PATH="/app/crates/libs/ml_analysis/py_ml/.venv"
 ENV PATH="${VENV_PATH}/bin:${PATH}"
 RUN pip install uv
 COPY crates/libs/ml_analysis/py_ml/pyproject.toml crates/libs/ml_analysis/py_ml/uv.lock ./crates/libs/ml_analysis/py_ml/
-WORKDIR /usr/src/app/crates/libs/ml_analysis/py_ml
+WORKDIR /app/crates/libs/ml_analysis/py_ml
 RUN uv sync --no-cache
 
 # -- Rust Dependency Caching Layer --
-WORKDIR /usr/src/app
+WORKDIR /app
 RUN mkdir -p crates/libs/common_types/proto
 COPY Cargo.toml Cargo.lock ./
 COPY crates/apps/api/Cargo.toml ./crates/apps/api/
@@ -96,12 +96,13 @@ RUN addgroup --system app && adduser --system --ingroup app app
 
 # Copy necessary runtime assets from the host.
 COPY config/settings.yaml ./config/
+COPY migrations migrations
 
 # Copy the Python virtual environment, which contains installed packages for 'ml_analysis'.
-COPY --from=builder /usr/src/app/crates/libs/ml_analysis/py_ml/.venv ./.venv
+COPY --from=builder /app/crates/libs/ml_analysis/py_ml/.venv ./.venv
 
 # Copy the compiled binary from the 'builder' stage.
-COPY --from=builder /usr/src/app/target/release/api .
+COPY --from=builder /app/target/release/api .
 
 # Set correct permissions for all application files.
 RUN chown -R app:app .
