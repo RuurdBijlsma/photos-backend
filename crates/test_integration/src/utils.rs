@@ -19,7 +19,7 @@ pub fn create_test_settings(
     let thumbnail_dir = TempDir::new()?;
     let port = get_free_port();
     settings.api.port = port as u32;
-    settings.api.public_url = format!("http://127.0.0.1:{}", port);
+    settings.api.public_url = format!("http://127.0.0.1:{port}");
     settings.ingest.media_root = media_dir.path().to_path_buf();
     settings.ingest.media_root_canon = media_dir.path().to_path_buf(); // Also set the canonical path
     settings.ingest.thumbnail_root = thumbnail_dir.path().to_path_buf();
@@ -40,7 +40,7 @@ pub async fn create_test_database(
     let mut management_db_url = Url::parse(base_database_url)?;
     management_db_url.set_path("/postgres");
     let management_pool = get_db_pool(management_db_url.as_str(), false).await?;
-    force_drop_db(&management_pool, &database_name)
+    force_drop_db(&management_pool, database_name)
         .await
         .expect("Failed to clean up DB.");
 
@@ -68,6 +68,7 @@ pub async fn force_drop_db(management_pool: &PgPool, db_name: &str) -> Result<()
     Ok(())
 }
 
+#[must_use]
 pub fn get_free_port() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.local_addr().unwrap().port()
