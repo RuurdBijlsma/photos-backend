@@ -39,7 +39,7 @@ pub async fn create_test_database(
     // 1. Connect to the default 'postgres' database to manage other databases.
     let mut management_db_url = Url::parse(base_database_url)?;
     management_db_url.set_path("/postgres");
-    let management_pool = get_db_pool(management_db_url.as_str(), true).await?;
+    let management_pool = get_db_pool(management_db_url.as_str()).await?;
     force_drop_db(&management_pool, &database_name)
         .await
         .expect("Failed to clean up DB.");
@@ -52,7 +52,7 @@ pub async fn create_test_database(
     // 3. Connect to the newly created test database.
     let mut test_db_url = Url::parse(base_database_url)?;
     test_db_url.set_path(&format!("/{database_name}"));
-    let main_pool = get_db_pool(test_db_url.as_str()).await?;
+    let main_pool = get_db_pool(test_db_url.as_str(), true).await?;
 
     // 4. Run migrations on the test database.
     sqlx::migrate!("../../migrations").run(&main_pool).await?;

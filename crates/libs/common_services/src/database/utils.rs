@@ -38,7 +38,7 @@ pub fn find_migrations_dir() -> Result<PathBuf> {
 pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Pool<Postgres>> {
     info!(
         "Connecting to database: {}",
-        database_url.split('/').last().unwrap_or("DB NOT FOUND")
+        database_url.split('/').next_back().unwrap_or("DB NOT FOUND")
     );
     let db_config = &constants().database;
     let pool = PgPoolOptions::new()
