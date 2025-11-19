@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 use std::fs::canonicalize;
-use std::path::{Path, absolute};
+use std::path::{absolute, Path};
 
 /// Converts a path to a POSIX-style string, replacing backslashes with forward slashes.
 #[must_use]
@@ -19,15 +19,15 @@ pub trait MakeRelativePath {
 }
 
 impl<P: AsRef<Path>> MakeRelativePath for P {
-    fn make_relative(&self, file: impl AsRef<Path>) -> Result<String> {
-        let file_abs = absolute(file)?;
-        let relative_path = file_abs.strip_prefix(self)?;
+    fn make_relative(&self, root_folder: impl AsRef<Path>) -> Result<String> {
+        let file_abs = absolute(self)?;
+        let relative_path = file_abs.strip_prefix(root_folder)?;
         Ok(to_posix_string(relative_path))
     }
 
-    fn make_relative_canon(&self, file: impl AsRef<Path>) -> Result<String> {
-        let file_canon = canonicalize(file)?;
-        let relative_path = file_canon.strip_prefix(self)?;
+    fn make_relative_canon(&self, root_folder: impl AsRef<Path>) -> Result<String> {
+        let file_canon = canonicalize(self)?;
+        let relative_path = file_canon.strip_prefix(root_folder)?;
         Ok(to_posix_string(relative_path))
     }
 }

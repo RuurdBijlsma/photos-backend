@@ -1,7 +1,9 @@
 use app_state::constants;
 use color_eyre::eyre::Result;
+use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
+use std::path::Path;
 use std::time::Duration;
 use tracing::info;
 
@@ -11,14 +13,10 @@ use tracing::info;
 /// * `env::var` can return an error if `DATABASE_URL` is not found in the environment.
 /// * `PgPool::connect` can return an error if the database connection fails.
 /// * `sqlx::migrate` can return an error if migrations fail.
-pub async fn get_db_pool(database_url: &str) -> Result<Pool<Postgres>> {
+pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Pool<Postgres>> {
     info!(
         "Connecting to database: {}",
-        database_url.split("/").last().unwrap_or("DB NOT FOUND")
-    );
-    println!(
-        "Connecting to database: {}",
-        database_url
+        database_url.split('/').last().unwrap_or("DB NOT FOUND")
     );
     let db_config = &constants().database;
     let pool = PgPoolOptions::new()
@@ -30,5 +28,11 @@ pub async fn get_db_pool(database_url: &str) -> Result<Pool<Postgres>> {
         .test_before_acquire(true)
         .connect(database_url)
         .await?;
+    if run_migrations {
+        let db_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../migrations");
+        let migrator =
+            Migrator::new(db_path).await?;
+        migrator.run(&pool).await?;
+    }
     Ok(pool)
 }

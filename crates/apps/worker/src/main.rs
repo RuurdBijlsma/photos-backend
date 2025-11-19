@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
 
 
     let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
     create_worker(pool, settings,Args::parse().analysis).await?;
 
     Ok(())

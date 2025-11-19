@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 app_state = { path = "../../libs/app_state" }
+common_types = { path = "../common_types" }
+common_services = { path = "../common_services" }
 pyo3 = { version = "0.27.0", features = ["auto-initialize"] }
 serde_json = "1.0"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -15,5 +17,3 @@ color-eyre = "0.6.5"
 imageproc = { version = "0.25.0" }
 tempfile = "3.23.0"
 tokio = { version = "1.47.1", features = ["full"]}
-common_types = { path = "../common_types" }
-common_services = { path = "../common_services" }

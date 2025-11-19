@@ -1,13 +1,10 @@
 # =====================================================================
 # Stage 1: Builder
-#
-# This stage starts with a Python base image, adds the Rust toolchain,
-# and then builds the final application binary.
 # =====================================================================
 FROM python:3.12-slim-bullseye AS builder
 
 # -- Base Setup --
-# Install system dependencies needed for both Python (native extensions) and Rust.
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential pkg-config libssl-dev libpq-dev protobuf-compiler nasm \
     curl git \
@@ -16,77 +13,108 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # -- Rust Toolchain Installation --
-# Install Rust using rustup, the official toolchain installer.
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
-# -- Python Dependency Layer --
-# Install uv, the fast Python package manager.
+# -- Python Layer --
+WORKDIR /usr/src/app
+ENV VENV_PATH="/usr/src/app/crates/libs/ml_analysis/py_ml/.venv"
+ENV PATH="${VENV_PATH}/bin:${PATH}"
 RUN pip install uv
-
-# This layer is only invalidated if pyproject.toml or uv.lock changes.
+COPY crates/libs/ml_analysis/py_ml/pyproject.toml crates/libs/ml_analysis/py_ml/uv.lock ./crates/libs/ml_analysis/py_ml/
 WORKDIR /usr/src/app/crates/libs/ml_analysis/py_ml
-COPY crates/libs/ml_analysis/py_ml/pyproject.toml crates/libs/ml_analysis/py_ml/uv.lock ./
-
-# Create the virtual environment and sync dependencies.
-# This step is slow, so we want it to be cached as often as possible.
-# todo: i can probably remove this
-# todo: make other dockerfiles and try to extract common logic.
-ENV PATH="/usr/src/app/crates/libs/ml_analysis/py_ml/.venv/bin:${PATH}"
 RUN uv sync --no-cache
 
-# -- Rust Build Layer --
-# This layer is invalidated whenever any application source code changes.
+# -- Rust Dependency Caching Layer --
 WORKDIR /usr/src/app
-# Copy the rest of the project source code
-# todo: only copy what's needed for rust build
-COPY . .
+RUN mkdir -p crates/libs/common_types/proto
+COPY Cargo.toml Cargo.lock ./
+COPY crates/apps/api/Cargo.toml ./crates/apps/api/
+COPY crates/apps/tasks/Cargo.toml ./crates/apps/tasks/
+COPY crates/apps/watcher/Cargo.toml ./crates/apps/watcher/
+COPY crates/apps/worker/Cargo.toml ./crates/apps/worker/
+COPY crates/libs/app_state/Cargo.toml ./crates/libs/app_state/
+COPY crates/libs/common_services/Cargo.toml ./crates/libs/common_services/
+COPY crates/libs/common_types/Cargo.toml crates/libs/common_types/build.rs ./crates/libs/common_types/
+COPY crates/libs/common_types/proto/photos.proto ./crates/libs/common_types/proto/
+COPY crates/libs/generate_thumbnails/Cargo.toml ./crates/libs/generate_thumbnails/
+COPY crates/libs/ml_analysis/Cargo.toml ./crates/libs/ml_analysis/
+COPY crates/test_integration/Cargo.toml ./crates/test_integration/
 
-# Build the 'api' application in release mode.
-# The Rust compiler will find the Python interpreter via the PATH.
-RUN cargo build --release --package api
+# Create a dummy main.rs files for each app.
+# todo: 2 RUN for dir in foo bar; do echo $dir; done
+RUN mkdir -p crates/apps/api/src && \
+    echo "fn main() {}" > crates/apps/api/src/main.rs
+RUN mkdir -p crates/apps/tasks/src && \
+    echo "fn main() {}" > crates/apps/tasks/src/main.rs
+RUN mkdir -p crates/apps/watcher/src && \
+    echo "fn main() {}" > crates/apps/watcher/src/main.rs
+RUN mkdir -p crates/apps/worker/src && \
+    echo "fn main() {}" > crates/apps/worker/src/main.rs
+# Create a dummy lib.rs files for each lib
+RUN mkdir -p crates/libs/app_state/src && \
+    echo "" > crates/libs/app_state/src/lib.rs
+RUN mkdir -p crates/libs/common_services/src && \
+    echo "" > crates/libs/common_services/src/lib.rs
+RUN mkdir -p crates/libs/common_types/src && \
+    echo "" > crates/libs/common_types/src/lib.rs
+RUN mkdir -p crates/libs/generate_thumbnails/src && \
+    echo "" > crates/libs/generate_thumbnails/src/lib.rs
+RUN mkdir -p crates/libs/ml_analysis/src && \
+    echo "" > crates/libs/ml_analysis/src/lib.rs
+RUN mkdir -p crates/test_integration/src && \
+    echo "" > crates/test_integration/src/lib.rs
+
+# -- Build Dependencies --
+RUN cargo build --release # build dependencies
+
+# -- Build libs --
+COPY crates/libs crates/libs
+COPY .sqlx .sqlx
+RUN cargo build --release # build libs
+
+# -- Build api --
+COPY crates/apps/api/src crates/apps/api/src
+RUN cargo build --release --package api # build api
+
 
 # =====================================================================
 # Stage 2: Runner
-#
-# This stage is completely UNCHANGED. It creates the final, lightweight
-# image by copying the compiled binary and the Python venv from the builder.
 # =====================================================================
 FROM python:3.12-slim-bullseye AS runner
 
-# Install runtime dependencies. libpq-dev is needed for postgres client libs.
+# Install runtime dependencies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
 WORKDIR /app
 
-# Create a non-root user for security purposes
+# Create a non-root user for security.
 RUN addgroup --system app && adduser --system --ingroup app app
 
-# Copy necessary runtime assets
+# Copy necessary runtime assets from the host.
 COPY config/settings.yaml ./config/
 
-# Copy the Python virtual environment, which contains your installed packages.
+# Copy the Python virtual environment, which contains installed packages for 'ml_analysis'.
 COPY --from=builder /usr/src/app/crates/libs/ml_analysis/py_ml/.venv ./.venv
 
-# Copy the compiled binary from the 'builder' stage
+# Copy the compiled binary from the 'builder' stage.
 COPY --from=builder /usr/src/app/target/release/api .
 
-# Set correct permissions for all application files
+# Set correct permissions for all application files.
 RUN chown -R app:app .
 
-# Switch to the non-root user
+# Switch to the non-root user.
 USER app
 
-# Add the venv's bin directory to the PATH. This ensures that your application
-# uses the python interpreter and packages from the venv.
+# Add the venv's bin directory to the PATH. This ensures the application
+# uses the Python interpreter and packages from the venv.
 ENV PATH="/app/.venv/bin:${PATH}"
 
-# Expose the port the API server will listen on
+# Expose the port the API server will listen on.
 EXPOSE 9475
 
-# Set the command to run the application
+# Set the command to run the application.
 CMD ["./api"]

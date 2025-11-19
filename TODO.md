@@ -132,6 +132,7 @@
 * copy pics to temp folder on test start
 * fix test tracing subscriber
 * fix test py_analyze
+* de frontend blijft maar in een loop requests maken als de backend errort (/onboarding/folders/?folder= ten minste)
 
 # integration test
 

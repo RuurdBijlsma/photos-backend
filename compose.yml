@@ -10,8 +10,8 @@ services:
       - ./media_dir:/app/media_dir:Z
       - ./thumbnails:/app/thumbnails:Z
     environment:
-      DATABASE_URL: postgresql://photos_user:dev-password@postgres:5432/photos
-      APP__SECRETS__DATABASE_URL: postgresql://photos_user:dev-password@postgres:5432/photos
+      DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+      APP__SECRETS__DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
       APP__SECRETS__JWT: your123secret
     depends_on:
       - postgres
@@ -29,10 +29,11 @@ services:
       POSTGRES_DB: photos
       POSTGRES_USER: photos_user
       POSTGRES_PASSWORD: dev-password
+      POSTGRES_PORT: 5533
     ports:
-      - "5432:5432"
+      - "5533:5533"
     volumes:
-      - photos_pgdata_dev:/var/lib/postgresql/data:Z
+      - pg_data:/var/lib/postgresql:Z
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U photos_user -d photos"]
@@ -41,4 +42,4 @@ services:
       retries: 5
 
 volumes:
-  photos_pgdata_dev:
+  pg_data:

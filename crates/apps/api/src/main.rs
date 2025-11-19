@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
     serve(pool, settings).await?;
 
     Ok(())
