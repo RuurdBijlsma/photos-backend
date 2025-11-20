@@ -1,7 +1,13 @@
 # =====================================================================
-# Stage 1: Builder
+# Stage 1: Python Base (Shared by Runner)
 # =====================================================================
-FROM python:3.12-slim-bullseye AS builder
+FROM python:3.12-slim-bullseye AS python-base
+ENV PYTHONUNBUFFERED=1
+
+# =====================================================================
+# Stage 2: Builder Base (Rust Toolchain + System Deps)
+# =====================================================================
+FROM python-base AS builder-base
 
 # -- Base Setup --
 # Install system dependencies
@@ -16,65 +22,52 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
-# -- Python Layer --
+# -- Install cargo-chef --
+RUN cargo install cargo-chef
+
+# =====================================================================
+# Stage 3: Python Dependencies (Needs Builder Base for compilation)
+# =====================================================================
+FROM builder-base AS python-deps
 WORKDIR /app
+
 ENV VENV_PATH="/app/crates/libs/ml_analysis/py_ml/.venv"
 ENV PATH="${VENV_PATH}/bin:${PATH}"
+
 RUN pip install uv
 COPY crates/libs/ml_analysis/py_ml/pyproject.toml crates/libs/ml_analysis/py_ml/uv.lock ./crates/libs/ml_analysis/py_ml/
 WORKDIR /app/crates/libs/ml_analysis/py_ml
 RUN uv sync --no-cache
 
-# -- Rust Dependency Caching Layer --
+# =====================================================================
+# Stage 4: Planner
+# =====================================================================
+FROM builder-base AS planner
 WORKDIR /app
-RUN mkdir -p crates/libs/common_types/proto
-COPY Cargo.toml Cargo.lock ./
-COPY crates/apps/api/Cargo.toml ./crates/apps/api/
-COPY crates/apps/tasks/Cargo.toml ./crates/apps/tasks/
-COPY crates/apps/watcher/Cargo.toml ./crates/apps/watcher/
-COPY crates/apps/worker/Cargo.toml ./crates/apps/worker/
-COPY crates/libs/app_state/Cargo.toml ./crates/libs/app_state/
-COPY crates/libs/common_services/Cargo.toml ./crates/libs/common_services/
-COPY crates/libs/common_types/Cargo.toml crates/libs/common_types/build.rs ./crates/libs/common_types/
-COPY crates/libs/common_types/proto/photos.proto ./crates/libs/common_types/proto/
-COPY crates/libs/generate_thumbnails/Cargo.toml ./crates/libs/generate_thumbnails/
-COPY crates/libs/ml_analysis/Cargo.toml ./crates/libs/ml_analysis/
-COPY crates/test_integration/Cargo.toml ./crates/test_integration/
-
-# Create dummy source files to cache dependencies
-RUN for dir in \
-    crates/apps/api \
-    crates/apps/tasks \
-    crates/apps/watcher \
-    crates/apps/worker \
-    crates/libs/app_state \
-    crates/libs/common_services \
-    crates/libs/common_types \
-    crates/libs/generate_thumbnails \
-    crates/libs/ml_analysis \
-    crates/test_integration; \
-    do \
-    mkdir -p "$dir/src" && \
-    echo "" > "$dir/src/lib.rs"; \
-    done
-
-# -- Build Dependencies --
-RUN cargo build --release # build dependencies
-
-# -- Build libs --
-COPY crates/libs crates/libs
-COPY .sqlx .sqlx
-RUN cargo build --release # build libs
-
-# -- Build api --
-COPY crates/apps/api/src crates/apps/api/src
-RUN cargo build --release --package api # build api
-
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
 # =====================================================================
-# Stage 2: Runner
+# Stage 5: Builder (Rust)
 # =====================================================================
-FROM python:3.12-slim-bullseye AS runner
+FROM builder-base AS builder
+WORKDIR /app
+
+# -- Rust Dependency Caching Layer --
+COPY --from=planner /app/recipe.json recipe.json
+# We need to make sure .sqlx is present if it's needed for compilation
+COPY .sqlx .sqlx 
+# Build dependencies - this is the caching step!
+RUN cargo chef cook --release --recipe-path recipe.json
+
+# -- Build Application --
+COPY . .
+RUN cargo build --release --package api
+
+# =====================================================================
+# Stage 6: Runner
+# =====================================================================
+FROM python-base AS runner
 
 # Install runtime dependencies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -91,8 +84,8 @@ RUN addgroup --system app && adduser --system --ingroup app app
 COPY config/settings.yaml ./config/
 COPY migrations migrations
 
-# Copy the Python virtual environment, which contains installed packages for 'ml_analysis'.
-COPY --from=builder /app/crates/libs/ml_analysis/py_ml/.venv ./.venv
+# Copy the Python virtual environment from python-deps
+COPY --from=python-deps /app/crates/libs/ml_analysis/py_ml/.venv ./.venv
 
 # Copy the compiled binary from the 'builder' stage.
 COPY --from=builder /app/target/release/api .
