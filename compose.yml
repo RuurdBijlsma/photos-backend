@@ -17,11 +17,26 @@ services:
       - postgres
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "curl -fs http://localhost:9475/health | grep -q 'OK'"]
+      test: [ "CMD-SHELL", "curl -fs http://localhost:9475/health | grep -q 'OK'" ]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 15s
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    volumes:
+      - ./config/settings.yaml:/app/config/settings.yaml:Z
+      - ./media_dir:/app/media_dir:Z
+      - ./thumbnails:/app/thumbnails:Z
+    environment:
+      DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+      APP__SECRETS__DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+    depends_on:
+      - postgres
+    restart: always
 
   postgres:
     image: pgvector/pgvector:pg18
@@ -36,7 +51,7 @@ services:
       - pg_data:/var/lib/postgresql:Z
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U photos_user -d photos"]
+      test: [ "CMD-SHELL", "pg_isready -U photos_user -d photos" ]
       interval: 5s
       timeout: 5s
       retries: 5
