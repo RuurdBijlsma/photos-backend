@@ -133,6 +133,7 @@
 * fix test tracing subscriber
 * fix test py_analyze
 * de frontend blijft maar in een loop requests maken als de backend errort (/onboarding/folders/?folder= ten minste)
+* fix docker image not finding py_analyze (because it looks in crates/...)
 
 # integration test
 

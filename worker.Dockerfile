@@ -71,6 +71,7 @@ FROM python-base AS runner
 # Install runtime dependencies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libimage-exiftool-perl \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
