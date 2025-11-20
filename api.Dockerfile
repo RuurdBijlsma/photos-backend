@@ -41,29 +41,22 @@ COPY crates/libs/generate_thumbnails/Cargo.toml ./crates/libs/generate_thumbnail
 COPY crates/libs/ml_analysis/Cargo.toml ./crates/libs/ml_analysis/
 COPY crates/test_integration/Cargo.toml ./crates/test_integration/
 
-# Create a dummy main.rs files for each app.
-# todo: 2 RUN for dir in foo bar; do echo $dir; done
-RUN mkdir -p crates/apps/api/src && \
-    echo "fn main() {}" > crates/apps/api/src/main.rs
-RUN mkdir -p crates/apps/tasks/src && \
-    echo "fn main() {}" > crates/apps/tasks/src/main.rs
-RUN mkdir -p crates/apps/watcher/src && \
-    echo "fn main() {}" > crates/apps/watcher/src/main.rs
-RUN mkdir -p crates/apps/worker/src && \
-    echo "fn main() {}" > crates/apps/worker/src/main.rs
-# Create a dummy lib.rs files for each lib
-RUN mkdir -p crates/libs/app_state/src && \
-    echo "" > crates/libs/app_state/src/lib.rs
-RUN mkdir -p crates/libs/common_services/src && \
-    echo "" > crates/libs/common_services/src/lib.rs
-RUN mkdir -p crates/libs/common_types/src && \
-    echo "" > crates/libs/common_types/src/lib.rs
-RUN mkdir -p crates/libs/generate_thumbnails/src && \
-    echo "" > crates/libs/generate_thumbnails/src/lib.rs
-RUN mkdir -p crates/libs/ml_analysis/src && \
-    echo "" > crates/libs/ml_analysis/src/lib.rs
-RUN mkdir -p crates/test_integration/src && \
-    echo "" > crates/test_integration/src/lib.rs
+# Create dummy source files to cache dependencies
+RUN for dir in \
+    crates/apps/api \
+    crates/apps/tasks \
+    crates/apps/watcher \
+    crates/apps/worker \
+    crates/libs/app_state \
+    crates/libs/common_services \
+    crates/libs/common_types \
+    crates/libs/generate_thumbnails \
+    crates/libs/ml_analysis \
+    crates/test_integration; \
+    do \
+    mkdir -p "$dir/src" && \
+    echo "" > "$dir/src/lib.rs"; \
+    done
 
 # -- Build Dependencies --
 RUN cargo build --release # build dependencies
