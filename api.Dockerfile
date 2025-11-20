@@ -31,7 +31,6 @@ RUN cargo install cargo-chef
 FROM builder-base AS python-deps
 WORKDIR /app
 
-ENV VENV_PATH="/app/crates/libs/ml_analysis/py_ml/.venv"
 ENV PATH="${VENV_PATH}/bin:${PATH}"
 
 RUN pip install uv
