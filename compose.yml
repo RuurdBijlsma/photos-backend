@@ -13,15 +13,11 @@ services:
       DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
       APP__SECRETS__DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
       APP__SECRETS__JWT: your123secret
+      APP__API__PORT: 9475
+      APP__API__PUBLIC_URL: http://localhost:9475
     depends_on:
       - postgres
     restart: always
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -fs http://localhost:9475/health | grep -q 'OK'" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
 
   worker:
     build:

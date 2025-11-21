@@ -1,7 +1,7 @@
 # =====================================================================
 # Stage 1: Python Base (Shared by Runner)
 # =====================================================================
-FROM python:3.12-slim-bullseye AS python-base
+FROM python:3.12-slim-bookworm AS python-base
 ENV PYTHONUNBUFFERED=1
 
 # =====================================================================
@@ -9,7 +9,6 @@ ENV PYTHONUNBUFFERED=1
 # =====================================================================
 FROM python-base AS builder-base
 
-# -- Base Setup --
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential pkg-config libssl-dev libpq-dev protobuf-compiler nasm \
@@ -30,8 +29,6 @@ RUN cargo install cargo-chef
 # =====================================================================
 FROM builder-base AS python-deps
 WORKDIR /app
-
-ENV PATH="${VENV_PATH}/bin:${PATH}"
 
 RUN pip install uv
 COPY crates/libs/ml_analysis/py_ml/pyproject.toml crates/libs/ml_analysis/py_ml/uv.lock ./crates/libs/ml_analysis/py_ml/
@@ -54,9 +51,7 @@ WORKDIR /app
 
 # -- Rust Dependency Caching Layer --
 COPY --from=planner /app/recipe.json recipe.json
-# We need to make sure .sqlx is present if it's needed for compilation
-COPY .sqlx .sqlx 
-# Build dependencies - this is the caching step!
+COPY .sqlx .sqlx
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # -- Build Application --
@@ -71,36 +66,31 @@ FROM python-base AS runner
 # Install runtime dependencies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libimage-exiftool-perl \
     curl \
+    file \
+    libgl1 \
+    libglib2.0-0 \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Create a non-root user for security.
-RUN addgroup --system app && adduser --system --ingroup app app
-
 # Copy necessary runtime assets from the host.
 COPY config/settings.yaml ./config/
 COPY migrations migrations
+COPY crates/libs/ml_analysis/py_ml ./py_ml
 
 # Copy the Python virtual environment from python-deps
-COPY --from=python-deps /app/crates/libs/ml_analysis/py_ml/.venv ./.venv
+COPY --from=python-deps /app/crates/libs/ml_analysis/py_ml/.venv ./py_ml/.venv
 
 # Copy the compiled binary from the 'builder' stage.
 COPY --from=builder /app/target/release/api .
 
-# Set correct permissions for all application files.
-RUN chown -R app:app .
-
-# Switch to the non-root user.
-USER app
-
 # Add the venv's bin directory to the PATH. This ensures the application
 # uses the Python interpreter and packages from the venv.
-ENV PATH="/app/.venv/bin:${PATH}"
-
-# Expose the port the API server will listen on.
-EXPOSE 9475
+ENV PATH="/app/py_ml/.venv/bin:${PATH}"
+ENV APP_PY_ML_DIR="/app/py_ml"
 
 # Set the command to run the application.
 CMD ["./api"]

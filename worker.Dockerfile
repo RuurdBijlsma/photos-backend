@@ -9,7 +9,6 @@ ENV PYTHONUNBUFFERED=1
 # =====================================================================
 FROM python-base AS builder-base
 
-# -- Base Setup --
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential pkg-config libssl-dev libpq-dev protobuf-compiler nasm \
@@ -52,9 +51,7 @@ WORKDIR /app
 
 # -- Rust Dependency Caching Layer --
 COPY --from=planner /app/recipe.json recipe.json
-# We need to make sure .sqlx is present if it's needed for compilation
 COPY .sqlx .sqlx
-# Build dependencies - this is the caching step!
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # -- Build Application --
