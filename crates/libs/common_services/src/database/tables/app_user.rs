@@ -66,6 +66,7 @@ where
 
 /// Represents a user in the application.
 #[derive(Debug, Serialize, FromRow, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
     pub created_at: DateTime<Utc>,

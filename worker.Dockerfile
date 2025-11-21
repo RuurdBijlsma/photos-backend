@@ -55,7 +55,7 @@ WORKDIR /app
 # -- Rust Dependency Caching Layer --
 COPY --from=planner /app/recipe.json recipe.json
 # We need to make sure .sqlx is present if it's needed for compilation
-COPY .sqlx .sqlx 
+COPY .sqlx .sqlx
 # Build dependencies - this is the caching step!
 RUN cargo chef cook --release --recipe-path recipe.json
 
@@ -73,6 +73,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     libimage-exiftool-perl \
     curl \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
