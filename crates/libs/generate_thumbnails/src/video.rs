@@ -74,8 +74,8 @@ fn generate_video_transcodes(
         return;
     }
     // This input corresponds to the main video file, added when the command was created.
-    let main_video_stream = "[0:v:0]";
-    let main_audio_stream = "[0:a:0?]";
+    let main_video_stream = "[0:v]";
+    let main_audio_stream = "[0:a]";
     let num_outputs = config.video_options.transcode_outputs.len();
 
     let v_streams = cmd.add_split(main_video_stream, num_outputs);

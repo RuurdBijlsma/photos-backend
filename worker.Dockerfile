@@ -1,7 +1,7 @@
 # =====================================================================
 # Stage 1: Python Base (Shared by Runner)
 # =====================================================================
-FROM python:3.12-slim-bullseye AS python-base
+FROM python:3.12-slim-bookworm AS python-base
 ENV PYTHONUNBUFFERED=1
 
 # =====================================================================
@@ -30,8 +30,6 @@ RUN cargo install cargo-chef
 # =====================================================================
 FROM builder-base AS python-deps
 WORKDIR /app
-
-ENV PATH="${VENV_PATH}/bin:${PATH}"
 
 RUN pip install uv
 COPY crates/libs/ml_analysis/py_ml/pyproject.toml crates/libs/ml_analysis/py_ml/uv.lock ./crates/libs/ml_analysis/py_ml/
@@ -73,14 +71,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     libimage-exiftool-perl \
     curl \
+    file \
+    ffmpeg \
     libgl1 \
     libglib2.0-0 \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-# Create a non-root user for security.
-RUN addgroup --system app && adduser --system --ingroup app app
 
 # Copy necessary runtime assets from the host.
 COPY config/settings.yaml ./config/
@@ -92,12 +90,6 @@ COPY --from=python-deps /app/crates/libs/ml_analysis/py_ml/.venv ./py_ml/.venv
 
 # Copy the compiled binary from the 'builder' stage.
 COPY --from=builder /app/target/release/worker .
-
-# Set correct permissions for all application files.
-RUN chown -R app:app .
-
-# Switch to the non-root user.
-USER app
 
 # Add the venv's bin directory to the PATH. This ensures the application
 # uses the Python interpreter and packages from the venv.
