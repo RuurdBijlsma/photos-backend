@@ -1,5 +1,5 @@
 # =====================================================================
-# Stage 1: Python Base (Shared by Runner)
+# Stage 1: Python Base (Shared by all runners)
 # =====================================================================
 FROM python:3.12-slim-bookworm AS python-base
 ENV PYTHONUNBUFFERED=1
@@ -36,7 +36,7 @@ WORKDIR /app/crates/libs/ml_analysis/py_ml
 RUN uv sync --no-cache
 
 # =====================================================================
-# Stage 4: Planner
+# Stage 4: Planner (for Rust dependency caching)
 # =====================================================================
 FROM builder-base AS planner
 WORKDIR /app
@@ -44,7 +44,7 @@ COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 # =====================================================================
-# Stage 5: Builder (Rust)
+# Stage 5: Builder (Compiles all Rust binaries)
 # =====================================================================
 FROM builder-base AS builder
 WORKDIR /app
@@ -54,14 +54,14 @@ COPY --from=planner /app/recipe.json recipe.json
 COPY .sqlx .sqlx
 RUN cargo chef cook --release --recipe-path recipe.json
 
-# -- Build Application --
+# -- Build All Applications --
 COPY . .
-RUN cargo build --release --package api
+RUN cargo build --release --workspace
 
 # =====================================================================
-# Stage 6: Runner
+# Stage 6: Runner Base (Common for both API and Worker)
 # =====================================================================
-FROM python-base AS runner
+FROM python-base AS runner-base
 
 # Install runtime dependencies.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -69,6 +69,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libimage-exiftool-perl \
     curl \
     file \
+    ffmpeg \
     libgl1 \
     libglib2.0-0 \
     xz-utils \
@@ -76,21 +77,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy necessary runtime assets from the host.
+# Copy runtime assets.
 COPY config/settings.yaml ./config/
 COPY migrations migrations
 COPY crates/libs/ml_analysis/py_ml ./py_ml
-
-# Copy the Python virtual environment from python-deps
 COPY --from=python-deps /app/crates/libs/ml_analysis/py_ml/.venv ./py_ml/.venv
 
-# Copy the compiled binary from the 'builder' stage.
-COPY --from=builder /app/target/release/api .
-
-# Add the venv's bin directory to the PATH. This ensures the application
-# uses the Python interpreter and packages from the venv.
+# Set environment variables.
 ENV PATH="/app/py_ml/.venv/bin:${PATH}"
 ENV APP_PY_ML_DIR="/app/py_ml"
 
-# Set the command to run the application.
+# =====================================================================
+# Stage 7: API Runner
+# =====================================================================
+FROM runner-base AS api
+COPY --from=builder /app/target/release/api .
 CMD ["./api"]
+
+# =====================================================================
+# Stage 8: Worker Runner
+# =====================================================================
+FROM runner-base AS worker
+COPY --from=builder /app/target/release/worker .
+CMD ["./worker"]

@@ -2,7 +2,8 @@ services:
   api:
     build:
       context: .
-      dockerfile: api.Dockerfile
+      dockerfile: Dockerfile
+      target: api
     ports:
       - "9475:9475"
     volumes:
@@ -22,7 +23,8 @@ services:
   worker:
     build:
       context: .
-      dockerfile: worker.Dockerfile
+      dockerfile: Dockerfile
+      target: worker
     volumes:
       - ./config/settings.yaml:/app/config/settings.yaml:Z
       - ./media_dir:/app/media_dir:Z

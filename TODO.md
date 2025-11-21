@@ -71,7 +71,8 @@
 * ✅ remove unused crates
 * ✅ If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
 * ✅ add remote_user_id as collaborator to album.
-* ✅ rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look at
+* ✅ rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look
+  at
   how ml analysis ColorData is actually used)
 * ✅ [BUG] accept invite is broken.
 * ✅ repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
@@ -99,7 +100,8 @@
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)
-* big refactor: make all crud functions for every db table, in common_services/database/repositories/{table_the_funcs_are_for}
+* big refactor: make all crud functions for every db table, in
+  common_services/database/repositories/{table_the_funcs_are_for}
 * monitoring/alerting
     * prometheus
     * grafana
@@ -134,6 +136,8 @@
 * fix test py_analyze
 * de frontend blijft maar in een loop requests maken als de backend errort (/onboarding/folders/?folder= ten minste)
 * fix docker image not finding py_analyze (because it looks in crates/...)
+* machine learning stuff in aparte app/container doen? en dan met gRPC/protobuf communiceren met api en worker zodat de
+  container size van deze 2 niet zo huge worden. Tonic is rust grpc crate.
 
 # integration test
 
