@@ -36,9 +36,16 @@ impl PyInterop {
         let sys_path = sys.getattr("path")?;
 
         // --- Set paths ---
-        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let py_ml_path = manifest_dir.join("py_ml");
-        let site_packages_path = py_ml_path.join(".venv/Lib/site-packages");
+        let py_ml_path = if let Ok(path) = env::var("APP_PY_ML_DIR") {
+            PathBuf::from(path)
+        } else {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("py_ml")
+        };
+        let site_packages_path = if cfg!(windows) {
+            py_ml_path.join(".venv/Lib/site-packages")
+        } else {
+            py_ml_path.join(".venv/lib/python3.12/site-packages")
+        };
         sys_path.call_method1(
             "append",
             (py_ml_path.to_str().expect("Path is not valid UTF-8"),),

@@ -83,9 +83,10 @@ RUN addgroup --system app && adduser --system --ingroup app app
 # Copy necessary runtime assets from the host.
 COPY config/settings.yaml ./config/
 COPY migrations migrations
+COPY crates/libs/ml_analysis/py_ml ./py_ml
 
 # Copy the Python virtual environment from python-deps
-COPY --from=python-deps /app/crates/libs/ml_analysis/py_ml/.venv ./.venv
+COPY --from=python-deps /app/crates/libs/ml_analysis/py_ml/.venv ./py_ml/.venv
 
 # Copy the compiled binary from the 'builder' stage.
 COPY --from=builder /app/target/release/worker .
@@ -98,7 +99,8 @@ USER app
 
 # Add the venv's bin directory to the PATH. This ensures the application
 # uses the Python interpreter and packages from the venv.
-ENV PATH="/app/.venv/bin:${PATH}"
+ENV PATH="/app/py_ml/.venv/bin:${PATH}"
+ENV APP_PY_ML_DIR="/app/py_ml"
 
 # Set the command to run the application.
 CMD ["./worker"]
