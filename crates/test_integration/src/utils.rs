@@ -18,7 +18,7 @@ pub fn create_test_settings(
     let media_dir = TempDir::new()?;
     let thumbnail_dir = TempDir::new()?;
     let port = get_free_port();
-    settings.api.port = port as u32;
+    settings.api.port = u32::from(port);
     settings.api.public_url = format!("http://127.0.0.1:{port}");
     settings.ingest.media_root = media_dir.path().to_path_buf();
     settings.ingest.media_root_canon = media_dir.path().to_path_buf(); // Also set the canonical path

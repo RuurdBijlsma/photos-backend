@@ -36,11 +36,10 @@ impl PyInterop {
         let sys_path = sys.getattr("path")?;
 
         // --- Set paths ---
-        let py_ml_path = if let Ok(path) = env::var("APP_PY_ML_DIR") {
-            PathBuf::from(path)
-        } else {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("py_ml")
-        };
+        let py_ml_path = env::var("APP_PY_ML_DIR").map_or_else(
+            |_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("py_ml"),
+            PathBuf::from,
+        );
         let site_packages_path = if cfg!(windows) {
             py_ml_path.join(".venv/Lib/site-packages")
         } else {

@@ -11,7 +11,7 @@ pub fn path_to_os_string(p: &Path) -> OsString {
 
 /// Copies the contents of one directory to another using the `walkdir` crate.
 async fn copy_dir_with_walkdir(src: &Path, dst: &Path) -> Result<()> {
-    for entry in WalkDir::new(src).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(src).into_iter().filter_map(Result::ok) {
         let src_path = entry.path();
         let relative_path = src_path.strip_prefix(src)?;
         let dst_path = dst.join(relative_path);

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Represents the data required to create a new user.
-#[derive(Deserialize, Debug, ToSchema)]
+#[derive(Deserialize, Debug, ToSchema, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateUser {
     pub email: String,
