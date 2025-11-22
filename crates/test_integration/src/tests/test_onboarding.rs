@@ -1,5 +1,6 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::{login, media_dir_contents};
+use app_state::MakeRelativePath;
 use color_eyre::eyre::bail;
 use color_eyre::Result;
 use common_services::api::onboarding::interfaces::{
@@ -7,6 +8,7 @@ use common_services::api::onboarding::interfaces::{
     UnsupportedFilesResponse,
 };
 use reqwest::StatusCode;
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::time::sleep;
@@ -143,7 +145,34 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
         sleep(Duration::from_secs(2)).await;
     }
     info!("All media items are processed");
-    // Todo: check if thumbnails and db items are there.
 
+    // 3. Check if thumbnails are actually there.
+    {
+        struct MediaItem {
+            id: String,
+            relative_path: String,
+        }
+        let media_items = sqlx::query_as!(MediaItem, "SELECT id, relative_path FROM media_item")
+            .fetch_all(&context.pool)
+            .await?;
+        for item in &media_items {
+            let path = context.settings.ingest.media_root.join(&item.relative_path);
+            let thumbs_exist = context.settings.ingest.thumbs_exist(&path, &item.id)?;
+            assert!(thumbs_exist);
+        }
+    }
+
+    // 4. Check if media item relative paths match actual files in media root.
+    let db_paths: HashSet<String> = sqlx::query_scalar!("SELECT relative_path FROM media_item")
+        .fetch_all(&context.pool)
+        .await?
+        .into_iter()
+        .collect();
+    let fs_paths: HashSet<_> = photos
+        .into_iter()
+        .chain(videos.into_iter())
+        .map(|p| p.make_relative(&context.settings.ingest.media_root))
+        .collect::<Result<_>>()?;
+    assert_eq!(db_paths, fs_paths);
     Ok(())
 }

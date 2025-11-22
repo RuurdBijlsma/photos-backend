@@ -67,7 +67,7 @@ pub fn generate_native_photo_thumbnails(
 
             let mut target_w = ((u64::from(orig_w) * target_h) / u64::from(orig_h)) as u32;
 
-            if target_w > 0 && target_w % 2 != 0 {
+            if target_w > 0 && !target_w.is_multiple_of(2) {
                 target_w += 1;
             }
 
