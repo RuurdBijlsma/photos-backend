@@ -26,7 +26,7 @@ mod test_runner {
     use color_eyre::Result;
     use colored::*;
     use std::time::Instant;
-    use crate::tests::test_onboarding::test_onboarding;
+    use crate::tests::test_onboarding::{test_onboarding, test_start_processing};
 
     #[tokio::test]
     async fn integration_suite() -> Result<()> {
@@ -43,6 +43,7 @@ mod test_runner {
                 test_refresh,
                 test_logout,
                 test_onboarding,
+                test_start_processing,
             ]
         );
 

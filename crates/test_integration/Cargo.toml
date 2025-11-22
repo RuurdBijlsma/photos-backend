@@ -20,3 +20,4 @@ reqwest = { version = "0.12.24", features = ["json"] }
 url = "2.5.7"
 colored = "3.0.0"
 chrono = { version = "0.4.42", features = ["serde"] }
+walkdir = "2.5.0"

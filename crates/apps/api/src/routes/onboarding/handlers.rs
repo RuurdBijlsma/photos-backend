@@ -19,7 +19,7 @@ use common_services::database::app_user::User;
 /// Retrieves information about the configured media and thumbnail disks.
 #[utoipa::path(
     get,
-    path = "/onboarding/disks",
+    path = "/onboarding/disk-info",
     responses(
         (status = 200, description = "Disk information retrieved successfully", body = DiskResponse),
         (status = 500, description = "A configured path is not a valid directory"),
