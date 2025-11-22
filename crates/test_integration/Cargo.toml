@@ -11,10 +11,11 @@ app_state = { path = "../libs/app_state" }
 common_services = { path = "../libs/common_services" }
 
 tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt"] }
 tokio = { version = "1.35.1", features = ["full"] }
 color-eyre = "0.6.2"
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json", "uuid"] }
 tempfile = "3.9.0"
 reqwest = { version = "0.12.24", features = ["json"] }
 url = "2.5.7"
+colored = "3.0.0"
