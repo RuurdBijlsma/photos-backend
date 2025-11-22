@@ -40,7 +40,7 @@ fn log_failure(error: &OnboardingError) {
         OnboardingError::Database(e) => error!("Database query failed: {}", e),
         OnboardingError::Internal(e) => println!("Error in /onboarding: {e:?}"),
         OnboardingError::MediaFolderAlreadySet => {
-            println!("Tried to set media folder on user that already had it. /onboarding");
+            warn!("Tried to set media folder on user that already had it. /onboarding");
         }
     }
 }

@@ -36,6 +36,21 @@ services:
       - postgres
     restart: always
 
+  watcher:
+    build:
+      context: .
+      dockerfile: watcher.Dockerfile
+      target: runner
+    volumes:
+      - ./config/settings.yaml:/app/config/settings.yaml:Z
+      - ./media_dir:/app/media_dir:Z
+    environment:
+      DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+      APP__SECRETS__DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+    depends_on:
+      - postgres
+    restart: always
+
   postgres:
     image: pgvector/pgvector:pg18
     environment:

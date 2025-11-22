@@ -24,7 +24,6 @@ pub async fn root() -> &'static str {
     )
 )]
 pub async fn health_check(State(context): State<ApiContext>) -> Result<&'static str, StatusCode> {
-    println!("HEALTH CHECK TIME");
     match sqlx::query("SELECT 1").fetch_one(&context.pool).await {
         Ok(_) => Ok("OK"),
         Err(e) => {

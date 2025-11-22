@@ -54,7 +54,6 @@ async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
 
 /// Processes a single file system event from the watcher.
 async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) {
-    println!("{:?}", event.paths);
     let Some(path) = event.paths.first() else {
         return;
     };

@@ -138,6 +138,7 @@
 * fix docker image not finding py_analyze (because it looks in crates/...)
 * machine learning stuff in aparte app/container doen? en dan met gRPC/protobuf communiceren met api en worker zodat de
   container size van deze 2 niet zo huge worden. Tonic is rust grpc crate.
+* make worker crate stop on ctrl c
 
 # integration test
 
