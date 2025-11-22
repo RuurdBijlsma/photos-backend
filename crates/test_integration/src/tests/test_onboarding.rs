@@ -14,8 +14,6 @@ use tokio::fs;
 use tokio::time::sleep;
 use tracing::info;
 
-const USER_FOLDER: &str = "integration_test_album";
-
 pub async fn test_onboarding(context: &TestContext) -> Result<()> {
     // 1. Login
     let token = login(context).await?;
@@ -46,12 +44,13 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
     let _folders: Vec<String> = response.json().await?;
 
     // 4. Create a new folder
+    let created_folder = "integration_test_folder";
     let response = client
         .post(format!("{api_url}/onboarding/make-folder"))
         .bearer_auth(&token)
         .json(&MakeFolderBody {
             base_folder: String::new(),
-            new_name: USER_FOLDER.to_string(),
+            new_name: created_folder.to_string(),
         })
         .send()
         .await?;
@@ -67,8 +66,8 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
         .await?;
 
     let folders: Vec<String> = response.json().await?;
-    assert!(folders.contains(&USER_FOLDER.to_string()));
-    let folder = &context.settings.ingest.media_root.join(USER_FOLDER);
+    assert!(folders.contains(&created_folder.to_string()));
+    let folder = &context.settings.ingest.media_root.join(created_folder);
     assert!(folder.exists());
     fs::remove_dir(folder).await?;
 

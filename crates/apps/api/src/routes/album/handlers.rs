@@ -22,8 +22,8 @@ use common_services::database::app_user::User;
 /// The user creating the album will be designated as the owner.
 #[utoipa::path(
     post,
-    path = "/albums",
-    tag = "Albums",
+    path = "/album",
+    tag = "Album",
     request_body = CreateAlbumRequest,
     responses(
         (status = 201, description = "Album created successfully.", body = Album),
@@ -52,8 +52,8 @@ pub async fn create_album_handler(
 /// Returns all albums where the user is a collaborator (owner, contributor, or viewer).
 #[utoipa::path(
     get,
-    path = "/albums",
-    tag = "Albums",
+    path = "/album",
+    tag = "Album",
     responses(
         (status = 200, description = "A list of the user's albums.", body = Vec<Album>),
         (status = 500, description = "A database or internal error occurred."),
@@ -73,8 +73,8 @@ pub async fn get_user_albums_handler(
 /// The user must be a collaborator on the album to view its details.
 #[utoipa::path(
     get,
-    path = "/albums/{album_id}",
-    tag = "Albums",
+    path = "/album/{album_id}",
+    tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album.")
     ),
@@ -99,8 +99,8 @@ pub async fn get_album_details_handler(
 /// Allows updating the name and/or description. The user must be the album owner.
 #[utoipa::path(
     put,
-    path = "/albums/{album_id}",
-    tag = "Albums",
+    path = "/album/{album_id}",
+    tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album to update.")
     ),
@@ -135,8 +135,8 @@ pub async fn update_album_handler(
 /// The user must be an owner or contributor of the album.
 #[utoipa::path(
     post,
-    path = "/albums/{album_id}/media",
-    tag = "Albums",
+    path = "/album/{album_id}/media",
+    tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album.")
     ),
@@ -163,8 +163,8 @@ pub async fn add_media_to_album_handler(
 /// The user must be an owner or contributor of the album.
 #[utoipa::path(
     delete,
-    path = "/albums/{album_id}/media/{media_item_id}",
-    tag = "Albums",
+    path = "/album/{album_id}/media/{media_item_id}",
+    tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album."),
         ("media_item_id" = String, Path, description = "The ID of the media item to remove.")
@@ -190,8 +190,8 @@ pub async fn remove_media_from_album_handler(
 /// The inviting user must be the album owner.
 #[utoipa::path(
     post,
-    path = "/albums/{album_id}/collaborators",
-    tag = "Albums",
+    path = "/album/{album_id}/collaborators",
+    tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album.")
     ),
@@ -225,8 +225,8 @@ pub async fn add_collaborator_handler(
 /// The user performing the action must be the album owner. The owner cannot be removed.
 #[utoipa::path(
     delete,
-    path = "/albums/{album_id}/collaborators/{collaborator_id}",
-    tag = "Albums",
+    path = "/album/{album_id}/collaborators/{collaborator_id}",
+    tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album."),
         ("collaborator_id" = i64, Path, description = "The numeric ID of the collaborator record.")
@@ -252,8 +252,8 @@ pub async fn remove_collaborator_handler(
 /// The inviting user must be the album owner. The generated token has a configurable expiry time.
 #[utoipa::path(
     get,
-    path = "/albums/{album_id}/generate-invite",
-    tag = "Albums",
+    path = "/album/{album_id}/generate-invite",
+    tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album to share.")
     ),
@@ -284,8 +284,8 @@ pub async fn generate_invite_handler(
 
 #[utoipa::path(
     post,
-    path = "/albums/invite/check",
-    tag = "Albums",
+    path = "/album/invite/check",
+    tag = "Album",
     request_body = CheckInviteRequest,
     responses(
         (status = 200, description = "Invitation summary retrieved successfully.", body = AlbumSummary),
@@ -311,8 +311,8 @@ pub async fn check_invite_handler(
 /// from the remote server.
 #[utoipa::path(
     post,
-    path = "/albums/invite/accept",
-    tag = "Albums",
+    path = "/album/invite/accept",
+    tag = "Album",
     request_body = AcceptInviteRequest,
     responses(
         (status = 202, description = "Album import process has been started."),
