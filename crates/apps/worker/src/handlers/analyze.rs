@@ -1,7 +1,7 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::eyre::{Result, eyre};
+use color_eyre::eyre::{eyre, Result};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
@@ -74,12 +74,21 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
 
     let mut analyses = Vec::new();
     for (percentage, image_path) in images_to_analyze {
-        analyses.push(
-            context
-                .visual_analyzer
-                .analyze_image(&context.settings.ingest.analyzer, &image_path, percentage)
-                .await?,
-        );
+        let analyzer = context.visual_analyzer.clone();
+        let analyzer_settings = context.settings.ingest.analyzer.clone();
+
+        // This spawn blocking -> block_on is needed because analyze image does heavy work on the
+        // main thread and this disturbs the integration test.
+        let analysis_result = tokio::task::spawn_blocking(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                analyzer
+                    .analyze_image(&analyzer_settings, &image_path, percentage)
+                    .await
+            })
+        })
+            .await??; // Double ? handles JoinError (panic) and the inner Result
+
+        analyses.push(analysis_result);
     }
 
     let job_result = if is_job_cancelled(&mut *tx, job.id).await? || !file_path.exists() {
