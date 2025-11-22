@@ -140,7 +140,7 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
                 timeout
             );
         }
-        sleep(Duration::from_secs(10)).await;
+        sleep(Duration::from_secs(2)).await;
     }
     info!("All media items are processed");
     // Todo: check if thumbnails and db items are there.

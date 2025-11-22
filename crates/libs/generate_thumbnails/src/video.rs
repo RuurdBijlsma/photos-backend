@@ -15,7 +15,7 @@ pub async fn generate_video_thumbnails(
     let mut cmd = FfmpegCommand::new(input);
 
     // 1. Generate multi-size stills from a fixed timestamp.
-    generate_fixed_time_stills(&mut cmd, output_dir, config);
+    generate_fixed_time_stills(&mut cmd, output_dir, config, duration);
 
     // 2. Generate stills from various time percentages.
     generate_percentage_stills(&mut cmd, output_dir, config, duration);
@@ -30,11 +30,14 @@ fn generate_fixed_time_stills(
     cmd: &mut FfmpegCommand,
     output_dir: &Path,
     config: &ThumbnailSettings,
+    duration: f64,
 ) {
     if config.heights.is_empty() {
         return;
     }
-    let input_stream = cmd.add_input_at_time(config.video_options.thumb_time);
+
+    let safe_ts = config.video_options.thumb_time.min((duration - 0.1).max(0.0));
+    let input_stream = cmd.add_input_at_time(safe_ts);
     let split_streams = cmd.add_split(&input_stream, config.heights.len());
 
     for (i, &h) in config.heights.iter().enumerate() {
@@ -55,9 +58,13 @@ fn generate_percentage_stills(
     }
     let target_h = config.video_options.height;
     let thumb_ext = &config.thumbnail_extension;
+    let max_safe_ts = (duration - 0.3).max(0.0);
 
     for &pct in &config.video_options.percentages {
-        let ts = (pct as f64) / 100.0 * duration;
+        let raw_ts = (pct as f64) / 100.0 * duration;
+        // Clamp the timestamp.
+        let ts = raw_ts.min(max_safe_ts);
+
         let input_stream = cmd.add_input_at_time(ts);
         let scaled_stream = cmd.add_scale(&input_stream, -2, target_h as i32);
         let out_path = output_dir.join(format!("{pct}_percent.{thumb_ext}"));
