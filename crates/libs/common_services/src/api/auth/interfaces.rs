@@ -13,7 +13,7 @@ pub struct CreateUser {
 }
 
 /// Represents the data required for user login.
-#[derive(Deserialize, Debug, ToSchema)]
+#[derive(Deserialize, Serialize, Debug, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginUser {
     pub email: String,
@@ -22,14 +22,14 @@ pub struct LoginUser {
 }
 
 /// Represents the payload for a refresh token request.
-#[derive(Deserialize, Debug, ToSchema)]
+#[derive(Deserialize, Serialize, Debug, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RefreshTokenPayload {
     pub refresh_token: String,
 }
 
 /// Represents a pair of access and refresh tokens.
-#[derive(Serialize, Debug, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Tokens {
     pub expiry: u64,
