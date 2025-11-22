@@ -38,7 +38,7 @@ fn generate_fixed_time_stills(
     let split_streams = cmd.add_split(&input_stream, config.heights.len());
 
     for (i, &h) in config.heights.iter().enumerate() {
-        let scaled_stream = cmd.add_scale(&split_streams[i], -1, h as i32);
+        let scaled_stream = cmd.add_scale(&split_streams[i], -2, h as i32);
         let out_path = output_dir.join(format!("{h}p.{}", config.thumbnail_extension));
         cmd.map_still_output(&scaled_stream, &out_path);
     }
@@ -59,7 +59,7 @@ fn generate_percentage_stills(
     for &pct in &config.video_options.percentages {
         let ts = (pct as f64) / 100.0 * duration;
         let input_stream = cmd.add_input_at_time(ts);
-        let scaled_stream = cmd.add_scale(&input_stream, -1, target_h as i32);
+        let scaled_stream = cmd.add_scale(&input_stream, -2, target_h as i32);
         let out_path = output_dir.join(format!("{pct}_percent.{thumb_ext}"));
         cmd.map_still_output(&scaled_stream, &out_path);
     }

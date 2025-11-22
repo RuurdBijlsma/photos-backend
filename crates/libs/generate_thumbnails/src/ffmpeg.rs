@@ -55,10 +55,27 @@ impl FfmpegCommand {
 
     /// Adds a `scale` filter to resize a video stream.
     /// Returns the output stream label (e.g., `[out_0]`).
+    ///
+    /// Automatically ensures dimensions are even numbers (required for YUV420 encoding).
+    /// - If -1 is passed, it is converted to -2 (FFmpeg logic for "preserve aspect ratio and ensure mod 2").
+    /// - If an odd positive integer is passed, it is rounded up to the next even number.
     pub fn add_scale(&mut self, input_stream: &str, width: i32, height: i32) -> String {
+        let sanitize_dim = |val: i32| -> i32 {
+            if val == -1 {
+                -2 // Tell FFmpeg to calc dimension AND ensure it's divisible by 2
+            } else if val > 0 && val % 2 != 0 {
+                val + 1 // Round odd dimensions up to even
+            } else {
+                val
+            }
+        };
+
+        let w = sanitize_dim(width);
+        let h = sanitize_dim(height);
+
         let out_label = format!("[out_{}]", self.filters.len());
         self.filters
-            .push(format!("{input_stream}scale={width}:{height}{out_label}"));
+            .push(format!("{input_stream}scale={w}:{h}{out_label}"));
         out_label
     }
 
