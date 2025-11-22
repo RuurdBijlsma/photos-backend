@@ -1,20 +1,54 @@
 use color_eyre::Result;
 use colored::*;
-use crate::helpers::test_context::test_context::TestContext;
-use crate::tests::{test_auth, test_health_endpoint};
 use std::future::Future;
 use std::time::Instant;
 use tracing::Level;
 use tracing_subscriber::{fmt, EnvFilter};
 
+#[macro_export]
 macro_rules! run_test {
     ($call:expr) => {
-        run_test_impl(stringify!($call), $call)
+        // We access run_test_impl via $crate::... so it works from anywhere
+        $crate::helpers::orchestration_utils::run_test_impl(stringify!($call), $call)
     };
 }
 
+/// A macro to run a list of tests and print a summary.
+#[macro_export]
+macro_rules! execute_suite {
+        ($context:expr, [ $($test_fn:ident),* $(,)? ]) => {
+            {
+                // 1. Count the tests by tricking the macro expansion
+                let total_tests = 0 $( + { let _ = stringify!($test_fn); 1 } )*;
+                let mut passed_tests = 0;
+                let suite_start = Instant::now();
+                println!();
+
+                // 2. Run each test sequentially
+                $(
+                    // To run ALL tests even if one fails, remove the '?'
+                    // but we'll need to handle the Err manually.
+                    run_test!($test_fn($context)).await?;
+                    passed_tests += 1;
+                )*
+
+                // 3. Print Summary
+                println!("{}", "─".repeat(60).truecolor(80, 80, 80));
+                println!(
+                    "{} {}/{} tests passed successfully in {:.2?}.",
+                    " SUMMARY ".on_purple().black().bold(),
+                    passed_tests,
+                    total_tests,
+                    suite_start.elapsed()
+                );
+                println!("{}", "─".repeat(60).truecolor(80, 80, 80));
+                println!();
+            }
+        };
+    }
+
 /// A helper to make test output distinct and readable
-async fn run_test_impl<Fut>(raw_name: &str, test: Fut) -> Result<()>
+pub async fn run_test_impl<Fut>(raw_name: &str, test: Fut) -> Result<()>
 where
     Fut: Future<Output = Result<()>>,
 {
@@ -55,31 +89,19 @@ where
     result
 }
 
-#[tokio::test]
-async fn integration_test() -> Result<()> {
+pub fn setup_tracing_and_panic_handling() {
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| "info,hyper=error,reqwest=error".into());
 
     let subscriber = fmt::Subscriber::builder()
         .with_env_filter(filter)
         .with_max_level(Level::INFO)
-        .compact() // Removes timestamp/levels for cleaner output
-        .with_target(false) // Hides the module path (e.g., common_services::api...)
+        .compact()
+        .with_target(false)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber)
         .expect("Setting default subscriber failed");
 
     color_eyre::install().expect("Failed to install color_eyre");
-
-    let context = TestContext::new().await?;
-    
-    run_test!(test_health_endpoint(&context)).await?;
-    run_test!(test_auth(&context)).await?;
-
-    println!();
-
-    println!("{}", "─".repeat(60).truecolor(80, 80, 80));
-
-    Ok(())
 }
