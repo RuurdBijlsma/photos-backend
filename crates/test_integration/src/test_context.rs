@@ -18,6 +18,7 @@ pub fn init_test_constants(constants: AppConstants) {
 }
 
 /// The main context for our integration tests.
+#[allow(dead_code)]
 pub struct TestContext {
     pub pool: PgPool,
     pub settings: AppSettings,
@@ -141,8 +142,6 @@ impl TestContext {
 
 impl Drop for TestContext {
     fn drop(&mut self) {
-        info!("Tearing down test environment...");
-
         // Abort background tasks
         self.api_handle.abort();
         self.worker_handle.abort();
