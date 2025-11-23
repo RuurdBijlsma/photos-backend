@@ -5,6 +5,7 @@ use axum::{
     Router,
 };
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tracing::info;
 use app_state::RateLimitingSettings;
 
 pub fn auth_public_router(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
@@ -13,6 +14,13 @@ pub fn auth_public_router(rate_limiting: &RateLimitingSettings) -> Router<ApiCon
         .burst_size(rate_limiting.burst_size)
         .finish()
         .expect("Could not create rate-limiting governor.");
+
+    info!("Using request limits: rate_limiting.req_per_second {:?}", rate_limiting.req_per_second);
+    info!("Using request limits: rate_limiting.burst_size{:?}", rate_limiting.burst_size);
+    info!("Using request limits: rate_limiting.req_per_second {:?}", rate_limiting.req_per_second);
+    info!("Using request limits: rate_limiting.burst_size{:?}", rate_limiting.burst_size);
+    info!("Using request limits: rate_limiting.req_per_second {:?}", rate_limiting.req_per_second);
+    info!("Using request limits: rate_limiting.burst_size{:?}", rate_limiting.burst_size);
 
     Router::new()
         .route("/auth/refresh", post(refresh_session))
