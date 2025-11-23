@@ -1,21 +1,27 @@
 use crate::{AppConstants, AppSettings, RawSettings};
 use color_eyre::eyre::Result;
+use config::{Config, File};
 use std::fs;
 use std::path::Path;
-use std::sync::LazyLock;
+use std::sync::OnceLock;
 
-pub fn load_app_settings() -> Result<AppSettings> {
-    // Need to load from dotenv to get it to overwrite the db url from env.
-    dotenv::from_path(".env").ok();
-    let config_path = Path::new("config/settings.yaml").canonicalize()?;
+pub fn load_settings_from_path(path: &Path, include_env: bool) -> Result<AppSettings> {
+    // Need to load from dotenv to get it to overwrite the secrets from env.
+    if include_env {
+        dotenv::from_path(".env").ok();
+    }
 
-    let builder = config::Config::builder()
-        .add_source(config::File::from(config_path))
-        .add_source(
-            config::Environment::with_prefix("APP")
-                .separator("__")
-                .try_parsing(true),
-        );
+    let builder = {
+        let mut builder = Config::builder().add_source(File::from(path));
+        if include_env {
+            builder = builder.add_source(
+                config::Environment::with_prefix("APP")
+                    .separator("__")
+                    .try_parsing(true),
+            );
+        }
+        builder
+    };
 
     let raw_settings = builder.build()?.try_deserialize::<RawSettings>()?;
     let settings: AppSettings = raw_settings.into();
@@ -25,19 +31,27 @@ pub fn load_app_settings() -> Result<AppSettings> {
     Ok(settings)
 }
 
-fn load_app_constants() -> Result<AppConstants> {
-    let config_path = Path::new("config/settings.yaml").canonicalize()?;
-    let builder = config::Config::builder().add_source(config::File::from(config_path));
+pub fn load_constants_from_path(path: &Path) -> Result<AppConstants> {
+    let builder = Config::builder().add_source(File::from(path));
     let raw_constants = builder.build()?.try_deserialize::<RawSettings>()?;
     let app_constants: AppConstants = raw_constants.into();
 
     Ok(app_constants)
 }
 
-pub static CONSTANTS: LazyLock<AppConstants> =
-    LazyLock::new(|| load_app_constants().expect("Cannot load app settings."));
+pub fn load_app_settings() -> Result<AppSettings> {
+    let config_path = Path::new("config/settings.yaml").canonicalize()?;
+    load_settings_from_path(&config_path, true)
+}
+
+fn load_app_constants() -> Result<AppConstants> {
+    let config_path = Path::new("config/settings.yaml").canonicalize()?;
+    load_constants_from_path(&config_path)
+}
+
+pub static CONSTANTS: OnceLock<AppConstants> = OnceLock::new();
 
 #[must_use]
 pub fn constants() -> &'static AppConstants {
-    &CONSTANTS
+    CONSTANTS.get_or_init(|| load_app_constants().expect("Cannot load app settings."))
 }

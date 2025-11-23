@@ -1,10 +1,10 @@
-use app_state::load_app_settings;
+use app_state::AppSettings;
 use color_eyre::Result;
-use common_services::database::get_db_pool;
 use common_services::database::jobs::JobType;
 use common_services::job_queue::enqueue_job;
+use sqlx::PgPool;
 
-pub async fn run_tasks() -> Result<()> {
+pub async fn run_tasks(pool: PgPool, settings: AppSettings) -> Result<()> {
     // let twenty_four_hours = Duration::from_secs(12 * 60 * 60);
     // let mut interval = time::interval(twenty_four_hours);
     //
@@ -14,8 +14,6 @@ pub async fn run_tasks() -> Result<()> {
     //
     //     tokio::spawn(async {
     //         let result: Result<()> = async {
-    let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
     enqueue_job::<()>(&pool, &settings, JobType::Scan)
         .call()
         .await?;

@@ -1,0 +1,73 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    ports:
+      - "9475:9475"
+    volumes:
+      - ./config/settings.yaml:/app/config/settings.yaml:Z
+      - ./media_dir:/app/media_dir:Z
+      - ./thumbnails:/app/thumbnails:Z
+    environment:
+      DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+      APP__SECRETS__DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+      APP__SECRETS__JWT: your123secret
+      APP__API__PORT: 9475
+      APP__API__PUBLIC_URL: http://localhost:9475
+    depends_on:
+      - postgres
+    restart: always
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    volumes:
+      - ./config/settings.yaml:/app/config/settings.yaml:Z
+      - ./media_dir:/app/media_dir:Z
+      - ./thumbnails:/app/thumbnails:Z
+    environment:
+      DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+      APP__SECRETS__DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+    depends_on:
+      - postgres
+    restart: always
+
+  watcher:
+    build:
+      context: .
+      dockerfile: watcher.Dockerfile
+      target: runner
+    volumes:
+      - ./config/settings.yaml:/app/config/settings.yaml:Z
+      - ./media_dir:/app/media_dir:Z
+    environment:
+      DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+      APP__SECRETS__DATABASE_URL: postgresql://photos_user:dev-password@postgres:5533/photos
+    depends_on:
+      - postgres
+    restart: always
+
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_DB: photos
+      POSTGRES_USER: photos_user
+      POSTGRES_PASSWORD: dev-password
+      PGPORT: 5533
+    ports:
+      - "5533:5533"
+    volumes:
+      - pg_data:/var/lib/postgresql:Z
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U photos_user -d photos" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data:

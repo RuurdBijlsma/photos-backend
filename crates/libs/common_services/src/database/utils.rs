@@ -1,8 +1,33 @@
 use app_state::constants;
+use color_eyre::eyre::{Result, WrapErr};
+use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
+use std::env;
+use std::path::PathBuf;
 use std::time::Duration;
 use tracing::info;
+
+pub fn find_migrations_dir() -> Result<PathBuf> {
+    let mut current_dir = env::current_exe()?
+        .parent()
+        .ok_or_else(|| color_eyre::eyre::eyre!("Executable has no parent directory"))?
+        .to_path_buf();
+
+    loop {
+        let migrations_path = current_dir.join("migrations");
+        if migrations_path.is_dir() {
+            return Ok(migrations_path);
+        }
+
+        // Go up to the parent directory. If we are at the root, stop.
+        if !current_dir.pop() {
+            return Err(color_eyre::eyre::eyre!(
+                "Could not find the 'migrations' directory in any parent path"
+            ));
+        }
+    }
+}
 
 /// Run migrations and get a database connection pool.
 /// # Errors
@@ -10,8 +35,14 @@ use tracing::info;
 /// * `env::var` can return an error if `DATABASE_URL` is not found in the environment.
 /// * `PgPool::connect` can return an error if the database connection fails.
 /// * `sqlx::migrate` can return an error if migrations fail.
-pub async fn get_db_pool(database_url: &str) -> color_eyre::Result<Pool<Postgres>> {
-    info!("Connecting to database.");
+pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Pool<Postgres>> {
+    info!(
+        "Connecting to database: {}",
+        database_url
+            .split('/')
+            .next_back()
+            .unwrap_or("DB NOT FOUND")
+    );
     let db_config = &constants().database;
     let pool = PgPoolOptions::new()
         .max_connections(db_config.max_connections)
@@ -22,5 +53,14 @@ pub async fn get_db_pool(database_url: &str) -> color_eyre::Result<Pool<Postgres
         .test_before_acquire(true)
         .connect(database_url)
         .await?;
+    if run_migrations {
+        let migrations_folder = find_migrations_dir()?;
+        let migrator = Migrator::new(migrations_folder).await?;
+        migrator
+            .run(&pool)
+            .await
+            .wrap_err("Failed to run database migrations")?;
+        info!("Database migrations completed successfully.");
+    }
     Ok(pool)
 }

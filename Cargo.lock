@@ -820,9 +820,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.51"
+version = "4.5.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c26d721170e0295f191a69bd9a1f93efcdb0aff38684b61ab5750468972e5f5"
+checksum = "aa8120877db0e5c011242f96806ce3c94e0737ab8108532a76a3300a01db2ab8"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -830,9 +830,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.51"
+version = "4.5.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75835f0c7bf681bfd05abe44e965760fea999a5286c6eb2d59883634fd02011a"
+checksum = "02576b399397b659c26064fbc92a75fede9d18ffd5f80ca1cd74ddab167016e1"
 dependencies = [
  "anstream",
  "anstyle",
@@ -898,6 +898,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
+name = "colored"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fde0e0ec90c9dfb3b4b1a0891a7dcd0e2bffde2f7efed5fe7c9bb00e5bfb915e"
+dependencies = [
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "comfy-table"
 version = "7.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -918,7 +927,6 @@ dependencies = [
  "base64",
  "bon",
  "chrono",
- "chrono-tz",
  "color-eyre",
  "common_types",
  "fastrand",
@@ -948,8 +956,6 @@ dependencies = [
 name = "common_types"
 version = "0.1.0"
 dependencies = [
- "chrono-tz",
- "color-eyre",
  "prost 0.13.5",
  "prost-build 0.13.5",
  "serde",
@@ -1974,8 +1980,6 @@ version = "0.1.0"
 dependencies = [
  "app_state",
  "color-eyre",
- "common_services",
- "common_types",
  "fast_image_resize",
  "image",
  "imgref",
@@ -1986,6 +1990,7 @@ dependencies = [
  "serde_json",
  "temp-dir",
  "tokio",
+ "walkdir",
 ]
 
 [[package]]
@@ -3110,7 +3115,6 @@ version = "0.1.0"
 dependencies = [
  "app_state",
  "color-eyre",
- "common_services",
  "common_types",
  "image",
  "imageproc",
@@ -5879,6 +5883,7 @@ dependencies = [
  "app_state",
  "color-eyre",
  "common_services",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -5919,12 +5924,22 @@ name = "test_integration"
 version = "0.1.0"
 dependencies = [
  "api",
- "clap",
+ "app_state",
+ "chrono",
  "color-eyre",
- "tasks",
+ "colored",
+ "common_services",
+ "common_types",
+ "prost 0.13.5",
+ "reqwest",
+ "serde_json",
+ "sqlx",
+ "tempfile",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "url",
+ "walkdir",
  "watcher",
  "worker",
 ]
@@ -6653,8 +6668,6 @@ dependencies = [
  "app_state",
  "color-eyre",
  "common_services",
- "common_types",
- "futures",
  "notify",
  "sqlx",
  "tokio",

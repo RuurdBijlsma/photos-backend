@@ -2,6 +2,7 @@ fn main() -> std::io::Result<()> {
     println!("cargo:rerun-if-changed=proto/photos.proto");
 
     let mut config = prost_build::Config::new();
+    config.protoc_arg("--experimental_allow_proto3_optional");
 
     config.type_attribute(
         ".api.TimelineResponse",

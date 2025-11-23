@@ -20,13 +20,16 @@ pub async fn get_invite_summary(
         SELECT
             name,
             description,
-            (
-                SELECT array_agg(mi.relative_path) 
-                FROM album_media_item ami 
-                    JOIN media_item mi ON ami.media_item_id = mi.id 
-                WHERE ami.album_id = $1
-            ) as "relative_paths!"
-        FROM album 
+            COALESCE(
+                (
+                    SELECT array_agg(mi.relative_path)
+                    FROM album_media_item ami
+                        JOIN media_item mi ON ami.media_item_id = mi.id
+                    WHERE ami.album_id = $1
+                ),
+                '{}'
+            ) AS "relative_paths!"
+        FROM album
         WHERE album.id = $1
         "#,
         claims.sub

@@ -192,7 +192,8 @@ impl MediaItemStore {
                 || media_item.taken_at_local.and_utc(),
                 |tz| {
                     tz.from_local_datetime(&media_item.taken_at_local)
-                        .unwrap()
+                        .earliest()
+                        .expect("Can't get datetime at timezone.")
                         .with_timezone(&Utc)
                 },
             )

@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FolderParams {
     pub folder: String,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PathInfoResponse {
     pub folder: String,
@@ -19,7 +19,7 @@ pub struct PathInfoResponse {
     pub write_access: bool,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MediaSampleResponse {
     pub read_access: bool,
@@ -42,7 +42,7 @@ impl MediaSampleResponse {
     }
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UnsupportedFilesResponse {
     pub read_access: bool,
@@ -65,21 +65,21 @@ impl UnsupportedFilesResponse {
     }
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, ToSchema, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiskResponse {
     pub media_folder: PathInfoResponse,
     pub thumbnails_folder: PathInfoResponse,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MakeFolderBody {
     pub base_folder: String,
     pub new_name: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StartProcessingBody {
     pub user_folder: String,

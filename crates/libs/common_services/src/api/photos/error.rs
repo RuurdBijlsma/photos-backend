@@ -15,31 +15,21 @@ pub enum PhotosError {
     #[error("internal error")]
     Internal(#[from] eyre::Report),
 
-    #[error("Invalid month format. Expected YYYY-MM-DD, but got '{0}'")]
-    InvalidMonthFormat(String),
-
     #[error("Media item not found: {0}")]
     MediaNotFound(String),
-}
 
-// Renamed for more general use
-fn log_error(error: &PhotosError) {
-    match error {
-        PhotosError::Database(e) => error!("Database query failed: {}", e),
-        PhotosError::Internal(e) => error!("Internal error: {}", e),
-        PhotosError::InvalidMonthFormat(month) => {
-            error!("Invalid month format provided: {}", month);
-        }
-        PhotosError::MediaNotFound(id) => {
-            error!("Media item not found: {}", id);
-        }
-    }
+    #[error("Invalid media path provided.")]
+    InvalidPath,
+
+    #[error("Permission denied while accessing media file.")]
+    AccessDenied,
+
+    #[error("The requested file is not a supported media type.")]
+    UnsupportedMediaType,
 }
 
 impl IntoResponse for PhotosError {
     fn into_response(self) -> Response {
-        log_error(&self);
-
         let (status, error_message) = match self {
             Self::Database(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -49,14 +39,13 @@ impl IntoResponse for PhotosError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An unexpected internal error occurred.".to_string(),
             ),
-            Self::InvalidMonthFormat(invalid_month) => (
-                StatusCode::BAD_REQUEST,
-                format!("Invalid month format. Expected YYYY-MM-DD, but got '{invalid_month}'"),
-            ),
             Self::MediaNotFound(media_id) => (
                 StatusCode::NOT_FOUND,
                 format!("Media item not found: {media_id}"),
             ),
+            Self::InvalidPath => (StatusCode::BAD_REQUEST, self.to_string()),
+            Self::AccessDenied => (StatusCode::FORBIDDEN, self.to_string()),
+            Self::UnsupportedMediaType => (StatusCode::UNSUPPORTED_MEDIA_TYPE, self.to_string()),
         };
 
         let body = Json(json!({ "error": error_message }));

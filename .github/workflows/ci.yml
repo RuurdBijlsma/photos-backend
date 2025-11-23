@@ -13,17 +13,15 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v5
 
       - name: apt install
-        run: sudo apt update && sudo apt install -y protobuf-compiler libfontconfig1-dev pkg-config nasm
+        run: sudo apt update && sudo apt install -y protobuf-compiler libfontconfig1-dev pkg-config nasm postgresql-client
 
       - name: Build
-        run: cargo build --profile dev
-
-      - name: Run tests
-        run: cargo test --profile dev
+        run: cargo build
 
       - name: Check formatting
         run: cargo fmt --all -- --check

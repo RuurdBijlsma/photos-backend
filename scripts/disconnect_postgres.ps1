@@ -1,5 +1,5 @@
 # Configuration
-$containerName = "photos-postgres-dev"
+$containerName = "photos-db-dev"
 $dbName = "photos"
 $dbUser = "photos_user"
 

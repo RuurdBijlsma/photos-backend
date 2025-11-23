@@ -5,7 +5,8 @@ use common_types::variant::Variant;
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use serde_json::Value;
-use std::path::Path;
+use std::env;
+use std::path::{Path, PathBuf};
 
 pub struct PyInterop {
     json_dumps: Py<PyAny>,
@@ -33,10 +34,26 @@ impl PyInterop {
     pub fn new(py: Python<'_>) -> PyResult<Self> {
         let sys = py.import("sys")?;
         let sys_path = sys.getattr("path")?;
-        sys_path.call_method1("append", ("./crates/libs/ml_analysis/py_ml",))?;
+
+        // --- Set paths ---
+        let py_ml_path = env::var("APP_PY_ML_DIR").map_or_else(
+            |_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("py_ml"),
+            PathBuf::from,
+        );
+        let site_packages_path = if cfg!(windows) {
+            py_ml_path.join(".venv/Lib/site-packages")
+        } else {
+            py_ml_path.join(".venv/lib/python3.12/site-packages")
+        };
         sys_path.call_method1(
             "append",
-            ("./crates/libs/ml_analysis/py_ml/.venv/Lib/site-packages",),
+            (py_ml_path.to_str().expect("Path is not valid UTF-8"),),
+        )?;
+        sys_path.call_method1(
+            "append",
+            (site_packages_path
+                .to_str()
+                .expect("Path is not valid UTF-8"),),
         )?;
 
         // --- Python log suppression code ---
@@ -47,7 +64,6 @@ impl PyInterop {
         let devnull_file = open.call1((devnull_path, "w"))?;
         sys.setattr("stdout", devnull_file.clone())?;
         sys.setattr("stderr", devnull_file)?;
-        // --- End of log suppression code ---
 
         let module = py.import("py_analyze")?;
         let captioner_func = module.getattr("caption")?.into_pyobject(py)?;
@@ -250,7 +266,7 @@ impl PyInterop {
 
             let result = func.call1((image,))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let faces: Vec<PyFace> = serde_json::from_str(&json_str).unwrap();
+            let faces: Vec<PyFace> = serde_json::from_str(&json_str).unwrap_or_default();
             Ok(faces)
         })
     }
@@ -274,7 +290,8 @@ impl PyInterop {
 
             let result = func.call1((image,))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let objects: Vec<PyDetectedObject> = serde_json::from_str(&json_str).unwrap();
+            let objects: Vec<PyDetectedObject> =
+                serde_json::from_str(&json_str).unwrap_or_default();
             Ok(objects)
         })
     }
@@ -299,7 +316,7 @@ impl PyInterop {
 
             let result = func.call1((image, languages))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let ocr_data: PyOCRData = serde_json::from_str(&json_str).unwrap();
+            let ocr_data: PyOCRData = serde_json::from_str(&json_str).unwrap_or_default();
             Ok(ocr_data)
         })
     }

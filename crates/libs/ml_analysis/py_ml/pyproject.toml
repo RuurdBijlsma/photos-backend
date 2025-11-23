@@ -1,7 +1,7 @@
 [project]
 name = "py_ml"
 version = "0.1.0"
-description = "Add your description here"
+description = "Python functions used by the rust project."
 readme = "README.md"
 requires-python = "~=3.12"
 dependencies = [

@@ -1,20 +1,16 @@
 use crate::api_state::ApiContext;
 use app_state::IngestSettings;
 use axum::extract::{Query, State};
+use axum::response::IntoResponse;
 use axum::{Extension, Json};
-use axum_extra::protobuf::Protobuf;
-use chrono::NaiveDate;
 use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::{
-    ColorThemeParams, GetMediaByMonthParams, GetMediaItemParams, RandomPhotoResponse,
+    ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse,
 };
-use common_services::api::photos::service::{
-    get_photos_by_month, get_timeline_ids, get_timeline_ratios, random_photo,
-};
+use common_services::api::photos::service::{download_media_file, random_photo};
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
 use common_services::database::media_item_store::MediaItemStore;
-use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 use ml_analysis::get_color_theme;
 use serde_json::Value;
 use tracing::instrument;
@@ -54,91 +50,6 @@ pub async fn get_full_item_handler(
     }
 }
 
-/// Get a timeline of all media ratios, grouped by month.
-///
-/// # Errors
-///
-/// Returns a `PhotosError` if the database query fails.
-#[utoipa::path(
-    get,
-    path = "/photos/timeline/ratios",
-    tag = "Photos",
-    responses(
-        (status = 200, description = "A timeline of media items grouped by month.", body = TimelineResponse),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_timeline_ratios_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<User>,
-) -> Result<Protobuf<TimelineResponse>, PhotosError> {
-    let timeline = get_timeline_ratios(&user, &context.pool).await?;
-    Ok(Protobuf(timeline))
-}
-
-/// Get a timeline of all media ids
-///
-/// # Errors
-///
-/// Returns a `PhotosError` if the database query fails.
-#[utoipa::path(
-    get,
-    path = "/photos/timeline/ids",
-    tag = "Photos",
-    responses(
-        (status = 200, description = "A timeline of media items grouped by month.", body = Vec<String>),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_timeline_ids_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<User>,
-) -> Result<Json<Vec<String>>, PhotosError> {
-    let timeline = get_timeline_ids(&user, &context.pool).await?;
-    Ok(Json(timeline))
-}
-
-/// Get all media items for a given set of months.
-///
-/// # Errors
-///
-/// Returns a `PhotosError` if the database query fails.
-#[utoipa::path(
-    get,
-    path = "/photos/by-month",
-    tag = "Photos",
-    params(
-        GetMediaByMonthParams
-    ),
-    responses(
-        (status = 200, description = "A collection of media items for the requested months.", body = ByMonthResponse),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_photos_by_month_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<User>,
-    Query(params): Query<GetMediaByMonthParams>,
-) -> Result<Protobuf<ByMonthResponse>, PhotosError> {
-    let month_ids = params
-        .months
-        .split(',')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d"))
-        .collect::<Result<Vec<NaiveDate>, _>>()
-        .map_err(|_| {
-            PhotosError::InvalidMonthFormat(
-                "Invalid date format in 'months' parameter. Please use 'YYYY-MM-DD'.".to_string(),
-            )
-        })?;
-    let photos = get_photos_by_month(&user, &context.pool, &month_ids).await?;
-    Ok(Protobuf(photos))
-}
-
 /// Get a random photo and its associated theme.
 ///
 /// # Errors
@@ -172,7 +83,7 @@ pub async fn get_random_photo(
     path = "/photos/theme",
     tag = "Photos",
     params(
-        GetMediaByMonthParams
+        ColorThemeParams
     ),
     responses(
         (status = 200, description = "Get theme object from a color.", body = Value),
@@ -191,4 +102,37 @@ pub async fn get_color_theme_handler(
         variant,
         contrast_level as f32,
     )?))
+}
+
+/// Download a media file.
+///
+/// This endpoint streams a specific media file to the client. The path to the media
+/// file must be a valid and secure path within the configured media directory.
+///
+/// # Errors
+///
+/// This function returns a `PhotosError` if the path is invalid, the file
+/// isn't found, the user lacks permissions, or an internal server error occurs.
+#[utoipa::path(
+    get,
+    path = "/photos/download",
+    params(
+        ("path" = String, Query, description = "The path of the media file to download")
+    ),
+    responses(
+        (status = 200, description = "Media file streamed successfully.", body = Vec<u8>, content_type = "application/octet-stream"),
+        (status = 400, description = "Invalid path provided, such as a directory traversal attempt."),
+        (status = 403, description = "Permission denied when trying to access the file."),
+        (status = 404, description = "The requested media file could not be found."),
+        (status = 415, description = "The requested file is not a supported media type."),
+        (status = 500, description = "An internal server error occurred."),
+    )
+)]
+pub async fn download_full_file(
+    State(ingestion): State<IngestSettings>,
+    Extension(user): Extension<User>,
+    Query(query): Query<DownloadMediaParams>,
+) -> Result<impl IntoResponse, PhotosError> {
+    let response = download_media_file(&ingestion, &user, &query.path).await?;
+    Ok(response)
 }

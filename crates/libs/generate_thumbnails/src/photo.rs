@@ -65,14 +65,23 @@ pub fn generate_native_photo_thumbnails(
                 .with_speed(config.avif_options.speed)
                 .with_alpha_quality(config.avif_options.alpha_quality);
 
-            let target_w = ((u64::from(orig_w) * target_h) / u64::from(orig_h)) as u32;
+            let mut target_w = ((u64::from(orig_w) * target_h) / u64::from(orig_h)) as u32;
+
+            if target_w > 0 && !target_w.is_multiple_of(2) {
+                target_w += 1;
+            }
+
             if target_w == 0 || target_h == 0 {
                 return Ok(());
             }
 
             let mut dst_img = Image::new(
-                NonZeroU32::new(target_w).unwrap().into(),
-                NonZeroU32::new(target_h as u32).unwrap().into(),
+                NonZeroU32::new(target_w)
+                    .ok_or_else(|| eyre!("thumb target width is zero"))?
+                    .into(),
+                NonZeroU32::new(target_h as u32)
+                    .ok_or_else(|| eyre!("thumb target height is zero"))?
+                    .into(),
                 PixelType::U8x4,
             );
 
@@ -121,7 +130,8 @@ pub async fn generate_ffmpeg_photo_thumbnails(
     let output_streams = cmd.add_split(input_stream, config.heights.len());
 
     for (i, &h) in config.heights.iter().enumerate() {
-        let scaled_stream = cmd.add_scale(&output_streams[i], -1, h as i32);
+        // -2 logic ensures even width
+        let scaled_stream = cmd.add_scale(&output_streams[i], -2, h as i32);
         let out_path = output_dir.join(format!("{h}p.{}", config.thumbnail_extension));
         cmd.map_still_output(&scaled_stream, &out_path);
     }

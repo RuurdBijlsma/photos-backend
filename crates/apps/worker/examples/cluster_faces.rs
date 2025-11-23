@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
     let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
+    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
 
     // --- Configuration ---
     let user_id_to_debug = 1;

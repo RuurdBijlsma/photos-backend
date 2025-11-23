@@ -14,7 +14,7 @@ pub struct WorkerContext {
     pub pool: PgPool,
     pub settings: AppSettings,
     pub media_analyzer: Arc<Mutex<MediaAnalyzer>>,
-    pub visual_analyzer: VisualAnalyzer,
+    pub visual_analyzer: Arc<VisualAnalyzer>,
     pub s2s_client: S2SClient,
 }
 
@@ -36,7 +36,7 @@ impl WorkerContext {
             pool,
             settings,
             media_analyzer: Arc::new(Mutex::new(MediaAnalyzer::builder().build().await?)),
-            visual_analyzer: VisualAnalyzer::new()?,
+            visual_analyzer: Arc::new(VisualAnalyzer::new()?),
             s2s_client: S2SClient::new(Client::new()),
         })
     }

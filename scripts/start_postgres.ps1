@@ -4,7 +4,7 @@
 
 # --- Configuration ---
 # You can change these values to suit your project.
-$containerName = "photos-postgres-dev"
+$containerName = "photos-db-dev"
 $dbName = "photos"
 $dbUser = "photos_user"
 $dbPassword = "dev-password"
@@ -49,7 +49,7 @@ if ($existingContainer -eq $containerName) {
         -e POSTGRES_USER=$dbUser `
         -e POSTGRES_PASSWORD=$dbPassword `
         -p "${dbPort}:5432" `
-        -v "${volumeName}:/var/lib/postgresql/data" `
+        -v "${volumeName}:/var/lib/postgresql" `
         --restart always `
         $postgresImage
 

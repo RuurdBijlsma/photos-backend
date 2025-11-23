@@ -5,11 +5,22 @@ edition = "2024"
 
 [dependencies]
 api = { path = "../apps/api" }
-tasks = { path = "../apps/tasks" }
 watcher = { path = "../apps/watcher" }
 worker = { path = "../apps/worker" }
-clap = { version = "4.5.51", features = ["derive"] }
-tracing = "0.1.41"
-tracing-subscriber = "0.3.20"
-tokio = "1.48.0"
-color-eyre = "0.6.5"
+app_state = { path = "../libs/app_state" }
+common_services = { path = "../libs/common_services" }
+common_types = { path = "../libs/common_types" }
+
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt"] }
+tokio = { version = "1.35.1", features = ["full"] }
+color-eyre = "0.6.2"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json", "uuid"] }
+tempfile = "3.9.0"
+reqwest = { version = "0.12.24", features = ["json"] }
+url = "2.5.7"
+colored = "3.0.0"
+chrono = { version = "0.4.42", features = ["serde"] }
+walkdir = "2.5.0"
+serde_json = "1.0.145"
+prost = "0.13.5"

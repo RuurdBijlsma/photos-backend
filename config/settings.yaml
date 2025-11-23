@@ -1,5 +1,5 @@
-ingestion:
-  media_folder: C:\Users\Ruurd\Pictures\deleteme
+ingest:
+  media_folder: media_dir
   thumbnail_folder: thumbnails
 
   analyzer:

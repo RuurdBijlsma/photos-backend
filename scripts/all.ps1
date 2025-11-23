@@ -73,7 +73,8 @@ try
 
     # Run tests
     Write-Host "`n=== Running tests ===" -ForegroundColor Cyan
-    cargo test
+    cargo test --release -p test_integration -- --nocapture
+    cargo test --workspace --exclude test_integration -- --nocapture
     if ($LASTEXITCODE -ne 0)
     {
         $checksPassed = $false

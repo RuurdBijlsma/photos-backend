@@ -1,17 +1,13 @@
 use crate::handlers::{handle_create, handle_remove};
-use app_state::{AppSettings, load_app_settings};
+use app_state::AppSettings;
 use color_eyre::eyre::Result;
 use common_services::alert;
-use common_services::database::get_db_pool;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::PgPool;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-pub async fn start_watching() -> Result<()> {
-    let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url).await?;
-
+pub async fn start_watching(pool: PgPool, settings: AppSettings) -> Result<()> {
     if let Err(e) = run(&pool, &settings).await {
         alert!("Watcher failed with an error: {}", e);
     }
@@ -58,7 +54,6 @@ async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
 
 /// Processes a single file system event from the watcher.
 async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) {
-    println!("{:?}", event.paths);
     let Some(path) = event.paths.first() else {
         return;
     };

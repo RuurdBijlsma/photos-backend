@@ -35,10 +35,7 @@ pub fn album_protected_router() -> Router<ApiContext> {
             "/album/{album_id}/collaborators/{collaborator_id}",
             delete(remove_collaborator_handler),
         )
-        .route(
-            "/album/{album_id}/generate-invite",
-            get(generate_invite_handler),
-        )
+        .route("/album/{album_id}/invite", get(generate_invite_handler))
         .route("/album/invite/check", post(check_invite_handler))
         .route("/album/invite/accept", post(accept_invite_handler))
 }
