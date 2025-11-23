@@ -38,6 +38,9 @@ jobs:
             sleep 1
           done
 
+      - name: Install SQLx CLI
+        run: cargo install sqlx-cli --no-default-features --features postgres
+
       - name: Run SQLx migrations
         run: cargo sqlx migrate run
 
