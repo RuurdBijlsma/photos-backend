@@ -25,6 +25,7 @@ use common_services::database::app_user::UserRole;
 use tower_http::{LatencyUnit, trace::TraceLayer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use crate::timeline::router::timeline_protected_routes;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {
@@ -63,6 +64,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
     Router::new()
         .merge(auth_protected_router())
         .merge(photos_protected_router())
+        .merge(timeline_protected_routes())
         .merge(album_protected_router())
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }

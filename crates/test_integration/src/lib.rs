@@ -28,6 +28,7 @@ mod test_runner {
     use std::time::Instant;
     use crate::tests::test_photos::{test_get_color_theme, test_get_full_item, test_get_random_photo, test_photo_download};
     use crate::tests::test_onboarding::{test_onboarding, test_start_processing};
+    use crate::tests::test_timeline::{test_get_photos_by_month, test_get_timeline_ids, test_get_timeline_ratios};
 
     #[tokio::test]
     async fn integration_suite() -> Result<()> {
@@ -37,14 +38,22 @@ mod test_runner {
         execute_suite!(
             &context,
             [
+                // -- Root --
                 test_health_endpoint,
+                // -- Auth --
                 test_register,
                 test_second_register_attempt,
                 test_login,
                 test_refresh,
                 test_logout,
+                // -- Onboarding --
                 test_onboarding,
                 test_start_processing,
+                // -- Timeline --
+                test_get_timeline_ids,
+                test_get_timeline_ratios,
+                test_get_photos_by_month,
+                // -- Photos --
                 test_photo_download,
                 test_get_full_item,
                 test_get_color_theme,

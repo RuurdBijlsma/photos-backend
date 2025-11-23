@@ -159,7 +159,7 @@ pub async fn test_get_full_item(context: &TestContext) -> Result<()> {
         // --- TEST 2: Invalid ID ---
         let response = client
             .get(&url)
-            .query(&[("id", "invalid-id-uuid-check")])
+            .query(&[("id", "invalid-media-item-id")])
             .bearer_auth(&token)
             .send()
             .await?;

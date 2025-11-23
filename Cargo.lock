@@ -5929,6 +5929,8 @@ dependencies = [
  "color-eyre",
  "colored",
  "common_services",
+ "common_types",
+ "prost 0.13.5",
  "reqwest",
  "serde_json",
  "sqlx",
