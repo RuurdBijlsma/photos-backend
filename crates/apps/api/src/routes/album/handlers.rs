@@ -252,7 +252,7 @@ pub async fn remove_collaborator_handler(
 /// The inviting user must be the album owner. The generated token has a configurable expiry time.
 #[utoipa::path(
     get,
-    path = "/album/{album_id}/generate-invite",
+    path = "/album/{album_id}/invite",
     tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album to share.")

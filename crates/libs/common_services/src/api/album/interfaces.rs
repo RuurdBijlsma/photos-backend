@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 // --- Request Payloads ---
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAlbumRequest {
     pub name: String,
@@ -12,20 +12,20 @@ pub struct CreateAlbumRequest {
     pub is_public: bool,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AddMediaToAlbumRequest {
     pub media_item_ids: Vec<String>,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AddCollaboratorRequest {
     pub user_email: String,
     pub role: AlbumRole,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAlbumRequest {
     pub name: Option<String>,
@@ -35,14 +35,14 @@ pub struct UpdateAlbumRequest {
 
 // --- Request Payloads for Cross-Server Sharing ---
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckInviteRequest {
     /// The full invitation token string (e.g., "inv-...")
     pub token: String,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AcceptInviteRequest {
     /// The full invitation token string.
@@ -55,20 +55,20 @@ pub struct AcceptInviteRequest {
 
 // --- URL/Path Parameters ---
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumIdParams {
     pub album_id: String,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoveMediaParams {
     pub album_id: String,
     pub media_item_id: String,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoveCollaboratorParams {
     pub album_id: String,
@@ -78,7 +78,7 @@ pub struct RemoveCollaboratorParams {
 // --- Response Payloads ---
 
 /// Full details of an album, including its media items and collaborators.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumDetailsResponse {
     pub id: String,
@@ -92,7 +92,7 @@ pub struct AlbumDetailsResponse {
 }
 
 /// A summary of a media item within an album.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumMediaItemSummary {
     pub id: String,
@@ -100,7 +100,7 @@ pub struct AlbumMediaItemSummary {
 }
 
 /// A summary of a collaborator on an album.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CollaboratorSummary {
     pub id: i64,

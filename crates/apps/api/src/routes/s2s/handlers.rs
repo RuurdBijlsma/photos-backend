@@ -15,6 +15,7 @@ use common_services::database::media_item_store::MediaItemStore;
 use tokio_util::io::ReaderStream;
 use tracing::instrument;
 
+#[instrument(skip(context), err(Debug))]
 pub async fn invite_summary_handler(
     State(context): State<ApiContext>,
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
