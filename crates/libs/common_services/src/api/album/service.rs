@@ -290,7 +290,7 @@ pub async fn generate_invite(
 ) -> Result<String, AlbumError> {
     // Permission Check: Only the owner can generate an invite.
     if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumError::Unauthorized(
+        return Err(AlbumError::Forbidden(
             "Only the album owner can generate an invitation.".to_string(),
         ));
     }
@@ -327,7 +327,7 @@ pub async fn accept_invite(
     // This now uses the client's internal token parsing.
     let jwt_secret = &settings.secrets.jwt;
     let claims = extract_token_claims(&payload.token, jwt_secret)
-        .map_err(|_| AlbumError::Unauthorized("Invalid token.".to_string()))?;
+        .map_err(|_| AlbumError::Forbidden("Invalid token.".to_string()))?;
 
     let summary: AlbumSummary = s2s_client
         .get_album_invite_summary(&payload.token, jwt_secret)

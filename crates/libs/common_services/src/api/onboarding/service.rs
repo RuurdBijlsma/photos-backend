@@ -267,7 +267,7 @@ pub async fn start_processing(
     .execute(pool)
     .await?;
 
-    // If nothing changed → folder already set → return Unauthorized
+    // If nothing changed → folder already set → return forbidden
     if updated.rows_affected() == 0 {
         return Err(OnboardingError::MediaFolderAlreadySet);
     }

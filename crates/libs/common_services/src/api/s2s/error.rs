@@ -24,8 +24,8 @@ pub enum S2SError {
     #[error("internal error")]
     Internal(#[from] eyre::Report),
 
-    #[error("Unauthorized: {0}")]
-    Unauthorized(String),
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
 }
 
 impl IntoResponse for S2SError {
@@ -39,7 +39,7 @@ impl IntoResponse for S2SError {
                 )
             }
             Self::TokenInvalid => (
-                StatusCode::UNAUTHORIZED,
+                StatusCode::FORBIDDEN,
                 "Token is invalid or expired.".to_string(),
             ),
             Self::PermissionDenied => (StatusCode::FORBIDDEN, "Permission denied.".to_string()),
@@ -48,8 +48,8 @@ impl IntoResponse for S2SError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An unexpected internal error occurred.".to_string(),
             ),
-            Self::Unauthorized(message) => {
-                (StatusCode::UNAUTHORIZED, format!("Unauthorized: {message}"))
+            Self::Forbidden(message) => {
+                (StatusCode::FORBIDDEN, format!("Forbidden: {message}"))
             }
         };
 

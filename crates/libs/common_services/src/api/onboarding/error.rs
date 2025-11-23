@@ -67,7 +67,7 @@ impl IntoResponse for OnboardingError {
                 "An unexpected internal error occurred.".into(),
             ),
             Self::MediaFolderAlreadySet => (
-                StatusCode::UNAUTHORIZED,
+                StatusCode::FORBIDDEN,
                 "Media folder is already configured for this user.".into(),
             ),
         };

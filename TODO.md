@@ -21,6 +21,7 @@
 * ✅ 👎 look into not using generated code, just add the prost annotations on the real structs
 * ✅ response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms,
   but on frontend end is 100-125 ms.
+* ✅ de frontend blijft maar in een loop requests maken als de backend errort (/onboarding/folders/?folder= ten minste)
 * ✅ make ratios endpoint more of a timeline endpoint, with count per month.
 * ✅ thumbnails zijn gedraait (orientation tag exif)
 * ✅ by-month and timeline dont return in sync media items. timeline ratios is wrong, it's not in order of
@@ -153,7 +154,6 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* de frontend blijft maar in een loop requests maken als de backend errort (/onboarding/folders/?folder= ten minste)
 
 
 # Features

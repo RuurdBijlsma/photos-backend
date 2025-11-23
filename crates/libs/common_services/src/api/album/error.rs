@@ -19,8 +19,8 @@ pub enum AlbumError {
     #[error("Not found: {0}")]
     NotFound(String),
 
-    #[error("Unauthorized: {0}")]
-    Unauthorized(String),
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
 
     #[error("Invalid invitation token: {0}")]
     InvalidInviteToken(String),
@@ -37,8 +37,8 @@ fn log_error(error: &AlbumError) {
         AlbumError::NotFound(id) => {
             warn!("Album -> Media item not found: {}", id);
         }
-        AlbumError::Unauthorized(id) => {
-            warn!("Unauthorized: {}", id);
+        AlbumError::Forbidden(id) => {
+            warn!("Forbidden: {}", id);
         }
         AlbumError::InvalidInviteToken(id) => {
             warn!("Invalid invitation token: {}", id);
@@ -65,8 +65,8 @@ impl IntoResponse for AlbumError {
             Self::NotFound(message) => {
                 (StatusCode::NOT_FOUND, format!("Album not found: {message}"))
             }
-            Self::Unauthorized(message) => {
-                (StatusCode::UNAUTHORIZED, format!("Unauthorized: {message}"))
+            Self::Forbidden(message) => {
+                (StatusCode::FORBIDDEN, format!("Forbidden: {message}"))
             }
             Self::InvalidInviteToken(message) => (
                 StatusCode::BAD_REQUEST,
