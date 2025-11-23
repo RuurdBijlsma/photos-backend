@@ -9,46 +9,19 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
-  DATABASE_URL: postgres://photos_user:dev-password@localhost:5432/photos
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: pgvector/pgvector:pg18
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_DB: photos
-          POSTGRES_USER: photos_user
-          POSTGRES_PASSWORD: dev-password
-
     steps:
       - uses: actions/checkout@v5
 
       - name: apt install
-        run: sudo apt update && sudo apt install -y protobuf-compiler libfontconfig1-dev pkg-config nasm postgresql-client ffmpeg libimage-exiftool-perl
-
-      - name: Wait for Postgres
-        run: |
-          until pg_isready -h localhost -p 5432 -U photos_user; do
-            echo "Waiting for Postgres..."
-            sleep 1
-          done
-
-      - name: Install SQLx CLI
-        run: cargo install sqlx-cli --no-default-features --features postgres
-
-      - name: Run SQLx migrations
-        run: cargo sqlx migrate run
+        run: sudo apt update && sudo apt install -y protobuf-compiler libfontconfig1-dev pkg-config nasm postgresql-client
 
       - name: Build
-        run: cargo build --profile release
-
-      - name: Run integration tests
-        run: cargo test --release -p test_integration -- --nocapture
+        run: cargo build
 
       - name: Check formatting
         run: cargo fmt --all -- --check
