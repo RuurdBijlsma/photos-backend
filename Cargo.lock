@@ -5930,6 +5930,7 @@ dependencies = [
  "colored",
  "common_services",
  "reqwest",
+ "serde_json",
  "sqlx",
  "tempfile",
  "tokio",

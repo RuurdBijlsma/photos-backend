@@ -1,11 +1,11 @@
 use crate::database::DbError;
-use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
-use tracing::{error, warn};
+use tracing::error;
 
 #[derive(Debug, Error)]
 pub enum PhotosError {
@@ -28,24 +28,8 @@ pub enum PhotosError {
     UnsupportedMediaType,
 }
 
-// Renamed for more general use
-fn log_error(error: &PhotosError) {
-    match error {
-        PhotosError::Database(e) => error!("Database query failed: {}", e),
-        PhotosError::Internal(e) => error!("Internal error: {}", e),
-        PhotosError::MediaNotFound(id) => {
-            warn!("Media item not found: {}", id);
-        },
-        PhotosError::InvalidPath => warn!("Invalid path provided."),
-        PhotosError::AccessDenied => warn!("access denied"),
-        PhotosError::UnsupportedMediaType => warn!("unsupported media type."),
-    }
-}
-
 impl IntoResponse for PhotosError {
     fn into_response(self) -> Response {
-        log_error(&self);
-
         let (status, error_message) = match self {
             Self::Database(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,

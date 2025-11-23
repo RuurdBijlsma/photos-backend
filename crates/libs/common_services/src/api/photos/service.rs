@@ -2,16 +2,16 @@ use crate::api::photos::error::PhotosError;
 
 use crate::api::photos::interfaces::RandomPhotoResponse;
 use crate::database::app_user::{User, UserRole};
-use rand::Rng;
-use sqlx::PgPool;
-use std::path::Path;
+use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
 use color_eyre::Report;
 use http::{header, Response, StatusCode};
+use rand::Rng;
+use sqlx::PgPool;
+use std::path::Path;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
-use app_state::{to_posix_string, IngestSettings, MakeRelativePath};
 
 /// Fetches a random photo with its color theme data for a specific user.
 ///
@@ -78,7 +78,6 @@ pub async fn random_photo(
     Ok(random_data)
 }
 
-
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///
 /// # Errors
@@ -102,7 +101,7 @@ pub async fn download_media_file(
         Ok(path) => path,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             debug!("File not found at path: {}", file_path.display());
-            return Err(PhotosError::MediaNotFound(to_posix_string(&file_path)));
+            return Err(PhotosError::MediaNotFound(path.to_owned()));
         }
         Err(e) => {
             return Err(Report::new(e)
@@ -145,7 +144,7 @@ pub async fn download_media_file(
     let file = match File::open(&file_canon).await {
         Ok(file) => file,
         Err(e) => match e.kind() {
-            std::io::ErrorKind::NotFound => Err(PhotosError::MediaNotFound(to_posix_string(&file_canon))),
+            std::io::ErrorKind::NotFound => Err(PhotosError::MediaNotFound(path.to_owned())),
             std::io::ErrorKind::PermissionDenied => Err(PhotosError::AccessDenied),
             _ => Err(Report::new(e).wrap_err("Failed to open media file").into()),
         }?,
