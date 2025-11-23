@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            name,\n            description,\n            COALESCE(\n                (\n                    SELECT array_agg(mi.relative_path)\n                    FROM album_media_item ami\n                        JOIN media_item mi ON ami.media_item_id = mi.id\n                    WHERE ami.album_id = $1\n                ),\n                '{}'\n            ) AS \"relative_paths!\"\n        FROM album\n        WHERE album.id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "relative_paths!",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "7437e285611d57fa5df5871e13af536c9b36199289487ff35323752a88beae66"
+}
