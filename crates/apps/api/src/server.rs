@@ -14,9 +14,10 @@ use app_state::AppSettings;
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
-use http::{HeaderValue, header};
+use http::{header, HeaderValue};
 use reqwest::Client;
 use sqlx::PgPool;
+use std::net::SocketAddr;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
 use tower_http::cors::CorsLayer;
@@ -80,6 +81,10 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
     info!("📚 Docs available at http://{listen_address}/docs");
     info!("✅ Server listening on http://{listen_address}");
 
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }

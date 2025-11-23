@@ -115,12 +115,12 @@
     * ✅ only allow register if no user exists
     * ✅ frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
     * ✅ add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
+    crate* ✅ axum-gate? crate voor axum auth
     * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
     * password reset flow (email) (make mail optional)
     * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
       db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
       user account)
-    * axum-gate? crate voor axum auth
 * check of readme uitleg klopt met verse windows installatie & linux
 * update sqlx
 * When we delete user, make sure to delete the jobs of that user (maak job type delete user)

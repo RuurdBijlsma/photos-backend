@@ -11,7 +11,7 @@ pub mod timeline;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::api_state::ApiContext;
-use crate::auth::middleware::{ApiUser, OptionalUser, require_role};
+use crate::auth::middleware::{require_role, ApiUser, OptionalUser};
 use crate::auth::router::{auth_protected_router, auth_public_router};
 use crate::onboarding::router::onboarding_admin_routes;
 use crate::photos::router::photos_protected_router;
@@ -20,10 +20,11 @@ use crate::root::router::root_public_router;
 use crate::routes::api_doc::ApiDoc;
 use crate::s2s::router::s2s_public_router;
 use crate::timeline::router::timeline_protected_routes;
-use axum::Router;
+use app_state::RateLimitingSettings;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
+use axum::Router;
 use common_services::database::app_user::UserRole;
-use tower_http::{LatencyUnit, trace::TraceLayer};
+use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -31,7 +32,7 @@ use utoipa_swagger_ui::SwaggerUi;
 pub fn create_router(api_state: ApiContext) -> Router {
     Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", ApiDoc::openapi()))
-        .merge(public_routes())
+        .merge(public_routes(&api_state.settings.api.rate_limiting))
         .merge(protected_routes(api_state.clone()))
         .merge(auth_optional_routes(api_state.clone()))
         .merge(admin_routes(api_state.clone()))
@@ -45,9 +46,9 @@ pub fn create_router(api_state: ApiContext) -> Router {
         )
 }
 
-fn public_routes() -> Router<ApiContext> {
+fn public_routes(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
     Router::new()
-        .merge(auth_public_router())
+        .merge(auth_public_router(rate_limiting))
         .merge(root_public_router())
         .merge(s2s_public_router())
 }

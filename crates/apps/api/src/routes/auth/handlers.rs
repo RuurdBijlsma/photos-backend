@@ -2,6 +2,7 @@
 
 use crate::api_state::ApiContext;
 use axum::{Extension, Json, extract::State, http::StatusCode};
+use tracing::instrument;
 use common_services::api::auth::error::AuthError;
 use common_services::api::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
 use common_services::api::auth::service::{
@@ -26,6 +27,7 @@ use common_services::database::app_user::User;
         (status = 401, description = "Invalid credentials"),
     )
 )]
+#[instrument(skip(context, payload), err(Debug))]
 pub async fn login(
     State(context): State<ApiContext>,
     Json(payload): Json<LoginUser>,
@@ -58,6 +60,7 @@ pub async fn login(
         (status = 409, description = "User with this email already exists"),
     )
 )]
+#[instrument(skip(context, payload), err(Debug))]
 pub async fn register(
     State(context): State<ApiContext>,
     Json(payload): Json<CreateUser>,
@@ -80,6 +83,7 @@ pub async fn register(
         (status = 401, description = "Invalid or expired refresh token"),
     )
 )]
+#[instrument(skip(context, payload), err(Debug))]
 pub async fn refresh_session(
     State(context): State<ApiContext>,
     Json(payload): Json<RefreshTokenPayload>,

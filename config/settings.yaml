@@ -72,6 +72,9 @@ api:
     - "http://127.0.0.1:3000"
     - "https://ruurdbijlsma.github.io"
   public_url: "http://localhost:9475"
+  rate_limiting:
+    req_per_second: 6
+    burst_size: 10
 
 secrets:
   jwt: "overwrite-me-with-env"
