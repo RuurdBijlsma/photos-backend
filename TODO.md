@@ -68,8 +68,31 @@
 * ✅ rename details to media_details
 * ✅ rename setup to onboarding
 * ✅ don't allow start onboarding endpoint if onboarding is already done.
+* ✅ Tests:
+  * ✅ auth
+  * ✅ onboarding
+  * ✅ ingest
+  * ✅ retrieve
+  * ✅ album
+  * ✅ cross server album
+* ✅ Create integration-tests crate:
+  * ✅ runs all binary crates in 1 binary, so tests can be run properly.
+  * ✅ have test specific database, that's fresh at start of test.
+  * ✅ have test folder for media items, make fresh before each test (tests/original_test_images copied to
+    tests/tmp_folder/media_dir before integration tests are run) The tmp folder can be deleted after tests.
+  * ✅ Thumbnails dir also for test in tmp folder.
+  * ✅ simulate user interactions by calling api with reqwest.
+  * ✅ check state after each interaction or after important interactions
 * ✅ remove unused crates
 * ✅ If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
+* 👎 make worker crate stop on ctrl c
+* 👎 [moet snel voor search embedding] machine learning stuff in aparte app/container doen? en dan met gRPC/protobuf communiceren met api en worker zodat de
+* ✅ fix docker image not finding py_analyze (because it looks in crates/...)
+* ✅ fix test tracing subscriber
+* ✅ copy pics to temp folder on test start
+* ✅ fix test py_analyze
+* ✅ split routes/photos into timeline related and media item related
+  container size van deze 2 niet zo huge worden. Tonic is rust grpc crate.
 * ✅ add remote_user_id as collaborator to album.
 * ✅ rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look
   at
@@ -125,38 +148,13 @@
         * group by country?
         * group by animal type?
     * make sure each "fun album" is shown as notification only once. In UI it can be more often?
-* split routes/photos into timeline related and media item related
 * websocket om nieuwe foto events te sturen
 * clean up error and warn and info tracing logs
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* copy pics to temp folder on test start
-* fix test tracing subscriber
-* fix test py_analyze
 * de frontend blijft maar in een loop requests maken als de backend errort (/onboarding/folders/?folder= ten minste)
-* fix docker image not finding py_analyze (because it looks in crates/...)
-* machine learning stuff in aparte app/container doen? en dan met gRPC/protobuf communiceren met api en worker zodat de
-  container size van deze 2 niet zo huge worden. Tonic is rust grpc crate.
-* make worker crate stop on ctrl c
 
-# integration test
-
-* Tests:
-    * auth
-    * onboarding
-    * ingest
-    * retrieve
-    * album
-    * cross server album
-* Create integration-tests crate:
-    * runs all binary crates in 1 binary, so tests can be run properly.
-    * have test specific database, that's fresh at start of test.
-    * have test folder for media items, make fresh before each test (tests/original_test_images copied to
-      tests/tmp_folder/media_dir before integration tests are run) The tmp folder can be deleted after tests.
-    * Thumbnails dir also for test in tmp folder.
-    * simulate user interactions by calling api with reqwest.
-    * check state after each interaction or after important interactions
 
 # Features
 
