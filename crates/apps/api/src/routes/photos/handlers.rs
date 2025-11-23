@@ -4,14 +4,16 @@ use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::{Extension, Json};
 use common_services::api::photos::error::PhotosError;
+use common_services::api::photos::interfaces::{
+    ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse,
+};
+use common_services::api::photos::service::{download_media_file, random_photo};
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
 use common_services::database::media_item_store::MediaItemStore;
 use ml_analysis::get_color_theme;
 use serde_json::Value;
 use tracing::instrument;
-use common_services::api::photos::interfaces::{ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse};
-use common_services::api::photos::service::{download_media_file, random_photo};
 
 /// Get a full media item
 ///
@@ -134,4 +136,3 @@ pub async fn download_full_file(
     let response = download_media_file(&ingestion, &user, &query.path).await?;
     Ok(response)
 }
-

@@ -2,9 +2,9 @@ use crate::runner::context::context_utils::{
     copy_dir_recursive, create_test_database, create_test_settings, force_drop_db,
 };
 use app_state::{
-    load_constants_from_path, load_settings_from_path, AppConstants, AppSettings, CONSTANTS,
+    AppConstants, AppSettings, CONSTANTS, load_constants_from_path, load_settings_from_path,
 };
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{Result, eyre};
 use reqwest::Client;
 use sqlx::PgPool;
 use std::path::PathBuf;

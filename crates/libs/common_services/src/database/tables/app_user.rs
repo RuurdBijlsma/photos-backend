@@ -65,7 +65,7 @@ where
 }
 
 /// Represents a user in the application.
-#[derive(Debug,Deserialize, Serialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, FromRow, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,

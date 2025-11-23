@@ -90,5 +90,8 @@ pub fn copy_dir_recursive(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Resul
 pub fn get_free_port() -> u16 {
     let listener =
         TcpListener::bind("127.0.0.1:0").expect("Can't bind tcp listener on 120.0.0.1:0");
-    listener.local_addr().expect("Can't get local address from listener.").port()
+    listener
+        .local_addr()
+        .expect("Can't get local address from listener.")
+        .port()
 }

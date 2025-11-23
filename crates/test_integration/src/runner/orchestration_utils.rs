@@ -3,7 +3,7 @@ use colored::*;
 use std::future::Future;
 use std::time::Instant;
 use tracing::Level;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 #[macro_export]
 macro_rules! run_test {
@@ -53,7 +53,11 @@ where
     Fut: Future<Output = Result<()>>,
 {
     let name_no_args = raw_name.split('(').next().unwrap_or(raw_name);
-    let pretty_name = name_no_args.split("::").last().unwrap_or(name_no_args).trim();
+    let pretty_name = name_no_args
+        .split("::")
+        .last()
+        .unwrap_or(name_no_args)
+        .trim();
 
     println!("{}", "─".repeat(60).truecolor(80, 80, 80));
     println!(
@@ -100,8 +104,7 @@ pub fn setup_tracing_and_panic_handling() {
         .with_target(false)
         .finish();
 
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Setting default subscriber failed");
+    tracing::subscriber::set_global_default(subscriber).expect("Setting default subscriber failed");
 
     color_eyre::install().expect("Failed to install color_eyre");
 }

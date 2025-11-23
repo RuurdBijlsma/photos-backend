@@ -1,6 +1,6 @@
 use crate::ffmpeg::FfmpegCommand;
 use app_state::ThumbnailSettings;
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{Result, eyre};
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};
 use image::{ImageBuffer, ImageReader, Rgba};

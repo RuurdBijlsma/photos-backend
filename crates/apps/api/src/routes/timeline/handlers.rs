@@ -5,7 +5,9 @@ use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
 use common_services::api::timeline::error::TimelineError;
 use common_services::api::timeline::interfaces::GetMediaByMonthParams;
-use common_services::api::timeline::service::{get_photos_by_month, get_timeline_ids, get_timeline_ratios};
+use common_services::api::timeline::service::{
+    get_photos_by_month, get_timeline_ids, get_timeline_ratios,
+};
 use common_services::database::app_user::User;
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 

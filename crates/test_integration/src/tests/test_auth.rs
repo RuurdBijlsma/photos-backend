@@ -1,11 +1,10 @@
-
+use crate::runner::context::test_context::TestContext;
+use crate::test_constants::{EMAIL, PASSWORD, USERNAME};
 use app_state::constants;
 use chrono::{DateTime, Utc};
 use color_eyre::Result;
 use common_services::api::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
 use common_services::database::app_user::{User, UserRole};
-use crate::runner::context::test_context::TestContext;
-use crate::test_constants::{EMAIL, PASSWORD, USERNAME};
 
 pub async fn test_register(context: &TestContext) -> Result<()> {
     // ARRANGE

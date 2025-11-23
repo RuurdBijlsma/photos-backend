@@ -36,7 +36,10 @@ fn generate_fixed_time_stills(
         return;
     }
 
-    let safe_ts = config.video_options.thumb_time.min((duration - 0.1).max(0.0));
+    let safe_ts = config
+        .video_options
+        .thumb_time
+        .min((duration - 0.1).max(0.0));
     let input_stream = cmd.add_input_at_time(safe_ts);
     let split_streams = cmd.add_split(&input_stream, config.heights.len());
 

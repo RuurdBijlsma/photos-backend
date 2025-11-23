@@ -1,7 +1,7 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_constants::{EMAIL, USERNAME};
 use crate::test_helpers::login;
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::{Result, bail};
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddMediaToAlbumRequest, AlbumDetailsResponse, CheckInviteRequest,
     CreateAlbumRequest, UpdateAlbumRequest,
@@ -191,6 +191,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
     // # Generate JWT invite
     // ARRANGE

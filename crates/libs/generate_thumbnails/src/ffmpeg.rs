@@ -1,6 +1,6 @@
 use crate::utils;
 use color_eyre::eyre;
-use color_eyre::eyre::{bail, Context, Result};
+use color_eyre::eyre::{Context, Result, bail};
 use serde::Deserialize;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};

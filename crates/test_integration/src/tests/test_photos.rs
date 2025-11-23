@@ -1,7 +1,7 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::{login, media_dir_contents};
 use app_state::MakeRelativePath;
-use color_eyre::eyre::{bail, ContextCompat, Result};
+use color_eyre::eyre::{ContextCompat, Result, bail};
 use common_services::api::photos::interfaces::RandomPhotoResponse;
 use common_services::database::media_item::media_item::FullMediaItem;
 use reqwest::StatusCode;

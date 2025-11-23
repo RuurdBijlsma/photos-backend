@@ -4,7 +4,7 @@ use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use std::env;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 use tracing::info;
 
@@ -38,7 +38,10 @@ pub fn find_migrations_dir() -> Result<PathBuf> {
 pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Pool<Postgres>> {
     info!(
         "Connecting to database: {}",
-        database_url.split('/').next_back().unwrap_or("DB NOT FOUND")
+        database_url
+            .split('/')
+            .next_back()
+            .unwrap_or("DB NOT FOUND")
     );
     let db_config = &constants().database;
     let pool = PgPoolOptions::new()

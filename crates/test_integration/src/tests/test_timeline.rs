@@ -1,6 +1,6 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::login;
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::{Result, bail};
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 use prost::Message;
 use reqwest::StatusCode;

@@ -3,7 +3,6 @@ use crate::auth::middleware::OptionalUser;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use tracing::instrument;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse,
@@ -17,6 +16,7 @@ use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
+use tracing::instrument;
 
 /// Create a new album.
 ///
