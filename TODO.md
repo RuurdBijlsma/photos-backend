@@ -70,24 +70,25 @@
 * ✅ rename setup to onboarding
 * ✅ don't allow start onboarding endpoint if onboarding is already done.
 * ✅ Tests:
-  * ✅ auth
-  * ✅ onboarding
-  * ✅ ingest
-  * ✅ retrieve
-  * ✅ album
-  * ✅ cross server album
+    * ✅ auth
+    * ✅ onboarding
+    * ✅ ingest
+    * ✅ retrieve
+    * ✅ album
+    * ✅ cross server album
 * ✅ Create integration-tests crate:
-  * ✅ runs all binary crates in 1 binary, so tests can be run properly.
-  * ✅ have test specific database, that's fresh at start of test.
-  * ✅ have test folder for media items, make fresh before each test (tests/original_test_images copied to
-    tests/tmp_folder/media_dir before integration tests are run) The tmp folder can be deleted after tests.
-  * ✅ Thumbnails dir also for test in tmp folder.
-  * ✅ simulate user interactions by calling api with reqwest.
-  * ✅ check state after each interaction or after important interactions
+    * ✅ runs all binary crates in 1 binary, so tests can be run properly.
+    * ✅ have test specific database, that's fresh at start of test.
+    * ✅ have test folder for media items, make fresh before each test (tests/original_test_images copied to
+      tests/tmp_folder/media_dir before integration tests are run) The tmp folder can be deleted after tests.
+    * ✅ Thumbnails dir also for test in tmp folder.
+    * ✅ simulate user interactions by calling api with reqwest.
+    * ✅ check state after each interaction or after important interactions
 * ✅ remove unused crates
 * ✅ If enqueueing ingest/analyze, then remove 'remove' jobs for same relative path? Idk maybe?
 * 👎 make worker crate stop on ctrl c
-* 👎 [moet snel voor search embedding] machine learning stuff in aparte app/container doen? en dan met gRPC/protobuf communiceren met api en worker zodat de
+* 👎 [moet snel voor search embedding] machine learning stuff in aparte app/container doen? en dan met gRPC/protobuf
+  communiceren met api en worker zodat de
 * ✅ fix docker image not finding py_analyze (because it looks in crates/...)
 * ✅ fix test tracing subscriber
 * ✅ copy pics to temp folder on test start
@@ -115,17 +116,14 @@
     * ✅ only allow register if no user exists
     * ✅ frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
     * ✅ add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
-    crate* ✅ axum-gate? crate voor axum auth
-    * rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
+    * 👎 axum-gate? crate voor axum auth
+    * ✅ rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
     * password reset flow (email) (make mail optional)
     * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
       db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
       user account)
 * check of readme uitleg klopt met verse windows installatie & linux
-* update sqlx
-* When we delete user, make sure to delete the jobs of that user (maak job type delete user)
-* big refactor: make all crud functions for every db table, in
-  common_services/database/repositories/{table_the_funcs_are_for}
+* make sure cache control on thumbnails are immutable/max age.
 * monitoring/alerting
     * prometheus
     * grafana
@@ -139,22 +137,12 @@
     * Summary table voor ratios
     * performance check voor beide /photos endpoints met 100k photos erin (explain analyze, check of frontend js veel
       delay toevoegt)
-* make sure cache control on thumbnails are immutable/max age.
-* fun "albums" notifications & in UI frontpage
-    * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
-    * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at
-      the lake", "Cat pics")
-    * group by  (only changes with significantly more photos)
-        * caption columns ("setting", "main subject", "is_outside & sunset & ...")
-        * group by country?
-        * group by animal type?
-    * make sure each "fun album" is shown as notification only once. In UI it can be more often?
 * websocket om nieuwe foto events te sturen
 * clean up error and warn and info tracing logs
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-
+* make UserStore::(find user by mail/id) (get user role) (set user media folder)
 
 # Features
 
@@ -176,6 +164,15 @@
     * group by: {country (if there are enough countries, otherwise group by province, otherwise group by city), camera
       model, main_subject, setting, animal type, pet type, food type, landmark, document type, photo_type, activity}
     * sunset/sunrise photos
+* fun "albums" notifications & in UI frontpage
+    * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
+    * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at
+      the lake", "Cat pics")
+    * group by  (only changes with significantly more photos)
+        * caption columns ("setting", "main subject", "is_outside & sunset & ...")
+        * group by country?
+        * group by animal type?
+    * make sure each "fun album" is shown as notification only once. In UI it can be more often?
 
 ## Kubernetes vs Docker compose (of beide? in eigen repos?)
 

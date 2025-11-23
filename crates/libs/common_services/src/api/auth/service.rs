@@ -231,7 +231,9 @@ pub async fn logout_user(pool: &PgPool, raw_token: &str) -> Result<StatusCode, A
     // If the token is malformed, we just ignore it and succeed silently.
     if let Ok((selector, verifier_bytes)) = split_refresh_token(raw_token)
         && let Some(rec) = sqlx::query!(
-            "SELECT user_id, verifier_hash FROM refresh_token WHERE selector = $1",
+            "SELECT user_id, verifier_hash
+            FROM refresh_token
+            WHERE selector = $1",
             selector
         )
         .fetch_optional(pool)
