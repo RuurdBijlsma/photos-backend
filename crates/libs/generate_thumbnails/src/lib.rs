@@ -1,3 +1,4 @@
+#![deny(clippy::unwrap_used)]
 #![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 
 //! # Thumbnail Generation Crate

@@ -26,6 +26,7 @@ mod test_runner {
     use color_eyre::Result;
     use colored::*;
     use std::time::Instant;
+    use crate::tests::test_photos::test_photo_download;
     use crate::tests::test_onboarding::{test_onboarding, test_start_processing};
 
     #[tokio::test]
@@ -44,6 +45,7 @@ mod test_runner {
                 test_logout,
                 test_onboarding,
                 test_start_processing,
+                test_photo_download,
             ]
         );
 

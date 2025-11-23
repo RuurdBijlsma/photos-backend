@@ -1,6 +1,6 @@
 use crate::ffmpeg::FfmpegCommand;
 use app_state::ThumbnailSettings;
-use color_eyre::eyre::{Result, eyre};
+use color_eyre::eyre::{eyre, Result};
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};
 use image::{ImageBuffer, ImageReader, Rgba};
@@ -76,8 +76,12 @@ pub fn generate_native_photo_thumbnails(
             }
 
             let mut dst_img = Image::new(
-                NonZeroU32::new(target_w).unwrap().into(),
-                NonZeroU32::new(target_h as u32).unwrap().into(),
+                NonZeroU32::new(target_w)
+                    .ok_or_else(|| eyre!("thumb target width is zero"))?
+                    .into(),
+                NonZeroU32::new(target_h as u32)
+                    .ok_or_else(|| eyre!("thumb target height is zero"))?
+                    .into(),
                 PixelType::U8x4,
             );
 

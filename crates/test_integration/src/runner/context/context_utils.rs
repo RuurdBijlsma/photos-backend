@@ -1,8 +1,8 @@
-use std::fs;
 use app_state::AppSettings;
 use color_eyre::eyre::Result;
 use common_services::database::get_db_pool;
 use sqlx::{Executor, PgPool};
+use std::fs;
 use std::net::TcpListener;
 use std::path::Path;
 use tempfile::TempDir;
@@ -88,6 +88,7 @@ pub fn copy_dir_recursive(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Resul
 
 #[must_use]
 pub fn get_free_port() -> u16 {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    listener.local_addr().unwrap().port()
+    let listener =
+        TcpListener::bind("127.0.0.1:0").expect("Can't bind tcp listener on 120.0.0.1:0");
+    listener.local_addr().expect("Can't get local address from listener.").port()
 }

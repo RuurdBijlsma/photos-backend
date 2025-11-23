@@ -266,7 +266,7 @@ impl PyInterop {
 
             let result = func.call1((image,))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let faces: Vec<PyFace> = serde_json::from_str(&json_str).unwrap();
+            let faces: Vec<PyFace> = serde_json::from_str(&json_str).unwrap_or_default();
             Ok(faces)
         })
     }
@@ -290,7 +290,8 @@ impl PyInterop {
 
             let result = func.call1((image,))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let objects: Vec<PyDetectedObject> = serde_json::from_str(&json_str).unwrap();
+            let objects: Vec<PyDetectedObject> =
+                serde_json::from_str(&json_str).unwrap_or_default();
             Ok(objects)
         })
     }
@@ -315,7 +316,7 @@ impl PyInterop {
 
             let result = func.call1((image, languages))?;
             let json_str: String = dumps.call1((result,))?.extract()?;
-            let ocr_data: PyOCRData = serde_json::from_str(&json_str).unwrap();
+            let ocr_data: PyOCRData = serde_json::from_str(&json_str).unwrap_or_default();
             Ok(ocr_data)
         })
     }

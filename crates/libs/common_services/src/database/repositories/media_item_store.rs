@@ -1,4 +1,3 @@
-use crate::database::DbError;
 use crate::database::media_item::capture_details::CaptureDetails;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
@@ -10,6 +9,7 @@ use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
+use crate::database::DbError;
 use app_state::constants;
 use chrono::{TimeZone, Utc};
 use sqlx::postgres::PgQueryResult;
@@ -192,7 +192,8 @@ impl MediaItemStore {
                 || media_item.taken_at_local.and_utc(),
                 |tz| {
                     tz.from_local_datetime(&media_item.taken_at_local)
-                        .unwrap()
+                        .earliest()
+                        .expect("Can't get datetime at timezone.")
                         .with_timezone(&Utc)
                 },
             )

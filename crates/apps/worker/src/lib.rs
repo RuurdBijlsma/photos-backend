@@ -1,3 +1,4 @@
+#![deny(clippy::unwrap_used)]
 #![allow(
     clippy::cognitive_complexity,
     clippy::cast_sign_loss,

@@ -11,13 +11,6 @@ pub struct RandomPhotoResponse {
 
 #[derive(Deserialize, IntoParams, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct GetMediaByMonthParams {
-    /// "YYYY-MM-DD" strings.
-    pub months: String,
-}
-
-#[derive(Deserialize, IntoParams, ToSchema, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct GetMediaItemParams {
     pub id: String,
 }
@@ -26,4 +19,10 @@ pub struct GetMediaItemParams {
 #[serde(rename_all = "camelCase")]
 pub struct ColorThemeParams {
     pub color: String,
+}
+
+#[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadMediaParams {
+    pub path: String,
 }
