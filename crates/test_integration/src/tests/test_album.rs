@@ -12,6 +12,7 @@ use common_services::database::app_user::User;
 use common_services::database::app_user::UserRole;
 use reqwest::StatusCode;
 use std::time::{Duration, Instant};
+use tokio::fs;
 use tokio::time::sleep;
 use tracing::info;
 
@@ -332,6 +333,21 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
         assert_eq!(owning_user.email, EMAIL);
         assert_eq!(owning_user.name, USERNAME);
     }
+
+    // Check for import folder structure
+    let import_folder = context.settings.ingest.media_root.join("import");
+    assert!(import_folder.exists());
+    let dirs = {
+        let mut dirs = Vec::new();
+        let mut rd = fs::read_dir(import_folder).await?;
+        while let Some(entry) = rd.next_entry().await? {
+            if entry.file_type().await?.is_dir() {
+                dirs.push(entry.file_name().to_string_lossy().to_string());
+            }
+        }
+        dirs
+    };
+    assert_eq!(dirs.len(), 1);
 
     Ok(())
 }
