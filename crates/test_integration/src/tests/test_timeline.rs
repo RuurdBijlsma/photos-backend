@@ -1,6 +1,6 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::login;
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{bail, Result};
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 use prost::Message;
 use reqwest::StatusCode;
@@ -77,43 +77,42 @@ pub async fn test_get_photos_by_month(context: &TestContext) -> Result<()> {
     let ratio_bytes = ratio_res.bytes().await?;
     let timeline = TimelineResponse::decode(Cursor::new(ratio_bytes))?;
 
-    if let Some(first_month) = timeline.months.first() {
-        // The month_id comes from DB date cast to text, e.g., "YYYY-MM-DD"
-        let target_month = &first_month.month_id;
-        let url = format!("{}/timeline/by-month", context.settings.api.public_url);
+    let Some(first_month) = timeline.months.first() else {
+        bail!("No first month returned from timeline/ratios endpoint.");
+    };
+    // The month_id comes from DB date cast to text, e.g., "YYYY-MM-DD"
+    let target_month = &first_month.month_id;
+    let url = format!("{}/timeline/by-month", context.settings.api.public_url);
 
-        // ACT
-        let response = client
-            .get(&url)
-            .query(&[("months", target_month)])
-            .bearer_auth(&token)
-            .send()
-            .await?;
+    // ACT
+    let response = client
+        .get(&url)
+        .query(&[("months", target_month)])
+        .bearer_auth(&token)
+        .send()
+        .await?;
 
-        // ASSERT
-        assert_eq!(response.status(), StatusCode::OK);
+    // ASSERT
+    assert_eq!(response.status(), StatusCode::OK);
 
-        let bytes = response.bytes().await?;
-        let by_month = ByMonthResponse::decode(Cursor::new(bytes))?;
+    let bytes = response.bytes().await?;
+    let by_month = ByMonthResponse::decode(Cursor::new(bytes))?;
 
-        // Verify we got the month section back
-        assert!(
-            !by_month.months.is_empty(),
-            "Should return data for the requested month"
-        );
+    // Verify we got the month section back
+    assert!(
+        !by_month.months.is_empty(),
+        "Should return data for the requested month"
+    );
 
-        let returned_group = &by_month.months[0];
-        assert!(
-            !returned_group.items.is_empty(),
-            "Month should contain media items"
-        );
+    let returned_group = &by_month.months[0];
+    assert!(
+        !returned_group.items.is_empty(),
+        "Month should contain media items"
+    );
 
-        // Sanity check an item
-        let item = &returned_group.items[0];
-        assert!(!item.id.is_empty(), "Media item ID should be present");
-    } else {
-        println!("Skipping test_get_photos_by_month (no timeline data available)");
-    }
+    // Sanity check an item
+    let item = &returned_group.items[0];
+    assert!(!item.id.is_empty(), "Media item ID should be present");
 
     Ok(())
 }
