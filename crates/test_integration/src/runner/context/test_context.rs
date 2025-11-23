@@ -32,6 +32,7 @@ pub struct TestContext {
     thumbnail_dir: TempDir,
     api_handle: JoinHandle<()>,
     worker_handle: JoinHandle<()>,
+    ml_worker_handle: JoinHandle<()>,
     watcher_handle: JoinHandle<()>,
 }
 
@@ -61,7 +62,7 @@ impl TestContext {
         copy_dir_recursive(&assets_source_path, media_dir.path())?;
 
         // 3. Spawn application components as background tasks
-        let (api_handle, worker_handle, watcher_handle) =
+        let (api_handle, worker_handle, ml_worker_handle, watcher_handle) =
             Self::spawn_services(&main_pool, &settings);
 
         // 4. Wait for the API to be ready to accept traffic
@@ -79,6 +80,7 @@ impl TestContext {
             thumbnail_dir,
             api_handle,
             worker_handle,
+            ml_worker_handle,
             watcher_handle,
         })
     }
@@ -87,7 +89,12 @@ impl TestContext {
     fn spawn_services(
         pool: &PgPool,
         settings: &AppSettings,
-    ) -> (JoinHandle<()>, JoinHandle<()>, JoinHandle<()>) {
+    ) -> (
+        JoinHandle<()>,
+        JoinHandle<()>,
+        JoinHandle<()>,
+        JoinHandle<()>,
+    ) {
         // Spawn API server
         let api_pool = pool.clone();
         let api_settings = settings.clone();
@@ -101,7 +108,19 @@ impl TestContext {
         let worker_pool = pool.clone();
         let worker_setting = settings.clone();
         let worker_handle = tokio::spawn(async move {
-            if let Err(e) = worker::worker::create_worker(worker_pool, worker_setting, true).await {
+            if let Err(e) = worker::worker::create_worker(worker_pool, worker_setting, false).await
+            {
+                error!("Worker failed: {}", e);
+            }
+        });
+
+        // Spawn Worker 2
+        let ml_worker_pool = pool.clone();
+        let ml_worker_setting = settings.clone();
+        let ml_worker_handle = tokio::spawn(async move {
+            if let Err(e) =
+                worker::worker::create_worker(ml_worker_pool, ml_worker_setting, true).await
+            {
                 error!("Worker failed: {}", e);
             }
         });
@@ -115,7 +134,7 @@ impl TestContext {
             }
         });
 
-        (api_handle, worker_handle, watcher_handle)
+        (api_handle, worker_handle, ml_worker_handle, watcher_handle)
     }
 
     /// Polls the `/health` endpoint until it receives a successful response or times out.
@@ -151,6 +170,7 @@ impl Drop for TestContext {
         // Abort background tasks
         self.api_handle.abort();
         self.worker_handle.abort();
+        self.ml_worker_handle.abort();
         self.watcher_handle.abort();
 
         // Drop the test database

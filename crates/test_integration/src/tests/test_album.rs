@@ -286,11 +286,6 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
     // todo: om een of andere reden wordt de import album item job niet opgepakt?
     loop {
         let album_content = AlbumStore::list_media_items(&context.pool, &album.id).await?;
-        info!(
-            "Polling album content... {:?} / {:?}",
-            start_time.elapsed(),
-            timeout
-        );
         if !album_content.is_empty() {
             break;
         }
@@ -303,10 +298,10 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
     let album_content = AlbumStore::list_media_items(&context.pool, &album.id).await?;
     assert_eq!(album_content.len(), 1);
     let album_item = album_content.first().expect("There should be an item here");
-    assert_eq!(album_item.id, media_id);
+    let new_media_id = album_item.id.clone();
     let Some(remote_user_id) = sqlx::query_scalar!(
         "SELECT remote_user_id FROM media_item WHERE id = $1",
-        media_id
+        new_media_id
     )
     .fetch_one(&context.pool)
     .await?

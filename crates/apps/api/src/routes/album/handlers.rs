@@ -3,6 +3,7 @@ use crate::auth::middleware::OptionalUser;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
+use tracing::instrument;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse,
@@ -148,6 +149,7 @@ pub async fn update_album_handler(
     ),
     security(("bearer_auth" = []))
 )]
+#[instrument(skip(context, user), err(Debug))]
 pub async fn add_media_to_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
