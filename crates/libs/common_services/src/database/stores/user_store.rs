@@ -191,7 +191,7 @@ impl UserStore {
         .await?)
     }
 
-    /// Retrieves just the media_folder for a specific user ID.
+    /// Retrieves just the `media_folder` for a specific user ID.
     pub async fn get_user_media_folder(
         executor: impl Executor<'_, Database = Postgres>,
         user_id: i32,
@@ -219,7 +219,7 @@ impl UserStore {
         executor: impl Executor<'_, Database = Postgres>,
         relative_path: &str,
     ) -> color_eyre::Result<Option<User>> {
-        let users = UserStore::list_users_with_media_folders(executor).await?;
+        let users = Self::list_users_with_media_folders(executor).await?;
 
         let mut best_match: Option<User> = None;
         let mut max_len = 0;

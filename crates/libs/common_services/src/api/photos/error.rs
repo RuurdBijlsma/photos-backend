@@ -62,8 +62,7 @@ impl From<tokio::task::JoinError> for PhotosError {
 impl From<DbError> for PhotosError {
     fn from(err: DbError) -> Self {
         match err {
-            DbError::UniqueViolation(sql_err) => Self::Database(sql_err),
-            DbError::Sqlx(sql_err) => Self::Database(sql_err),
+            DbError::UniqueViolation(err) | DbError::Sqlx(err) => Self::Database(err),
             DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }
     }

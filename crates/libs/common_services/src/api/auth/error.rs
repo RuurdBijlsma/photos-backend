@@ -99,7 +99,7 @@ impl From<jsonwebtoken::errors::Error> for AuthError {
 impl From<DbError> for AuthError {
     fn from(err: DbError) -> Self {
         match err {
-            DbError::UniqueViolation(_) => AuthError::UserAlreadyExists,
+            DbError::UniqueViolation(_) => Self::UserAlreadyExists,
             DbError::Sqlx(err) => Self::Internal(eyre::Report::new(err)),
             DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }

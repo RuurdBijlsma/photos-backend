@@ -8,8 +8,6 @@ use common_services::api::album::interfaces::{
 };
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album_store::AlbumStore;
-use common_services::database::app_user::User;
-use common_services::database::app_user::UserRole;
 use common_services::database::user_store::UserStore;
 use reqwest::StatusCode;
 use std::time::{Duration, Instant};
