@@ -11,7 +11,7 @@ use tracing::{error, info};
 use worker::handlers::common::clustering::run_hdbscan;
 
 /// A simple struct to hold the necessary data for clustering and file operations.
-#[derive(Debug)]
+#[derive(Debug, FromRow)]
 struct PhotoData {
     relative_path: String,
     embedding: Vector,

@@ -15,7 +15,7 @@ use common_services::database::visual_analysis::face::FaceEmbedding;
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
-use sqlx::PgPool;
+use sqlx::{FromRow, PgPool};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -23,7 +23,7 @@ use tracing::info;
 use worker::handlers::common::clustering::{group_by_cluster, run_hdbscan};
 
 // A new struct to hold more comprehensive face details for drawing
-#[derive( Debug)]
+#[derive(FromRow, Debug)]
 struct FaceDetails {
     id: i64,
     media_item_id: String,
