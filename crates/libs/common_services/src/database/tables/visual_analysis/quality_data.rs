@@ -4,7 +4,7 @@ use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`quality_data`' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct QualityData {
     pub blurriness: f64,
     pub noisiness: f64,

@@ -6,27 +6,27 @@ fn main() -> std::io::Result<()> {
 
     config.type_attribute(
         ".api.TimelineResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 
     config.type_attribute(
         ".api.TimelineMonth",
-        "#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 
     config.type_attribute(
         ".api.ByMonthResponse",
-        "#[derive(Eq, serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]",
+        "#[derive(Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 
     config.type_attribute(
         ".api.MediaMonth",
-        "#[derive(Eq, serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]",
+        "#[derive(Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 
     config.type_attribute(
         ".api.MediaItem",
-        "#[derive(Eq, serde::Serialize, serde::Deserialize, sqlx::FromRow, utoipa::ToSchema)]",
+        "#[derive(Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 
     config.compile_protos(&["proto/photos.proto"], &["proto/"])?;

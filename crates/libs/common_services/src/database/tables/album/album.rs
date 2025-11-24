@@ -16,7 +16,7 @@ pub enum AlbumRole {
 }
 
 /// Represents a single album in the database.
-#[derive(Debug, Serialize, Deserialize, FromRow, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Album {
     pub id: String,
@@ -28,7 +28,7 @@ pub struct Album {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug, FromRow)]
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumSummary {
     pub name: String,

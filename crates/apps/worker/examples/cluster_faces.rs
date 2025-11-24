@@ -23,7 +23,7 @@ use tracing::info;
 use worker::handlers::common::clustering::{group_by_cluster, run_hdbscan};
 
 // A new struct to hold more comprehensive face details for drawing
-#[derive(sqlx::FromRow, Debug)]
+#[derive( Debug)]
 struct FaceDetails {
     id: i64,
     media_item_id: String,

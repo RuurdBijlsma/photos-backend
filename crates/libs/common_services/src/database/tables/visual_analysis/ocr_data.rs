@@ -5,7 +5,7 @@ use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// A composite struct representing data from the '`ocr_data`' table, with its associated OCR boxes nested inside.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct OCRData {
     pub has_legible_text: bool,
     pub ocr_text: Option<String>,

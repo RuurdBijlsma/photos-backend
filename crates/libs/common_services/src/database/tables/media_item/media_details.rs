@@ -4,7 +4,7 @@ use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the 'details' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct MediaDetails {
     pub mime_type: String,
     pub size_bytes: i64,

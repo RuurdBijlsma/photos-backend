@@ -4,7 +4,7 @@ use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the 'location' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct Location {
     pub name: String,
     pub admin1: String,

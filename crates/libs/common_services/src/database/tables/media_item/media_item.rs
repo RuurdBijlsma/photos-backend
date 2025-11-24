@@ -13,7 +13,7 @@ use sqlx::types::Json;
 use utoipa::ToSchema;
 
 /// The root struct representing a '`media_item`' and all its available, nested information.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct CreateFullMediaItem {
     pub hash: String,
     pub width: i32,
@@ -71,7 +71,7 @@ impl From<AnalyzeResult> for CreateFullMediaItem {
 }
 
 /// The root struct representing a '`media_item`' and all its available, nested information.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct FullMediaItem {
     pub id: String,
     pub user_id: i32,
@@ -95,7 +95,7 @@ pub struct FullMediaItem {
     pub panorama: Panorama,
 }
 
-#[derive(sqlx::FromRow, Debug, Clone)]
+#[derive( Debug, Clone)]
 pub struct FullMediaItemRow {
     pub id: String,
     pub user_id: i32,

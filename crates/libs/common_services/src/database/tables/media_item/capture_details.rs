@@ -3,7 +3,7 @@ use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`capture_details`' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct CaptureDetails {
     pub iso: Option<i32>,
     pub exposure_time: Option<f32>,

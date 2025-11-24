@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use utoipa::ToSchema;
 
-#[derive(Debug, FromRow, Clone)]
+#[derive(Debug, Clone)]
 pub struct FaceEmbedding {
     pub id: i64,
     pub media_item_id: String,
@@ -12,7 +12,7 @@ pub struct FaceEmbedding {
 }
 
 /// Corresponds to the 'face' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct Face {
     pub position_x: f32,
     pub position_y: f32,
@@ -34,7 +34,7 @@ pub struct Face {
 }
 
 /// Corresponds to the 'face' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateFace {
     pub embedding: Vector,
     pub position_x: f32,

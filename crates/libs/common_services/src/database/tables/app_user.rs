@@ -2,7 +2,7 @@ use crate::database::DbError;
 use chrono::{DateTime, Utc};
 use color_eyre::eyre::Result;
 use serde::{Deserialize, Serialize};
-use sqlx::{Executor, FromRow, Postgres};
+use sqlx::{Executor, Postgres};
 use std::fmt;
 use utoipa::ToSchema;
 
@@ -65,7 +65,7 @@ where
 }
 
 /// Represents a user in the application.
-#[derive(Debug, Deserialize, Serialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: i32,
@@ -78,7 +78,7 @@ pub struct User {
 }
 
 /// Represents a user record from db, including the password hash.
-#[derive(Debug, FromRow)]
+#[derive(Debug)]
 pub struct UserWithPassword {
     pub id: i32,
     pub created_at: DateTime<Utc>,
