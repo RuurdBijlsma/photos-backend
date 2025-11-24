@@ -1,6 +1,5 @@
 use common_types::ml_analysis;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`quality_data`' table.

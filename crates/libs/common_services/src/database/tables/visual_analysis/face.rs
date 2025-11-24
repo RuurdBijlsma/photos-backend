@@ -1,7 +1,6 @@
 use common_types::ml_analysis::PyFace;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone)]

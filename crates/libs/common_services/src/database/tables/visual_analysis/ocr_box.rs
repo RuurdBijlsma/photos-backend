@@ -1,6 +1,5 @@
 use common_types::ml_analysis::PyOCRBox;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`ocr_box`' table.

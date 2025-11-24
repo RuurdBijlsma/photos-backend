@@ -1,5 +1,5 @@
 use serde_json::Value;
-use sqlx::{FromRow, Type};
+use sqlx::Type;
 
 #[derive( Debug)]
 #[allow(clippy::struct_field_names)]

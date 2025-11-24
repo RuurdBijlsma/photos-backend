@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Represents the link between a media item and an album.

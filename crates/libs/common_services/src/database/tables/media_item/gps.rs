@@ -1,7 +1,6 @@
 use crate::database::media_item::location::Location;
 use media_analyzer::GpsInfo;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// A composite struct representing data from the 'gps' table, with its associated 'location' data nested inside.

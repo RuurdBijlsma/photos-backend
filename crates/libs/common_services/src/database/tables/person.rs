@@ -1,5 +1,4 @@
 use pgvector::Vector;
-use sqlx::FromRow;
 
 #[derive(Debug, Clone)]
 pub struct ExistingPerson {

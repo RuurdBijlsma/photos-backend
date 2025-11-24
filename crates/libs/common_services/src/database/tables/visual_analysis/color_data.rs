@@ -1,7 +1,6 @@
 use common_types::ml_analysis::PyColorData;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`color_data`' table.

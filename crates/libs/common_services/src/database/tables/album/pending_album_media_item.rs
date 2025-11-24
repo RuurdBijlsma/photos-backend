@@ -1,5 +1,4 @@
 use serde::Serialize;
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Represents a temporary record for a media item downloaded from another server,

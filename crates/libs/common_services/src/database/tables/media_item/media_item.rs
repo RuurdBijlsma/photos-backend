@@ -8,7 +8,6 @@ use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use media_analyzer::AnalyzeResult;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use sqlx::types::Json;
 use utoipa::ToSchema;
 

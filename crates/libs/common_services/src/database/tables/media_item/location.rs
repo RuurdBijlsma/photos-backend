@@ -1,6 +1,5 @@
 use media_analyzer::LocationName;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the 'location' table.

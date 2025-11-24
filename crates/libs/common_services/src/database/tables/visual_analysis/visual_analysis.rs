@@ -8,7 +8,6 @@ use chrono::{DateTime, Utc};
 use common_types::ml_analysis::PyVisualAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Represents a single photo's embedding data fetched for clustering.

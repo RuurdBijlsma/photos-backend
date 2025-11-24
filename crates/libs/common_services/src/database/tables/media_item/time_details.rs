@@ -1,6 +1,5 @@
 use media_analyzer::TimeInfo;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`time_details`' table.

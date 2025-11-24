@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use media_analyzer::WeatherInfo;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the 'weather' table.
