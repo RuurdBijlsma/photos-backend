@@ -2,11 +2,10 @@ use crate::api_state::ApiContext;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use app_state::RateLimitingSettings;
 use axum::{
-    Router,
     routing::{get, post},
+    Router,
 };
-use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
-use tracing::info;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 pub fn auth_public_router(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
     let governor_conf = GovernorConfigBuilder::default()
@@ -14,31 +13,6 @@ pub fn auth_public_router(rate_limiting: &RateLimitingSettings) -> Router<ApiCon
         .burst_size(rate_limiting.burst_size)
         .finish()
         .expect("Could not create rate-limiting governor.");
-
-    info!(
-        "Using request limits: rate_limiting.req_per_second {:?}",
-        rate_limiting.req_per_second
-    );
-    info!(
-        "Using request limits: rate_limiting.burst_size{:?}",
-        rate_limiting.burst_size
-    );
-    info!(
-        "Using request limits: rate_limiting.req_per_second {:?}",
-        rate_limiting.req_per_second
-    );
-    info!(
-        "Using request limits: rate_limiting.burst_size{:?}",
-        rate_limiting.burst_size
-    );
-    info!(
-        "Using request limits: rate_limiting.req_per_second {:?}",
-        rate_limiting.req_per_second
-    );
-    info!(
-        "Using request limits: rate_limiting.burst_size{:?}",
-        rate_limiting.burst_size
-    );
 
     Router::new()
         .route("/auth/refresh", post(refresh_session))

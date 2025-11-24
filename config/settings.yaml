@@ -1,5 +1,5 @@
 ingest:
-  media_folder: media_dir
+  media_folder: C:/Users/Ruurd/Pictures/media_dir
   thumbnail_folder: thumbnails
 
   analyzer:

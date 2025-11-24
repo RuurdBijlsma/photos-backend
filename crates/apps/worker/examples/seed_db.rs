@@ -177,7 +177,7 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
     let settings = load_app_settings()?;
     let pool = get_db_pool(&settings.secrets.database_url, true).await?;
-    seed_database_for_dev(&pool, 100_000).await?;
+    seed_database_for_dev(&pool, 50_000).await?;
 
     Ok(())
 }

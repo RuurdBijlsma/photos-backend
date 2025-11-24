@@ -108,6 +108,7 @@
     * ✅ get s2s invite summary
     * ✅ make s2s client in common code somewhere, to call s2s endpoints.
 * ✅ pretty sure the watcher doesn't do anything if a folder is deleted.
+* ✅ make UserStore::(find user by mail/id) (get user role) (set user media folder)
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -142,7 +143,6 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
-* make UserStore::(find user by mail/id) (get user role) (set user media folder)
 
 # Features
 
