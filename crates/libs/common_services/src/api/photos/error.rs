@@ -1,7 +1,7 @@
 use crate::database::DbError;
-use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
@@ -62,6 +62,7 @@ impl From<tokio::task::JoinError> for PhotosError {
 impl From<DbError> for PhotosError {
     fn from(err: DbError) -> Self {
         match err {
+            DbError::UniqueViolation(sql_err) => Self::Database(sql_err),
             DbError::Sqlx(sql_err) => Self::Database(sql_err),
             DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }

@@ -2,7 +2,7 @@ use crate::api_state::ApiContext;
 use axum::{
     body::Body,
     extract::{FromRequestParts, State},
-    http::{Request, header, request::Parts},
+    http::{header, request::Parts, Request},
     middleware::Next,
     response::Response,
 };
@@ -10,8 +10,8 @@ use color_eyre::eyre::eyre;
 use common_services::api::auth::error::AuthError;
 use common_services::api::auth::interfaces::AuthClaims;
 use common_services::database::app_user::{User, UserRole};
-use jsonwebtoken::{DecodingKey, Validation, decode};
-use sqlx::PgPool;
+use common_services::database::user_store::UserStore;
+use jsonwebtoken::{decode, DecodingKey, Validation};
 
 #[derive(Clone, Debug)]
 pub struct ApiUser(pub User);
@@ -51,19 +51,6 @@ fn decode_token(token: &str, jwt_secret: &str) -> Result<AuthClaims, AuthError> 
     .map_err(|_| AuthError::InvalidToken)
 }
 
-async fn fetch_user(pool: &PgPool, user_id: i32) -> Result<User, AuthError> {
-    sqlx::query_as!(
-        User,
-        r#"SELECT id, email, name, media_folder, role as "role: UserRole",
-                  created_at, updated_at
-           FROM app_user WHERE id = $1"#,
-        user_id
-    )
-    .fetch_optional(pool)
-    .await?
-    .ok_or(AuthError::UserNotFound)
-}
-
 impl<S> FromRequestParts<S> for ApiUser
 where
     S: Send + Sync,
@@ -75,7 +62,7 @@ where
         let token = extract_token(parts)?;
         let context = extract_context(parts, state).await?;
         let claims = decode_token(&token, &context.settings.secrets.jwt)?;
-        let user = fetch_user(&context.pool, claims.sub).await?;
+        let user = UserStore::find_by_id(&context.pool, claims.sub).await?.ok_or(AuthError::UserNotFound)?;
         parts.extensions.insert(user.clone());
         Ok(Self(user))
     }
@@ -96,7 +83,7 @@ where
             Ok(token) => {
                 let context = extract_context(parts, state).await?;
                 let claims = decode_token(&token, &context.settings.secrets.jwt)?;
-                let user = fetch_user(&context.pool, claims.sub).await?;
+                let user = UserStore::find_by_id(&context.pool, claims.sub).await?.ok_or(AuthError::UserNotFound)?;
                 parts.extensions.insert(Self(Some(user.clone())));
                 Ok(Self(Some(user)))
             }

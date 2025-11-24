@@ -1,6 +1,8 @@
-use axum::Json;
+use crate::api::auth::error::AuthError;
+use crate::database::DbError;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use std::path::StripPrefixError;
@@ -80,5 +82,15 @@ impl IntoResponse for OnboardingError {
 impl From<tokio::task::JoinError> for OnboardingError {
     fn from(err: tokio::task::JoinError) -> Self {
         Self::Internal(eyre::Report::new(err))
+    }
+}
+
+impl From<DbError> for OnboardingError {
+    fn from(err: DbError) -> Self {
+        match err {
+            DbError::UniqueViolation(sql_err) => Self::Database(sql_err),
+            DbError::Sqlx(err) => Self::Internal(eyre::Report::new(err)),
+            DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
+        }
     }
 }

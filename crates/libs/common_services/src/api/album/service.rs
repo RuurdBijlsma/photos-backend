@@ -3,18 +3,18 @@ use crate::api::album::error::AlbumError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
-use crate::database::app_user::get_user_by_email;
 use crate::database::jobs::JobType;
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::{S2SClient, extract_token_claims};
+use crate::s2s_client::{extract_token_claims, S2SClient};
 use crate::utils::nice_id;
-use app_state::{AppSettings, constants};
+use app_state::{constants, AppSettings};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use jsonwebtoken::{EncodingKey, Header, encode};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
+use crate::database::user_store::UserStore;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
@@ -53,7 +53,9 @@ pub async fn get_album_details(
     album_id: &str,
     user_id: Option<i32>,
 ) -> Result<AlbumDetailsResponse, AlbumError> {
-    let album = AlbumStore::find_by_id(pool, album_id).await?;
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
     if !album.is_public {
         let Some(user_id) = user_id else {
             return Err(AlbumError::NotFound(album_id.to_string()));
@@ -195,7 +197,7 @@ pub async fn add_collaborator(
     }
 
     // Find the user to add by their email.
-    let user_to_add = get_user_by_email(pool, new_user_email)
+    let user_to_add = UserStore::find_by_email(pool, new_user_email)
         .await?
         .ok_or_else(|| {
             AlbumError::NotFound(format!("User with email {new_user_email} not found."))
@@ -269,13 +271,14 @@ pub async fn update_album(
     }
 
     // At least one field must be provided for the update.
+    // Else we write for nothing and set updated_at for nothing.
     if name.is_none() && description.is_none() && is_public.is_none() {
-        // If no changes are requested, just return the current album data.
-        return Ok(AlbumStore::find_by_id(pool, album_id).await?);
+        return AlbumStore::find_by_id(pool, album_id)
+            .await?
+            .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()));
     }
 
     let updated_album = AlbumStore::update(pool, album_id, name, description, is_public).await?;
-
     Ok(updated_album)
 }
 

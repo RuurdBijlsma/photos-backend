@@ -110,6 +110,7 @@ impl From<ParseError> for AlbumError {
 impl From<DbError> for AlbumError {
     fn from(err: DbError) -> Self {
         match err {
+            DbError::UniqueViolation(sql_err) => Self::Database(sql_err),
             DbError::Sqlx(sql_err) => {
                 if matches!(sql_err, sqlx::Error::RowNotFound) {
                     Self::NotFound("row not found".into())

@@ -71,10 +71,10 @@ impl AlbumStore {
     pub async fn find_by_id(
         executor: impl Executor<'_, Database = Postgres>,
         album_id: &str,
-    ) -> Result<Album, DbError> {
+    ) -> Result<Option<Album>, DbError> {
         Ok(
             sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
-                .fetch_one(executor)
+                .fetch_optional(executor)
                 .await?,
         )
     }

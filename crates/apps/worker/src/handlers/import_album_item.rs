@@ -1,12 +1,13 @@
 use crate::context::WorkerContext;
-use crate::handlers::JobResult;
 use crate::handlers::common::remote_user::get_or_create_remote_user;
+use crate::handlers::JobResult;
 use app_state::MakeRelativePath;
-use color_eyre::Result;
 use color_eyre::eyre::eyre;
+use color_eyre::Result;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
+use common_services::database::user_store::UserStore;
 use common_services::job_queue::enqueue_full_ingest;
 use common_types::ImportAlbumItemPayload;
 use serde_json::from_value;
@@ -26,10 +27,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_id = job
         .user_id
         .ok_or_else(|| eyre!("ImportAlbumItem Job missing user_id"))?;
-    let user_media_folder = query!("SELECT media_folder FROM app_user WHERE id = $1", user_id)
-        .fetch_one(&context.pool)
+    let user_media_folder = UserStore::get_user_media_folder(&context.pool, user_id)
         .await?
-        .media_folder
         .ok_or_else(|| eyre!("User has no media folder configured"))?;
     let remote_host = payload
         .remote_url

@@ -1,6 +1,6 @@
 use app_state::{AppSettings, MakeRelativePath};
-use common_services::database::app_user::user_from_relative_path;
 use common_services::database::jobs::JobType;
+use common_services::database::user_store::UserStore;
 use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
 use sqlx::PgPool;
 use std::path::Path;
@@ -53,7 +53,7 @@ async fn enqueue_file_job(
     job_type: JobType,
 ) -> color_eyre::Result<()> {
     let relative_path = &path.make_relative(&settings.ingest.media_root)?;
-    let Some(user) = user_from_relative_path(relative_path, pool).await? else {
+    let Some(user) = UserStore::find_user_by_relative_path(pool, relative_path).await? else {
         warn!(
             "Could not find user for path: {}. Cannot enqueue job.",
             relative_path

@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use color_eyre::Result;
 use common_services::api::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
 use common_services::database::app_user::{User, UserRole};
+use common_services::database::user_store::UserStore;
 
 pub async fn test_register(context: &TestContext) -> Result<()> {
     // ARRANGE
@@ -32,15 +33,9 @@ pub async fn test_register(context: &TestContext) -> Result<()> {
     assert_eq!(user.media_folder, None);
     assert_eq!(user.role, UserRole::Admin);
 
-    let created_user = sqlx::query_as!(
-        User,
-        r#"SELECT id, email, name, media_folder, role as "role: UserRole", created_at, updated_at
-           FROM app_user"#
-    )
-    .fetch_all(&context.pool)
-    .await?;
-    assert_eq!(created_user.len(), 1);
-    let created_user = &created_user[0];
+    let all_users = UserStore::list_users(&context.pool).await?;
+    assert_eq!(all_users.len(), 1);
+    let created_user = &all_users[0];
     assert_eq!(created_user.name, USERNAME);
     assert_eq!(created_user.email, EMAIL);
     assert_eq!(created_user.media_folder, None);
@@ -68,9 +63,7 @@ pub async fn test_second_register_attempt(context: &TestContext) -> Result<()> {
 
     // ASSERT
     assert_eq!(status, reqwest::StatusCode::FORBIDDEN);
-    let users = sqlx::query_scalar!("SELECT id FROM app_user")
-        .fetch_all(&context.pool)
-        .await?;
+    let users = UserStore::list_user_ids(&context.pool).await?;
     assert_eq!(users.len(), 1);
 
     Ok(())
