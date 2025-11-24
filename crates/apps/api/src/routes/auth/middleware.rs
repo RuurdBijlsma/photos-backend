@@ -2,7 +2,7 @@ use crate::api_state::ApiContext;
 use axum::{
     body::Body,
     extract::{FromRequestParts, State},
-    http::{header, request::Parts, Request},
+    http::{Request, header, request::Parts},
     middleware::Next,
     response::Response,
 };
@@ -11,7 +11,7 @@ use common_services::api::auth::error::AuthError;
 use common_services::api::auth::interfaces::AuthClaims;
 use common_services::database::app_user::{User, UserRole};
 use common_services::database::user_store::UserStore;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
 #[derive(Clone, Debug)]
 pub struct ApiUser(pub User);
@@ -62,7 +62,9 @@ where
         let token = extract_token(parts)?;
         let context = extract_context(parts, state).await?;
         let claims = decode_token(&token, &context.settings.secrets.jwt)?;
-        let user = UserStore::find_by_id(&context.pool, claims.sub).await?.ok_or(AuthError::UserNotFound)?;
+        let user = UserStore::find_by_id(&context.pool, claims.sub)
+            .await?
+            .ok_or(AuthError::UserNotFound)?;
         parts.extensions.insert(user.clone());
         Ok(Self(user))
     }
@@ -83,7 +85,9 @@ where
             Ok(token) => {
                 let context = extract_context(parts, state).await?;
                 let claims = decode_token(&token, &context.settings.secrets.jwt)?;
-                let user = UserStore::find_by_id(&context.pool, claims.sub).await?.ok_or(AuthError::UserNotFound)?;
+                let user = UserStore::find_by_id(&context.pool, claims.sub)
+                    .await?
+                    .ok_or(AuthError::UserNotFound)?;
                 parts.extensions.insert(Self(Some(user.clone())));
                 Ok(Self(Some(user)))
             }

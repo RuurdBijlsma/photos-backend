@@ -1,8 +1,7 @@
-use crate::api::album::error::AlbumError;
 use crate::database::DbError;
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
@@ -100,7 +99,7 @@ impl From<jsonwebtoken::errors::Error> for AuthError {
 impl From<DbError> for AuthError {
     fn from(err: DbError) -> Self {
         match err {
-            DbError::UniqueViolation(_)=> AuthError::UserAlreadyExists,
+            DbError::UniqueViolation(_) => AuthError::UserAlreadyExists,
             DbError::Sqlx(err) => Self::Internal(eyre::Report::new(err)),
             DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }

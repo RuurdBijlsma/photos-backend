@@ -1,7 +1,7 @@
 use serde_json::Value;
 use sqlx::Type;
 
-#[derive( Debug)]
+#[derive(Debug)]
 #[allow(clippy::struct_field_names)]
 pub struct Job {
     pub id: i64,

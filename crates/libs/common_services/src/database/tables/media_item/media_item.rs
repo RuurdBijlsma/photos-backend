@@ -94,7 +94,7 @@ pub struct FullMediaItem {
     pub panorama: Panorama,
 }
 
-#[derive( Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct FullMediaItemRow {
     pub id: String,
     pub user_id: i32,

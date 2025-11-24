@@ -4,17 +4,17 @@ use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
+use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::{extract_token_claims, S2SClient};
+use crate::s2s_client::{S2SClient, extract_token_claims};
 use crate::utils::nice_id;
-use app_state::{constants, AppSettings};
+use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
-use crate::database::user_store::UserStore;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]

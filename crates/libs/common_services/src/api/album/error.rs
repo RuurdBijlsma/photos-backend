@@ -65,9 +65,7 @@ impl IntoResponse for AlbumError {
             Self::NotFound(message) => {
                 (StatusCode::NOT_FOUND, format!("Album not found: {message}"))
             }
-            Self::Forbidden(message) => {
-                (StatusCode::FORBIDDEN, format!("Forbidden: {message}"))
-            }
+            Self::Forbidden(message) => (StatusCode::FORBIDDEN, format!("Forbidden: {message}")),
             Self::InvalidInviteToken(message) => (
                 StatusCode::BAD_REQUEST,
                 format!("Invalid invite: {message}"),

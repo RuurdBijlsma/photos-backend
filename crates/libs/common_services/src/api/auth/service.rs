@@ -2,15 +2,15 @@ use crate::api::auth::error::AuthError;
 use crate::api::auth::hashing::{hash_password, verify_password};
 use crate::api::auth::interfaces::{AuthClaims, CreateUser, Tokens};
 use crate::api::auth::token::{
-    generate_refresh_token_parts, split_refresh_token, verify_token, RefreshTokenParts,
+    RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
 use crate::database::app_user::{User, UserRole, UserWithPassword};
 use crate::database::user_store::UserStore;
 use app_state::constants;
-use axum::http::StatusCode;
 use axum::Json;
+use axum::http::StatusCode;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
 

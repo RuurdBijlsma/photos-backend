@@ -2,7 +2,6 @@
 
 use crate::api_state::ApiContext;
 use axum::{Extension, Json, extract::State, http::StatusCode};
-use tracing::instrument;
 use common_services::api::auth::error::AuthError;
 use common_services::api::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
 use common_services::api::auth::service::{
@@ -11,6 +10,7 @@ use common_services::api::auth::service::{
 };
 use common_services::api::auth::token::generate_refresh_token_parts;
 use common_services::database::app_user::User;
+use tracing::instrument;
 
 /// Handles user login and returns a new set of tokens.
 ///

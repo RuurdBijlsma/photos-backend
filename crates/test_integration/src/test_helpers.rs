@@ -1,7 +1,7 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_constants::{EMAIL, PASSWORD};
-use color_eyre::eyre::bail;
 use color_eyre::Result;
+use color_eyre::eyre::bail;
 use common_services::api::auth::interfaces::{LoginUser, Tokens};
 use std::path::PathBuf;
 use walkdir::WalkDir;

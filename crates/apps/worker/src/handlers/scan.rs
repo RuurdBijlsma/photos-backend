@@ -1,8 +1,8 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use app_state::{AppSettings, MakeRelativePath};
-use color_eyre::eyre::eyre;
 use color_eyre::eyre::Result;
+use color_eyre::eyre::eyre;
 use common_services::alert;
 use common_services::database::jobs::{Job, JobType};
 use common_services::database::user_store::UserStore;

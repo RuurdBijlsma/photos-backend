@@ -1,12 +1,12 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use async_trait::async_trait;
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
 use common_services::database::user_store::UserStore;
 use hdbscan::{Center, DistanceMetric, Hdbscan, HdbscanHyperParams};
 use pgvector::Vector;
-use sqlx::{query_scalar, PgPool, Transaction};
+use sqlx::{PgPool, Transaction};
 use std::collections::{HashMap, HashSet};
 use tracing::info;
 

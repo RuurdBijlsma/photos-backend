@@ -1,5 +1,5 @@
-use crate::database::tables::app_user::{User, UserRole, UserWithPassword};
 use crate::database::DbError;
+use crate::database::tables::app_user::{User, UserRole, UserWithPassword};
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
 

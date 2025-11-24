@@ -48,9 +48,7 @@ impl IntoResponse for S2SError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An unexpected internal error occurred.".to_string(),
             ),
-            Self::Forbidden(message) => {
-                (StatusCode::FORBIDDEN, format!("Forbidden: {message}"))
-            }
+            Self::Forbidden(message) => (StatusCode::FORBIDDEN, format!("Forbidden: {message}")),
         };
 
         let body = Json(json!({ "error": error_message }));

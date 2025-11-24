@@ -1,11 +1,7 @@
-use crate::database::DbError;
 use chrono::{DateTime, Utc};
-use color_eyre::eyre::Result;
 use serde::{Deserialize, Serialize};
-use sqlx::{Executor, Postgres};
 use std::fmt;
 use utoipa::ToSchema;
-use crate::database::user_store::UserStore;
 
 /// Represents a user in the application.
 #[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]

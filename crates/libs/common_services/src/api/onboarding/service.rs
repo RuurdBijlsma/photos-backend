@@ -5,17 +5,17 @@ use crate::api::onboarding::helpers::{check_drive_info, list_folders};
 use crate::api::onboarding::interfaces::{
     DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
+use crate::database::app_user::User;
 use crate::database::jobs::JobType;
 use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
-use app_state::{constants, to_posix_string, AppSettings, IngestSettings, MakeRelativePath};
+use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_posix_string};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
-use crate::database::app_user::User;
 
 /// Gathers information about the media and thumbnail directories.
 ///
@@ -259,10 +259,11 @@ pub async fn start_processing(
     let user_folder = validate_user_folder(media_root, &user_folder).await?;
     let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
     let existing_folder = UserStore::get_user_media_folder(pool, user_id).await?;
-    if existing_folder.is_some(){
+    if existing_folder.is_some() {
         return Err(OnboardingError::MediaFolderAlreadySet);
     }
-    let updated_user = UserStore::update(pool, user_id, None, None, None, None, Some(relative)).await?;
+    let updated_user =
+        UserStore::update(pool, user_id, None, None, None, None, Some(relative)).await?;
 
     enqueue_job::<()>(pool, settings, JobType::Scan)
         .user_id(user_id)
