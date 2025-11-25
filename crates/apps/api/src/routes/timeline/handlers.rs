@@ -4,7 +4,6 @@ use axum::extract::{Query, State, WebSocketUpgrade};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
-use tracing::instrument;
 use common_services::api::timeline::error::TimelineError;
 use common_services::api::timeline::interfaces::GetMediaByMonthParams;
 use common_services::api::timeline::service::{
@@ -12,7 +11,6 @@ use common_services::api::timeline::service::{
 };
 use common_services::database::app_user::User;
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
-use crate::auth::middlewares::websocket::WsUser;
 
 /// Get a timeline of all media ratios, grouped by month.
 ///

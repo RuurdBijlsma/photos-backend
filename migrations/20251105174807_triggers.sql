@@ -1,9 +1,7 @@
 -- Function to broadcast a notification when a row is inserted
 CREATE OR REPLACE FUNCTION notify_new_media_item() RETURNS trigger AS $$
 BEGIN
-    -- We send the new row as a JSON string payload.
-    -- We can limit the fields sent to reduce payload size if necessary,
-    -- but sending the row ensures the UI has immediate access to data.
+    -- We send the new row as a JSON string payload. Maybe later send only id, but IDK what's necessary yet.
     PERFORM pg_notify('media_item_added', row_to_json(NEW)::text);
     RETURN NEW;
 END;

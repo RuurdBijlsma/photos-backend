@@ -1,12 +1,11 @@
+use crate::api_state::ApiContext;
 use axum::extract::{FromRequestParts, State};
 use color_eyre::eyre::eyre;
+use common_services::api::auth::error::AuthError;
+use common_services::api::auth::interfaces::AuthClaims;
 use http::header;
 use http::request::Parts;
 use jsonwebtoken::{decode, DecodingKey, Validation};
-use tracing::error;
-use common_services::api::auth::error::AuthError;
-use common_services::api::auth::interfaces::AuthClaims;
-use crate::api_state::ApiContext;
 
 pub async fn extract_context<S>(parts: &mut Parts, state: &S) -> Result<ApiContext, AuthError>
 where
@@ -15,11 +14,7 @@ where
 {
     match State::<ApiContext>::from_request_parts(parts, state).await {
         Ok(State(context)) => Ok(context),
-        Err(e) => {
-            // LOG THE ERROR HERE
-            error!("❌ Failed to extract ApiContext state");
-            Err(AuthError::Internal(eyre!("Server state is not configured correctly.")))
-        }
+        Err(_e) => Err(AuthError::Internal(eyre!("Server state is not configured correctly.")))
     }
 }
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::api_state::ApiContext;
-use axum::extract::ws::{Message, Utf8Bytes, WebSocket};
+use axum::extract::ws::{Message, WebSocket};
 use color_eyre::Result;
 use serde_json::Value;
 use common_services::database::app_user::User;
@@ -25,50 +25,44 @@ pub async fn handle_timeline_socket(mut socket: WebSocket, context: ApiContext, 
 
     loop {
         select! {
-            // 1. Handle incoming broadcast messages from Postgres/Server
+            // 1. Handle Broadcast Messages (From Postgres/Server)
             result = rx.recv() => {
                 match result {
-                    Ok(msg) => {
-                        // Parse JSON to check ownership
-                        let is_owner = serde_json::from_str::<Value>(&msg)
-                            .ok()
-                            .and_then(|v| v.get("user_id").and_then(|id| id.as_i64()))
-                            .map(|owner_id| owner_id as i32 == user.id)
-                            .unwrap_or(false);
-
-                        if is_owner {
-                            if let Err(e) = socket.send(Message::Text(msg.into())).await {
-                                // Client disconnected during send
-                                warn!("Client disconnected (send error): {}", e);
+                    Ok(payload) => {
+                        // 'payload' is now Arc<MediaPayload>
+                        // No JSON parsing needed here! Just check the Integer ID.
+                        if payload.user_id == user.id {
+                            // We clone the inner String (raw_json).
+                            // This is much cheaper than parsing/serializing again.
+                            if let Err(e) = socket.send(Message::Text(payload.raw_json.clone().into())).await {
+                                warn!("Client disconnected during send: {}", e);
                                 break;
                             }
                         }
                     }
-                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
-                        // Creating a warning here might be noisy, usually safe to ignore or log debug
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                         // This happens if the server generates events faster than
+                         // this specific client can read them.
+                         warn!("User {} lagged, skipped {} messages", user.id, skipped);
                     }
-                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                        // Broadcaster itself closed
+                    Err(broadcast::error::RecvError::Closed) => {
                         break;
                     }
                 }
             }
 
-            // 2. Handle incoming messages/disconnects from the Client
+            // 2. Handle Client Disconnects
             client_msg = socket.recv() => {
                 match client_msg {
-                    // Client sent a close frame OR the stream ended (None)
                     Some(Ok(Message::Close(_))) | None => {
                         info!("Client disconnected (socket closed)");
                         break;
                     }
-                    // Error reading from socket
                     Some(Err(e)) => {
                         warn!("Client error: {}", e);
                         break;
                     }
-                    // Client sent text/binary/ping - we just ignore it to keep connection alive
-                    _ => {}
+                    _ => {} // Ignore text/binary from client for now
                 }
             }
         }
@@ -83,7 +77,6 @@ pub fn create_media_item_transmitter(pool: &PgPool) -> Result<broadcast::Sender<
     let listener_tx = tx.clone();
 
     tokio::spawn(async move {
-        info!("🔌 Connecting to Postgres notification stream...");
         let mut listener = match PgListener::connect_with(&listener_pool).await {
             Ok(l) => l,
             Err(e) => {
@@ -101,16 +94,14 @@ pub fn create_media_item_transmitter(pool: &PgPool) -> Result<broadcast::Sender<
         loop {
             match listener.recv().await {
                 Ok(notification) => {
-                    let payload_str = notification.payload().to_string();
+                    let payload_str = notification.payload();
 
-                    // Optimization: Parse minimal info ONCE here
-                    // We interpret the payload as a generic Value first to extract user_id safely
-                    if let Ok(val) = serde_json::from_str::<Value>(&payload_str) {
-                        if let Some(user_id) = val.get("user_id").and_then(|v| v.as_i64()) {
+                    if let Ok(val) = serde_json::from_str::<Value>(payload_str)
+                        && let Some(user_id) = val.get("user_id").and_then(Value::as_i64) {
 
                             let event = Arc::new(MediaPayload {
                                 user_id: user_id as i32,
-                                raw_json: payload_str, // Pass the original string along
+                                raw_json: payload_str.to_owned(),
                             });
 
                             // Broadcast the Arc (very cheap, just a pointer copy)
@@ -118,9 +109,8 @@ pub fn create_media_item_transmitter(pool: &PgPool) -> Result<broadcast::Sender<
                                 warn!("No active listeners for media update: {}", e);
                             }
                         }
-                    }
                 }
-                Err(e) => { /* ... */ }
+                Err(e) => { warn!("Error receiving from timeline listener: {e:?}") }
             }
         }
     });

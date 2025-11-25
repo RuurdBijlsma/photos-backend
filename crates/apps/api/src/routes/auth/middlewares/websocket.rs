@@ -15,7 +15,7 @@ use common_services::database::user_store::UserStore;
 pub struct WsUser(pub User);
 
 /// Get auth token from WebSocket Protocol Header.
-/// Expected format: ["access_token", "YOUR_JWT"]
+/// Expected format: `["access_token", "YOUR_JWT"]`
 fn extract_websocket_token(parts: &Parts) -> Result<String, AuthError> {
     // 1. Try standard header first (tools like Postman can do this)
     if let Ok(token) = extract_token(parts) {
