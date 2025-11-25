@@ -11,7 +11,7 @@ pub mod timeline;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::api_state::ApiContext;
-use crate::auth::middleware::{ApiUser, OptionalUser, require_role};
+use crate::auth::middleware::{require_role, ApiUser, OptionalUser};
 use crate::auth::router::{auth_protected_router, auth_public_router};
 use crate::onboarding::router::onboarding_admin_routes;
 use crate::photos::router::photos_protected_router;
@@ -19,12 +19,12 @@ use crate::root::handlers::root;
 use crate::root::router::root_public_router;
 use crate::routes::api_doc::ApiDoc;
 use crate::s2s::router::s2s_public_router;
-use crate::timeline::router::timeline_protected_routes;
+use crate::timeline::router::{timeline_protected_router, timeline_websocket_router};
 use app_state::RateLimitingSettings;
-use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
+use axum::Router;
 use common_services::database::app_user::UserRole;
-use tower_http::{LatencyUnit, trace::TraceLayer};
+use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -53,6 +53,10 @@ fn public_routes(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
         .merge(s2s_public_router())
 }
 
+fn websocket_routes(api_state: ApiContext) -> Router<ApiContext> {
+    Router::new().merge(timeline_websocket_router())
+}
+
 fn auth_optional_routes(api_state: ApiContext) -> Router<ApiContext> {
     Router::new()
         .merge(album_auth_optional_router())
@@ -65,7 +69,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
     Router::new()
         .merge(auth_protected_router())
         .merge(photos_protected_router())
-        .merge(timeline_protected_routes())
+        .merge(timeline_protected_router())
         .merge(album_protected_router())
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }

@@ -2,12 +2,14 @@ use app_state::{AppSettings, IngestSettings};
 use axum::extract::FromRef;
 use common_services::s2s_client::S2SClient;
 use sqlx::PgPool;
+use tokio::sync::broadcast;
 
 #[derive(Clone)]
 pub struct ApiContext {
     pub pool: PgPool,
     pub s2s_client: S2SClient,
     pub settings: AppSettings,
+    pub timeline_broadcaster: broadcast::Sender<String>,
 }
 
 // These impls allow Axum to extract the PgPool and reqwest::Client from the AppState.
@@ -21,6 +23,12 @@ impl FromRef<ApiContext> for PgPool {
 impl FromRef<ApiContext> for S2SClient {
     fn from_ref(state: &ApiContext) -> Self {
         state.s2s_client.clone()
+    }
+}
+
+impl FromRef<ApiContext> for broadcast::Sender<String> {
+    fn from_ref(state: &ApiContext) -> Self {
+        state.timeline_broadcaster.clone()
     }
 }
 

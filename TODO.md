@@ -97,8 +97,7 @@
   container size van deze 2 niet zo huge worden. Tonic is rust grpc crate.
 * ✅ add remote_user_id as collaborator to album.
 * ✅ rename types with similar names to db tables, so ColorData from ml_analysis becomes PyColorData or something (look
-  at
-  how ml analysis ColorData is actually used)
+  at how ml analysis ColorData is actually used)
 * ✅ [BUG] accept invite is broken.
 * ✅ repeated code in import album en import album item worker job, repeated code is in api/s2s en api/albums
     * ✅ parse url stuff

@@ -10,11 +10,12 @@
 
 use crate::api_state::ApiContext;
 use crate::create_router;
+use crate::timeline::websocket::create_media_item_transmitter;
 use app_state::AppSettings;
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
-use http::{HeaderValue, header};
+use http::{header, HeaderValue};
 use reqwest::Client;
 use sqlx::PgPool;
 use std::net::SocketAddr;
@@ -29,9 +30,10 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let api_state = ApiContext {
-        pool,
+        pool: pool.clone(),
         s2s_client: S2SClient::new(Client::new()),
         settings: settings.clone(),
+        timeline_broadcaster: create_media_item_transmitter(&pool)?,
     };
 
     // --- CORS Configuration ---
