@@ -1,10 +1,10 @@
 use crate::alert;
 use crate::api::album::interfaces::AlbumShareClaims;
 use crate::database::album::album::AlbumSummary;
-use color_eyre::Result;
 use color_eyre::eyre::eyre;
+use color_eyre::Result;
 use futures_util::StreamExt;
-use jsonwebtoken::{DecodingKey, Validation, decode};
+use jsonwebtoken::{decode, DecodingKey, Validation};
 use reqwest::Client;
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
@@ -24,7 +24,7 @@ pub fn extract_token_claims(token: &str, jwt_secret: &str) -> Result<AlbumShareC
     .map_err(Into::into)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct S2SClient {
     http_client: Client,
 }

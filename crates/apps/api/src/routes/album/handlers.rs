@@ -1,5 +1,4 @@
 use crate::api_state::ApiContext;
-use crate::auth::middleware::OptionalUser;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
@@ -17,6 +16,7 @@ use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
 use tracing::instrument;
+use crate::auth::middlewares::optional_user::OptionalUser;
 
 /// Create a new album.
 ///

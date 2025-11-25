@@ -1,5 +1,3 @@
-// crates/api/rc/routes/mod.rs
-
 pub mod album;
 mod api_doc;
 pub mod auth;
@@ -11,7 +9,6 @@ pub mod timeline;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::api_state::ApiContext;
-use crate::auth::middleware::{require_role, ApiUser, OptionalUser};
 use crate::auth::router::{auth_protected_router, auth_public_router};
 use crate::onboarding::router::onboarding_admin_routes;
 use crate::photos::router::photos_protected_router;
@@ -27,12 +24,17 @@ use common_services::database::app_user::UserRole;
 use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use crate::auth::middlewares::optional_user::OptionalUser;
+use crate::auth::middlewares::require_role::require_role;
+use crate::auth::middlewares::user::ApiUser;
+use crate::auth::middlewares::websocket::WsUser;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {
     Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", ApiDoc::openapi()))
         .merge(public_routes(&api_state.settings.api.rate_limiting))
+        .merge(websocket_routes(api_state.clone()))
         .merge(protected_routes(api_state.clone()))
         .merge(auth_optional_routes(api_state.clone()))
         .merge(admin_routes(api_state.clone()))
@@ -53,8 +55,11 @@ fn public_routes(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
         .merge(s2s_public_router())
 }
 
+// New WebSocket Route Group
 fn websocket_routes(api_state: ApiContext) -> Router<ApiContext> {
-    Router::new().merge(timeline_websocket_router())
+    Router::new()
+        .merge(timeline_websocket_router())
+        .route_layer(from_extractor_with_state::<WsUser, ApiContext>(api_state))
 }
 
 fn auth_optional_routes(api_state: ApiContext) -> Router<ApiContext> {

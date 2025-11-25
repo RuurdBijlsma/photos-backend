@@ -4,6 +4,7 @@ use axum::extract::{Query, State, WebSocketUpgrade};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
+use tracing::instrument;
 use common_services::api::timeline::error::TimelineError;
 use common_services::api::timeline::interfaces::GetMediaByMonthParams;
 use common_services::api::timeline::service::{
@@ -11,6 +12,7 @@ use common_services::api::timeline::service::{
 };
 use common_services::database::app_user::User;
 use common_types::pb::api::{ByMonthResponse, TimelineResponse};
+use crate::auth::middlewares::websocket::WsUser;
 
 /// Get a timeline of all media ratios, grouped by month.
 ///
@@ -99,8 +101,7 @@ pub async fn get_photos_by_month_handler(
 
 /// Real-time timeline updates via WebSocket.
 ///
-/// This connection streams JSON objects whenever a new `media_item` is inserted
-/// into the database.
+/// Requires `Sec-WebSocket-Protocol: access_token, <YOUR_JWT>` header.
 #[utoipa::path(
     get,
     path = "/timeline/ws",
@@ -108,11 +109,15 @@ pub async fn get_photos_by_month_handler(
     responses(
         (status = 101, description = "WebSocket upgrade")
     ),
-    security(("bearer_auth" = []))
+    params(
+        ("Sec-WebSocket-Protocol" = String, Header, description = "Auth: 'access_token, <JWT>'")
+    )
 )]
 pub async fn timeline_websocket_handler(
     ws: WebSocketUpgrade,
     State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
 ) -> axum::response::Response {
-    ws.on_upgrade(move |socket| handle_timeline_socket(socket, context))
+    ws.protocols(["access_token"])
+        .on_upgrade(move |socket| handle_timeline_socket(socket, context, user))
 }

@@ -142,6 +142,7 @@
     * error for fatal boys
     * warn for user might be impacted
     * info for info
+* clean up websocket code
 
 # Features
 
