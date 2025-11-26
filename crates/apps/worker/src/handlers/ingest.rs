@@ -13,7 +13,9 @@ use common_services::utils::nice_id;
 use media_analyzer::AnalyzeResult;
 use sqlx::PgPool;
 
-use crate::handlers::common::cache::{get_ingest_cache, get_thumbnail_cache, hash_file, write_ingest_cache, write_thumbnail_cache};
+use crate::handlers::common::cache::{
+    get_ingest_cache, get_thumbnail_cache, hash_file, write_ingest_cache, write_thumbnail_cache,
+};
 use app_state::constants;
 use generate_thumbnails::{copy_dir_contents, generate_thumbnails};
 use tokio::fs;
@@ -37,8 +39,8 @@ async fn store_media_item(
         "#,
         relative_path
     )
-        .fetch_optional(&mut *tx)
-        .await?;
+    .fetch_optional(&mut *tx)
+    .await?;
 
     let remote_user_id = if let Some(info) = &pending {
         Some(get_or_create_remote_user(&mut tx, user_id, &info.remote_user_identity).await?)
@@ -56,7 +58,7 @@ async fn store_media_item(
         remote_user_id,
         &analyze_result.into(),
     )
-        .await?;
+    .await?;
 
     if let Some(info) = &pending {
         AlbumStore::add_media_items(&mut *tx, &info.album_id, &[new_id.to_string()], user_id)
@@ -94,20 +96,26 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     }
     let file_hash = hash_file(&file_path)?;
 
-    let media_info = if context.settings.ingest.enable_cache && let Some(cached_media_info) = get_ingest_cache(&file_hash).await? {
+    let media_info = if context.settings.ingest.enable_cache
+        && let Some(cached_media_info) = get_ingest_cache(&file_hash).await?
+    {
         cached_media_info
     } else {
         let media_info = {
             let mut analyzer = context.media_analyzer.lock().await;
             analyzer.analyze_media(&file_path).await?
         };
-        write_ingest_cache(&file_hash, &media_info).await?;
+        if context.settings.ingest.enable_cache {
+            write_ingest_cache(&file_hash, &media_info).await?;
+        }
         media_info
     };
     let media_item_id = nice_id(constants().database.media_item_id_length);
 
     let thumbnails_out_folder = thumbnail_root.join(&media_item_id);
-    if context.settings.ingest.enable_cache && let Some(thumbnail_cache_folder) = get_thumbnail_cache(&file_hash).await? {
+    if context.settings.ingest.enable_cache
+        && let Some(thumbnail_cache_folder) = get_thumbnail_cache(&file_hash).await?
+    {
         copy_dir_contents(&thumbnail_cache_folder, &thumbnails_out_folder).await?;
     } else {
         generate_thumbnails(
@@ -116,10 +124,11 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             &thumbnails_out_folder,
             media_info.metadata.orientation,
         )
-            .await?;
-        write_thumbnail_cache(&file_hash, &thumbnails_out_folder).await?;
+        .await?;
+        if context.settings.ingest.enable_cache {
+            write_thumbnail_cache(&file_hash, &thumbnails_out_folder).await?;
+        }
     }
-
 
     // Don't insert to DB if file doesn't exist, or job is cancelled.
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
@@ -132,7 +141,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         media_info,
         &media_item_id,
     )
-        .await?;
+    .await?;
     cleanup_old_thumbnails(thumbnail_root, deleted_id).await?;
 
     Ok(JobResult::Done)
