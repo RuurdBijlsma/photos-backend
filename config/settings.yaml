@@ -1,6 +1,7 @@
 ingest:
   media_folder: C:/Users/Ruurd/Pictures/media_dir
   thumbnail_folder: thumbnails
+  enable_cache: true
 
   analyzer:
     theme_generation:

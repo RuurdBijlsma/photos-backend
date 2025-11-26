@@ -17,6 +17,7 @@ pub struct RawSettings {
 pub struct RawIngestSettings {
     pub media_folder: PathBuf,
     pub thumbnail_folder: PathBuf,
+    pub enable_cache: bool,
     pub analyzer: AnalyzerSettings,
     pub file_detection: FileDetectionSettings,
     pub thumbnails: ThumbnailSettings,

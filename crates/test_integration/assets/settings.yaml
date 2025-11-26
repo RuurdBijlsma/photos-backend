@@ -1,6 +1,7 @@
 ingest:
   media_folder: .
   thumbnail_folder: .
+  enable_cache: false
 
   analyzer:
     theme_generation:

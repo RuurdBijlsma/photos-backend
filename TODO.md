@@ -143,6 +143,13 @@
     * warn for user might be impacted
     * info for info
 * clean up websocket code
+* add cache for processing
+  * cache based on file hash
+  * setting for enabling cache
+  * thumbnails
+  * processed_info
+  * analysis_info
+* [weird bug] crates dont start when migration isnt in sync for some reason?
 
 # Features
 

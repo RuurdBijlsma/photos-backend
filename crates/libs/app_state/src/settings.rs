@@ -6,7 +6,7 @@ use color_eyre::Result;
 use serde::Deserialize;
 use sqlx::{Executor, Postgres};
 use std::fs::canonicalize;
-use std::path::{Path, PathBuf, absolute};
+use std::path::{absolute, Path, PathBuf};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppSettings {
@@ -22,6 +22,7 @@ pub struct IngestSettings {
     pub media_root: PathBuf,
     pub media_root_canon: PathBuf,
     pub thumbnail_root: PathBuf,
+    pub enable_cache: bool,
     pub analyzer: AnalyzerSettings,
     pub file_detection: FileDetectionSettings,
     pub thumbnails: ThumbnailSettings,
@@ -38,6 +39,7 @@ impl From<RawSettings> for AppSettings {
             media_root_canon,
             media_root,
             thumbnail_root,
+            enable_cache: raw.ingest.enable_cache,
             analyzer: raw.ingest.analyzer,
             file_detection: raw.ingest.file_detection,
             thumbnails: raw.ingest.thumbnails,
