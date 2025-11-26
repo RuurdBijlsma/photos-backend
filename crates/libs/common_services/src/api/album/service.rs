@@ -319,7 +319,6 @@ pub async fn generate_invite(
 }
 
 /// Accepts an album invitation and enqueues a background job to start the import.
-#[instrument(skip(pool, settings, s2s_client))]
 pub async fn accept_invite(
     pool: &PgPool,
     settings: &AppSettings,
@@ -327,7 +326,6 @@ pub async fn accept_invite(
     user_id: i32,
     payload: AcceptInviteRequest,
 ) -> Result<Album, AlbumError> {
-    // This now uses the client's internal token parsing.
     let jwt_secret = &settings.secrets.jwt;
     let claims = extract_token_claims(&payload.token, jwt_secret)
         .map_err(|_| AlbumError::Forbidden("Invalid token.".to_string()))?;

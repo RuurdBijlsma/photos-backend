@@ -16,12 +16,12 @@ fn main() -> std::io::Result<()> {
 
     config.type_attribute(
         ".api.ByMonthResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
     );
 
     config.type_attribute(
         ".api.MediaMonth",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
     );
 
     config.type_attribute(

@@ -1,17 +1,19 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::{login, media_dir_contents};
 use app_state::MakeRelativePath;
-use color_eyre::Result;
 use color_eyre::eyre::bail;
+use color_eyre::Result;
 use common_services::api::onboarding::interfaces::{
     DiskResponse, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
     UnsupportedFilesResponse,
 };
+use futures_util::StreamExt;
 use reqwest::StatusCode;
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
 use tokio::fs;
-use tokio::time::sleep;
+use tokio_tungstenite::connect_async;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::info;
 
 pub async fn test_onboarding(context: &TestContext) -> Result<()> {
@@ -106,7 +108,22 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
     let api_url = &context.settings.api.public_url;
     let client = &context.http_client;
 
-    // 2. Start Processing
+    // 2. Prepare expected counts
+    let (photos, videos) = media_dir_contents(context)?;
+    let expected_media_items = photos.len() + videos.len();
+
+    // 3. Connect to WebSocket to listen for timeline events
+    let ws_url = format!("{}/timeline/ws", api_url.replace("http", "ws"));
+    let mut request = ws_url.into_client_request()?;
+    request.headers_mut().insert(
+        "Sec-WebSocket-Protocol",
+        format!("access_token, {token}").parse()?,
+    );
+
+    let (mut socket, _) = connect_async(request).await?;
+    info!("WebSocket connected for timeline updates");
+
+    // 4. Start Processing
     // This sets the user's media folder and enqueues a scan job.
     let response = client
         .post(format!("{api_url}/onboarding/start-processing"))
@@ -119,33 +136,45 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
 
     assert_eq!(response.status(), StatusCode::OK);
 
-    let timeout = Duration::from_secs(120);
+    // 5. Listen for WebSocket messages
+    let timeout = Duration::from_secs(60);
     let start = Instant::now();
-    let (photos, videos) = media_dir_contents(context)?;
-    let expected_media_items = photos.len() + videos.len();
-    loop {
-        let media_items = sqlx::query_scalar!("SELECT id FROM media_item")
-            .fetch_all(&context.pool)
-            .await?;
-        info!(
-            "{}/{} files processed.",
-            media_items.len(),
-            expected_media_items
-        );
-        if media_items.len() >= expected_media_items {
-            break;
-        }
+    let mut received_count = 0;
+
+    info!(
+        "Waiting for {} media items via WebSocket...",
+        expected_media_items
+    );
+
+    while received_count < expected_media_items {
         if start.elapsed() > timeout {
             bail!(
-                "Processing media files took longer than the timeout: {:?}",
-                timeout
+                "Processing media files took longer than the timeout: {:?}. Received {}/{}",
+                timeout,
+                received_count,
+                expected_media_items
             );
         }
-        sleep(Duration::from_secs(2)).await;
+
+        // Wait for next message with a short timeout to allow checking global timeout loop
+        match tokio::time::timeout(Duration::from_secs(1), socket.next()).await {
+            Ok(Some(Ok(msg))) => {
+                if msg.is_text() {
+                    received_count += 1;
+                    info!(
+                        "WebSocket event received: {}/{}",
+                        received_count, expected_media_items
+                    );
+                }
+            }
+            Ok(Some(Err(e))) => bail!("WebSocket error: {}", e),
+            Ok(None) => bail!("WebSocket closed unexpectedly"),
+            Err(_) => {}
+        }
     }
     info!("All media items are processed");
 
-    // 3. Check if thumbnails are actually there.
+    // 6. Check if thumbnails are actually there.
     {
         struct MediaItem {
             id: String,
@@ -161,7 +190,7 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
         }
     }
 
-    // 4. Check if media item relative paths match actual files in media root.
+    // 7. Check if media item relative paths match actual files in media root.
     let db_paths: HashSet<String> = sqlx::query_scalar!("SELECT relative_path FROM media_item")
         .fetch_all(&context.pool)
         .await?
