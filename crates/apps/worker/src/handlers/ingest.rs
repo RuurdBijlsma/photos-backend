@@ -19,6 +19,7 @@ use crate::handlers::common::cache::{
 use app_state::constants;
 use generate_thumbnails::{copy_dir_contents, generate_thumbnails};
 use tokio::fs;
+use tracing::debug;
 
 /// Process pending album entry, delete old media, create new media entry
 async fn store_media_item(
@@ -99,6 +100,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let media_info = if context.settings.ingest.enable_cache
         && let Some(cached_media_info) = get_ingest_cache(&file_hash).await?
     {
+        debug!("Using ingest cache for {}", relative_path);
         cached_media_info
     } else {
         let media_info = {
@@ -117,6 +119,11 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         && let Some(thumbnail_cache_folder) = get_thumbnail_cache(&file_hash).await?
     {
         copy_dir_contents(&thumbnail_cache_folder, &thumbnails_out_folder).await?;
+        debug!(
+            "Using thumbnail cache for {}: {}",
+            relative_path,
+            thumbnail_cache_folder.display()
+        );
     } else {
         generate_thumbnails(
             &context.settings.ingest,
