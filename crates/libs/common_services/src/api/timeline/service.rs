@@ -43,7 +43,6 @@ pub async fn get_timeline_ids(
     pool: &PgPool,
     sort_order: SortOrder,
 ) -> Result<Vec<String>, TimelineError> {
-    // Note: We escape the empty array literal '{}' as '{{}}' because we are inside format!
     let sql = format!(
         r"
         SELECT COALESCE(array_agg(id ORDER BY sort_timestamp {}), '{{}}')

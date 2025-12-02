@@ -9,6 +9,10 @@ pub mod timeline;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::api_state::ApiContext;
+use crate::auth::middlewares::optional_user::OptionalUser;
+use crate::auth::middlewares::require_role::require_role;
+use crate::auth::middlewares::user::ApiUser;
+use crate::auth::middlewares::websocket::WsUser;
 use crate::auth::router::{auth_protected_router, auth_public_router};
 use crate::onboarding::router::onboarding_admin_routes;
 use crate::photos::router::photos_protected_router;
@@ -21,13 +25,8 @@ use app_state::RateLimitingSettings;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use axum::Router;
 use common_services::database::app_user::UserRole;
-use tower_http::{trace::TraceLayer, LatencyUnit};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use crate::auth::middlewares::optional_user::OptionalUser;
-use crate::auth::middlewares::require_role::require_role;
-use crate::auth::middlewares::user::ApiUser;
-use crate::auth::middlewares::websocket::WsUser;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {
@@ -39,13 +38,6 @@ pub fn create_router(api_state: ApiContext) -> Router {
         .merge(auth_optional_routes(api_state.clone()))
         .merge(admin_routes(api_state.clone()))
         .with_state(api_state)
-        .layer(
-            TraceLayer::new_for_http().on_response(
-                tower_http::trace::DefaultOnResponse::new()
-                    .level(tracing::Level::INFO)
-                    .latency_unit(LatencyUnit::Millis),
-            ),
-        )
 }
 
 fn public_routes(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {

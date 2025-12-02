@@ -7,7 +7,6 @@
     clippy::missing_panics_doc,
     clippy::cast_possible_truncation
 )]
-
 use crate::api_state::ApiContext;
 use crate::create_router;
 use crate::timeline::websocket::create_media_item_transmitter;
@@ -18,12 +17,15 @@ use common_services::s2s_client::S2SClient;
 use http::{header, HeaderValue};
 use reqwest::Client;
 use sqlx::PgPool;
+use std::iter::once;
 use std::net::SocketAddr;
 use tower_http::compression::CompressionLayer;
-use tower_http::cors;
 use tower_http::cors::CorsLayer;
+use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
+use tower_http::trace::TraceLayer;
+use tower_http::{cors};
 use tracing::{error, info};
 
 pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
@@ -72,11 +74,17 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         HeaderValue::from_static("public, max-age=31536000, immutable"),
     );
 
-    // --- Create Router & Start Server ---
+    // --- Create Router ---
     let app = create_router(api_state)
+        .layer(TraceLayer::new_for_http().on_request(()))
         .layer(cors)
         .layer(CompressionLayer::new())
+        .layer(SetSensitiveRequestHeadersLayer::new(once(
+            header::AUTHORIZATION,
+        )))
         .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
+
+    // --- Start Server ---
     let listen_address = format!("{}:{}", settings.api.host, settings.api.port);
     let listener = tokio::net::TcpListener::bind(&listen_address).await?;
 
