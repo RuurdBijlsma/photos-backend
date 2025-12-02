@@ -5,15 +5,15 @@ use std::fs;
 use std::path::Path;
 use std::sync::OnceLock;
 
-pub fn load_settings_from_path(path: &Path, include_env: bool) -> Result<AppSettings> {
+pub fn load_settings_from_path(path: &Path, env_path: Option<&Path>) -> Result<AppSettings> {
     // Need to load from dotenv to get it to overwrite the secrets from env.
-    if include_env {
-        dotenv::from_path(".env").ok();
+    if let Some(env_path) = env_path {
+        dotenv::from_path(env_path).ok();
     }
 
     let builder = {
         let mut builder = Config::builder().add_source(File::from(path));
-        if include_env {
+        if env_path.is_some() {
             builder = builder.add_source(
                 config::Environment::with_prefix("APP")
                     .separator("__")
@@ -41,7 +41,7 @@ pub fn load_constants_from_path(path: &Path) -> Result<AppConstants> {
 
 pub fn load_app_settings() -> Result<AppSettings> {
     let config_path = Path::new("config/settings.yaml").canonicalize()?;
-    load_settings_from_path(&config_path, true)
+    load_settings_from_path(&config_path, Some(Path::new(".env")))
 }
 
 fn load_app_constants() -> Result<AppConstants> {

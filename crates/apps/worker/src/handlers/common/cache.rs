@@ -3,7 +3,9 @@ use directories::ProjectDirs;
 use generate_thumbnails::copy_dir_contents;
 use media_analyzer::AnalyzeResult;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tokio::fs;
+use tokio::time::sleep;
 
 const THUMBNAILS_FOLDER: &str = "thumbnails";
 const INGEST_RESULT_FILENAME: &str = "ingest_result.json";
@@ -67,14 +69,16 @@ pub async fn write_ingest_cache(hash: &str, analyze_result: &AnalyzeResult) -> R
     Ok(())
 }
 
-pub async fn get_analysis_cache(hash: &str) -> Result<Option<()>> {
+pub async fn get_analysis_cache(_hash: &str) -> Result<Option<()>> {
     println!("{ANALYSIS_RESULT_FILENAME}");
+    sleep(Duration::from_millis(5)).await;
     // todo: make this
     Ok(Some(()))
 }
 
-pub async fn write_analysis_cache(hash: &str) -> Result<()> {
+pub async fn write_analysis_cache(_hash: &str) -> Result<()> {
     println!("{ANALYSIS_RESULT_FILENAME}");
+    sleep(Duration::from_millis(5)).await;
     // todo: make this
     Ok(())
 }

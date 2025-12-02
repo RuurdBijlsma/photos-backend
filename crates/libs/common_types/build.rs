@@ -11,7 +11,7 @@ fn main() -> std::io::Result<()> {
 
     config.type_attribute(
         ".api.TimelineMonth",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, sqlx::FromRow)]",
     );
 
     config.type_attribute(
@@ -26,7 +26,7 @@ fn main() -> std::io::Result<()> {
 
     config.type_attribute(
         ".api.MediaItem",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, sqlx::FromRow)]",
     );
 
     config.compile_protos(&["proto/photos.proto"], &["proto/"])?;

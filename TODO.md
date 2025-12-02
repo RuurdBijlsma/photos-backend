@@ -151,6 +151,7 @@
   * analysis_info
 * automatic onboarding
 * [weird bug] crates dont start when migration isnt in sync for some reason?
+* Clean up timeline/service.rs duplicated code
 
 # Features
 

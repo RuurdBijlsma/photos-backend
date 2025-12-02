@@ -5,7 +5,7 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
 use common_services::api::timeline::error::TimelineError;
-use common_services::api::timeline::interfaces::GetMediaByMonthParams;
+use common_services::api::timeline::interfaces::{GetMediaByMonthParams, TimelineParams};
 use common_services::api::timeline::service::{
     get_photos_by_month, get_timeline_ids, get_timeline_ratios,
 };
@@ -21,6 +21,9 @@ use common_types::pb::api::{ByMonthResponse, TimelineResponse};
     get,
     path = "/timeline/ratios",
     tag = "Timeline",
+    params(
+        TimelineParams
+    ),
     responses(
         (status = 200, description = "A timeline of media items grouped by month.", body = TimelineResponse),
         (status = 500, description = "A database or internal error occurred."),
@@ -30,8 +33,9 @@ use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 pub async fn get_timeline_ratios_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
+    Query(params): Query<TimelineParams>,
 ) -> Result<Protobuf<TimelineResponse>, TimelineError> {
-    let timeline = get_timeline_ratios(&user, &context.pool).await?;
+    let timeline = get_timeline_ratios(&user, &context.pool, params.sort).await?;
     Ok(Protobuf(timeline))
 }
 
@@ -44,6 +48,9 @@ pub async fn get_timeline_ratios_handler(
     get,
     path = "/timeline/ids",
     tag = "Timeline",
+    params(
+        TimelineParams
+    ),
     responses(
         (status = 200, description = "A timeline of media items grouped by month.", body = Vec<String>),
         (status = 500, description = "A database or internal error occurred."),
@@ -53,8 +60,9 @@ pub async fn get_timeline_ratios_handler(
 pub async fn get_timeline_ids_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
+    Query(params): Query<TimelineParams>,
 ) -> Result<Json<Vec<String>>, TimelineError> {
-    let timeline = get_timeline_ids(&user, &context.pool).await?;
+    let timeline = get_timeline_ids(&user, &context.pool, params.sort).await?;
     Ok(Json(timeline))
 }
 
@@ -93,7 +101,8 @@ pub async fn get_photos_by_month_handler(
                 "Invalid date format in 'months' parameter. Please use 'YYYY-MM-DD'.".to_string(),
             )
         })?;
-    let photos = get_photos_by_month(&user, &context.pool, &month_ids).await?;
+
+    let photos = get_photos_by_month(&user, &context.pool, &month_ids, params.sort).await?;
     Ok(Protobuf(photos))
 }
 
