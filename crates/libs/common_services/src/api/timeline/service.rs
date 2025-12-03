@@ -2,18 +2,16 @@ use crate::api::timeline::error::TimelineError;
 use crate::api::timeline::interfaces::SortOrder;
 use crate::database::app_user::User;
 use chrono::NaiveDate;
-use common_types::pb::api::{
-    ByMonthResponse, MediaItem, MediaMonth, TimelineMonth, TimelineResponse,
-};
 use sqlx::PgPool;
 use std::collections::HashMap;
+use common_types::pb::api::{TimelineItem, TimelineItemsResponse, TimelineMonthItems, TimelineMonthRatios, TimelineRatiosResponse};
 
 /// Fetches a timeline of media item ratios, grouped by month.
 pub async fn get_timeline_ratios(
     user: &User,
     pool: &PgPool,
     sort_order: SortOrder,
-) -> Result<TimelineResponse, TimelineError> {
+) -> Result<TimelineRatiosResponse, TimelineError> {
     let sql = format!(
         r"
         SELECT
@@ -29,12 +27,12 @@ pub async fn get_timeline_ratios(
         sort_order.as_sql()
     );
 
-    let months = sqlx::query_as::<_, TimelineMonth>(&sql)
+    let months = sqlx::query_as::<_, TimelineMonthRatios>(&sql)
         .bind(user.id)
         .fetch_all(pool)
         .await?;
 
-    Ok(TimelineResponse { months })
+    Ok(TimelineRatiosResponse { months })
 }
 
 /// Fetches a timeline of media item ids.
@@ -66,7 +64,7 @@ pub async fn get_photos_by_month(
     pool: &PgPool,
     month_ids: &[NaiveDate],
     sort_order: SortOrder,
-) -> Result<ByMonthResponse, TimelineError> {
+) -> Result<TimelineItemsResponse, TimelineError> {
     let sql = format!(
         r"
         SELECT
@@ -87,14 +85,14 @@ pub async fn get_photos_by_month(
         sort_order.as_sql()
     );
 
-    let items = sqlx::query_as::<_, MediaItem>(&sql)
+    let items = sqlx::query_as::<_, TimelineItem>(&sql)
         .bind(user.id)
         .bind(month_ids)
         .fetch_all(pool)
         .await?;
 
     // Grouping logic
-    let mut months_map: HashMap<String, Vec<MediaItem>> = HashMap::new();
+    let mut months_map: HashMap<String, Vec<TimelineItem>> = HashMap::new();
     for item in items {
         // Assuming timestamp format YYYY-MM-DD...
         if item.timestamp.len() >= 7 {
@@ -105,8 +103,8 @@ pub async fn get_photos_by_month(
 
     let months = months_map
         .into_iter()
-        .map(|(month_id, items)| MediaMonth { month_id, items })
+        .map(|(month_id, items)| TimelineMonthItems { month_id, items })
         .collect();
 
-    Ok(ByMonthResponse { months })
+    Ok(TimelineItemsResponse { months })
 }

@@ -1,11 +1,11 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::login;
 use color_eyre::eyre::{Result, bail};
-use common_types::pb::api::{ByMonthResponse, TimelineResponse};
 use prost::Message;
 use reqwest::StatusCode;
 use std::collections::HashSet;
 use std::io::Cursor;
+use common_types::pb::api::{TimelineItemsResponse, TimelineRatiosResponse};
 
 /// Tests the `GET /timeline/ids` endpoint.
 /// Expects a JSON list of media IDs.
@@ -50,7 +50,7 @@ pub async fn test_get_timeline_ratios(context: &TestContext) -> Result<()> {
 
     // Decode Protobuf body
     let bytes = response.bytes().await?;
-    let timeline = TimelineResponse::decode(Cursor::new(bytes))?;
+    let timeline = TimelineRatiosResponse::decode(Cursor::new(bytes))?;
 
     // Verify structure
     if let Some(month) = timeline.months.first() {
@@ -75,7 +75,7 @@ pub async fn test_get_photos_by_month(context: &TestContext) -> Result<()> {
     let ratios_url = format!("{}/timeline/ratios", context.settings.api.public_url);
     let ratio_res = client.get(&ratios_url).bearer_auth(&token).send().await?;
     let ratio_bytes = ratio_res.bytes().await?;
-    let timeline = TimelineResponse::decode(Cursor::new(ratio_bytes))?;
+    let timeline = TimelineRatiosResponse::decode(Cursor::new(ratio_bytes))?;
 
     let Some(first_month) = timeline.months.first() else {
         bail!("No first month returned from timeline/ratios endpoint.");
@@ -96,7 +96,7 @@ pub async fn test_get_photos_by_month(context: &TestContext) -> Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     let bytes = response.bytes().await?;
-    let by_month = ByMonthResponse::decode(Cursor::new(bytes))?;
+    let by_month = TimelineItemsResponse::decode(Cursor::new(bytes))?;
 
     // Verify we got the month section back
     assert!(

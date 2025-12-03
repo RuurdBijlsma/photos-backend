@@ -80,12 +80,11 @@ async fn get_media_info(
     file_path: &Path,
     file_hash: &str,
 ) -> Result<AnalyzeResult> {
-    if context.settings.ingest.enable_cache {
-        if let Some(cached) = get_ingest_cache(file_hash).await? {
+    if context.settings.ingest.enable_cache
+        && let Some(cached) = get_ingest_cache(file_hash).await? {
             debug!("Using ingest cache for {:?}", file_path.file_name());
             return Ok(cached);
         }
-    }
 
     let media_info = {
         let mut analyzer = context.media_analyzer.lock().await;
@@ -111,8 +110,8 @@ async fn process_thumbnails(
     let thumbnails_out_folder = thumbnail_root.join(media_item_id);
 
     // Try Cache
-    if context.settings.ingest.enable_cache {
-        if let Some(cached_folder) = get_thumbnail_cache(file_hash).await? {
+    if context.settings.ingest.enable_cache
+        && let Some(cached_folder) = get_thumbnail_cache(file_hash).await? {
             debug!(
                 "Using thumbnail cache for {:?}: {}",
                 file_path.file_name(),
@@ -121,7 +120,6 @@ async fn process_thumbnails(
             copy_dir_contents(&cached_folder, &thumbnails_out_folder).await?;
             return Ok(());
         }
-    }
 
     // Cache Miss: Generate
     generate_thumbnails(

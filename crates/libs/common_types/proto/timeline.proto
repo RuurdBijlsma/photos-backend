@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package api;
+
+// Contains ratios and amount of media items per month, grouped by month.
+message TimelineRatiosResponse {
+  repeated TimelineMonthRatios months = 1;
+}
+
+message TimelineMonthRatios {
+  string month_id = 1;
+  int32 count = 2;
+  repeated float ratios = 3;
+}
+
+// Contains information for media items for the requested months, grouped by month.
+message TimelineItemsResponse {
+  repeated TimelineMonthItems months = 1;
+}
+
+message TimelineMonthItems {
+  string month_id = 1;
+  repeated TimelineItem items = 2;
+}
+
+message TimelineItem {
+  string id = 1;
+  bool is_video = 2;
+  bool is_panorama = 3;
+  optional int32 duration_ms = 4;
+  string timestamp = 5;
+}

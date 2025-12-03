@@ -10,7 +10,7 @@ use common_services::api::timeline::service::{
     get_photos_by_month, get_timeline_ids, get_timeline_ratios,
 };
 use common_services::database::app_user::User;
-use common_types::pb::api::{ByMonthResponse, TimelineResponse};
+use common_types::pb::api::{TimelineItemsResponse, TimelineRatiosResponse};
 
 /// Get a timeline of all media ratios, grouped by month.
 ///
@@ -25,7 +25,7 @@ use common_types::pb::api::{ByMonthResponse, TimelineResponse};
         TimelineParams
     ),
     responses(
-        (status = 200, description = "A timeline of media items grouped by month.", body = TimelineResponse),
+        (status = 200, description = "A timeline of media items grouped by month.", body = TimelineRatiosResponse),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
@@ -34,7 +34,7 @@ pub async fn get_timeline_ratios_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<TimelineParams>,
-) -> Result<Protobuf<TimelineResponse>, TimelineError> {
+) -> Result<Protobuf<TimelineRatiosResponse>, TimelineError> {
     let timeline = get_timeline_ratios(&user, &context.pool, params.sort).await?;
     Ok(Protobuf(timeline))
 }
@@ -79,7 +79,7 @@ pub async fn get_timeline_ids_handler(
         GetMediaByMonthParams
     ),
     responses(
-        (status = 200, description = "A collection of media items for the requested months.", body = ByMonthResponse),
+        (status = 200, description = "A collection of media items for the requested months.", body = TimelineItemsResponse),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
@@ -88,7 +88,7 @@ pub async fn get_photos_by_month_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<GetMediaByMonthParams>,
-) -> Result<Protobuf<ByMonthResponse>, TimelineError> {
+) -> Result<Protobuf<TimelineItemsResponse>, TimelineError> {
     let month_ids = params
         .months
         .split(',')
