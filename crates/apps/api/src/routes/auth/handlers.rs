@@ -21,6 +21,7 @@ use tracing::instrument;
 #[utoipa::path(
     post,
     path = "/auth/login",
+    tag = "Auth",
     request_body = LoginUser,
     responses(
         (status = 200, description = "Login successful", body = Tokens),
@@ -54,6 +55,7 @@ pub async fn login(
 #[utoipa::path(
     post,
     path = "/auth/register",
+    tag = "Auth",
     request_body = CreateUser,
     responses(
         (status = 200, description = "User created successfully", body = User),
@@ -77,6 +79,7 @@ pub async fn register(
 #[utoipa::path(
     post,
     path = "/auth/refresh",
+    tag = "Auth",
     request_body = RefreshTokenPayload,
     responses(
         (status = 200, description = "Session refreshed successfully", body = Tokens),
@@ -104,6 +107,7 @@ pub async fn refresh_session(
 #[utoipa::path(
     post,
     path = "/auth/logout",
+    tag = "Auth",
     request_body = RefreshTokenPayload,
     responses(
         (status = 200, description = "Logout successful"),
@@ -125,6 +129,7 @@ pub async fn logout(
 #[utoipa::path(
     get,
     path = "/auth/me",
+    tag = "Auth",
     responses(
         (status = 200, description = "Current user data", body = User),
         (status = 401, description = "Authentication required"),

@@ -116,6 +116,7 @@ pub async fn get_color_theme_handler(
 #[utoipa::path(
     get,
     path = "/photos/download",
+    tag = "Photos",
     params(
         ("path" = String, Query, description = "The path of the media file to download")
     ),

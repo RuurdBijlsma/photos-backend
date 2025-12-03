@@ -6,6 +6,7 @@ use tracing::error;
 #[utoipa::path(
     get,
     path = "/",
+    tag = "System",
     responses(
         (status = 200, description = "Root message")
     )
