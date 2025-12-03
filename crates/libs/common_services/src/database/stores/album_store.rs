@@ -1,7 +1,8 @@
 use crate::api::album::interfaces::{AlbumMediaItemSummary, CollaboratorSummary};
-use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
+use crate::database::DbError;
+use common_types::pb::api::TimelineItem;
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
 
@@ -144,23 +145,47 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Retrieves all media items associated with an album.
+    /// Retrieves all media items associated with an album, joined with their metadata.
     pub async fn list_media_items(
         executor: impl Executor<'_, Database = Postgres>,
         album_id: &str,
     ) -> Result<Vec<AlbumMediaItemSummary>, DbError> {
-        Ok(sqlx::query_as!(
-            AlbumMediaItemSummary,
+        let rows = sqlx::query!(
             r#"
-            SELECT media_item_id as id, added_at
-            FROM album_media_item
-            WHERE album_id = $1
-            ORDER BY added_at DESC
+            SELECT
+                mi.id,
+                mi.is_video,
+                mi.use_panorama_viewer as is_panorama,
+                mi.duration_ms::INT as duration_ms,
+                mi.taken_at_local::TEXT as "timestamp!",
+                ami.added_at
+            FROM album_media_item ami
+            JOIN media_item mi ON ami.media_item_id = mi.id
+            WHERE ami.album_id = $1
+            AND mi.deleted = false
+            ORDER BY ami.added_at DESC
             "#,
             album_id
         )
         .fetch_all(executor)
-        .await?)
+        .await?;
+
+        // Map the flat DB rows to the nested AlbumMediaItemSummary struct
+        let summaries = rows
+            .into_iter()
+            .map(|r| AlbumMediaItemSummary {
+                media_item: TimelineItem {
+                    id: r.id,
+                    is_video: r.is_video,
+                    is_panorama: r.is_panorama,
+                    duration_ms: r.duration_ms,
+                    timestamp: r.timestamp,
+                },
+                added_at: r.added_at,
+            })
+            .collect();
+
+        Ok(summaries)
     }
 
     //================================================================================

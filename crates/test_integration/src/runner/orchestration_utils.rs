@@ -95,11 +95,11 @@ where
 
 pub fn setup_tracing_and_panic_handling() {
     let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| "info,hyper=error,reqwest=error".into());
+        .unwrap_or_else(|_| "info,sqlx=warn,api=debug,hyper=error,reqwest=error".into());
 
     let subscriber = fmt::Subscriber::builder()
-        .with_env_filter(filter)
         .with_max_level(Level::INFO)
+        .with_env_filter(filter)
         .compact()
         .with_target(false)
         .finish();

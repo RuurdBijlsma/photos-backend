@@ -2,6 +2,7 @@ use crate::database::album::album::AlbumRole;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
+use common_types::pb::api::TimelineItem;
 // --- Request Payloads ---
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
@@ -95,7 +96,7 @@ pub struct AlbumDetailsResponse {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumMediaItemSummary {
-    pub id: String,
+    pub media_item: TimelineItem,
     pub added_at: DateTime<Utc>,
 }
 

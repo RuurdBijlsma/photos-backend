@@ -165,7 +165,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
         .await?;
 
     assert_eq!(details.media_items.len(), 1);
-    assert_eq!(details.media_items[0].id, media_id);
+    assert_eq!(details.media_items[0].media_item.id, media_id);
 
     // 2. Remove Media from Album
     let response = client
@@ -299,7 +299,7 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
     let album_content = AlbumStore::list_media_items(&context.pool, &album.id).await?;
     assert_eq!(album_content.len(), 1);
     let album_item = album_content.first().expect("There should be an item here");
-    let new_media_id = album_item.id.clone();
+    let new_media_id = album_item.media_item.id.clone();
     let Some(remote_user_id) = sqlx::query_scalar!(
         "SELECT remote_user_id FROM media_item WHERE id = $1",
         new_media_id
