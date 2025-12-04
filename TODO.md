@@ -109,24 +109,25 @@
 * ✅ pretty sure the watcher doesn't do anything if a folder is deleted.
 * ✅ make UserStore::(find user by mail/id) (get user role) (set user media folder)
 * ✅ timeline performance
-  * ✅ use proper index on get-month endpoint, if not already at max perf level.
-  * ✅ timeline_summary.sql en ratios_summary.sql migrations deleten, en weer maken met goeie nieuwe columns (maybe its
-    already pretty good).
-  * 👎 Summary table voor ratios
-  * ✅ performance check voor beide /timeline endpoints met 100k photos erin (explain analyze, check of frontend js veel
-    delay toevoegt)
+    * ✅ use proper index on get-month endpoint, if not already at max perf level.
+    * ✅ timeline_summary.sql en ratios_summary.sql migrations deleten, en weer maken met goeie nieuwe columns (maybe its
+      already pretty good).
+    * 👎 Summary table voor ratios
+    * ✅ performance check voor beide /timeline endpoints met 100k photos erin (explain analyze, check of frontend js
+      veel
+      delay toevoegt)
 * ✅ websocket om nieuwe foto events te sturen
 * ✅ clean up error and warn and info tracing logs
-  * ✅ error for fatal boys
-  * ✅ warn for user might be impacted
-  * ✅ info for info
+    * ✅ error for fatal boys
+    * ✅ warn for user might be impacted
+    * ✅ info for info
 * ✅ clean up websocket code
 * ✅ add cache for processing
-  * ✅ cache based on file hash
-  * ✅ setting for enabling cache
-  * ✅ thumbnails
-  * ✅ processed_info
-  * ✅ analysis_info
+    * ✅ cache based on file hash
+    * ✅ setting for enabling cache
+    * ✅ thumbnails
+    * ✅ processed_info
+    * ✅ analysis_info
 * ✅ Clean up timeline/service.rs duplicated code
 * api:
     * ✅ add random image + theme endpoint
@@ -152,6 +153,8 @@
 * at some point copy paste all sql queries into gemini en ask for proper indices
 * automatic onboarding
 * [weird bug] crates dont start when migration isnt in sync for some reason?
+* also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
+  items (2e sort toevoegen? idk)
 
 # Features
 
