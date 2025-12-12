@@ -26,6 +26,7 @@ pub async fn test_album_lifecycle(context: &TestContext) -> Result<()> {
         name: "Lifecycle Test Album".to_string(),
         description: Some("Integration test description".to_string()),
         is_public: false,
+        media_item_ids: vec!(),
     };
 
     let response = client
@@ -79,6 +80,7 @@ pub async fn test_update_album(context: &TestContext) -> Result<()> {
             name: "Original Name".to_string(),
             description: None,
             is_public: false,
+            media_item_ids: vec!(),
         })
         .send()
         .await?
@@ -89,6 +91,7 @@ pub async fn test_update_album(context: &TestContext) -> Result<()> {
     let update_payload = UpdateAlbumRequest {
         name: Some("Updated Name".to_string()),
         description: Some("Updated Description".to_string()),
+        thumbnail_id: None,
         is_public: Some(true),
     };
 
@@ -137,6 +140,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
             name: "Media Test Album".to_string(),
             description: None,
             is_public: false,
+            media_item_ids: vec!(),
         })
         .send()
         .await?
@@ -213,6 +217,7 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
             name: source_album_name.to_string(),
             description: None,
             is_public: false,
+            media_item_ids: vec!(),
         })
         .send()
         .await?

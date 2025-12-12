@@ -6,15 +6,15 @@ use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
 use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::{S2SClient, extract_token_claims};
+use crate::s2s_client::{extract_token_claims, S2SClient};
 use crate::utils::nice_id;
-use app_state::{AppSettings, constants};
+use app_state::{constants, AppSettings};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use jsonwebtoken::{EncodingKey, Header, encode};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlx::{Executor, PgPool, Postgres};
-use tracing::instrument;
+use tracing::{info, instrument};
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
@@ -89,6 +89,7 @@ pub async fn get_album_details(
         is_public: album.is_public,
         owner_id: album.owner_id,
         created_at: album.created_at,
+        thumbnail_id: album.thumbnail_id,
         media_items,
         collaborators,
     })
@@ -101,13 +102,31 @@ pub async fn create_album(
     name: &str,
     description: Option<String>,
     is_public: bool,
+    media_item_ids: &[String],
 ) -> Result<Album, AlbumError> {
     let mut tx = pool.begin().await?;
     let album_id = nice_id(constants().database.media_item_id_length);
+    let thumbnail_id = if media_item_ids.is_empty() {
+        None
+    } else {
+        Some(media_item_ids[media_item_ids.len() / 2].clone())
+    };
 
-    let album =
-        AlbumStore::create(&mut *tx, &album_id, user_id, name, description, is_public).await?;
+    info!("Create w thumb id {:?}", thumbnail_id);
+    let album = AlbumStore::create(
+        &mut *tx,
+        &album_id,
+        user_id,
+        name,
+        description,
+        thumbnail_id,
+        is_public,
+    )
+    .await?;
+    info!("UPSERT, album:{:?}", album);
     AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
+    info!("ADD, {:?}", media_item_ids);
+    AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
 
     tx.commit().await?;
 
@@ -261,6 +280,7 @@ pub async fn update_album(
     user_id: i32,
     name: Option<String>,
     description: Option<String>,
+    thumbnail_id: Option<String>,
     is_public: Option<bool>,
 ) -> Result<Album, AlbumError> {
     // Permission Check: Only the owner can update album details.
@@ -272,13 +292,14 @@ pub async fn update_album(
 
     // At least one field must be provided for the update.
     // Else we write for nothing and set updated_at for nothing.
-    if name.is_none() && description.is_none() && is_public.is_none() {
+    if name.is_none() && description.is_none() && thumbnail_id.is_none() && is_public.is_none() {
         return AlbumStore::find_by_id(pool, album_id)
             .await?
             .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()));
     }
 
-    let updated_album = AlbumStore::update(pool, album_id, name, description, is_public).await?;
+    let updated_album =
+        AlbumStore::update(pool, album_id, name, description, thumbnail_id, is_public).await?;
     Ok(updated_album)
 }
 
@@ -344,6 +365,7 @@ pub async fn accept_invite(
         user_id,
         &payload.name,
         payload.description,
+        None,
         false,
     )
     .await?;

@@ -1,5 +1,6 @@
-use crate::api::album::interfaces::{AlbumMediaItemSummary, CollaboratorSummary};
-use crate::database::album::album::{Album, AlbumRole};
+use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSortField, CollaboratorSummary};
+use crate::api::timeline::interfaces::SortDirection;
+use crate::database::album::album::{Album, AlbumRole, AlbumWithCount};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::DbError;
 use common_types::pb::api::TimelineItem;
@@ -20,19 +21,21 @@ impl AlbumStore {
         user_id: i32,
         name: &str,
         description: Option<String>,
+        thumbnail_id: Option<String>,
         is_public: bool,
     ) -> Result<Album, DbError> {
         Ok(sqlx::query_as!(
             Album,
             r#"
-            INSERT INTO album (id, owner_id, name, description, is_public)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             "#,
             album_id,
             user_id,
             name,
             description,
+            thumbnail_id,
             is_public,
         )
         .fetch_one(executor)
@@ -45,6 +48,7 @@ impl AlbumStore {
         album_id: &str,
         name: Option<String>,
         description: Option<String>,
+        thumbnail_id: Option<String>,
         is_public: Option<bool>,
     ) -> Result<Album, DbError> {
         Ok(sqlx::query_as!(
@@ -54,13 +58,15 @@ impl AlbumStore {
             SET
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
-                is_public = COALESCE($3, is_public),
+                thumbnail_id = COALESCE($3, thumbnail_id),
+                is_public = COALESCE($4, is_public),
                 updated_at = now()
-            WHERE id = $4
+            WHERE id = $5
             RETURNING *
             "#,
             name,
             description,
+            thumbnail_id,
             is_public,
             album_id
         )
@@ -98,6 +104,72 @@ impl AlbumStore {
         )
         .fetch_all(executor)
         .await?)
+    }
+
+    /// Retrieves all albums a user is a collaborator on.
+    pub async fn list_with_count_by_user_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        user_id: i32,
+        sort_field: AlbumSortField,
+        sort_dir: SortDirection,
+    ) -> Result<Vec<AlbumWithCount>, DbError> {
+        // todo: benchmark
+        Ok(sqlx::query_as!(
+        AlbumWithCount,
+        r#"
+            SELECT
+                a.id,
+                a.owner_id,
+                a.name,
+                a.description,
+                a.thumbnail_id,
+                a.is_public,
+                a.created_at,
+                a.updated_at,
+                COUNT(mi.id)::INT AS "media_count!"
+            FROM album a
+            -- Check collaboration status
+            LEFT JOIN album_collaborator ac ON a.id = ac.album_id AND ac.user_id = $1
+            -- Join for media items
+            LEFT JOIN album_media_item ami ON a.id = ami.album_id
+            -- Join media items to filter deleted ones and get timestamps
+            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
+            WHERE
+                a.owner_id = $1      -- User is the owner
+                OR
+                ac.user_id = $1      -- OR User is a collaborator
+            GROUP BY
+                a.id,
+                a.owner_id,
+                a.name,
+                a.description,
+                a.thumbnail_id,
+                a.is_public,
+                a.created_at,
+                a.updated_at
+            ORDER BY
+                -- 1. Sort by Name
+                CASE WHEN $2 = 'name' AND $3 = 'ASC' THEN a.name END,
+                CASE WHEN $2 = 'name' AND $3 = 'DESC' THEN a.name END DESC,
+
+                -- 2. Sort by Updated At
+                CASE WHEN $2 = 'updated_at' AND $3 = 'ASC' THEN a.updated_at END,
+                CASE WHEN $2 = 'updated_at' AND $3 = 'DESC' THEN a.updated_at END DESC,
+
+                -- 3. Sort by Latest Photo (MAX sort_timestamp)
+                -- NULLS LAST ensures empty albums appear at the bottom
+                CASE WHEN $2 = 'latest_photo' AND $3 = 'ASC' THEN MAX(mi.sort_timestamp) END NULLS LAST,
+                CASE WHEN $2 = 'latest_photo' AND $3 = 'DESC' THEN MAX(mi.sort_timestamp) END DESC NULLS LAST,
+
+                -- Secondary sort to ensure stable pagination/ordering
+                a.id
+        "#,
+        user_id,
+        sort_field.as_str(),
+        sort_dir.as_sql()
+    )
+            .fetch_all(executor)
+            .await?)
     }
 
     //================================================================================

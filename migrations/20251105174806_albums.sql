@@ -9,14 +9,15 @@ CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'rejected');
 -- The main 'album' table.
 CREATE TABLE album
 (
-    id          VARCHAR(10) PRIMARY KEY,
-    owner_id    INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    name        TEXT        NOT NULL,
-    description TEXT,
+    id           VARCHAR(10) PRIMARY KEY,
+    owner_id     INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    name         TEXT        NOT NULL,
+    description  TEXT,
+    thumbnail_id VARCHAR(10) NULL REFERENCES media_item (id) ON DELETE SET NULL,
     -- This flag enables public, view-only link sharing without requiring a login.
-    is_public   BOOLEAN     NOT NULL DEFAULT false,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    is_public    BOOLEAN     NOT NULL DEFAULT false,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Index to quickly find all albums owned by a specific user.

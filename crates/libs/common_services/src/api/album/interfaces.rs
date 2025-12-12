@@ -1,8 +1,9 @@
+use crate::api::timeline::interfaces::SortDirection;
 use crate::database::album::album::AlbumRole;
 use chrono::{DateTime, Utc};
+use common_types::pb::api::TimelineItem;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
-use common_types::pb::api::TimelineItem;
 // --- Request Payloads ---
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
@@ -11,6 +12,7 @@ pub struct CreateAlbumRequest {
     pub name: String,
     pub description: Option<String>,
     pub is_public: bool,
+    pub media_item_ids: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
@@ -31,6 +33,7 @@ pub struct AddCollaboratorRequest {
 pub struct UpdateAlbumRequest {
     pub name: Option<String>,
     pub description: Option<String>,
+    pub thumbnail_id: Option<String>,
     pub is_public: Option<bool>,
 }
 
@@ -76,6 +79,14 @@ pub struct RemoveCollaboratorParams {
     pub collaborator_id: i64,
 }
 
+#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListAlbumsParam {
+    #[serde(default)]
+    pub sort_direction: SortDirection,
+    pub sort_field: AlbumSortField,
+}
+
 // --- Response Payloads ---
 
 /// Full details of an album, including its media items and collaborators.
@@ -85,6 +96,7 @@ pub struct AlbumDetailsResponse {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
+    pub thumbnail_id: Option<String>,
     pub is_public: bool,
     pub owner_id: i32,
     pub created_at: DateTime<Utc>,
@@ -111,9 +123,28 @@ pub struct CollaboratorSummary {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AlbumShareClaims {
-    // Registered claims
     pub iss: String, // Issuer (server's public_url)
     pub sub: String, // Subject (album_id)
     pub exp: i64,    // Expiration time (as a Unix timestamp)
     pub sharer_username: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Default, ToSchema, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum AlbumSortField {
+    #[default]
+    UpdatedAt,
+    LatestPhoto,
+    Name,
+}
+
+impl AlbumSortField {
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Name => "name",
+            Self::UpdatedAt => "updated_at",
+            Self::LatestPhoto => "latest_photo",
+        }
+    }
 }

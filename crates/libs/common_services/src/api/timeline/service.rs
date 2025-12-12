@@ -1,5 +1,5 @@
 use crate::api::timeline::error::TimelineError;
-use crate::api::timeline::interfaces::SortOrder;
+use crate::api::timeline::interfaces::SortDirection;
 use crate::database::app_user::User;
 use chrono::NaiveDate;
 use sqlx::PgPool;
@@ -10,7 +10,7 @@ use common_types::pb::api::{TimelineItem, TimelineItemsResponse, TimelineMonthIt
 pub async fn get_timeline_ratios(
     user: &User,
     pool: &PgPool,
-    sort_order: SortOrder,
+    sort_direction: SortDirection,
 ) -> Result<TimelineRatiosResponse, TimelineError> {
     let sql = format!(
         r"
@@ -24,7 +24,7 @@ pub async fn get_timeline_ratios(
         GROUP BY month_id
         ORDER BY month_id {0}
         ",
-        sort_order.as_sql()
+        sort_direction.as_sql()
     );
 
     let months = sqlx::query_as::<_, TimelineMonthRatios>(&sql)
@@ -39,7 +39,7 @@ pub async fn get_timeline_ratios(
 pub async fn get_timeline_ids(
     user: &User,
     pool: &PgPool,
-    sort_order: SortOrder,
+    sort_direction: SortDirection,
 ) -> Result<Vec<String>, TimelineError> {
     let sql = format!(
         r"
@@ -47,7 +47,7 @@ pub async fn get_timeline_ids(
         FROM media_item
         WHERE user_id = $1 AND deleted = false
         ",
-        sort_order.as_sql()
+        sort_direction.as_sql()
     );
 
     let ids = sqlx::query_scalar::<_, Vec<String>>(&sql)
@@ -63,7 +63,7 @@ pub async fn get_photos_by_month(
     user: &User,
     pool: &PgPool,
     month_ids: &[NaiveDate],
-    sort_order: SortOrder,
+    sort_direction: SortDirection,
 ) -> Result<TimelineItemsResponse, TimelineError> {
     let sql = format!(
         r"
@@ -82,7 +82,7 @@ pub async fn get_photos_by_month(
         ORDER BY
             sort_timestamp {}
         ",
-        sort_order.as_sql()
+        sort_direction.as_sql()
     );
 
     let items = sqlx::query_as::<_, TimelineItem>(&sql)

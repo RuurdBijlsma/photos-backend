@@ -1,22 +1,19 @@
 use crate::api_state::ApiContext;
-use axum::extract::{Path, State};
+use crate::auth::middlewares::optional_user::OptionalUser;
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_services::api::album::error::AlbumError;
-use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse,
-    CheckInviteRequest, CreateAlbumRequest, UpdateAlbumRequest,
-};
+use common_services::api::album::interfaces::{AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse, CheckInviteRequest, CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest};
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
     get_album_details, remove_collaborator, remove_media_from_album, update_album,
 };
-use common_services::database::album::album::{Album, AlbumSummary};
+use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use tracing::instrument;
-use crate::auth::middlewares::optional_user::OptionalUser;
+use tracing::{info, instrument};
 
 /// Create a new album.
 ///
@@ -37,12 +34,14 @@ pub async fn create_album_handler(
     Extension(user): Extension<User>,
     Json(payload): Json<CreateAlbumRequest>,
 ) -> Result<(StatusCode, Json<Album>), AlbumError> {
+    info!("Create album handler {:?}", payload);
     let album = create_album(
         &context.pool,
         user.id,
         &payload.name,
         payload.description,
         payload.is_public,
+        &payload.media_item_ids,
     )
     .await?;
     Ok((StatusCode::CREATED, Json(album)))
@@ -56,16 +55,17 @@ pub async fn create_album_handler(
     path = "/album",
     tag = "Album",
     responses(
-        (status = 200, description = "A list of the user's albums.", body = Vec<Album>),
+        (status = 200, description = "A list of the user's albums.", body = Vec<AlbumWithCount>),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
 )]
 pub async fn get_user_albums_handler(
     State(context): State<ApiContext>,
+    Query(query): Query<ListAlbumsParam>,
     Extension(user): Extension<User>,
-) -> Result<Json<Vec<Album>>, AlbumError> {
-    let albums = AlbumStore::list_by_user_id(&context.pool, user.id).await?;
+) -> Result<Json<Vec<AlbumWithCount>>, AlbumError> {
+    let albums = AlbumStore::list_with_count_by_user_id(&context.pool, user.id, query.sort_field, query.sort_direction).await?;
     Ok(Json(albums))
 }
 
@@ -125,6 +125,7 @@ pub async fn update_album_handler(
         user.id,
         payload.name,
         payload.description,
+        payload.thumbnail_id,
         payload.is_public,
     )
     .await?;

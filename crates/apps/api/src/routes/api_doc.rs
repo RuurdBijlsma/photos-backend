@@ -2,7 +2,6 @@ use crate::routes::{album, auth, onboarding, photos, root, s2s, timeline};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 
-// todo: fix this
 #[derive(OpenApi)]
 #[openapi(
     paths(

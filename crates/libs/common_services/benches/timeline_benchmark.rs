@@ -1,6 +1,6 @@
 use app_state::{load_constants_from_path, load_settings_from_path, CONSTANTS};
 use color_eyre::eyre::Result;
-use common_services::api::timeline::interfaces::SortOrder;
+use common_services::api::timeline::interfaces::SortDirection;
 use common_services::api::timeline::service::{
     get_photos_by_month, get_timeline_ids, get_timeline_ratios,
 };
@@ -45,14 +45,14 @@ fn bench_timeline(c: &mut Criterion) {
     // 1. Benchmark Ratios
     c.bench_function("get_timeline_ratios_desc", |b| {
         b.to_async(&rt).iter(|| async {
-            get_timeline_ratios(&user, &pool, SortOrder::Desc)
+            get_timeline_ratios(&user, &pool, SortDirection::Desc)
                 .await
                 .unwrap();
         });
     });
     c.bench_function("get_timeline_ratios_asc", |b| {
         b.to_async(&rt).iter(|| async {
-            get_timeline_ratios(&user, &pool, SortOrder::Asc)
+            get_timeline_ratios(&user, &pool, SortDirection::Asc)
                 .await
                 .unwrap();
         });
@@ -61,14 +61,14 @@ fn bench_timeline(c: &mut Criterion) {
     // 2. Benchmark IDs
     c.bench_function("get_timeline_ids_desc", |b| {
         b.to_async(&rt).iter(|| async {
-            get_timeline_ids(&user, &pool, SortOrder::Desc)
+            get_timeline_ids(&user, &pool, SortDirection::Desc)
                 .await
                 .unwrap();
         });
     });
     c.bench_function("get_timeline_ids_asc", |b| {
         b.to_async(&rt).iter(|| async {
-            get_timeline_ids(&user, &pool, SortOrder::Asc)
+            get_timeline_ids(&user, &pool, SortDirection::Asc)
                 .await
                 .unwrap();
         });
@@ -83,14 +83,14 @@ fn bench_timeline(c: &mut Criterion) {
 
     c.bench_function("get_photos_by_month_desc", |b| {
         b.to_async(&rt).iter(|| async {
-            get_photos_by_month(&user, &pool, &month_ids, SortOrder::Desc)
+            get_photos_by_month(&user, &pool, &month_ids, SortDirection::Desc)
                 .await
                 .unwrap();
         });
     });
     c.bench_function("get_photos_by_month_asc", |b| {
         b.to_async(&rt).iter(|| async {
-            get_photos_by_month(&user, &pool, &month_ids, SortOrder::Asc)
+            get_photos_by_month(&user, &pool, &month_ids, SortDirection::Asc)
                 .await
                 .unwrap();
         });
