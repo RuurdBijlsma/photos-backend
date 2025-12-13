@@ -32,6 +32,34 @@ async fn check_user_role(
     }
 }
 
+async fn can_edit_album(
+    executor: impl Executor<'_, Database = Postgres>,
+    user_id: i32,
+    album_id: &str,
+) -> Result<bool, AlbumError> {
+    check_user_role(
+        executor,
+        user_id,
+        album_id,
+        &[AlbumRole::Owner, AlbumRole::Contributor],
+    )
+    .await
+}
+
+async fn can_view_album(
+    executor: impl Executor<'_, Database = Postgres>,
+    user_id: i32,
+    album_id: &str,
+) -> Result<bool, AlbumError> {
+    check_user_role(
+        executor,
+        user_id,
+        album_id,
+        &[AlbumRole::Owner, AlbumRole::Contributor, AlbumRole::Viewer],
+    )
+    .await
+}
+
 /// A more specific check to see if the user is the owner of the album.
 #[instrument(skip(executor))]
 async fn is_album_owner<'c, E>(
@@ -61,14 +89,7 @@ pub async fn get_album_details(
             return Err(AlbumError::NotFound(album_id.to_string()));
         };
         // Permission Check: User must be part of the album to view it.
-        let is_collaborator = check_user_role(
-            pool,
-            user_id,
-            album_id,
-            &[AlbumRole::Owner, AlbumRole::Contributor, AlbumRole::Viewer],
-        )
-        .await?;
-        if !is_collaborator {
+        if !can_view_album(pool, user_id, album_id).await? {
             return Err(AlbumError::NotFound(album_id.to_string()));
         }
     }
@@ -139,15 +160,8 @@ pub async fn add_media_to_album(
     media_item_ids: &[String],
     user_id: i32,
 ) -> Result<(), AlbumError> {
-    // Permission Check
-    let has_permission = check_user_role(
-        pool,
-        user_id,
-        album_id,
-        &[AlbumRole::Owner, AlbumRole::Contributor],
-    )
-    .await?;
-    if !has_permission {
+    // Permission Check: Owner OR Contributor
+    if !can_edit_album(pool, user_id, album_id).await? {
         return Err(AlbumError::NotFound("Album not found.".to_string()));
     }
 
@@ -177,14 +191,8 @@ pub async fn remove_media_from_album(
     media_item_id: &str,
     user_id: i32,
 ) -> Result<(), AlbumError> {
-    let has_permission = check_user_role(
-        pool,
-        user_id,
-        album_id,
-        &[AlbumRole::Owner, AlbumRole::Contributor],
-    )
-    .await?;
-    if !has_permission {
+    // Permission Check: Owner OR Contributor
+    if !can_edit_album(pool, user_id, album_id).await? {
         return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
@@ -310,7 +318,6 @@ pub async fn update_album(
     }
 
     // At least one field must be provided for the update.
-    // Else we write for nothing and set updated_at for nothing.
     if name.is_none() && description.is_none() && thumbnail_id.is_none() && is_public.is_none() {
         let album = AlbumStore::find_by_id(pool, album_id)
             .await?

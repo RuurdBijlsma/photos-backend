@@ -14,6 +14,18 @@ impl AlbumStore {
     // Core Album Management
     //================================================================================
 
+    /// Helper to get the absolute owner ID from the album table (Source of Truth).
+    pub async fn get_owner_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        album_id: &str,
+    ) -> Result<Option<i32>, DbError> {
+        let rec = sqlx::query!("SELECT owner_id FROM album WHERE id = $1", album_id)
+            .fetch_optional(executor)
+            .await?;
+
+        Ok(rec.map(|r| r.owner_id))
+    }
+
     /// Creates a new album and assigns the user as the owner.
     pub async fn create(
         executor: impl Executor<'_, Database = Postgres>,
@@ -29,7 +41,7 @@ impl AlbumStore {
             r#"
             INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public)
             VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
+            RETURNING id, owner_id, name, description, thumbnail_id, is_public, created_at, updated_at
             "#,
             album_id,
             user_id,
@@ -62,7 +74,7 @@ impl AlbumStore {
                 is_public = COALESCE($4, is_public),
                 updated_at = now()
             WHERE id = $5
-            RETURNING *
+            RETURNING id, owner_id, name, description, thumbnail_id, is_public, updated_at, created_at
             "#,
             name,
             description,
@@ -112,7 +124,7 @@ impl AlbumStore {
         Ok(sqlx::query_as!(
             Album,
             r#"
-            SELECT a.*
+            SELECT a.id, owner_id, name, description, thumbnail_id, is_public, created_at, updated_at
             FROM album a
             JOIN album_collaborator ac ON a.id = ac.album_id
             WHERE ac.user_id = $1
@@ -124,7 +136,7 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Retrieves all albums a user is a collaborator on.
+    /// Retrieves all albums a user is a collaborator on with sorting.
     pub async fn list_with_count_by_user_id(
         executor: impl Executor<'_, Database = Postgres>,
         user_id: i32,
@@ -150,7 +162,6 @@ impl AlbumStore {
             LEFT JOIN album_collaborator ac ON a.id = ac.album_id AND ac.user_id = $1
             -- Join for media items
             LEFT JOIN album_media_item ami ON a.id = ami.album_id
-            -- Join media items to filter deleted ones and get timestamps
             LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
             WHERE
                 a.owner_id = $1      -- User is the owner
@@ -164,7 +175,8 @@ impl AlbumStore {
                 a.thumbnail_id,
                 a.is_public,
                 a.created_at,
-                a.updated_at
+                a.updated_at,
+                a.latest_media_item_timestamp
             ORDER BY
                 -- 1. Sort by Name
                 CASE WHEN $2 = 'name' AND $3 = 'ASC' THEN a.name END,
@@ -174,12 +186,11 @@ impl AlbumStore {
                 CASE WHEN $2 = 'updated_at' AND $3 = 'ASC' THEN a.updated_at END,
                 CASE WHEN $2 = 'updated_at' AND $3 = 'DESC' THEN a.updated_at END DESC,
 
-                -- 3. Sort by Latest Photo (MAX sort_timestamp)
-                -- NULLS LAST ensures empty albums appear at the bottom
-                CASE WHEN $2 = 'latest_photo' AND $3 = 'ASC' THEN MAX(mi.sort_timestamp) END NULLS LAST,
-                CASE WHEN $2 = 'latest_photo' AND $3 = 'DESC' THEN MAX(mi.sort_timestamp) END DESC NULLS LAST,
+                -- 3. Sort by Latest Photo (Optimized: using cached column)
+                CASE WHEN $2 = 'latest_photo' AND $3 = 'ASC' THEN a.latest_media_item_timestamp END NULLS LAST,
+                CASE WHEN $2 = 'latest_photo' AND $3 = 'DESC' THEN a.latest_media_item_timestamp END DESC NULLS LAST,
 
-                -- Secondary sort to ensure stable pagination/ordering
+                -- Secondary sort
                 a.id
         "#,
         user_id,
@@ -217,7 +228,6 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Removes multiple media items from an album by their IDs.
     pub async fn remove_media_items_by_id(
         executor: impl Executor<'_, Database = Postgres>,
         album_id: &str,
@@ -332,8 +342,8 @@ impl AlbumStore {
             "#,
             album_id
         )
-            .fetch_optional(executor)
-            .await?;
+        .fetch_optional(executor)
+        .await?;
 
         Ok(result.map(|r| r.id))
     }
