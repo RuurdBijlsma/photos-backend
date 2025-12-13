@@ -74,16 +74,34 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Retrieves a single album by its ID.
+    /// Retrieves a single album by its ID, including the count of media items.
     pub async fn find_by_id(
         executor: impl Executor<'_, Database = Postgres>,
         album_id: &str,
-    ) -> Result<Option<Album>, DbError> {
-        Ok(
-            sqlx::query_as!(Album, "SELECT * FROM album WHERE id = $1", album_id)
-                .fetch_optional(executor)
-                .await?,
+    ) -> Result<Option<AlbumWithCount>, DbError> {
+        Ok(sqlx::query_as!(
+            AlbumWithCount,
+            r#"
+            SELECT
+                a.id,
+                a.owner_id,
+                a.name,
+                a.description,
+                a.thumbnail_id,
+                a.is_public,
+                a.created_at,
+                a.updated_at,
+                COUNT(mi.id)::INT AS "media_count!"
+            FROM album a
+            LEFT JOIN album_media_item ami ON a.id = ami.album_id
+            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
+            WHERE a.id = $1
+            GROUP BY a.id
+            "#,
+            album_id
         )
+        .fetch_optional(executor)
+        .await?)
     }
 
     /// Retrieves all albums a user is a collaborator on.
@@ -258,6 +276,66 @@ impl AlbumStore {
             .collect();
 
         Ok(summaries)
+    }
+
+    /// Checks if a specific media item exists in an album and is not deleted.
+    pub async fn has_media_item(
+        executor: impl Executor<'_, Database = Postgres>,
+        album_id: &str,
+        media_item_id: &str,
+    ) -> Result<bool, DbError> {
+        let result = sqlx::query!(
+            r#"
+            SELECT 1 as "one!"
+            FROM album_media_item ami
+            JOIN media_item mi ON ami.media_item_id = mi.id
+            WHERE ami.album_id = $1
+              AND ami.media_item_id = $2
+              AND mi.deleted = false
+            LIMIT 1
+            "#,
+            album_id,
+            media_item_id
+        )
+        .fetch_optional(executor)
+        .await?;
+
+        Ok(result.is_some())
+    }
+
+    /// Finds the media item ID located at the "middle" of the album based on time.
+    /// Useful for generating a representative thumbnail.
+    pub async fn find_middle_media_item_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        album_id: &str,
+    ) -> Result<Option<String>, DbError> {
+        struct Row {
+            id: String,
+        }
+
+        let result = sqlx::query_as!(
+            Row,
+            r#"
+            SELECT id
+            FROM (
+                SELECT
+                    mi.id,
+                    ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp) as rn,
+                    COUNT(*) OVER () as total_count
+                FROM media_item mi
+                JOIN album_media_item ami ON mi.id = ami.media_item_id
+                WHERE ami.album_id = $1
+                  AND mi.deleted = false
+            ) t
+            WHERE rn = (total_count / 2) + 1
+            LIMIT 1
+            "#,
+            album_id
+        )
+            .fetch_optional(executor)
+            .await?;
+
+        Ok(result.map(|r| r.id))
     }
 
     //================================================================================

@@ -43,6 +43,21 @@ pub struct Album {
     pub updated_at: DateTime<Utc>,
 }
 
+impl From<AlbumWithCount> for Album {
+    fn from(album: AlbumWithCount) -> Self {
+        Self {
+            id: album.id,
+            owner_id: album.owner_id,
+            name: album.name,
+            thumbnail_id: album.thumbnail_id,
+            description: album.description,
+            is_public: album.is_public,
+            created_at: album.created_at,
+            updated_at: album.updated_at,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumSummary {

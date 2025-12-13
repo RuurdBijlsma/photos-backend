@@ -1,7 +1,7 @@
 use crate::database::DbError;
-use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
@@ -27,6 +27,9 @@ pub enum AlbumError {
 
     #[error("Remote server error: {0}")]
     RemoteServerError(String),
+
+    #[error("Bad Request: {0}")]
+    BadRequest(String),
 }
 
 // Renamed for more general use
@@ -38,13 +41,16 @@ fn log_error(error: &AlbumError) {
             warn!("Album -> Media item not found: {}", id);
         }
         AlbumError::Forbidden(id) => {
-            warn!("Forbidden: {}", id);
+            warn!("Album -> Forbidden: {}", id);
         }
         AlbumError::InvalidInviteToken(id) => {
             warn!("Invalid invitation token: {}", id);
         }
         AlbumError::RemoteServerError(message) => {
             warn!("Album sharing -> Remote server error: {}", message);
+        }
+        AlbumError::BadRequest(message) => {
+            warn!("Album -> Bad Request: {}", message);
         }
     }
 }
@@ -74,6 +80,9 @@ impl IntoResponse for AlbumError {
                 StatusCode::BAD_GATEWAY,
                 format!("Could not contact remote server: {message}"),
             ),
+            Self::BadRequest(message) => {
+                (StatusCode::BAD_REQUEST, format!("Bad request: {message}"))
+            }
         };
 
         let body = Json(json!({ "error": error_message }));

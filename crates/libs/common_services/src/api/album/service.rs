@@ -14,7 +14,7 @@ use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlx::{Executor, PgPool, Postgres};
-use tracing::{info, instrument};
+use tracing::instrument;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
@@ -106,27 +106,22 @@ pub async fn create_album(
 ) -> Result<Album, AlbumError> {
     let mut tx = pool.begin().await?;
     let album_id = nice_id(constants().database.media_item_id_length);
-    let thumbnail_id = if media_item_ids.is_empty() {
-        None
-    } else {
-        Some(media_item_ids[media_item_ids.len() / 2].clone())
-    };
 
-    info!("Create w thumb id {:?}", thumbnail_id);
     let album = AlbumStore::create(
         &mut *tx,
         &album_id,
         user_id,
         name,
         description,
-        thumbnail_id,
+        None,
         is_public,
     )
     .await?;
-    info!("UPSERT, album:{:?}", album);
     AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
-    info!("ADD, {:?}", media_item_ids);
     AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
+    if let Some(thumb) = AlbumStore::find_middle_media_item_id(&mut *tx, &album_id).await? {
+        AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
+    }
 
     tx.commit().await?;
 
@@ -151,14 +146,21 @@ pub async fn add_media_to_album(
     )
     .await?;
     if !has_permission {
-        return Err(AlbumError::NotFound(
-            "Album not found or permission denied.".to_string(),
-        ));
+        return Err(AlbumError::NotFound("Album not found.".to_string()));
     }
 
     let mut tx = pool.begin().await?;
 
+    let Some(album_before) = AlbumStore::find_by_id(&mut *tx, album_id).await? else {
+        return Err(AlbumError::NotFound("Album not found.".to_string()));
+    };
     AlbumStore::add_media_items(&mut *tx, album_id, media_item_ids, user_id).await?;
+    if album_before.thumbnail_id.is_none() {
+        let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
+        if let Some(thumbnail_id) = thumbnail_id {
+            AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None).await?;
+        }
+    }
 
     tx.commit().await?;
     Ok(())
@@ -186,14 +188,29 @@ pub async fn remove_media_from_album(
         ));
     }
 
+    let mut tx = pool.begin().await?;
     let result =
-        AlbumStore::remove_media_items_by_id(pool, album_id, &[media_item_id.to_owned()]).await?;
+        AlbumStore::remove_media_items_by_id(&mut *tx, album_id, &[media_item_id.to_owned()])
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(AlbumError::NotFound(format!(
             "Media item {media_item_id} not found in album {album_id}"
         )));
     }
+
+    // Fix thumbnail id if it was removed
+    if let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? {
+        // Check if removed item was the thumbnail
+        if Some(media_item_id.to_owned()) == album.thumbnail_id && album.media_count > 0 {
+            let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
+            if let Some(thumbnail_id) = thumbnail_id {
+                AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
+                    .await?;
+            }
+        }
+    }
+    tx.commit().await?;
 
     Ok(())
 }
@@ -293,9 +310,19 @@ pub async fn update_album(
     // At least one field must be provided for the update.
     // Else we write for nothing and set updated_at for nothing.
     if name.is_none() && description.is_none() && thumbnail_id.is_none() && is_public.is_none() {
-        return AlbumStore::find_by_id(pool, album_id)
+        let album = AlbumStore::find_by_id(pool, album_id)
             .await?
-            .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()));
+            .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()))?;
+        return Ok(album.into());
+    }
+
+    if let Some(thumbnail_id) = &thumbnail_id {
+        let exists = AlbumStore::has_media_item(pool, album_id, thumbnail_id).await?;
+        if !exists {
+            return Err(AlbumError::BadRequest(
+                "thumbnail_id is not in the album".to_owned(),
+            ));
+        }
     }
 
     let updated_album =
