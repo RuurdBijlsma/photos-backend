@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::fmt::Display;
 use utoipa::ToSchema;
 
 // Custom types to match the ENUMs in your SQL schema.
@@ -12,6 +14,17 @@ pub enum AlbumRole {
     Owner,
     Contributor,
     Viewer,
+}
+
+impl Display for AlbumRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::Owner => "owner",
+            Self::Contributor => "contributor",
+            Self::Viewer => "viewer",
+        };
+        f.write_str(s)
+    }
 }
 
 /// Represents a single album in the database, with count of media items.

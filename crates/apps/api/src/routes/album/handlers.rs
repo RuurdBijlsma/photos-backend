@@ -3,17 +3,18 @@ use crate::auth::middlewares::optional_user::OptionalUser;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
+use axum_extra::protobuf::Protobuf;
+use chrono::NaiveDate;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse, CheckInviteRequest, CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest};
-use common_services::api::album::service::{
-    accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
-    get_album_details, remove_collaborator, remove_media_from_album, update_album,
-};
+use common_services::api::album::service::{accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite, get_album_ids, get_album_photos_by_month, get_album_ratios, remove_collaborator, remove_media_from_album, update_album};
 use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
 use tracing::{info, instrument};
+use common_services::api::timeline::interfaces::{GetMediaByMonthParams, TimelineParams};
+use common_types::pb::api::{AlbumRatiosResponse, TimelineItemsResponse};
 
 /// Create a new album.
 ///
@@ -69,32 +70,6 @@ pub async fn get_user_albums_handler(
 ) -> Result<Json<Vec<AlbumWithCount>>, AlbumError> {
     let albums = AlbumStore::list_with_count_by_user_id(&context.pool, user.id, query.sort_field, query.sort_direction).await?;
     Ok(Json(albums))
-}
-
-/// Get details for a specific album.
-///
-/// The user must be a collaborator on the album to view its details.
-#[utoipa::path(
-    get,
-    path = "/album/{album_id}",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album.")
-    ),
-    responses(
-        (status = 200, description = "Detailed information about the album.", body = AlbumDetailsResponse),
-        (status = 404, description = "Album not found or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_album_details_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<OptionalUser>,
-    Path(album_id): Path<String>,
-) -> Result<Json<AlbumDetailsResponse>, AlbumError> {
-    let details = get_album_details(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
-    Ok(Json(details))
 }
 
 /// Update an album's details.
@@ -340,4 +315,119 @@ pub async fn accept_invite_handler(
     )
     .await?;
     Ok(Json(album))
+}
+
+// ====================================== //
+// === --- === ALBUM TIMELINE === --- === //
+// ====================================== //
+
+
+/// Get album metadata and timeline ratios.
+/// Replaces the need for a heavy initial load.
+#[utoipa::path(
+    get,
+    path = "/album/{album_id}/ratios",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album."),
+        TimelineParams
+    ),
+    responses(
+        (status = 200, description = "Album metadata and media ratios.", body = AlbumRatiosResponse),
+        (status = 404, description = "Album not found or permission denied."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = [])) // Optional auth handled inside service
+)]
+pub async fn get_album_ratios_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<OptionalUser>,
+    Path(album_id): Path<String>,
+    Query(params): Query<TimelineParams>,
+) -> Result<Protobuf<AlbumRatiosResponse>, AlbumError> {
+    let response = get_album_ratios(
+        &context.pool,
+        &album_id,
+        user.0.map(|u| u.id),
+        params.sort,
+    )
+        .await?;
+    Ok(Protobuf(response))
+}
+
+/// Get all media IDs for an album.
+#[utoipa::path(
+    get,
+    path = "/album/{album_id}/ids",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album."),
+        TimelineParams
+    ),
+    responses(
+        (status = 200, description = "List of media IDs in the album.", body = Vec<String>),
+        (status = 404, description = "Album not found."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_album_ids_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<OptionalUser>,
+    Path(album_id): Path<String>,
+    Query(params): Query<TimelineParams>,
+) -> Result<Json<Vec<String>>, AlbumError> {
+    let ids = get_album_ids(
+        &context.pool,
+        &album_id,
+        user.0.map(|u| u.id),
+        params.sort,
+    )
+        .await?;
+    Ok(Json(ids))
+}
+
+/// Get media items for specific months within an album.
+#[utoipa::path(
+    get,
+    path = "/album/{album_id}/by-month",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album."),
+        GetMediaByMonthParams
+    ),
+    responses(
+        (status = 200, description = "Media items for the requested months.", body = TimelineItemsResponse),
+        (status = 500, description = "Internal Error."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_album_photos_by_month_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<OptionalUser>,
+    Path(album_id): Path<String>,
+    Query(params): Query<GetMediaByMonthParams>,
+) -> Result<Protobuf<TimelineItemsResponse>, AlbumError> {
+    // Parse months (same logic as timeline handler, maybe extract to utils later)
+    let month_ids = params
+        .months
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d"))
+        .collect::<Result<Vec<NaiveDate>, _>>()
+        .map_err(|_| {
+            AlbumError::BadRequest(
+                "Invalid date format in 'months' parameter. Please use 'YYYY-MM-DD'.".to_string(),
+            )
+        })?;
+
+    let response = get_album_photos_by_month(
+        &context.pool,
+        &album_id,
+        user.0.map(|u| u.id),
+        &month_ids,
+        params.sort,
+    )
+        .await?;
+    Ok(Protobuf(response))
 }

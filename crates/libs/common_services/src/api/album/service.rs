@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use super::interfaces::{AcceptInviteRequest, AlbumDetailsResponse, AlbumShareClaims};
 use crate::api::album::error::AlbumError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
@@ -9,12 +10,14 @@ use crate::job_queue::enqueue_job;
 use crate::s2s_client::{extract_token_claims, S2SClient};
 use crate::utils::nice_id;
 use app_state::{constants, AppSettings};
-use chrono::{Duration, Utc};
+use chrono::{Duration, NaiveDate, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
+use common_types::pb::api::{AlbumInfo, AlbumRatiosResponse, TimelineItem, TimelineItemsResponse, TimelineMonthItems, TimelineMonthRatios};
+use crate::api::timeline::interfaces::SortDirection;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
@@ -71,49 +74,6 @@ where
     E: Executor<'c, Database = Postgres>,
 {
     check_user_role(executor, user_id, album_id, &[AlbumRole::Owner]).await
-}
-
-/// Fetches detailed information for a single album, including media items and collaborators.
-/// The user must be a collaborator to view the details.
-#[instrument(skip(pool))]
-pub async fn get_album_details(
-    pool: &PgPool,
-    album_id: &str,
-    user_id: Option<i32>,
-) -> Result<AlbumDetailsResponse, AlbumError> {
-    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
-        return Err(AlbumError::NotFound(album_id.to_owned()));
-    };
-    if !album.is_public {
-        let Some(user_id) = user_id else {
-            return Err(AlbumError::NotFound(album_id.to_string()));
-        };
-        // Permission Check: User must be part of the album to view it.
-        if !can_view_album(pool, user_id, album_id).await? {
-            return Err(AlbumError::NotFound(album_id.to_string()));
-        }
-    }
-
-    // Fetch album details, media items, and collaborators in parallel
-    let (media_items_res, collaborators_res) = tokio::join!(
-        AlbumStore::list_media_items(pool, album_id),
-        AlbumStore::list_collaborators(pool, album_id),
-    );
-
-    let media_items = media_items_res?;
-    let collaborators = collaborators_res?;
-
-    Ok(AlbumDetailsResponse {
-        id: album.id,
-        name: album.name,
-        description: album.description,
-        is_public: album.is_public,
-        owner_id: album.owner_id,
-        created_at: album.created_at,
-        thumbnail_id: album.thumbnail_id,
-        media_items,
-        collaborators,
-    })
 }
 
 #[instrument(skip(pool))]
@@ -426,4 +386,176 @@ pub async fn accept_invite(
     }
 
     Ok(album)
+}
+
+// ====================================== //
+// === --- === ALBUM TIMELINE === --- === //
+// ====================================== //
+
+/// Fetches lightweight album metadata and the timeline ratios.
+#[instrument(skip(pool))]
+pub async fn get_album_ratios(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: Option<i32>,
+    sort_direction: SortDirection,
+) -> Result<AlbumRatiosResponse, AlbumError> {
+    // 1. Permission Check
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+
+    let mut user_role_str = None;
+
+    if !album.is_public{
+        let Some(uid) = user_id else {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        };
+        // Check role directly so we can return it in metadata
+        let role = AlbumStore::find_user_role(pool, album_id, uid).await?;
+        if role.is_none() {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        }
+        user_role_str = role.map(|r| r.to_string());
+    } else if let Some(uid) = user_id {
+        // Even if public, try to find role for UI purposes (e.g. show edit buttons)
+        let role = AlbumStore::find_user_role(pool, album_id, uid).await?;
+        user_role_str = role.map(|r| r.to_string());
+    }
+
+    // 2. Fetch Ratios (Mirrors timeline service but with JOIN)
+    let sql = format!(
+        r"
+        SELECT
+            m.month_id::TEXT as month_id,
+            COUNT(*)::INT AS count,
+            array_agg(m.width::real / m.height::real ORDER BY m.sort_timestamp {0}) AS ratios
+        FROM media_item m
+        JOIN album_media_item ami ON m.id = ami.media_item_id
+        WHERE ami.album_id = $1
+          AND m.deleted = false
+        GROUP BY m.month_id
+        ORDER BY m.month_id {0}
+        ",
+        sort_direction.as_sql()
+    );
+
+    let months = sqlx::query_as::<_, TimelineMonthRatios>(&sql)
+        .bind(album_id)
+        .fetch_all(pool)
+        .await?;
+
+    // 3. Construct Response
+    let album_info = AlbumInfo {
+        id: album.id,
+        name: album.name,
+        description: album.description,
+        is_public: album.is_public,
+        owner_id: album.owner_id,
+        created_at: album.created_at.to_rfc3339(),
+        thumbnail_id: album.thumbnail_id,
+        user_role: user_role_str,
+    };
+
+    Ok(AlbumRatiosResponse {
+        album: Some(album_info),
+        months,
+    })
+}
+
+/// Fetches media item IDs for an album (Timeline style).
+#[instrument(skip(pool))]
+pub async fn get_album_ids(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: Option<i32>,
+    sort_direction: SortDirection,
+) -> Result<Vec<String>, AlbumError> {
+    // Permission Check
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+    if !album.is_public {
+        let Some(uid) = user_id else { return Err(AlbumError::NotFound(album_id.to_string())); };
+        if !can_view_album(pool, uid, album_id).await? { return Err(AlbumError::NotFound(album_id.to_string())); }
+    }
+
+    let sql = format!(
+        r"
+        SELECT COALESCE(array_agg(m.id ORDER BY m.sort_timestamp {}), '{{}}')
+        FROM media_item m
+        JOIN album_media_item ami ON m.id = ami.media_item_id
+        WHERE ami.album_id = $1 AND m.deleted = false
+        ",
+        sort_direction.as_sql()
+    );
+
+    let ids = sqlx::query_scalar::<_, Vec<String>>(&sql)
+        .bind(album_id)
+        .fetch_one(pool)
+        .await?;
+
+    Ok(ids)
+}
+
+/// Fetches media items for an album by month (Timeline style).
+#[instrument(skip(pool))]
+pub async fn get_album_photos_by_month(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: Option<i32>,
+    month_ids: &[NaiveDate],
+    sort_direction: SortDirection,
+) -> Result<TimelineItemsResponse, AlbumError> {
+    // Permission Check
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+    if !album.is_public {
+        let Some(uid) = user_id else { return Err(AlbumError::NotFound(album_id.to_string())); };
+        if !can_view_album(pool, uid, album_id).await? { return Err(AlbumError::NotFound(album_id.to_string())); }
+    }
+
+    let sql = format!(
+        r"
+        SELECT
+            m.id,
+            m.is_video,
+            m.use_panorama_viewer as is_panorama,
+            m.duration_ms::INT as duration_ms,
+            m.taken_at_local::TEXT as timestamp
+        FROM
+            media_item m
+        JOIN album_media_item ami ON m.id = ami.media_item_id
+        WHERE
+            ami.album_id = $1
+            AND m.deleted = false
+            AND m.month_id = ANY($2)
+        ORDER BY
+            m.sort_timestamp {}
+        ",
+        sort_direction.as_sql()
+    );
+
+    let items = sqlx::query_as::<_, TimelineItem>(&sql)
+        .bind(album_id)
+        .bind(month_ids)
+        .fetch_all(pool)
+        .await?;
+
+    // Grouping logic (Same as timeline service)
+    let mut months_map: HashMap<String, Vec<TimelineItem>> = HashMap::new();
+    for item in items {
+        if item.timestamp.len() >= 7 {
+            let month_id = format!("{}-01", &item.timestamp[0..7]);
+            months_map.entry(month_id).or_default().push(item);
+        }
+    }
+
+    let months = months_map
+        .into_iter()
+        .map(|(month_id, items)| TimelineMonthItems { month_id, items })
+        .collect();
+
+    Ok(TimelineItemsResponse { months })
 }

@@ -155,6 +155,11 @@
 * [weird bug] crates dont start when migration isnt in sync for some reason?
 * also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
   items (2e sort toevoegen? idk)
+* benchmark albums endpoints
+* review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
+  * is auth wel goed implemented? met is_public enzo
+  * minder repeated code maken voor de auth check daar
+* kan camelcase op de proto generated structs?
 
 # Features
 

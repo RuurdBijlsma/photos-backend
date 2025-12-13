@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package api;
 
+// --- Main Timeline ---
+
 // Contains ratios and amount of media items per month, grouped by month.
 message TimelineRatiosResponse {
   repeated TimelineMonthRatios months = 1;
@@ -29,4 +31,25 @@ message TimelineItem {
   bool is_panorama = 3;
   optional int32 duration_ms = 4;
   string timestamp = 5;
+}
+
+// --- Album Specific ---
+
+// Returns Album Metadata + Ratios
+message AlbumRatiosResponse {
+  AlbumInfo album = 1;
+  repeated TimelineMonthRatios months = 2;
+}
+
+message AlbumInfo {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  bool is_public = 4;
+  int32 owner_id = 5;
+  // RFC3339 string
+  string created_at = 6;
+  optional string thumbnail_id = 7;
+  // If the user is a collaborator, this shows their role
+  optional string user_role = 8;
 }

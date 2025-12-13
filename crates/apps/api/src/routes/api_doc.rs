@@ -28,7 +28,6 @@ use utoipa::{Modify, OpenApi};
         // Album handlers
         album::handlers::create_album_handler,
         album::handlers::get_user_albums_handler,
-        album::handlers::get_album_details_handler,
         album::handlers::update_album_handler,
         album::handlers::add_media_to_album_handler,
         album::handlers::remove_media_from_album_handler,
@@ -37,6 +36,9 @@ use utoipa::{Modify, OpenApi};
         album::handlers::generate_invite_handler,
         album::handlers::check_invite_handler,
         album::handlers::accept_invite_handler,
+        album::handlers::get_album_ratios_handler,
+        album::handlers::get_album_ids_handler,
+        album::handlers::get_album_photos_by_month_handler,
         // Timeline handlers
         timeline::handlers::get_timeline_ratios_handler,
         timeline::handlers::get_timeline_ids_handler,
