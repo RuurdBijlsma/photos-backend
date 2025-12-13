@@ -1,12 +1,12 @@
 use crate::context::WorkerContext;
+use crate::handlers::JobResult;
 use crate::handlers::common::cache::{
     get_ingest_cache, get_thumbnail_cache, hash_file, write_ingest_cache, write_thumbnail_cache,
 };
 use crate::handlers::common::remote_user::get_or_create_remote_user;
-use crate::handlers::JobResult;
 use crate::jobs::management::is_job_cancelled;
 use app_state::constants;
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{Result, eyre::eyre};
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
@@ -17,7 +17,7 @@ use media_analyzer::AnalyzeResult;
 use sqlx::PgPool;
 use std::path::Path;
 use tokio::fs;
-use tracing::{debug};
+use tracing::debug;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     // 1. Validate Job Data
@@ -51,7 +51,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         &media_item_id,
         media_info.metadata.orientation,
     )
-        .await?;
+    .await?;
 
     // 5. Final Checks before DB Write
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
@@ -66,7 +66,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         media_info,
         &media_item_id,
     )
-        .await?;
+    .await?;
 
     // 7. Cleanup
     cleanup_old_thumbnails(&context.settings.ingest.thumbnail_root, deleted_id).await?;
@@ -81,10 +81,11 @@ async fn get_media_info(
     file_hash: &str,
 ) -> Result<AnalyzeResult> {
     if context.settings.ingest.enable_cache
-        && let Some(cached) = get_ingest_cache(file_hash).await? {
-            debug!("Using ingest cache for {:?}", file_path.file_name());
-            return Ok(cached);
-        }
+        && let Some(cached) = get_ingest_cache(file_hash).await?
+    {
+        debug!("Using ingest cache for {:?}", file_path.file_name());
+        return Ok(cached);
+    }
 
     let media_info = {
         let mut analyzer = context.media_analyzer.lock().await;
@@ -111,15 +112,16 @@ async fn process_thumbnails(
 
     // Try Cache
     if context.settings.ingest.enable_cache
-        && let Some(cached_folder) = get_thumbnail_cache(file_hash).await? {
-            debug!(
-                "Using thumbnail cache for {:?}: {}",
-                file_path.file_name(),
-                cached_folder.display()
-            );
-            copy_dir_contents(&cached_folder, &thumbnails_out_folder).await?;
-            return Ok(());
-        }
+        && let Some(cached_folder) = get_thumbnail_cache(file_hash).await?
+    {
+        debug!(
+            "Using thumbnail cache for {:?}: {}",
+            file_path.file_name(),
+            cached_folder.display()
+        );
+        copy_dir_contents(&cached_folder, &thumbnails_out_folder).await?;
+        return Ok(());
+    }
 
     // Cache Miss: Generate
     generate_thumbnails(
@@ -128,7 +130,7 @@ async fn process_thumbnails(
         &thumbnails_out_folder,
         orientation,
     )
-        .await?;
+    .await?;
 
     // Write Cache
     if context.settings.ingest.enable_cache {
@@ -162,8 +164,8 @@ async fn store_media_item(
         "#,
         relative_path
     )
-        .fetch_optional(&mut *tx)
-        .await?;
+    .fetch_optional(&mut *tx)
+    .await?;
 
     // Resolve remote user if applicable
     let remote_user_id = if let Some(info) = &pending {
@@ -184,16 +186,11 @@ async fn store_media_item(
         remote_user_id,
         &analyze_result.into(),
     )
-        .await?;
+    .await?;
 
     // Link to album if pending existed
     if let Some(info) = &pending {
-        AlbumStore::add_media_items(
-            &mut *tx,
-            &info.album_id,
-            &[new_id.to_string()],
-            user_id,
-        )
+        AlbumStore::add_media_items(&mut *tx, &info.album_id, &[new_id.to_string()], user_id)
             .await?;
     }
 

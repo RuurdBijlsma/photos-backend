@@ -5,7 +5,7 @@ use common_services::api::auth::error::AuthError;
 use common_services::api::auth::interfaces::AuthClaims;
 use http::header;
 use http::request::Parts;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
 pub async fn extract_context<S>(parts: &mut Parts, state: &S) -> Result<ApiContext, AuthError>
 where
@@ -14,7 +14,9 @@ where
 {
     match State::<ApiContext>::from_request_parts(parts, state).await {
         Ok(State(context)) => Ok(context),
-        Err(_e) => Err(AuthError::Internal(eyre!("Server state is not configured correctly.")))
+        Err(_e) => Err(AuthError::Internal(eyre!(
+            "Server state is not configured correctly."
+        ))),
     }
 }
 
@@ -38,6 +40,6 @@ pub fn decode_token(token: &str, jwt_secret: &str) -> Result<AuthClaims, AuthErr
         &DecodingKey::from_secret(jwt_secret.as_ref()),
         &Validation::default(),
     )
-        .map(|data| data.claims)
-        .map_err(|_| AuthError::InvalidToken)
+    .map(|data| data.claims)
+    .map_err(|_| AuthError::InvalidToken)
 }

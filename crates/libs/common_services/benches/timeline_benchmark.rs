@@ -1,4 +1,4 @@
-use app_state::{load_constants_from_path, load_settings_from_path, CONSTANTS};
+use app_state::{CONSTANTS, load_constants_from_path, load_settings_from_path};
 use color_eyre::eyre::Result;
 use common_services::api::timeline::interfaces::SortDirection;
 use common_services::api::timeline::service::{
@@ -7,7 +7,7 @@ use common_services::api::timeline::service::{
 use common_services::database::app_user::User;
 use common_services::database::get_db_pool;
 use common_services::database::user_store::UserStore;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use std::path::Path;
 use tracing::info;
 

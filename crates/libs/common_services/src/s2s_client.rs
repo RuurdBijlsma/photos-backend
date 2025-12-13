@@ -1,10 +1,10 @@
 use crate::alert;
 use crate::api::album::interfaces::AlbumShareClaims;
 use crate::database::album::album::AlbumSummary;
-use color_eyre::eyre::eyre;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use futures_util::StreamExt;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use reqwest::Client;
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;

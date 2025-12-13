@@ -2,9 +2,12 @@ use crate::api::timeline::error::TimelineError;
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::app_user::User;
 use chrono::NaiveDate;
+use common_types::pb::api::{
+    TimelineItem, TimelineItemsResponse, TimelineMonthItems, TimelineMonthRatios,
+    TimelineRatiosResponse,
+};
 use sqlx::PgPool;
 use std::collections::HashMap;
-use common_types::pb::api::{TimelineItem, TimelineItemsResponse, TimelineMonthItems, TimelineMonthRatios, TimelineRatiosResponse};
 
 /// Fetches a timeline of media item ratios, grouped by month.
 pub async fn get_timeline_ratios(

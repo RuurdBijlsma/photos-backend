@@ -1,13 +1,13 @@
-use std::sync::Arc;
+use crate::api_state::ApiContext;
 use axum::extract::ws::{Message, WebSocket};
 use color_eyre::Result;
+use common_services::database::app_user::User;
 use serde::Deserialize;
 use serde_json::Value;
-use sqlx::{postgres::PgListener, PgPool};
+use sqlx::{PgPool, postgres::PgListener};
+use std::sync::Arc;
 use tokio::{select, sync::broadcast};
 use tracing::{error, info, warn};
-use common_services::database::app_user::User;
-use crate::api_state::ApiContext;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct MediaPayload {
@@ -45,7 +45,9 @@ pub async fn handle_timeline_socket(mut socket: WebSocket, context: ApiContext, 
     }
 }
 
-pub fn create_media_item_transmitter(pool: &PgPool) -> Result<broadcast::Sender<Arc<MediaPayload>>> {
+pub fn create_media_item_transmitter(
+    pool: &PgPool,
+) -> Result<broadcast::Sender<Arc<MediaPayload>>> {
     let (tx, _) = broadcast::channel(100);
     let listener_pool = pool.clone();
     let listener_tx = tx.clone();
@@ -69,12 +71,13 @@ pub fn create_media_item_transmitter(pool: &PgPool) -> Result<broadcast::Sender<
                 Ok(notification) => {
                     let payload = notification.payload();
                     if let Ok(val) = serde_json::from_str::<Value>(payload)
-                        && let Some(user_id) = val.get("user_id").and_then(Value::as_i64) {
-                            let _ = listener_tx.send(Arc::new(MediaPayload {
-                                user_id: user_id as i32,
-                                raw_json: payload.to_owned(),
-                            }));
-                        }
+                        && let Some(user_id) = val.get("user_id").and_then(Value::as_i64)
+                    {
+                        let _ = listener_tx.send(Arc::new(MediaPayload {
+                            user_id: user_id as i32,
+                            raw_json: payload.to_owned(),
+                        }));
+                    }
                 }
                 Err(e) => warn!("PgListener error: {:?}", e),
             }

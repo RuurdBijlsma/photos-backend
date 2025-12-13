@@ -1,11 +1,11 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::login;
 use color_eyre::eyre::{Result, bail};
+use common_types::pb::api::{TimelineItemsResponse, TimelineRatiosResponse};
 use prost::Message;
 use reqwest::StatusCode;
 use std::collections::HashSet;
 use std::io::Cursor;
-use common_types::pb::api::{TimelineItemsResponse, TimelineRatiosResponse};
 
 /// Tests the `GET /timeline/ids` endpoint.
 /// Expects a JSON list of media IDs.

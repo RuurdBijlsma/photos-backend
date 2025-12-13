@@ -6,7 +6,7 @@ use color_eyre::Result;
 use serde::Deserialize;
 use sqlx::{Executor, Postgres};
 use std::fs::canonicalize;
-use std::path::{absolute, Path, PathBuf};
+use std::path::{Path, PathBuf, absolute};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppSettings {

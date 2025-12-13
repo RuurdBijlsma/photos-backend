@@ -1,5 +1,5 @@
 use app_state::constants;
-use color_eyre::eyre::{Result};
+use color_eyre::eyre::Result;
 use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
@@ -56,10 +56,7 @@ pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Poo
     if run_migrations {
         let migrations_folder = find_migrations_dir()?;
         let migrator = Migrator::new(migrations_folder).await?;
-        match migrator
-            .run(&pool)
-            .await
-        {
+        match migrator.run(&pool).await {
             Ok(()) => info!("Database migrations completed successfully."),
             Err(e) => warn!("Database doesn't feel like migrating today: {e:?}"),
         }

@@ -1,10 +1,8 @@
 use crate::context::WorkerContext;
-use crate::handlers::common::cache::{
-    get_analysis_cache, hash_file, write_analysis_cache,
-};
 use crate::handlers::JobResult;
+use crate::handlers::common::cache::{get_analysis_cache, hash_file, write_analysis_cache};
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{Result, eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
@@ -45,10 +43,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     }
 
     // 2. Resolve Media Item ID
-    let media_item_id =
-        MediaItemStore::find_id_by_relative_path(&context.pool, relative_path)
-            .await?
-            .ok_or_else(|| eyre!("Could not find media item by relative_path."))?;
+    let media_item_id = MediaItemStore::find_id_by_relative_path(&context.pool, relative_path)
+        .await?
+        .ok_or_else(|| eyre!("Could not find media item by relative_path."))?;
 
     // 3. Get Analysis Data (Computed or Cached)
     let analyses = get_analysis_data(context, &file_path, &media_item_id).await?;
@@ -68,10 +65,11 @@ async fn get_analysis_data(
 
     // Try Cache
     if context.settings.ingest.enable_cache
-        && let Some(cached_analysis) = get_analysis_cache(&file_hash).await? {
-            debug!("Using analysis cache for {}", media_item_id);
-            return Ok(cached_analysis);
-        }
+        && let Some(cached_analysis) = get_analysis_cache(&file_hash).await?
+    {
+        debug!("Using analysis cache for {}", media_item_id);
+        return Ok(cached_analysis);
+    }
 
     // Cache Miss: Compute
     let analyses = compute_analysis(context, file_path, media_item_id).await?;
@@ -106,7 +104,7 @@ async fn compute_analysis(
                     .await
             })
         })
-            .await??;
+        .await??;
 
         analyses.push(analysis_result);
     }
@@ -169,12 +167,7 @@ async fn save_results(
     }
 
     for analysis in analyses {
-        VisualAnalysisStore::create(
-            &mut tx,
-            media_item_id,
-            &analysis.to_owned().into(),
-        )
-            .await?;
+        VisualAnalysisStore::create(&mut tx, media_item_id, &analysis.to_owned().into()).await?;
     }
 
     tx.commit().await?;

@@ -13,6 +13,5 @@ pub fn timeline_protected_router() -> Router<ApiContext> {
 }
 
 pub fn timeline_websocket_router() -> Router<ApiContext> {
-    Router::new()
-        .route("/timeline/ws", get(timeline_websocket_handler))
+    Router::new().route("/timeline/ws", get(timeline_websocket_handler))
 }

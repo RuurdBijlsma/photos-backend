@@ -1,23 +1,26 @@
-use std::collections::HashMap;
 use super::interfaces::{AcceptInviteRequest, AlbumDetailsResponse, AlbumShareClaims};
 use crate::api::album::error::AlbumError;
+use crate::api::timeline::interfaces::SortDirection;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
 use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::{extract_token_claims, S2SClient};
+use crate::s2s_client::{S2SClient, extract_token_claims};
 use crate::utils::nice_id;
-use app_state::{constants, AppSettings};
+use app_state::{AppSettings, constants};
 use chrono::{Duration, NaiveDate, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use jsonwebtoken::{encode, EncodingKey, Header};
+use common_types::pb::api::{
+    AlbumInfo, AlbumRatiosResponse, TimelineItem, TimelineItemsResponse, TimelineMonthItems,
+    TimelineMonthRatios,
+};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
+use std::collections::HashMap;
 use tracing::instrument;
-use common_types::pb::api::{AlbumInfo, AlbumRatiosResponse, TimelineItem, TimelineItemsResponse, TimelineMonthItems, TimelineMonthRatios};
-use crate::api::timeline::interfaces::SortDirection;
 
 /// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
@@ -407,7 +410,7 @@ pub async fn get_album_ratios(
 
     let mut user_role_str = None;
 
-    if !album.is_public{
+    if !album.is_public {
         let Some(uid) = user_id else {
             return Err(AlbumError::NotFound(album_id.to_string()));
         };
@@ -476,8 +479,12 @@ pub async fn get_album_ids(
         return Err(AlbumError::NotFound(album_id.to_owned()));
     };
     if !album.is_public {
-        let Some(uid) = user_id else { return Err(AlbumError::NotFound(album_id.to_string())); };
-        if !can_view_album(pool, uid, album_id).await? { return Err(AlbumError::NotFound(album_id.to_string())); }
+        let Some(uid) = user_id else {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        };
+        if !can_view_album(pool, uid, album_id).await? {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        }
     }
 
     let sql = format!(
@@ -512,8 +519,12 @@ pub async fn get_album_photos_by_month(
         return Err(AlbumError::NotFound(album_id.to_owned()));
     };
     if !album.is_public {
-        let Some(uid) = user_id else { return Err(AlbumError::NotFound(album_id.to_string())); };
-        if !can_view_album(pool, uid, album_id).await? { return Err(AlbumError::NotFound(album_id.to_string())); }
+        let Some(uid) = user_id else {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        };
+        if !can_view_album(pool, uid, album_id).await? {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        }
     }
 
     let sql = format!(

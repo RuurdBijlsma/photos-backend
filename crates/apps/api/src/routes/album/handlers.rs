@@ -6,15 +6,22 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
 use common_services::api::album::error::AlbumError;
-use common_services::api::album::interfaces::{AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse, CheckInviteRequest, CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest};
-use common_services::api::album::service::{accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite, get_album_ids, get_album_photos_by_month, get_album_ratios, remove_collaborator, remove_media_from_album, update_album};
+use common_services::api::album::interfaces::{
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse,
+    CheckInviteRequest, CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest,
+};
+use common_services::api::album::service::{
+    accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
+    get_album_ids, get_album_photos_by_month, get_album_ratios, remove_collaborator,
+    remove_media_from_album, update_album,
+};
+use common_services::api::timeline::interfaces::{GetMediaByMonthParams, TimelineParams};
 use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use tracing::{info, instrument};
-use common_services::api::timeline::interfaces::{GetMediaByMonthParams, TimelineParams};
 use common_types::pb::api::{AlbumRatiosResponse, TimelineItemsResponse};
+use tracing::{info, instrument};
 
 /// Create a new album.
 ///
@@ -68,7 +75,13 @@ pub async fn get_user_albums_handler(
     Query(query): Query<ListAlbumsParam>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Vec<AlbumWithCount>>, AlbumError> {
-    let albums = AlbumStore::list_with_count_by_user_id(&context.pool, user.id, query.sort_field, query.sort_direction).await?;
+    let albums = AlbumStore::list_with_count_by_user_id(
+        &context.pool,
+        user.id,
+        query.sort_field,
+        query.sort_direction,
+    )
+    .await?;
     Ok(Json(albums))
 }
 
@@ -321,7 +334,6 @@ pub async fn accept_invite_handler(
 // === --- === ALBUM TIMELINE === --- === //
 // ====================================== //
 
-
 /// Get album metadata and timeline ratios.
 /// Replaces the need for a heavy initial load.
 #[utoipa::path(
@@ -345,13 +357,8 @@ pub async fn get_album_ratios_handler(
     Path(album_id): Path<String>,
     Query(params): Query<TimelineParams>,
 ) -> Result<Protobuf<AlbumRatiosResponse>, AlbumError> {
-    let response = get_album_ratios(
-        &context.pool,
-        &album_id,
-        user.0.map(|u| u.id),
-        params.sort,
-    )
-        .await?;
+    let response =
+        get_album_ratios(&context.pool, &album_id, user.0.map(|u| u.id), params.sort).await?;
     Ok(Protobuf(response))
 }
 
@@ -376,13 +383,7 @@ pub async fn get_album_ids_handler(
     Path(album_id): Path<String>,
     Query(params): Query<TimelineParams>,
 ) -> Result<Json<Vec<String>>, AlbumError> {
-    let ids = get_album_ids(
-        &context.pool,
-        &album_id,
-        user.0.map(|u| u.id),
-        params.sort,
-    )
-        .await?;
+    let ids = get_album_ids(&context.pool, &album_id, user.0.map(|u| u.id), params.sort).await?;
     Ok(Json(ids))
 }
 
@@ -428,6 +429,6 @@ pub async fn get_album_photos_by_month_handler(
         &month_ids,
         params.sort,
     )
-        .await?;
+    .await?;
     Ok(Protobuf(response))
 }

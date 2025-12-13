@@ -1,11 +1,11 @@
+use crate::api_state::ApiContext;
+use crate::auth::middlewares::common::{decode_token, extract_context, extract_token};
 use axum::{
     extract::{FromRequestParts, State},
     http::request::Parts,
 };
 use common_services::api::auth::error::AuthError;
 use common_services::database::{app_user::User, user_store::UserStore};
-use crate::api_state::ApiContext;
-use crate::auth::middlewares::common::{decode_token, extract_context, extract_token};
 
 #[derive(Clone, Debug)]
 pub struct WsUser(pub User);

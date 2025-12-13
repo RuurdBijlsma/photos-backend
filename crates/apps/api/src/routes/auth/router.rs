@@ -2,10 +2,10 @@ use crate::api_state::ApiContext;
 use crate::auth::handlers::{get_me, login, logout, refresh_session, register};
 use app_state::RateLimitingSettings;
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 
 pub fn auth_public_router(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
     let governor_conf = GovernorConfigBuilder::default()

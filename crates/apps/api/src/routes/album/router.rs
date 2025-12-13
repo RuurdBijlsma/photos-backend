@@ -1,22 +1,26 @@
+use crate::album::handlers::{
+    get_album_ids_handler, get_album_photos_by_month_handler, get_album_ratios_handler,
+};
 use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
     accept_invite_handler, add_collaborator_handler, add_media_to_album_handler,
-    check_invite_handler, create_album_handler, generate_invite_handler,
-    get_user_albums_handler, remove_collaborator_handler, remove_media_from_album_handler,
-    update_album_handler,
+    check_invite_handler, create_album_handler, generate_invite_handler, get_user_albums_handler,
+    remove_collaborator_handler, remove_media_from_album_handler, update_album_handler,
 };
 use axum::routing::put;
 use axum::{
     Router,
     routing::{delete, get, post},
 };
-use crate::album::handlers::{get_album_ids_handler, get_album_photos_by_month_handler, get_album_ratios_handler};
 
 pub fn album_auth_optional_router() -> Router<ApiContext> {
     Router::new()
         .route("/album/{album_id}/ratios", get(get_album_ratios_handler))
         .route("/album/{album_id}/ids", get(get_album_ids_handler))
-        .route("/album/{album_id}/by-month", get(get_album_photos_by_month_handler))
+        .route(
+            "/album/{album_id}/by-month",
+            get(get_album_photos_by_month_handler),
+        )
 }
 
 pub fn album_protected_router() -> Router<ApiContext> {

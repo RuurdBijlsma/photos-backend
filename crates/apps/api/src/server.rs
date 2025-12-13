@@ -14,18 +14,18 @@ use app_state::AppSettings;
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
-use http::{header, HeaderValue};
+use http::{HeaderValue, header};
 use reqwest::Client;
 use sqlx::PgPool;
 use std::iter::once;
 use std::net::SocketAddr;
 use tower_http::compression::CompressionLayer;
+use tower_http::cors;
 use tower_http::cors::CorsLayer;
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
-use tower_http::{cors};
 use tracing::{error, info};
 
 pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {

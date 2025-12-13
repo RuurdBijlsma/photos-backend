@@ -2,9 +2,9 @@ use axum::body::Body;
 use axum::extract::State;
 use axum::middleware::Next;
 use axum::response::Response;
-use http::Request;
 use common_services::api::auth::error::AuthError;
 use common_services::database::app_user::{User, UserRole};
+use http::Request;
 
 pub async fn require_role(
     State(required_role): State<UserRole>,

@@ -3,7 +3,7 @@
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
     clippy::missing_errors_doc,
-    clippy::missing_panics_doc,
+    clippy::missing_panics_doc
 )]
 
 //! # Thumbnail Generation Crate
@@ -41,8 +41,8 @@ mod utils;
 mod video;
 
 use app_state::IngestSettings;
-use color_eyre::eyre::bail;
 use color_eyre::Result;
+use color_eyre::eyre::bail;
 use std::path::Path;
 use temp_dir::TempDir;
 pub use utils::copy_dir_contents;

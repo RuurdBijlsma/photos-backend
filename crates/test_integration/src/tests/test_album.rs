@@ -80,7 +80,7 @@ pub async fn test_update_album(context: &TestContext) -> Result<()> {
             name: "Original Name".to_string(),
             description: None,
             is_public: false,
-            media_item_ids: vec!(),
+            media_item_ids: vec![],
         })
         .send()
         .await?
@@ -140,7 +140,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
             name: "Media Test Album".to_string(),
             description: None,
             is_public: false,
-            media_item_ids: vec!(),
+            media_item_ids: vec![],
         })
         .send()
         .await?
@@ -217,7 +217,7 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
             name: source_album_name.to_string(),
             description: None,
             is_public: false,
-            media_item_ids: vec!(),
+            media_item_ids: vec![],
         })
         .send()
         .await?
