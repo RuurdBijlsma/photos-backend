@@ -160,6 +160,7 @@
   * is auth wel goed implemented? met is_public enzo
   * minder repeated code maken voor de auth check daar
 * kan camelcase op de proto generated structs?
+* current albums pb interface misses collaborators
 
 # Features
 

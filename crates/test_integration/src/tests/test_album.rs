@@ -1,9 +1,9 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_constants::{EMAIL, USERNAME};
 use crate::test_helpers::login;
-use color_eyre::eyre::{Result, bail};
+use color_eyre::eyre::{bail, Result};
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddMediaToAlbumRequest, AlbumDetailsResponse, CheckInviteRequest,
+    AcceptInviteRequest, AddMediaToAlbumRequest, CheckInviteRequest,
     CreateAlbumRequest, UpdateAlbumRequest,
 };
 use common_services::database::album::album::{Album, AlbumSummary};
@@ -52,16 +52,7 @@ pub async fn test_album_lifecycle(context: &TestContext) -> Result<()> {
     assert!(albums.iter().any(|a| a.id == created_album.id));
 
     // 3. Get Album Details
-    let response = client
-        .get(format!("{base_url}/album/{}", created_album.id))
-        .bearer_auth(&token)
-        .send()
-        .await?;
-
-    assert_eq!(response.status(), StatusCode::OK);
-    let details: AlbumDetailsResponse = response.json().await?;
-    assert_eq!(details.id, created_album.id);
-    assert_eq!(details.media_items.len(), 0);
+    // todo: get album details via /ratios, /ids, /by-month
 
     Ok(())
 }
@@ -160,16 +151,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     // Verify addition via details
-    let details: AlbumDetailsResponse = client
-        .get(format!("{base_url}/album/{}", album.id))
-        .bearer_auth(&token)
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    assert_eq!(details.media_items.len(), 1);
-    assert_eq!(details.media_items[0].media_item.id, media_id);
+    // todo verify with /ids, /ratios, /by-month, maybe just put back the get album details endpoint
 
     // 2. Remove Media from Album
     let response = client
@@ -181,15 +163,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
     // Verify removal
-    let details: AlbumDetailsResponse = client
-        .get(format!("{base_url}/album/{}", album.id))
-        .bearer_auth(&token)
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    assert_eq!(details.media_items.len(), 0);
+    // todo verify with /ids, /ratios, /by-month, maybe just put back the get album details endpoint
 
     Ok(())
 }
