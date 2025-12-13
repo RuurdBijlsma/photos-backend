@@ -84,6 +84,7 @@ pub struct RemoveCollaboratorParams {
 pub struct ListAlbumsParam {
     #[serde(default)]
     pub sort_direction: SortDirection,
+    #[serde(default)]
     pub sort_field: AlbumSortField,
 }
 

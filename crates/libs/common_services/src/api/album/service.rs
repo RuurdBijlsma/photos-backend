@@ -118,9 +118,11 @@ pub async fn create_album(
     )
     .await?;
     AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
-    AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
-    if let Some(thumb) = AlbumStore::find_middle_media_item_id(&mut *tx, &album_id).await? {
-        AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
+    if !media_item_ids.is_empty() {
+        AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
+        if let Some(thumb) = AlbumStore::find_middle_media_item_id(&mut *tx, &album_id).await? {
+            AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
+        }
     }
 
     tx.commit().await?;

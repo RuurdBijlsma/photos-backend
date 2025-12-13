@@ -26,7 +26,7 @@ pub async fn test_album_lifecycle(context: &TestContext) -> Result<()> {
         name: "Lifecycle Test Album".to_string(),
         description: Some("Integration test description".to_string()),
         is_public: false,
-        media_item_ids: vec!(),
+        media_item_ids: vec![],
     };
 
     let response = client

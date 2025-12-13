@@ -29,6 +29,7 @@ use tracing::{info, instrument};
     ),
     security(("bearer_auth" = []))
 )]
+#[instrument(skip(context, user), err(Debug))]
 pub async fn create_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -60,6 +61,7 @@ pub async fn create_album_handler(
     ),
     security(("bearer_auth" = []))
 )]
+#[instrument(skip(context, user), err(Debug))]
 pub async fn get_user_albums_handler(
     State(context): State<ApiContext>,
     Query(query): Query<ListAlbumsParam>,
