@@ -1,4 +1,4 @@
-use super::interfaces::{AcceptInviteRequest, AlbumDetailsResponse, AlbumShareClaims};
+use super::interfaces::{AcceptInviteRequest, AlbumShareClaims};
 use crate::api::album::error::AlbumError;
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};

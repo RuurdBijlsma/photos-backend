@@ -7,8 +7,8 @@ use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse,
-    CheckInviteRequest, CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest,
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
+    CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
