@@ -1,10 +1,10 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_constants::{EMAIL, USERNAME};
 use crate::test_helpers::login;
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::{Result, bail};
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddMediaToAlbumRequest, CheckInviteRequest,
-    CreateAlbumRequest, UpdateAlbumRequest,
+    AcceptInviteRequest, AddMediaToAlbumRequest, CheckInviteRequest, CreateAlbumRequest,
+    UpdateAlbumRequest,
 };
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album_store::AlbumStore;
