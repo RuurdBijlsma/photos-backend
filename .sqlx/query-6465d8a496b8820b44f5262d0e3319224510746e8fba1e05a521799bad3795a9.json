@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                a.id,\n                a.owner_id,\n                a.name,\n                a.description,\n                a.thumbnail_id,\n                a.is_public,\n                a.created_at,\n                a.updated_at,\n                COUNT(mi.id)::INT AS \"media_count!\"\n            FROM album a\n            -- Check collaboration status\n            LEFT JOIN album_collaborator ac ON a.id = ac.album_id AND ac.user_id = $1\n            -- Join for media items\n            LEFT JOIN album_media_item ami ON a.id = ami.album_id\n            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false\n            WHERE\n                a.owner_id = $1      -- User is the owner\n                OR\n                ac.user_id = $1      -- OR User is a collaborator\n            GROUP BY\n                a.id,\n                a.owner_id,\n                a.name,\n                a.description,\n                a.thumbnail_id,\n                a.is_public,\n                a.created_at,\n                a.updated_at,\n                a.latest_media_item_timestamp\n            ORDER BY\n                -- 1. Sort by Name\n                CASE WHEN $2 = 'name' AND $3 = 'ASC' THEN a.name END,\n                CASE WHEN $2 = 'name' AND $3 = 'DESC' THEN a.name END DESC,\n\n                -- 2. Sort by Updated At\n                CASE WHEN $2 = 'updated_at' AND $3 = 'ASC' THEN a.updated_at END,\n                CASE WHEN $2 = 'updated_at' AND $3 = 'DESC' THEN a.updated_at END DESC,\n\n                -- 3. Sort by Latest Photo (Optimized: using cached column)\n                CASE WHEN $2 = 'latest_photo' AND $3 = 'ASC' THEN a.latest_media_item_timestamp END NULLS LAST,\n                CASE WHEN $2 = 'latest_photo' AND $3 = 'DESC' THEN a.latest_media_item_timestamp END DESC NULLS LAST,\n\n                -- Secondary sort\n                a.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "thumbnail_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "media_count!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "6465d8a496b8820b44f5262d0e3319224510746e8fba1e05a521799bad3795a9"
+}

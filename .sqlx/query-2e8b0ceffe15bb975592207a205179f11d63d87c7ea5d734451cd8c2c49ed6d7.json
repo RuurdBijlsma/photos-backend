@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT id, created_at, updated_at, email, name, media_folder, role as \"role: UserRole\"\n        FROM app_user\n        WHERE media_folder IS NOT null\n    ",
+  "query": "\n            INSERT INTO app_user (email, name, password, role, media_folder)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                role as \"role: UserRole\"\n            ",
   "describe": {
     "columns": [
       {
@@ -50,7 +50,23 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "user_role",
+            "kind": {
+              "Enum": [
+                "admin",
+                "user"
+              ]
+            }
+          }
+        },
+        "Text"
+      ]
     },
     "nullable": [
       false,
@@ -62,5 +78,5 @@
       false
     ]
   },
-  "hash": "3c23d863802a34afb2886a4abf5a7b3954f5dda9f955492f39f7a4943729c087"
+  "hash": "2e8b0ceffe15bb975592207a205179f11d63d87c7ea5d734451cd8c2c49ed6d7"
 }

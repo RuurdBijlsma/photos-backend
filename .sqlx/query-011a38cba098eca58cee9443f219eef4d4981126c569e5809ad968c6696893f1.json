@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM album WHERE id = $1",
+  "query": "\n            INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public)\n            VALUES ($1, $2, $3, $4, $5, $6)\n            RETURNING id, owner_id, name, description, thumbnail_id, is_public, created_at, updated_at\n            ",
   "describe": {
     "columns": [
       {
@@ -25,23 +25,33 @@
       },
       {
         "ordinal": 4,
+        "name": "thumbnail_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
         "name": "is_public",
         "type_info": "Bool"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Varchar",
+        "Int4",
+        "Text",
+        "Text",
+        "Varchar",
+        "Bool"
       ]
     },
     "nullable": [
@@ -49,10 +59,11 @@
       false,
       false,
       true,
+      true,
       false,
       false,
       false
     ]
   },
-  "hash": "17ebfb168f5d51cc6a5bbb24027473c289b85218b2eda96033ca0cc4f017b9f7"
+  "hash": "011a38cba098eca58cee9443f219eef4d4981126c569e5809ad968c6696893f1"
 }

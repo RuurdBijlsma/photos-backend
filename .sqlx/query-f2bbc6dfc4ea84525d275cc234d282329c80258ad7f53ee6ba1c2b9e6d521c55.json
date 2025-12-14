@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id\n            FROM (\n                SELECT\n                    mi.id,\n                    ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp) as rn,\n                    COUNT(*) OVER () as total_count\n                FROM media_item mi\n                JOIN album_media_item ami ON mi.id = ami.media_item_id\n                WHERE ami.album_id = $1\n                  AND mi.deleted = false\n            ) t\n            WHERE rn = (total_count / 2) + 1\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f2bbc6dfc4ea84525d275cc234d282329c80258ad7f53ee6ba1c2b9e6d521c55"
+}

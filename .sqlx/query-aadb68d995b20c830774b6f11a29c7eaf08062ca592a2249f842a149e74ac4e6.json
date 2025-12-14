@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT role as \"role: UserRole\" FROM app_user WHERE id = $1",
+  "query": "\n            SELECT role as \"role: UserRole\"\n            FROM app_user\n            WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "1739af8fe78117ad208777cffc4f67e20e4d4db709ff025b204af03b620f0a88"
+  "hash": "aadb68d995b20c830774b6f11a29c7eaf08062ca592a2249f842a149e74ac4e6"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO app_user (email, name, password, role)\n        VALUES ($1, $2, $3, $4)\n        RETURNING id, email, name, media_folder, role as \"role: UserRole\", created_at, updated_at\n        ",
+  "query": "\n            UPDATE app_user\n            SET\n                name = COALESCE($1, name),\n                email = COALESCE($2, email),\n                password = COALESCE($3, password),\n                role = COALESCE($4, role),\n                media_folder = COALESCE($5, media_folder),\n                updated_at = now()\n            WHERE id = $6\n            RETURNING\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                role as \"role: UserRole\"\n            ",
   "describe": {
     "columns": [
       {
@@ -10,21 +10,31 @@
       },
       {
         "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
         "name": "email",
         "type_info": "Text"
       },
       {
-        "ordinal": 2,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 5,
         "name": "media_folder",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 6,
         "name": "role: UserRole",
         "type_info": {
           "Custom": {
@@ -37,16 +47,6 @@
             }
           }
         }
-      },
-      {
-        "ordinal": 5,
-        "name": "created_at",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 6,
-        "name": "updated_at",
-        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
@@ -64,18 +64,20 @@
               ]
             }
           }
-        }
+        },
+        "Text",
+        "Int4"
       ]
     },
     "nullable": [
       false,
       false,
       false,
+      false,
+      false,
       true,
-      false,
-      false,
       false
     ]
   },
-  "hash": "f3e0d42b8e4c36facba7c56da25b15fa85ce85072aaacf890b1f116ead6d21be"
+  "hash": "267abfc5fc4047420e4255c8df9bc052c56fb98ccd71febb65a2f7e53b05bccb"
 }

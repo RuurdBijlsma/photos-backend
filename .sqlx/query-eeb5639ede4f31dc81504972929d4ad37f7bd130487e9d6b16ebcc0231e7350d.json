@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT media_folder FROM app_user WHERE id = $1",
+  "query": "\n            SELECT media_folder\n            FROM app_user\n            WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       true
     ]
   },
-  "hash": "81099762bd464aee22961e06b637c48b25b85f0fbec3c49376b8a83308d269e1"
+  "hash": "eeb5639ede4f31dc81504972929d4ad37f7bd130487e9d6b16ebcc0231e7350d"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT user_id, verifier_hash FROM refresh_token WHERE selector = $1",
+  "query": "SELECT user_id, verifier_hash\n            FROM refresh_token\n            WHERE selector = $1",
   "describe": {
     "columns": [
       {
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "b25174649781ee3b53108a2913799ff99e0806e94c9afb05b3d5363f08ea0aea"
+  "hash": "2d874ab485385b1e3285df5d34dd35947a2f7f6c149cbe6cd0a9d8b5665321c2"
 }
