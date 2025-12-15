@@ -33,10 +33,8 @@ CREATE TABLE album_media_item
 (
     album_id      VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
     media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
-    -- Tracks which user added the media item to the album. Can be null if the user is deleted.
     added_by_user INT         REFERENCES app_user (id) ON DELETE SET NULL,
     added_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    -- Ensures a media item can only appear once in any given album.
     PRIMARY KEY (album_id, media_item_id)
 );
 

@@ -4,12 +4,8 @@ use std::fmt;
 use std::fmt::Display;
 use utoipa::ToSchema;
 
-// Custom types to match the ENUMs in your SQL schema.
-// It's good practice to define these in a shared library if they are used elsewhere,
-// but defining them here is fine for this module.
-#[derive(Debug, Serialize, Deserialize, sqlx::Type, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "album_role", rename_all = "lowercase")]
-#[derive(PartialEq, Eq)]
 pub enum AlbumRole {
     Owner,
     Contributor,

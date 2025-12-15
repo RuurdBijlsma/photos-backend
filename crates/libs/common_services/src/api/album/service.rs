@@ -22,7 +22,6 @@ use sqlx::{Executor, PgPool, Postgres};
 use std::collections::HashMap;
 use tracing::instrument;
 
-/// Checks if a user has a specific role in an album.
 #[instrument(skip(executor))]
 async fn check_user_role(
     executor: impl Executor<'_, Database = Postgres>,
@@ -66,7 +65,6 @@ async fn can_view_album(
     .await
 }
 
-/// A more specific check to see if the user is the owner of the album.
 #[instrument(skip(executor))]
 async fn is_album_owner<'c, E>(
     executor: E,
@@ -123,7 +121,6 @@ pub async fn add_media_to_album(
     media_item_ids: &[String],
     user_id: i32,
 ) -> Result<(), AlbumError> {
-    // Permission Check: Owner OR Contributor
     if !can_edit_album(pool, user_id, album_id).await? {
         return Err(AlbumError::NotFound("Album not found.".to_string()));
     }
@@ -154,7 +151,6 @@ pub async fn remove_media_from_album(
     media_item_id: &str,
     user_id: i32,
 ) -> Result<(), AlbumError> {
-    // Permission Check: Owner OR Contributor
     if !can_edit_album(pool, user_id, album_id).await? {
         return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
@@ -213,7 +209,7 @@ pub async fn add_collaborator(
         })?;
 
     // An owner cannot be added or demoted via this function.
-    if matches!(role, AlbumRole::Owner) {
+    if role == AlbumRole::Owner {
         return Err(AlbumError::Internal(color_eyre::eyre::eyre!(
             "Cannot assign the owner role."
         )));
@@ -235,7 +231,6 @@ pub async fn remove_collaborator(
     collaborator_id_to_remove: i64,
     requesting_user_id: i32,
 ) -> Result<(), AlbumError> {
-    // Only the album owner can remove collaborators.
     if !is_album_owner(pool, requesting_user_id, album_id).await? {
         return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
@@ -255,7 +250,6 @@ pub async fn remove_collaborator(
         )));
     }
 
-    // Proceed with deletion.
     AlbumStore::remove_collaborator_by_id(pool, collaborator_id_to_remove).await?;
 
     Ok(())
