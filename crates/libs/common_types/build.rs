@@ -51,6 +51,14 @@ fn main() -> std::io::Result<()> {
         ".api.AlbumInfo",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
+    config.type_attribute(
+        ".api.FullAlbumMediaResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.AlbumTimelineItem",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
 
     config.compile_protos(&["proto/timeline.proto"], &["proto/"])?;
 

@@ -29,14 +29,17 @@ CREATE INDEX idx_album_is_public ON album (id) WHERE is_public = true;
 
 
 -- A many-to-many join table connecting albums and media_items.
+-- Ranks are strictly doubles to allow insertion between existing items without full rebalancing.
 CREATE TABLE album_media_item
 (
-    album_id      VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
-    media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
-    added_by_user INT         REFERENCES app_user (id) ON DELETE SET NULL,
-    added_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    rank          SERIAL      NOT NULL UNIQUE,
-    PRIMARY KEY (album_id, media_item_id)
+    album_id      VARCHAR(10)      NOT NULL REFERENCES album (id) ON DELETE CASCADE,
+    media_item_id VARCHAR(10)      NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
+    added_by_user INT              REFERENCES app_user (id) ON DELETE SET NULL,
+    added_at      TIMESTAMPTZ      NOT NULL DEFAULT now(),
+    -- The user can manually sort items. We use float rank for easier reordering (insert between).
+    rank          DOUBLE PRECISION NOT NULL,
+    PRIMARY KEY (album_id, media_item_id),
+    CONSTRAINT uq_album_media_rank UNIQUE (album_id, rank)
 );
 
 -- Indices for album_media_item

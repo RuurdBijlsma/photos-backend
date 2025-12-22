@@ -11,14 +11,14 @@ use common_services::api::album::interfaces::{
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
-    get_album_ids, get_album_media_by_groups, get_album_ratios, remove_collaborator,
-    remove_media_from_album, update_album,
+    get_album_ids, get_album_media, get_album_media_by_groups, get_album_ratios,
+    remove_collaborator, remove_media_from_album, update_album,
 };
 use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use common_types::pb::api::{AlbumMediaResponse, AlbumRatiosResponse};
+use common_types::pb::api::{AlbumMediaResponse, AlbumRatiosResponse, FullAlbumMediaResponse};
 use tracing::{info, instrument};
 
 /// Create a new album.
@@ -36,6 +36,7 @@ use tracing::{info, instrument};
     security(("bearer_auth" = []))
 )]
 #[instrument(skip(context, user), err(Debug))]
+#[axum::debug_handler]
 pub async fn create_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -407,16 +408,39 @@ pub async fn get_album_media_by_groups_handler(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(|s| {
-            s.parse::<i32>().map_err(|_| {
+            s.parse::<f64>().map_err(|_| {
                 AlbumError::BadRequest(format!(
-                    "Invalid rank format '{s}' in 'groups' parameter. Must be integer."
+                    "Invalid rank format '{s}' in 'groups' parameter. Must be float."
                 ))
             })
         })
-        .collect::<Result<Vec<i32>, _>>()?;
+        .collect::<Result<Vec<f64>, _>>()?;
 
     let response =
         get_album_media_by_groups(&context.pool, &album_id, user.0.map(|u| u.id), &group_ids)
             .await?;
+    Ok(Protobuf(response))
+}
+
+/// Get media items for specific rank groups within an album.
+#[utoipa::path(
+    get,
+    path = "/album/{album_id}/media",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album."),
+    ),
+    responses(
+        (status = 200, description = "Media items for the requested groups.", body = AlbumMediaResponse),
+        (status = 500, description = "Internal Error."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_album_media_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<OptionalUser>,
+    Path(album_id): Path<String>,
+) -> Result<Protobuf<FullAlbumMediaResponse>, AlbumError> {
+    let response = get_album_media(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
     Ok(Protobuf(response))
 }

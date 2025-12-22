@@ -13,7 +13,7 @@ use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::pb::api::{
     AlbumInfo, AlbumMediaGroup, AlbumMediaResponse, AlbumRatioGroup, AlbumRatiosResponse,
-    TimelineItem,
+    AlbumTimelineItem, FullAlbumMediaResponse, TimelineItem,
 };
 use common_types::ImportAlbumItemPayload;
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -21,7 +21,7 @@ use sqlx::{Executor, FromRow, PgPool, Postgres};
 use tracing::instrument;
 
 // Number of items per "page" or "rank group"
-const ALBUM_GROUP_SIZE: usize = 100;
+const ALBUM_GROUP_SIZE: usize = 300;
 
 #[instrument(skip(executor))]
 async fn check_user_role(
@@ -394,7 +394,7 @@ pub async fn accept_invite(
 struct RatioRow {
     width: i32,
     height: i32,
-    rank: i32, // Using i32 matching SERIAL, but logic works for any int/float
+    rank: f64,
 }
 
 /// Fetches lightweight album metadata and the timeline ratios, grouped by rank (pagination).
@@ -442,7 +442,7 @@ pub async fn get_album_ratios(
         .await?;
 
     // 3. Chunk into groups in application memory
-    // Because 'rank' can be sparse (e.g. 1, 10, 25...), we can't use simple math on the rank.
+    // Because 'rank' can be sparse (e.g. 1.0, 1.05, 1.1...), we can't use simple math on the rank.
     // We create a new group every N items.
     let mut groups = Vec::new();
     for chunk in rows.chunks(ALBUM_GROUP_SIZE) {
@@ -510,17 +510,13 @@ pub async fn get_album_ids(
     Ok(ids)
 }
 
-#[derive(FromRow, Debug)]
+#[derive(FromRow)]
 struct AlbumTimelineItemRow {
     // Grouping identifier
-    group_start_rank: i32,
-
-    // Item data
-    id: String,
-    is_video: bool,
-    is_panorama: bool,
-    duration_ms: Option<i32>,
-    timestamp: String,
+    group_start_rank: f64,
+    // Flatten the fields of TimelineItem to be read from the same row
+    #[sqlx(flatten)]
+    item: TimelineItem,
 }
 
 /// Fetches media items for an album by specific Rank Groups.
@@ -530,7 +526,7 @@ pub async fn get_album_media_by_groups(
     pool: &PgPool,
     album_id: &str,
     user_id: Option<i32>,
-    group_start_ranks: &[i32],
+    group_start_ranks: &[f64],
 ) -> Result<AlbumMediaResponse, AlbumError> {
     // Permission Check
     let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
@@ -551,13 +547,13 @@ pub async fn get_album_media_by_groups(
     let sql = format!(
         r"
         SELECT
-            x.rank as group_start_rank,
+            request_rank_id as group_start_rank,
             m.id,
             m.is_video,
             m.use_panorama_viewer as is_panorama,
             m.duration_ms::INT as duration_ms,
             m.taken_at_local::TEXT as timestamp
-        FROM unnest($2::int[]) as request_rank_id
+        FROM unnest($2::float8[]) as request_rank_id
         CROSS JOIN LATERAL (
             SELECT ami.rank, ami.media_item_id
             FROM album_media_item ami
@@ -580,79 +576,31 @@ pub async fn get_album_media_by_groups(
 
     // Group the flat rows back into the structure
     let mut groups = Vec::new();
-    let mut current_group_id = -1;
+    let mut current_group_id = -1.0;
     let mut current_items = Vec::new();
 
     // Helper to push a finished group
-    let mut push_group = |rank_id: i32, items: Vec<TimelineItem>| {
+    let mut push_group = |rank_id: f64, items: Vec<TimelineItem>| {
         groups.push(AlbumMediaGroup {
             group_id: rank_id.to_string(),
             items,
         });
     };
 
-    for row in rows {
-        // Since we order by request_rank_id in SQL, we can iterate sequentially.
-        // Note: multiple requested groups might theoretically overlap if the client asks for weird offsets,
-        // but `group_start_rank` here comes from the `unnest` input (aliased), so we key off that?
-        // Wait, the SQL returns `x.rank` (the item's rank) or `request_rank_id`?
-        // The SQL selects `request_rank_id` implicitly via the ORDER BY, but strictly we need to group by the REQUESTED rank
-        // to match the client's map.
-        // Let's adjust the SQL select to return `request_rank_id`.
-
-        // Actually, looking at the struct, I defined `group_start_rank`.
-        // I need to change the SQL to select `request_rank_id` as `group_start_rank`.
-    }
-
-    // Correcting SQL Logic for grouping in loop:
-    let sql_corrected = format!(
-        r"
-        SELECT
-            request_rank_id as group_start_rank,
-            m.id,
-            m.is_video,
-            m.use_panorama_viewer as is_panorama,
-            m.duration_ms::INT as duration_ms,
-            m.taken_at_local::TEXT as timestamp
-        FROM unnest($2::int[]) as request_rank_id
-        CROSS JOIN LATERAL (
-            SELECT ami.rank, ami.media_item_id
-            FROM album_media_item ami
-            WHERE ami.album_id = $1
-              AND ami.rank >= request_rank_id
-            ORDER BY ami.rank ASC
-            LIMIT {ALBUM_GROUP_SIZE}
-        ) x
-        JOIN media_item m ON m.id = x.media_item_id
-        WHERE m.deleted = false
-        ORDER BY request_rank_id, x.rank ASC
-        "
-    );
-
-    let rows = sqlx::query_as::<_, AlbumTimelineItemRow>(&sql_corrected)
-        .bind(album_id)
-        .bind(group_start_ranks)
-        .fetch_all(pool)
-        .await?;
-
     if let Some(first) = rows.first() {
         current_group_id = first.group_start_rank;
     }
 
     for row in rows {
-        if row.group_start_rank != current_group_id {
+        // Floating point comparison with epsilon might be safer, but
+        // since the rank comes from the same unnest source, exact match works here.
+        if (row.group_start_rank - current_group_id).abs() > f64::EPSILON {
             push_group(current_group_id, current_items);
             current_items = Vec::new();
             current_group_id = row.group_start_rank;
         }
 
-        current_items.push(TimelineItem {
-            id: row.id,
-            is_video: row.is_video,
-            is_panorama: row.is_panorama,
-            duration_ms: row.duration_ms,
-            timestamp: row.timestamp,
-        });
+        current_items.push(row.item);
     }
 
     if !current_items.is_empty() {
@@ -660,4 +608,60 @@ pub async fn get_album_media_by_groups(
     }
 
     Ok(AlbumMediaResponse { groups })
+}
+
+/// Fetches media items for an album by specific Rank Groups.
+/// Used to hydrate the grid as the user scrolls.
+#[instrument(skip(pool))]
+pub async fn get_album_media(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: Option<i32>,
+) -> Result<FullAlbumMediaResponse, AlbumError> {
+    // Permission Check
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+    if !album.is_public {
+        let Some(uid) = user_id else {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        };
+        if !can_view_album(pool, uid, album_id).await? {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        }
+    }
+
+    let items = sqlx::query_as!(
+        AlbumTimelineItem,
+        r#"
+        SELECT
+            a.id,
+            is_video,
+            use_panorama_viewer as is_panorama,
+            duration_ms::INT as duration_ms,
+            (width::real / height::real) as "ratio!"
+        FROM album_media_item as ami
+        JOIN album a ON a.id = ami.album_id
+        JOIN media_item mi ON mi.id = ami.media_item_id
+        WHERE ami.album_id = $1 AND mi.deleted = false
+        ORDER BY ami.rank
+        "#,
+        album_id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(FullAlbumMediaResponse {
+        items,
+        album: Some(AlbumInfo {
+            id: album.id,
+            name: album.name,
+            description: album.description,
+            is_public: album.is_public,
+            owner_id: album.owner_id,
+            thumbnail_id: album.thumbnail_id,
+            created_at: album.created_at.to_rfc3339(),
+            user_role: None,
+        }),
+    })
 }

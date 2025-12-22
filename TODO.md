@@ -168,6 +168,10 @@
     * ^ PROBLEEM: limit+offset is langzamer dan huidige systeem
     * & OPLOSSING: hou logic voor timeline t zelfde, album & search kan met cursor 
     * question: hoe hou ik de timeline scroll voor album? 
+* BIG CHANGE 2
+  * MISSCHIEN KAN JE VOOR ALBUMS WEL GEWOON ALLES REQUESTEN
+  * hele timeline (ratios+item jsons (zonder timestamp)) =  117ms / 185kb voor 10k items
+  * frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid functie maken)
 
 ## Album Manual Sorting Implementation
 

@@ -1,6 +1,4 @@
-use crate::album::handlers::{
-    get_album_ids_handler, get_album_media_by_groups_handler, get_album_ratios_handler,
-};
+use crate::album::handlers::{get_album_ids_handler, get_album_media_handler, get_album_media_by_groups_handler, get_album_ratios_handler};
 use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
     accept_invite_handler, add_collaborator_handler, add_media_to_album_handler,
@@ -20,6 +18,10 @@ pub fn album_auth_optional_router() -> Router<ApiContext> {
         .route(
             "/album/{album_id}/by-groups",
             get(get_album_media_by_groups_handler),
+        )
+        .route(
+            "/album/{album_id}/media",
+            get(get_album_media_handler),
         )
 }
 
