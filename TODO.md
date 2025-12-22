@@ -157,10 +157,40 @@
   items (2e sort toevoegen? idk)
 * benchmark albums endpoints
 * review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
-  * is auth wel goed implemented? met is_public enzo
-  * minder repeated code maken voor de auth check daar
+    * is auth wel goed implemented? met is_public enzo
+    * minder repeated code maken voor de auth check daar
 * kan camelcase op de proto generated structs?
 * current albums pb interface misses collaborators
+* BIG CHANGE
+    * timeline by-month veranderen van month-based naar iets van offset+limit (keep in mind dat we beide kanten op
+      kunnen scrollen en in het midden beginnen)
+    * album timeline ook met offset+limit maar dan sorted by rank
+    * ^ PROBLEEM: limit+offset is langzamer dan huidige systeem
+    * & OPLOSSING: hou logic voor timeline t zelfde, album & search kan met cursor 
+    * question: hoe hou ik de timeline scroll voor album? 
+
+## Album Manual Sorting Implementation
+
+* alle dingen hieronder + voeg een flag field toe: order_is_changed_by_user ofzo, als die true is vrag je in de UI of je
+  zeker weet of je wil reorderen
+
+- [ ] **Database Migration**
+    - Add `rank` column (`DOUBLE PRECISION`) to `album_media_item`.
+    - Add index: `CREATE INDEX idx_album_media_item_rank ON album_media_item (album_id, rank);`.
+- [ ] **Read Logic (Query)**
+    - Update `GET /album/:id/media` query to always `ORDER BY ami.rank ASC`.
+- [ ] **Write Logic (Service)**
+    - **Add Item:** Calculate `new_rank = (MAX(rank) OR 0) + 10000.0` on insert.
+    - **Move Item (Drag & Drop):**
+        - Calculate `new_rank = (prev_rank + next_rank) / 2.0`.
+        - Handle edge case: If gap < 0.001, trigger **Rebalance**.
+    - **Rebalance:** Fetch all items by rank, update ranks to `10000, 20000...`.
+    - **Apply Sort (Reset):**
+        - Create function `apply_album_sort(album_id, sort_mode)`.
+        - Execute single SQL: `UPDATE ... SET rank = ROW_NUMBER() OVER (ORDER BY [sort_field]) * 10000.0`.
+- [ ] **API Endpoints**
+    - `POST /albums/:id/items/reorder`: Accepts `{ item_id, prev_item_id, next_item_id }`.
+    - `POST /albums/:id/sort`: Accepts `{ sort_mode: "date_asc" | "date_desc" | "added_asc" ... }`.
 
 # Features
 

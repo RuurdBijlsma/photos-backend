@@ -35,12 +35,13 @@ CREATE TABLE album_media_item
     media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
     added_by_user INT         REFERENCES app_user (id) ON DELETE SET NULL,
     added_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    rank          SERIAL      NOT NULL UNIQUE,
     PRIMARY KEY (album_id, media_item_id)
 );
 
--- Index for quickly retrieving all media items within a specific album.
+-- Indices for album_media_item
+CREATE INDEX idx_album_media_item_rank ON album_media_item (album_id, rank);
 CREATE INDEX idx_album_media_item_album_id ON album_media_item (album_id);
--- Index for quickly finding which albums a specific media item belongs to.
 CREATE INDEX idx_album_media_item_media_item_id ON album_media_item (media_item_id);
 
 
