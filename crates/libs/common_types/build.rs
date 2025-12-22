@@ -32,11 +32,23 @@ fn main() -> std::io::Result<()> {
 
     // --- ALBUM STRUCTS ---
     config.type_attribute(
-        ".api.AlbumInfo",
+        ".api.AlbumRatiosResponse",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
     config.type_attribute(
-        ".api.AlbumRatiosResponse",
+        ".api.AlbumRatioGroup",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.AlbumMediaResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.AlbumMediaGroup",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.AlbumInfo",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 

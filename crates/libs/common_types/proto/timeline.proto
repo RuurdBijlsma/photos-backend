@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package api;
 
-// --- Main Timeline ---
+// --- Main Timeline (Main library view) ---
 
 // Contains ratios and amount of media items per month, grouped by month.
 message TimelineRatiosResponse {
@@ -35,10 +35,28 @@ message TimelineItem {
 
 // --- Album Specific ---
 
-// Returns Album Metadata + Ratios
+// Returns Album Metadata + Ratios grouped by Rank
 message AlbumRatiosResponse {
   AlbumInfo album = 1;
-  repeated TimelineMonthRatios months = 2;
+  // Groups of items, e.g. 100 items per group
+  repeated AlbumRatioGroup groups = 2;
+}
+
+message AlbumRatioGroup {
+  // The rank ID that starts this group (acts as the cursor/ID)
+  string group_id = 1;
+  // The ratios of the items in this group
+  repeated float ratios = 2;
+}
+
+// Response for specific chunks of the album.
+message AlbumMediaResponse {
+  repeated AlbumMediaGroup groups = 1;
+}
+
+message AlbumMediaGroup {
+  string group_id = 1;
+  repeated TimelineItem items = 2;
 }
 
 message AlbumInfo {

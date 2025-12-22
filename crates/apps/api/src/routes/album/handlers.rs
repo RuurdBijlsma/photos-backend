@@ -4,23 +4,21 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
-use chrono::NaiveDate;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
-    CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest,
+    CreateAlbumRequest, GetAlbumMediaParams, ListAlbumsParam, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
-    get_album_ids, get_album_photos_by_month, get_album_ratios, remove_collaborator,
+    get_album_ids, get_album_media_by_groups, get_album_ratios, remove_collaborator,
     remove_media_from_album, update_album,
 };
-use common_services::api::timeline::interfaces::{GetMediaByMonthParams, TimelineParams};
 use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use common_types::pb::api::{AlbumRatiosResponse, TimelineItemsResponse};
+use common_types::pb::api::{AlbumMediaResponse, AlbumRatiosResponse};
 use tracing::{info, instrument};
 
 /// Create a new album.
@@ -334,15 +332,14 @@ pub async fn accept_invite_handler(
 // === --- === ALBUM TIMELINE === --- === //
 // ====================================== //
 
-/// Get album metadata and timeline ratios.
+/// Get album metadata and timeline ratios (grouped by rank).
 /// Replaces the need for a heavy initial load.
 #[utoipa::path(
     get,
     path = "/album/{album_id}/ratios",
     tag = "Album",
     params(
-        ("album_id" = String, Path, description = "The unique ID of the album."),
-        TimelineParams
+        ("album_id" = String, Path, description = "The unique ID of the album.")
     ),
     responses(
         (status = 200, description = "Album metadata and media ratios.", body = AlbumRatiosResponse),
@@ -355,10 +352,8 @@ pub async fn get_album_ratios_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<OptionalUser>,
     Path(album_id): Path<String>,
-    Query(params): Query<TimelineParams>,
 ) -> Result<Protobuf<AlbumRatiosResponse>, AlbumError> {
-    let response =
-        get_album_ratios(&context.pool, &album_id, user.0.map(|u| u.id), params.sort).await?;
+    let response = get_album_ratios(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
     Ok(Protobuf(response))
 }
 
@@ -368,8 +363,7 @@ pub async fn get_album_ratios_handler(
     path = "/album/{album_id}/ids",
     tag = "Album",
     params(
-        ("album_id" = String, Path, description = "The unique ID of the album."),
-        TimelineParams
+        ("album_id" = String, Path, description = "The unique ID of the album.")
     ),
     responses(
         (status = 200, description = "List of media IDs in the album.", body = Vec<String>),
@@ -381,54 +375,48 @@ pub async fn get_album_ids_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<OptionalUser>,
     Path(album_id): Path<String>,
-    Query(params): Query<TimelineParams>,
 ) -> Result<Json<Vec<String>>, AlbumError> {
-    let ids = get_album_ids(&context.pool, &album_id, user.0.map(|u| u.id), params.sort).await?;
+    let ids = get_album_ids(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
     Ok(Json(ids))
 }
 
-/// Get media items for specific months within an album.
+/// Get media items for specific rank groups within an album.
 #[utoipa::path(
     get,
-    path = "/album/{album_id}/by-month",
+    path = "/album/{album_id}/by-groups",
     tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album."),
-        GetMediaByMonthParams
+        GetAlbumMediaParams
     ),
     responses(
-        (status = 200, description = "Media items for the requested months.", body = TimelineItemsResponse),
+        (status = 200, description = "Media items for the requested groups.", body = AlbumMediaResponse),
         (status = 500, description = "Internal Error."),
     ),
     security(("bearer_auth" = []))
 )]
-pub async fn get_album_photos_by_month_handler(
+pub async fn get_album_media_by_groups_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<OptionalUser>,
     Path(album_id): Path<String>,
-    Query(params): Query<GetMediaByMonthParams>,
-) -> Result<Protobuf<TimelineItemsResponse>, AlbumError> {
-    // Parse months (same logic as timeline handler, maybe extract to utils later)
-    let month_ids = params
-        .months
+    Query(params): Query<GetAlbumMediaParams>,
+) -> Result<Protobuf<AlbumMediaResponse>, AlbumError> {
+    let group_ids = params
+        .groups
         .split(',')
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        .map(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d"))
-        .collect::<Result<Vec<NaiveDate>, _>>()
-        .map_err(|_| {
-            AlbumError::BadRequest(
-                "Invalid date format in 'months' parameter. Please use 'YYYY-MM-DD'.".to_string(),
-            )
-        })?;
+        .map(|s| {
+            s.parse::<i32>().map_err(|_| {
+                AlbumError::BadRequest(format!(
+                    "Invalid rank format '{s}' in 'groups' parameter. Must be integer."
+                ))
+            })
+        })
+        .collect::<Result<Vec<i32>, _>>()?;
 
-    let response = get_album_photos_by_month(
-        &context.pool,
-        &album_id,
-        user.0.map(|u| u.id),
-        &month_ids,
-        params.sort,
-    )
-    .await?;
+    let response =
+        get_album_media_by_groups(&context.pool, &album_id, user.0.map(|u| u.id), &group_ids)
+            .await?;
     Ok(Protobuf(response))
 }

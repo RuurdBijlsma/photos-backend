@@ -1,5 +1,5 @@
 use crate::album::handlers::{
-    get_album_ids_handler, get_album_photos_by_month_handler, get_album_ratios_handler,
+    get_album_ids_handler, get_album_media_by_groups_handler, get_album_ratios_handler,
 };
 use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
@@ -18,8 +18,8 @@ pub fn album_auth_optional_router() -> Router<ApiContext> {
         .route("/album/{album_id}/ratios", get(get_album_ratios_handler))
         .route("/album/{album_id}/ids", get(get_album_ids_handler))
         .route(
-            "/album/{album_id}/by-month",
-            get(get_album_photos_by_month_handler),
+            "/album/{album_id}/by-groups",
+            get(get_album_media_by_groups_handler),
         )
 }
 

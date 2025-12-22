@@ -88,6 +88,13 @@ pub struct ListAlbumsParam {
     pub sort_field: AlbumSortField,
 }
 
+#[derive(Deserialize, IntoParams, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetAlbumMediaParams {
+    /// Comma separated list of Rank IDs (Start Ranks of the groups).
+    pub groups: String,
+}
+
 // --- Response Payloads ---
 
 /// Full details of an album, including its media items and collaborators.
