@@ -13,6 +13,9 @@ and search.
 
 ## Prerequisites
 
+* **nasm**: `winget install -e --id NASM.NASM`
+* **protoc**: `winget install -e --id Google.Protobuf`
+* **sqlx**: `cargo install sqlx-cli`
 * **Python** installed and added to `PATH` (e.g., `C:\Users\YourName\AppData\Local\Programs\Python\Python312` on
   Windows; Linux support needs testing)
 * **uv** installed for setting up the virtualenv in `ml_analysis`
@@ -65,15 +68,13 @@ Edit `config/settings.yaml` to adjust backend settings.
 There are 4 crates required for full backend functionality:
 
 1. `crates/binaries/api` – Web API
-2. `crates/binaries/indexer` – Scans media directories, enqueues ingest/remove jobs
-3. `crates/binaries/watcher` – Watches media directories and enqueues jobs for created/deleted files
-4. `crates/binaries/worker` – Processes jobs (generates thumbnails, analyzes metadata, updates database)
+2. `crates/binaries/watcher` – Watches media directories and enqueues jobs for created/deleted files
+3. `crates/binaries/worker` – Processes jobs (generates thumbnails, analyzes metadata, updates database)
 
 Run each crate in a separate terminal:
 
 ```bash
 cargo run -p api
-cargo run -p indexer
 cargo run -p watcher
 cargo run -p worker
 ```
