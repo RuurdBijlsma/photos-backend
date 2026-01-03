@@ -173,6 +173,7 @@
   * hele timeline (ratios+item jsons (zonder timestamp)) =  117ms / 185kb voor 10k items
   * frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid functie maken)
 * better error if exiftool or numpy isnt there (worker wont work then)
+* fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 
 ## Album Manual Sorting Implementation
 
