@@ -36,7 +36,6 @@ use tracing::{info, instrument};
     security(("bearer_auth" = []))
 )]
 #[instrument(skip(context, user), err(Debug))]
-#[axum::debug_handler]
 pub async fn create_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,

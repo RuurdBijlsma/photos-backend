@@ -63,6 +63,18 @@ Edit `config/settings.yaml` to adjust backend settings.
 
 ## Usage
 
+### 1. Run integration tests
+
+```shell
+cargo test -p test_integration -- --nocapture
+```
+
+### 2. Clippy
+
+```shell
+cargo clippy --no-deps --all-features -- -D clippy::all -D clippy::pedantic -D clippy::nursery
+```
+
 ### 1. Run the backend crates
 
 There are 4 crates required for full backend functionality:

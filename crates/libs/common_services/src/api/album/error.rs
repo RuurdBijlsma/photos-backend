@@ -5,7 +5,7 @@ use axum::response::{IntoResponse, Response};
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
-use tracing::{error, warn};
+use tracing::{warn};
 use url::ParseError;
 
 #[derive(Debug, Error)]

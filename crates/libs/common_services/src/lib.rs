@@ -6,6 +6,7 @@
     clippy::module_inception,
     clippy::struct_excessive_bools,
     clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
     clippy::cast_possible_wrap
 )]
 
