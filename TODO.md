@@ -174,29 +174,8 @@
   * frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid functie maken)
 * better error if exiftool or numpy isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
-
-## Album Manual Sorting Implementation
-
-* alle dingen hieronder + voeg een flag field toe: order_is_changed_by_user ofzo, als die true is vrag je in de UI of je
-  zeker weet of je wil reorderen
-
-- [ ] **Database Migration**
-    - Add `rank` column (`DOUBLE PRECISION`) to `album_media_item`.
-    - Add index: `CREATE INDEX idx_album_media_item_rank ON album_media_item (album_id, rank);`.
-- [ ] **Read Logic (Query)**
-    - Update `GET /album/:id/media` query to always `ORDER BY ami.rank ASC`.
-- [ ] **Write Logic (Service)**
-    - **Add Item:** Calculate `new_rank = (MAX(rank) OR 0) + 10000.0` on insert.
-    - **Move Item (Drag & Drop):**
-        - Calculate `new_rank = (prev_rank + next_rank) / 2.0`.
-        - Handle edge case: If gap < 0.001, trigger **Rebalance**.
-    - **Rebalance:** Fetch all items by rank, update ranks to `10000, 20000...`.
-    - **Apply Sort (Reset):**
-        - Create function `apply_album_sort(album_id, sort_mode)`.
-        - Execute single SQL: `UPDATE ... SET rank = ROW_NUMBER() OVER (ORDER BY [sort_field]) * 10000.0`.
-- [ ] **API Endpoints**
-    - `POST /albums/:id/items/reorder`: Accepts `{ item_id, prev_item_id, next_item_id }`.
-    - `POST /albums/:id/sort`: Accepts `{ sort_mode: "date_asc" | "date_desc" | "added_asc" ... }`.
+* make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
+* er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
 
 # Features
 

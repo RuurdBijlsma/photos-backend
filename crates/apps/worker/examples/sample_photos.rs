@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 fn main() -> Result<()> {
-    let source = Path::new("C:/Users/Ruurd/Pictures/photos");
+    let source = Path::new("C:/Users/Ruurd/Pictures/Photos");
     let destination = Path::new("C:/Users/Ruurd/Pictures/media_dir");
-    let number = 10000;
+    let number = 20000;
     let settings = load_app_settings()?;
 
     // 1. Validate Source
