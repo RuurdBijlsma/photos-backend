@@ -635,7 +635,7 @@ pub async fn get_album_media(
         AlbumTimelineItem,
         r#"
         SELECT
-            a.id,
+            mi.id,
             is_video,
             use_panorama_viewer as is_panorama,
             duration_ms::INT as duration_ms,
