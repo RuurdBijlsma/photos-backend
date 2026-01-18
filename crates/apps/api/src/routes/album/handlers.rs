@@ -7,18 +7,17 @@ use axum_extra::protobuf::Protobuf;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
-    CreateAlbumRequest, GetAlbumMediaParams, ListAlbumsParam, UpdateAlbumRequest,
+    CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
-    get_album_ids, get_album_media, get_album_media_by_groups, get_album_ratios,
-    remove_collaborator, remove_media_from_album, update_album,
+    get_album_media, remove_collaborator, remove_media_from_album, update_album,
 };
 use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use common_types::pb::api::{AlbumMediaResponse, AlbumRatiosResponse, FullAlbumMediaResponse};
+use common_types::pb::api::FullAlbumMediaResponse;
 use tracing::{info, instrument};
 
 /// Create a new album.
@@ -332,105 +331,16 @@ pub async fn accept_invite_handler(
 // === --- === ALBUM TIMELINE === --- === //
 // ====================================== //
 
-/// Get album metadata and timeline ratios (grouped by rank).
-/// Replaces the need for a heavy initial load.
-#[utoipa::path(
-    get,
-    path = "/album/{album_id}/ratios",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album.")
-    ),
-    responses(
-        (status = 200, description = "Album metadata and media ratios.", body = AlbumRatiosResponse),
-        (status = 404, description = "Album not found or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = [])) // Optional auth handled inside service
-)]
-pub async fn get_album_ratios_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<OptionalUser>,
-    Path(album_id): Path<String>,
-) -> Result<Protobuf<AlbumRatiosResponse>, AlbumError> {
-    let response = get_album_ratios(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
-    Ok(Protobuf(response))
-}
-
-/// Get all media IDs for an album.
-#[utoipa::path(
-    get,
-    path = "/album/{album_id}/ids",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album.")
-    ),
-    responses(
-        (status = 200, description = "List of media IDs in the album.", body = Vec<String>),
-        (status = 404, description = "Album not found."),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_album_ids_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<OptionalUser>,
-    Path(album_id): Path<String>,
-) -> Result<Json<Vec<String>>, AlbumError> {
-    let ids = get_album_ids(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
-    Ok(Json(ids))
-}
-
 /// Get media items for specific rank groups within an album.
 #[utoipa::path(
     get,
-    path = "/album/{album_id}/by-groups",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album."),
-        GetAlbumMediaParams
-    ),
-    responses(
-        (status = 200, description = "Media items for the requested groups.", body = AlbumMediaResponse),
-        (status = 500, description = "Internal Error."),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_album_media_by_groups_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<OptionalUser>,
-    Path(album_id): Path<String>,
-    Query(params): Query<GetAlbumMediaParams>,
-) -> Result<Protobuf<AlbumMediaResponse>, AlbumError> {
-    let group_ids = params
-        .groups
-        .split(',')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(|s| {
-            s.parse::<f64>().map_err(|_| {
-                AlbumError::BadRequest(format!(
-                    "Invalid rank format '{s}' in 'groups' parameter. Must be float."
-                ))
-            })
-        })
-        .collect::<Result<Vec<f64>, _>>()?;
-
-    let response =
-        get_album_media_by_groups(&context.pool, &album_id, user.0.map(|u| u.id), &group_ids)
-            .await?;
-    Ok(Protobuf(response))
-}
-
-/// Get media items for specific rank groups within an album.
-#[utoipa::path(
-    get,
-    path = "/album/{album_id}/media",
+    path = "/album/{album_id}",
     tag = "Album",
     params(
         ("album_id" = String, Path, description = "The unique ID of the album."),
     ),
     responses(
-        (status = 200, description = "Media items for the requested groups.", body = AlbumMediaResponse),
+        (status = 200, description = "Media items for the requested groups.", body = FullAlbumMediaResponse),
         (status = 500, description = "Internal Error."),
     ),
     security(("bearer_auth" = []))

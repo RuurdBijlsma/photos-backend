@@ -36,9 +36,7 @@ use utoipa::{Modify, OpenApi};
         album::handlers::generate_invite_handler,
         album::handlers::check_invite_handler,
         album::handlers::accept_invite_handler,
-        album::handlers::get_album_ratios_handler,
-        album::handlers::get_album_ids_handler,
-        album::handlers::get_album_media_by_groups_handler,
+        album::handlers::get_album_media_handler,
         // Timeline handlers
         timeline::handlers::get_timeline_ratios_handler,
         timeline::handlers::get_timeline_ids_handler,
