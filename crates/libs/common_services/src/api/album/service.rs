@@ -1,10 +1,10 @@
-use super::interfaces::{AcceptInviteRequest, AlbumDetailsResponse, AlbumShareClaims};
+use super::interfaces::{AcceptInviteRequest, AlbumShareClaims};
 use crate::api::album::error::AlbumError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
-use crate::database::app_user::get_user_by_email;
 use crate::database::jobs::JobType;
+use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
 use crate::s2s_client::{S2SClient, extract_token_claims};
 use crate::utils::nice_id;
@@ -12,11 +12,17 @@ use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
+use common_types::pb::api::{
+    AlbumInfo, AlbumMediaGroup, AlbumMediaResponse, AlbumRatioGroup, AlbumRatiosResponse,
+    AlbumTimelineItem, FullAlbumMediaResponse, TimelineItem,
+};
 use jsonwebtoken::{EncodingKey, Header, encode};
-use sqlx::{Executor, PgPool, Postgres};
+use sqlx::{Executor, FromRow, PgPool, Postgres};
 use tracing::instrument;
 
-/// Checks if a user has a specific role in an album.
+// Number of items per "page" or "rank group"
+const ALBUM_GROUP_SIZE: usize = 300;
+
 #[instrument(skip(executor))]
 async fn check_user_role(
     executor: impl Executor<'_, Database = Postgres>,
@@ -32,7 +38,34 @@ async fn check_user_role(
     }
 }
 
-/// A more specific check to see if the user is the owner of the album.
+async fn can_edit_album(
+    executor: impl Executor<'_, Database = Postgres>,
+    user_id: i32,
+    album_id: &str,
+) -> Result<bool, AlbumError> {
+    check_user_role(
+        executor,
+        user_id,
+        album_id,
+        &[AlbumRole::Owner, AlbumRole::Contributor],
+    )
+    .await
+}
+
+async fn can_view_album(
+    executor: impl Executor<'_, Database = Postgres>,
+    user_id: i32,
+    album_id: &str,
+) -> Result<bool, AlbumError> {
+    check_user_role(
+        executor,
+        user_id,
+        album_id,
+        &[AlbumRole::Owner, AlbumRole::Contributor, AlbumRole::Viewer],
+    )
+    .await
+}
+
 #[instrument(skip(executor))]
 async fn is_album_owner<'c, E>(
     executor: E,
@@ -45,53 +78,6 @@ where
     check_user_role(executor, user_id, album_id, &[AlbumRole::Owner]).await
 }
 
-/// Fetches detailed information for a single album, including media items and collaborators.
-/// The user must be a collaborator to view the details.
-#[instrument(skip(pool))]
-pub async fn get_album_details(
-    pool: &PgPool,
-    album_id: &str,
-    user_id: Option<i32>,
-) -> Result<AlbumDetailsResponse, AlbumError> {
-    let album = AlbumStore::find_by_id(pool, album_id).await?;
-    if !album.is_public {
-        let Some(user_id) = user_id else {
-            return Err(AlbumError::NotFound(album_id.to_string()));
-        };
-        // Permission Check: User must be part of the album to view it.
-        let is_collaborator = check_user_role(
-            pool,
-            user_id,
-            album_id,
-            &[AlbumRole::Owner, AlbumRole::Contributor, AlbumRole::Viewer],
-        )
-        .await?;
-        if !is_collaborator {
-            return Err(AlbumError::NotFound(album_id.to_string()));
-        }
-    }
-
-    // Fetch album details, media items, and collaborators in parallel
-    let (media_items_res, collaborators_res) = tokio::join!(
-        AlbumStore::list_media_items(pool, album_id),
-        AlbumStore::list_collaborators(pool, album_id),
-    );
-
-    let media_items = media_items_res?;
-    let collaborators = collaborators_res?;
-
-    Ok(AlbumDetailsResponse {
-        id: album.id,
-        name: album.name,
-        description: album.description,
-        is_public: album.is_public,
-        owner_id: album.owner_id,
-        created_at: album.created_at,
-        media_items,
-        collaborators,
-    })
-}
-
 #[instrument(skip(pool))]
 pub async fn create_album(
     pool: &PgPool,
@@ -99,13 +85,28 @@ pub async fn create_album(
     name: &str,
     description: Option<String>,
     is_public: bool,
+    media_item_ids: &[String],
 ) -> Result<Album, AlbumError> {
     let mut tx = pool.begin().await?;
     let album_id = nice_id(constants().database.media_item_id_length);
 
-    let album =
-        AlbumStore::create(&mut *tx, &album_id, user_id, name, description, is_public).await?;
+    let album = AlbumStore::create(
+        &mut *tx,
+        &album_id,
+        user_id,
+        name,
+        description,
+        None,
+        is_public,
+    )
+    .await?;
     AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
+    if !media_item_ids.is_empty() {
+        AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
+        if let Some(thumb) = AlbumStore::find_middle_media_item_id(&mut *tx, &album_id).await? {
+            AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
+        }
+    }
 
     tx.commit().await?;
 
@@ -121,23 +122,22 @@ pub async fn add_media_to_album(
     media_item_ids: &[String],
     user_id: i32,
 ) -> Result<(), AlbumError> {
-    // Permission Check
-    let has_permission = check_user_role(
-        pool,
-        user_id,
-        album_id,
-        &[AlbumRole::Owner, AlbumRole::Contributor],
-    )
-    .await?;
-    if !has_permission {
-        return Err(AlbumError::NotFound(
-            "Album not found or permission denied.".to_string(),
-        ));
+    if !can_edit_album(pool, user_id, album_id).await? {
+        return Err(AlbumError::NotFound("Album not found.".to_string()));
     }
 
     let mut tx = pool.begin().await?;
 
+    let Some(album_before) = AlbumStore::find_by_id(&mut *tx, album_id).await? else {
+        return Err(AlbumError::NotFound("Album not found.".to_string()));
+    };
     AlbumStore::add_media_items(&mut *tx, album_id, media_item_ids, user_id).await?;
+    if album_before.thumbnail_id.is_none() {
+        let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
+        if let Some(thumbnail_id) = thumbnail_id {
+            AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None).await?;
+        }
+    }
 
     tx.commit().await?;
     Ok(())
@@ -152,27 +152,35 @@ pub async fn remove_media_from_album(
     media_item_id: &str,
     user_id: i32,
 ) -> Result<(), AlbumError> {
-    let has_permission = check_user_role(
-        pool,
-        user_id,
-        album_id,
-        &[AlbumRole::Owner, AlbumRole::Contributor],
-    )
-    .await?;
-    if !has_permission {
+    if !can_edit_album(pool, user_id, album_id).await? {
         return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
 
+    let mut tx = pool.begin().await?;
     let result =
-        AlbumStore::remove_media_items_by_id(pool, album_id, &[media_item_id.to_owned()]).await?;
+        AlbumStore::remove_media_items_by_id(&mut *tx, album_id, &[media_item_id.to_owned()])
+            .await?;
 
     if result.rows_affected() == 0 {
         return Err(AlbumError::NotFound(format!(
             "Media item {media_item_id} not found in album {album_id}"
         )));
     }
+
+    // Fix thumbnail id if it was removed
+    if let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? {
+        // Check if removed item was the thumbnail
+        if Some(media_item_id.to_owned()) == album.thumbnail_id && album.media_count > 0 {
+            let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
+            if let Some(thumbnail_id) = thumbnail_id {
+                AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
+                    .await?;
+            }
+        }
+    }
+    tx.commit().await?;
 
     Ok(())
 }
@@ -195,14 +203,14 @@ pub async fn add_collaborator(
     }
 
     // Find the user to add by their email.
-    let user_to_add = get_user_by_email(pool, new_user_email)
+    let user_to_add = UserStore::find_by_email(pool, new_user_email)
         .await?
         .ok_or_else(|| {
             AlbumError::NotFound(format!("User with email {new_user_email} not found."))
         })?;
 
     // An owner cannot be added or demoted via this function.
-    if matches!(role, AlbumRole::Owner) {
+    if role == AlbumRole::Owner {
         return Err(AlbumError::Internal(color_eyre::eyre::eyre!(
             "Cannot assign the owner role."
         )));
@@ -224,7 +232,6 @@ pub async fn remove_collaborator(
     collaborator_id_to_remove: i64,
     requesting_user_id: i32,
 ) -> Result<(), AlbumError> {
-    // Only the album owner can remove collaborators.
     if !is_album_owner(pool, requesting_user_id, album_id).await? {
         return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
@@ -244,7 +251,6 @@ pub async fn remove_collaborator(
         )));
     }
 
-    // Proceed with deletion.
     AlbumStore::remove_collaborator_by_id(pool, collaborator_id_to_remove).await?;
 
     Ok(())
@@ -259,6 +265,7 @@ pub async fn update_album(
     user_id: i32,
     name: Option<String>,
     description: Option<String>,
+    thumbnail_id: Option<String>,
     is_public: Option<bool>,
 ) -> Result<Album, AlbumError> {
     // Permission Check: Only the owner can update album details.
@@ -269,13 +276,24 @@ pub async fn update_album(
     }
 
     // At least one field must be provided for the update.
-    if name.is_none() && description.is_none() && is_public.is_none() {
-        // If no changes are requested, just return the current album data.
-        return Ok(AlbumStore::find_by_id(pool, album_id).await?);
+    if name.is_none() && description.is_none() && thumbnail_id.is_none() && is_public.is_none() {
+        let album = AlbumStore::find_by_id(pool, album_id)
+            .await?
+            .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()))?;
+        return Ok(album.into());
     }
 
-    let updated_album = AlbumStore::update(pool, album_id, name, description, is_public).await?;
+    if let Some(thumbnail_id) = &thumbnail_id {
+        let exists = AlbumStore::has_media_item(pool, album_id, thumbnail_id).await?;
+        if !exists {
+            return Err(AlbumError::BadRequest(
+                "thumbnail_id is not in the album".to_owned(),
+            ));
+        }
+    }
 
+    let updated_album =
+        AlbumStore::update(pool, album_id, name, description, thumbnail_id, is_public).await?;
     Ok(updated_album)
 }
 
@@ -290,7 +308,7 @@ pub async fn generate_invite(
 ) -> Result<String, AlbumError> {
     // Permission Check: Only the owner can generate an invite.
     if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumError::Unauthorized(
+        return Err(AlbumError::Forbidden(
             "Only the album owner can generate an invitation.".to_string(),
         ));
     }
@@ -316,7 +334,6 @@ pub async fn generate_invite(
 }
 
 /// Accepts an album invitation and enqueues a background job to start the import.
-#[instrument(skip(pool, settings, s2s_client))]
 pub async fn accept_invite(
     pool: &PgPool,
     settings: &AppSettings,
@@ -324,10 +341,9 @@ pub async fn accept_invite(
     user_id: i32,
     payload: AcceptInviteRequest,
 ) -> Result<Album, AlbumError> {
-    // This now uses the client's internal token parsing.
     let jwt_secret = &settings.secrets.jwt;
     let claims = extract_token_claims(&payload.token, jwt_secret)
-        .map_err(|_| AlbumError::Unauthorized("Invalid token.".to_string()))?;
+        .map_err(|_| AlbumError::Forbidden("Invalid token.".to_string()))?;
 
     let summary: AlbumSummary = s2s_client
         .get_album_invite_summary(&payload.token, jwt_secret)
@@ -343,6 +359,7 @@ pub async fn accept_invite(
         user_id,
         &payload.name,
         payload.description,
+        None,
         false,
     )
     .await?;
@@ -367,4 +384,284 @@ pub async fn accept_invite(
     }
 
     Ok(album)
+}
+
+// ====================================== //
+// === --- === ALBUM TIMELINE === --- === //
+// ====================================== //
+
+#[derive(FromRow)]
+struct RatioRow {
+    width: i32,
+    height: i32,
+    rank: f64,
+}
+
+/// Fetches lightweight album metadata and the timeline ratios, grouped by rank (pagination).
+#[instrument(skip(pool))]
+pub async fn get_album_ratios(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: Option<i32>,
+) -> Result<AlbumRatiosResponse, AlbumError> {
+    // 1. Permission Check
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+
+    let mut user_role_str = None;
+    if !album.is_public {
+        let Some(uid) = user_id else {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        };
+        let role = AlbumStore::find_user_role(pool, album_id, uid).await?;
+        if role.is_none() {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        }
+        user_role_str = role.map(|r| r.to_string());
+    } else if let Some(uid) = user_id {
+        let role = AlbumStore::find_user_role(pool, album_id, uid).await?;
+        user_role_str = role.map(|r| r.to_string());
+    }
+
+    // 2. Fetch all ratios and ranks.
+    // Albums are ALWAYS sorted by RANK ASC to support manual ordering.
+    let sql = r"
+        SELECT
+            m.width, m.height, ami.rank
+        FROM media_item m
+        JOIN album_media_item ami ON m.id = ami.media_item_id
+        WHERE ami.album_id = $1
+          AND m.deleted = false
+        ORDER BY ami.rank ASC
+    ";
+
+    let rows = sqlx::query_as::<_, RatioRow>(sql)
+        .bind(album_id)
+        .fetch_all(pool)
+        .await?;
+
+    // 3. Chunk into groups in application memory
+    // Because 'rank' can be sparse (e.g. 1.0, 1.05, 1.1...), we can't use simple math on the rank.
+    // We create a new group every N items.
+    let mut groups = Vec::new();
+    for chunk in rows.chunks(ALBUM_GROUP_SIZE) {
+        if let Some(first) = chunk.first() {
+            let group_id = first.rank.to_string(); // The rank of the first item is the cursor key
+            let ratios: Vec<f32> = chunk
+                .iter()
+                .map(|r| r.width as f32 / r.height as f32)
+                .collect();
+
+            groups.push(AlbumRatioGroup { group_id, ratios });
+        }
+    }
+
+    // 4. Construct Response
+    let album_info = AlbumInfo {
+        id: album.id,
+        name: album.name,
+        description: album.description,
+        is_public: album.is_public,
+        owner_id: album.owner_id,
+        created_at: album.created_at.to_rfc3339(),
+        thumbnail_id: album.thumbnail_id,
+        user_role: user_role_str,
+    };
+
+    Ok(AlbumRatiosResponse {
+        album: Some(album_info),
+        groups,
+    })
+}
+
+/// Fetches media item IDs for an album (Timeline style), sorted by Rank.
+#[instrument(skip(pool))]
+pub async fn get_album_ids(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: Option<i32>,
+) -> Result<Vec<String>, AlbumError> {
+    // Permission Check
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+    if !album.is_public {
+        let Some(uid) = user_id else {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        };
+        if !can_view_album(pool, uid, album_id).await? {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        }
+    }
+
+    let sql = r"
+        SELECT COALESCE(array_agg(m.id ORDER BY ami.rank ASC), '{}')
+        FROM media_item m
+        JOIN album_media_item ami ON m.id = ami.media_item_id
+        WHERE ami.album_id = $1 AND m.deleted = false
+    ";
+
+    let ids = sqlx::query_scalar::<_, Vec<String>>(sql)
+        .bind(album_id)
+        .fetch_one(pool)
+        .await?;
+
+    Ok(ids)
+}
+
+#[derive(FromRow)]
+struct AlbumTimelineItemRow {
+    // Grouping identifier
+    group_start_rank: f64,
+    // Flatten the fields of TimelineItem to be read from the same row
+    #[sqlx(flatten)]
+    item: TimelineItem,
+}
+
+/// Fetches media items for an album by specific Rank Groups.
+/// Used to hydrate the grid as the user scrolls.
+#[instrument(skip(pool))]
+pub async fn get_album_media_by_groups(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: Option<i32>,
+    group_start_ranks: &[f64],
+) -> Result<AlbumMediaResponse, AlbumError> {
+    // Permission Check
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+    if !album.is_public {
+        let Some(uid) = user_id else {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        };
+        if !can_view_album(pool, uid, album_id).await? {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        }
+    }
+
+    // We use a LATERAL JOIN to fetch N items for each requested start rank.
+    // This efficiently handles the "sparse rank" problem and ensures each group
+    // maps exactly to what was generated in `get_album_ratios`.
+    let sql = format!(
+        r"
+        SELECT
+            request_rank_id as group_start_rank,
+            m.id,
+            m.is_video,
+            m.use_panorama_viewer as is_panorama,
+            m.duration_ms::INT as duration_ms,
+            m.taken_at_local::TEXT as timestamp
+        FROM unnest($2::float8[]) as request_rank_id
+        CROSS JOIN LATERAL (
+            SELECT ami.rank, ami.media_item_id
+            FROM album_media_item ami
+            WHERE ami.album_id = $1
+              AND ami.rank >= request_rank_id
+            ORDER BY ami.rank ASC
+            LIMIT {ALBUM_GROUP_SIZE}
+        ) x
+        JOIN media_item m ON m.id = x.media_item_id
+        WHERE m.deleted = false
+        ORDER BY request_rank_id, x.rank ASC
+        "
+    );
+
+    let rows = sqlx::query_as::<_, AlbumTimelineItemRow>(&sql)
+        .bind(album_id)
+        .bind(group_start_ranks)
+        .fetch_all(pool)
+        .await?;
+
+    // Group the flat rows back into the structure
+    let mut groups = Vec::new();
+    let mut current_group_id = -1.0;
+    let mut current_items = Vec::new();
+
+    // Helper to push a finished group
+    let mut push_group = |rank_id: f64, items: Vec<TimelineItem>| {
+        groups.push(AlbumMediaGroup {
+            group_id: rank_id.to_string(),
+            items,
+        });
+    };
+
+    if let Some(first) = rows.first() {
+        current_group_id = first.group_start_rank;
+    }
+
+    for row in rows {
+        // Floating point comparison with epsilon might be safer, but
+        // since the rank comes from the same unnest source, exact match works here.
+        if (row.group_start_rank - current_group_id).abs() > f64::EPSILON {
+            push_group(current_group_id, current_items);
+            current_items = Vec::new();
+            current_group_id = row.group_start_rank;
+        }
+
+        current_items.push(row.item);
+    }
+
+    if !current_items.is_empty() {
+        push_group(current_group_id, current_items);
+    }
+
+    Ok(AlbumMediaResponse { groups })
+}
+
+/// Fetches media items for an album by specific Rank Groups.
+/// Used to hydrate the grid as the user scrolls.
+#[instrument(skip(pool))]
+pub async fn get_album_media(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: Option<i32>,
+) -> Result<FullAlbumMediaResponse, AlbumError> {
+    // Permission Check
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+    if !album.is_public {
+        let Some(uid) = user_id else {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        };
+        if !can_view_album(pool, uid, album_id).await? {
+            return Err(AlbumError::NotFound(album_id.to_string()));
+        }
+    }
+
+    let items = sqlx::query_as!(
+        AlbumTimelineItem,
+        r#"
+        SELECT
+            mi.id,
+            is_video,
+            use_panorama_viewer as is_panorama,
+            duration_ms::INT as duration_ms,
+            (width::real / height::real) as "ratio!"
+        FROM album_media_item as ami
+        JOIN album a ON a.id = ami.album_id
+        JOIN media_item mi ON mi.id = ami.media_item_id
+        WHERE ami.album_id = $1 AND mi.deleted = false
+        ORDER BY ami.rank
+        "#,
+        album_id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(FullAlbumMediaResponse {
+        items,
+        album: Some(AlbumInfo {
+            id: album.id,
+            name: album.name,
+            description: album.description,
+            is_public: album.is_public,
+            owner_id: album.owner_id,
+            thumbnail_id: album.thumbnail_id,
+            created_at: album.created_at.to_rfc3339(),
+            user_role: None,
+        }),
+    })
 }

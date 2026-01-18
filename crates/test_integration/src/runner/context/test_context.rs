@@ -45,7 +45,7 @@ impl TestContext {
         let settings_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("assets/settings.yaml")
             .canonicalize()?;
-        let base_settings = load_settings_from_path(&settings_path, false)?;
+        let base_settings = load_settings_from_path(&settings_path, None)?;
         let test_constants = load_constants_from_path(&settings_path)?;
         init_test_constants(test_constants);
 

@@ -1,3 +1,4 @@
+use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -92,5 +93,15 @@ impl From<sqlx::Error> for AuthError {
 impl From<jsonwebtoken::errors::Error> for AuthError {
     fn from(err: jsonwebtoken::errors::Error) -> Self {
         Self::Internal(eyre::Report::new(err))
+    }
+}
+
+impl From<DbError> for AuthError {
+    fn from(err: DbError) -> Self {
+        match err {
+            DbError::UniqueViolation(_) => Self::UserAlreadyExists,
+            DbError::Sqlx(err) => Self::Internal(eyre::Report::new(err)),
+            DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
+        }
     }
 }

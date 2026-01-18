@@ -1,10 +1,9 @@
 use media_analyzer::PanoInfo;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the 'panorama' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct Panorama {
     pub is_photosphere: bool,
     pub projection_type: Option<String>,

@@ -1,10 +1,9 @@
 use common_types::ml_analysis::PyCaptionData;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`caption_data`' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct CaptionData {
     pub default_caption: Option<String>,
     pub main_subject: Option<String>,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT a.*\n            FROM album a\n            JOIN album_collaborator ac ON a.id = ac.album_id\n            WHERE ac.user_id = $1\n            ORDER BY a.updated_at DESC\n            ",
+  "query": "\n            SELECT a.id, owner_id, name, description, thumbnail_id, is_public, created_at, updated_at\n            FROM album a\n            JOIN album_collaborator ac ON a.id = ac.album_id\n            WHERE ac.user_id = $1\n            ORDER BY a.updated_at DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -25,16 +25,21 @@
       },
       {
         "ordinal": 4,
+        "name": "thumbnail_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
         "name": "is_public",
         "type_info": "Bool"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -49,10 +54,11 @@
       false,
       false,
       true,
+      true,
       false,
       false,
       false
     ]
   },
-  "hash": "cf08da1cdbb310c5453391f3dd7da986cff99db66b9f7c646c487c9eb681285f"
+  "hash": "7c01f43c932e80ce72608d2cd444d1a2c397c02c497ae73c968d11a61225896c"
 }

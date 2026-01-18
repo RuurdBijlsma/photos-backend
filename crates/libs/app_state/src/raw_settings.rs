@@ -17,6 +17,7 @@ pub struct RawSettings {
 pub struct RawIngestSettings {
     pub media_folder: PathBuf,
     pub thumbnail_folder: PathBuf,
+    pub enable_cache: bool,
     pub analyzer: AnalyzerSettings,
     pub file_detection: FileDetectionSettings,
     pub thumbnails: ThumbnailSettings,
@@ -105,6 +106,13 @@ pub struct ApiSettings {
     pub port: u32,
     pub allowed_origins: Vec<String>,
     pub public_url: String,
+    pub rate_limiting: RateLimitingSettings,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct RateLimitingSettings {
+    pub req_per_second: u64,
+    pub burst_size: u32,
 }
 
 #[derive(Debug, Deserialize, Clone)]

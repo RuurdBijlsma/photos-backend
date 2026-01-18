@@ -74,6 +74,7 @@ pub async fn get_media_item_path(
     media_root: &Path,
     media_item_id: &str,
 ) -> Result<std::path::PathBuf, S2SError> {
+    // todo: deze join is nutteloos
     let relative_path = sqlx::query_scalar!(
         r#"
         SELECT mi.relative_path

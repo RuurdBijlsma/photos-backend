@@ -8,18 +8,17 @@ use chrono::{DateTime, Utc};
 use common_types::ml_analysis::PyVisualAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Represents a single photo's embedding data fetched for clustering.
-#[derive(Debug, FromRow, Clone)]
+#[derive(Debug, Clone)]
 pub struct MediaEmbedding {
     pub media_item_id: String,
     pub embedding: Vector,
 }
 
 /// A composite struct representing a '`visual_analysis`' run and all its associated nested data.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateVisualAnalysis {
     pub embedding: Vector,
     pub percentage: i32,
@@ -47,7 +46,7 @@ impl From<PyVisualAnalysis> for CreateVisualAnalysis {
 }
 
 /// A composite struct representing a '`visual_analysis`' run and all its associated nested data.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct ReadVisualAnalysis {
     pub created_at: DateTime<Utc>,
     pub percentage: i32,

@@ -1,3 +1,4 @@
+use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -67,7 +68,7 @@ impl IntoResponse for OnboardingError {
                 "An unexpected internal error occurred.".into(),
             ),
             Self::MediaFolderAlreadySet => (
-                StatusCode::UNAUTHORIZED,
+                StatusCode::FORBIDDEN,
                 "Media folder is already configured for this user.".into(),
             ),
         };
@@ -80,5 +81,15 @@ impl IntoResponse for OnboardingError {
 impl From<tokio::task::JoinError> for OnboardingError {
     fn from(err: tokio::task::JoinError) -> Self {
         Self::Internal(eyre::Report::new(err))
+    }
+}
+
+impl From<DbError> for OnboardingError {
+    fn from(err: DbError) -> Self {
+        match err {
+            DbError::UniqueViolation(sql_err) => Self::Database(sql_err),
+            DbError::Sqlx(err) => Self::Internal(eyre::Report::new(err)),
+            DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
+        }
     }
 }

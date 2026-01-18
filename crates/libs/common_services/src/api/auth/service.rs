@@ -5,6 +5,7 @@ use crate::api::auth::token::{
     RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
 use crate::database::app_user::{User, UserRole, UserWithPassword};
+use crate::database::user_store::UserStore;
 use app_state::constants;
 use axum::Json;
 use axum::http::StatusCode;
@@ -24,15 +25,9 @@ pub async fn authenticate_user(
     email: &str,
     password: &str,
 ) -> Result<UserWithPassword, AuthError> {
-    let user = sqlx::query_as!(
-        UserWithPassword,
-        r#"SELECT id, email, name, password, role as "role: UserRole", created_at, updated_at, media_folder
-           FROM app_user WHERE email = $1"#,
-        email
-    )
-    .fetch_optional(pool)
-    .await?
-    .ok_or(AuthError::InvalidCredentials)?;
+    let user = UserStore::find_by_email_with_password(pool, email)
+        .await?
+        .ok_or(AuthError::InvalidCredentials)?;
 
     let valid = verify_password(password.as_ref(), &user.password)?;
     if !valid {
@@ -83,28 +78,7 @@ pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, Au
         });
     }
 
-    let result = sqlx::query_as!(
-        User,
-        r#"
-        INSERT INTO app_user (email, name, password, role)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, email, name, media_folder, role as "role: UserRole", created_at, updated_at
-        "#,
-        payload.email,
-        payload.name,
-        hashed,
-        role as UserRole
-    )
-    .fetch_one(pool)
-    .await;
-
-    match result {
-        Ok(user) => Ok(user),
-        Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
-            Err(AuthError::UserAlreadyExists)
-        }
-        Err(e) => Err(e.into()),
-    }
+    Ok(UserStore::create(pool, &payload.email, &payload.name, &hashed, role, None).await?)
 }
 
 /// Stores a refresh token in the database.
@@ -195,14 +169,9 @@ pub async fn refresh_tokens(
         return Err(AuthError::InvalidToken);
     }
 
-    let user_role = sqlx::query!(
-        r#"SELECT role as "role: UserRole" FROM app_user WHERE id = $1"#,
-        record.user_id
-    )
-    .fetch_one(pool)
-    .await
-    .map_err(|_| AuthError::UserNotFound)?
-    .role;
+    let user_role = UserStore::get_user_role(pool, record.user_id)
+        .await?
+        .ok_or(AuthError::UserNotFound)?;
 
     let mut tx = pool.begin().await?;
     sqlx::query!("DELETE FROM refresh_token WHERE selector = $1", selector)
@@ -231,7 +200,9 @@ pub async fn logout_user(pool: &PgPool, raw_token: &str) -> Result<StatusCode, A
     // If the token is malformed, we just ignore it and succeed silently.
     if let Ok((selector, verifier_bytes)) = split_refresh_token(raw_token)
         && let Some(rec) = sqlx::query!(
-            "SELECT user_id, verifier_hash FROM refresh_token WHERE selector = $1",
+            "SELECT user_id, verifier_hash
+            FROM refresh_token
+            WHERE selector = $1",
             selector
         )
         .fetch_optional(pool)

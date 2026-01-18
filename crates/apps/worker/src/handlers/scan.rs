@@ -4,8 +4,8 @@ use app_state::{AppSettings, MakeRelativePath};
 use color_eyre::eyre::Result;
 use color_eyre::eyre::eyre;
 use common_services::alert;
-use common_services::database::app_user::user_from_relative_path;
 use common_services::database::jobs::{Job, JobType};
+use common_services::database::user_store::UserStore;
 use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
 use sqlx::PgPool;
 use std::collections::HashSet;
@@ -155,7 +155,7 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
             info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
             // Re-ingest files with missing thumbnails, as long as the fs file exists.
 
-            if let Some(user) = user_from_relative_path(&relative_path, pool).await? {
+            if let Some(user) = UserStore::find_user_by_relative_path(pool, &relative_path).await? {
                 enqueue_full_ingest(pool, settings, &relative_path, user.id).await?;
             } else {
                 alert!("[Sync - Thumbnail scan] Cannot find user from relative path.");
@@ -166,23 +166,13 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     Ok(())
 }
 
-struct ScanUser {
-    pub id: i32,
-    pub media_folder: Option<String>,
-}
-
 /// Run the indexing scan.
 ///
 /// # Errors
 ///
 /// Error if creating thumbnails dir doesn't work out
 pub async fn run_scan(pool: &PgPool, settings: &AppSettings) -> Result<()> {
-    let users = sqlx::query_as!(
-        ScanUser,
-        r#"SELECT id, media_folder FROM app_user WHERE media_folder IS NOT NULL"#
-    )
-    .fetch_all(pool)
-    .await?;
+    let users = UserStore::list_users_with_media_folders(pool).await?;
     let media_root = &settings.ingest.media_root;
     info!("Scanning \"{}\" ...", &media_root.display());
     for user in users {

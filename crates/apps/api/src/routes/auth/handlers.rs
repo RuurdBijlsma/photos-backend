@@ -10,6 +10,7 @@ use common_services::api::auth::service::{
 };
 use common_services::api::auth::token::generate_refresh_token_parts;
 use common_services::database::app_user::User;
+use tracing::instrument;
 
 /// Handles user login and returns a new set of tokens.
 ///
@@ -20,12 +21,14 @@ use common_services::database::app_user::User;
 #[utoipa::path(
     post,
     path = "/auth/login",
+    tag = "Auth",
     request_body = LoginUser,
     responses(
         (status = 200, description = "Login successful", body = Tokens),
         (status = 401, description = "Invalid credentials"),
     )
 )]
+#[instrument(skip(context, payload), err(Debug))]
 pub async fn login(
     State(context): State<ApiContext>,
     Json(payload): Json<LoginUser>,
@@ -52,12 +55,14 @@ pub async fn login(
 #[utoipa::path(
     post,
     path = "/auth/register",
+    tag = "Auth",
     request_body = CreateUser,
     responses(
         (status = 200, description = "User created successfully", body = User),
         (status = 409, description = "User with this email already exists"),
     )
 )]
+#[instrument(skip(context, payload), err(Debug))]
 pub async fn register(
     State(context): State<ApiContext>,
     Json(payload): Json<CreateUser>,
@@ -74,12 +79,14 @@ pub async fn register(
 #[utoipa::path(
     post,
     path = "/auth/refresh",
+    tag = "Auth",
     request_body = RefreshTokenPayload,
     responses(
         (status = 200, description = "Session refreshed successfully", body = Tokens),
         (status = 401, description = "Invalid or expired refresh token"),
     )
 )]
+#[instrument(skip(context, payload), err(Debug))]
 pub async fn refresh_session(
     State(context): State<ApiContext>,
     Json(payload): Json<RefreshTokenPayload>,
@@ -100,6 +107,7 @@ pub async fn refresh_session(
 #[utoipa::path(
     post,
     path = "/auth/logout",
+    tag = "Auth",
     request_body = RefreshTokenPayload,
     responses(
         (status = 200, description = "Logout successful"),
@@ -121,6 +129,7 @@ pub async fn logout(
 #[utoipa::path(
     get,
     path = "/auth/me",
+    tag = "Auth",
     responses(
         (status = 200, description = "Current user data", body = User),
         (status = 401, description = "Authentication required"),

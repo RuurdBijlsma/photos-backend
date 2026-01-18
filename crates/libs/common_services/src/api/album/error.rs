@@ -5,7 +5,7 @@ use axum::response::{IntoResponse, Response};
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
-use tracing::{error, warn};
+use tracing::warn;
 use url::ParseError;
 
 #[derive(Debug, Error)]
@@ -19,14 +19,17 @@ pub enum AlbumError {
     #[error("Not found: {0}")]
     NotFound(String),
 
-    #[error("Unauthorized: {0}")]
-    Unauthorized(String),
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
 
     #[error("Invalid invitation token: {0}")]
     InvalidInviteToken(String),
 
     #[error("Remote server error: {0}")]
     RemoteServerError(String),
+
+    #[error("Bad Request: {0}")]
+    BadRequest(String),
 }
 
 // Renamed for more general use
@@ -37,14 +40,17 @@ fn log_error(error: &AlbumError) {
         AlbumError::NotFound(id) => {
             warn!("Album -> Media item not found: {}", id);
         }
-        AlbumError::Unauthorized(id) => {
-            warn!("Unauthorized: {}", id);
+        AlbumError::Forbidden(id) => {
+            warn!("Album -> Forbidden: {}", id);
         }
         AlbumError::InvalidInviteToken(id) => {
             warn!("Invalid invitation token: {}", id);
         }
         AlbumError::RemoteServerError(message) => {
             warn!("Album sharing -> Remote server error: {}", message);
+        }
+        AlbumError::BadRequest(message) => {
+            warn!("Album -> Bad Request: {}", message);
         }
     }
 }
@@ -65,9 +71,7 @@ impl IntoResponse for AlbumError {
             Self::NotFound(message) => {
                 (StatusCode::NOT_FOUND, format!("Album not found: {message}"))
             }
-            Self::Unauthorized(message) => {
-                (StatusCode::UNAUTHORIZED, format!("Unauthorized: {message}"))
-            }
+            Self::Forbidden(message) => (StatusCode::FORBIDDEN, format!("Forbidden: {message}")),
             Self::InvalidInviteToken(message) => (
                 StatusCode::BAD_REQUEST,
                 format!("Invalid invite: {message}"),
@@ -76,6 +80,9 @@ impl IntoResponse for AlbumError {
                 StatusCode::BAD_GATEWAY,
                 format!("Could not contact remote server: {message}"),
             ),
+            Self::BadRequest(message) => {
+                (StatusCode::BAD_REQUEST, format!("Bad request: {message}"))
+            }
         };
 
         let body = Json(json!({ "error": error_message }));
@@ -110,6 +117,7 @@ impl From<ParseError> for AlbumError {
 impl From<DbError> for AlbumError {
     fn from(err: DbError) -> Self {
         match err {
+            DbError::UniqueViolation(sql_err) => Self::Database(sql_err),
             DbError::Sqlx(sql_err) => {
                 if matches!(sql_err, sqlx::Error::RowNotFound) {
                     Self::NotFound("row not found".into())

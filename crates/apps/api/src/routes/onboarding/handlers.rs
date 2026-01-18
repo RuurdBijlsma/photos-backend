@@ -20,6 +20,7 @@ use common_services::database::app_user::User;
 #[utoipa::path(
     get,
     path = "/onboarding/disk-info",
+    tag = "Onboarding",
     responses(
         (status = 200, description = "Disk information retrieved successfully", body = DiskResponse),
         (status = 500, description = "A configured path is not a valid directory"),
@@ -36,6 +37,7 @@ pub async fn get_disk_response(
 #[utoipa::path(
     get,
     path = "/onboarding/media-sample",
+    tag = "Onboarding",
     params(
         ("folder" = String, Query, description = "The folder to sample media from")
     ),
@@ -57,6 +59,7 @@ pub async fn get_folder_media_sample(
 #[utoipa::path(
     get,
     path = "/onboarding/unsupported-files",
+    tag = "Onboarding",
     params(
         ("folder" = String, Query, description = "The folder to scan for unsupported files")
     ),
@@ -78,6 +81,7 @@ pub async fn get_folder_unsupported(
 #[utoipa::path(
     get,
     path = "/onboarding/folders",
+    tag = "Onboarding",
     params(
         ("folder" = String, Query, description = "The base folder to list subdirectories from")
     ),
@@ -98,6 +102,7 @@ pub async fn get_folders(
 #[utoipa::path(
     post,
     path = "/onboarding/make-folder",
+    tag = "Onboarding",
     request_body = MakeFolderBody,
     responses(
         (status = 204, description = "Folder created successfully"),
@@ -118,8 +123,9 @@ pub async fn make_folder(
 ///
 /// Returns a `OnboardingError` if a database connection cannot be established or the query fails.
 #[utoipa::path(
-    get,
+    post,
     path = "/onboarding/start-processing",
+    tag = "Onboarding",
     responses(
         (status = 200, description = "Processing job enqueued successfully.", body = bool),
         (status = 500, description = "Database error"),

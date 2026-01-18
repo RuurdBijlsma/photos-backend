@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT 1 as \"one!\"\n            FROM album_media_item ami\n            JOIN media_item mi ON ami.media_item_id = mi.id\n            WHERE ami.album_id = $1\n              AND ami.media_item_id = $2\n              AND mi.deleted = false\n            LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "one!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "238d746286e18d3f4b7e86de7af16930dd8a0172d9dee56140fc9ca48314c7cb"
+}

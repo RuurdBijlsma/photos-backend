@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[derive(Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -8,7 +8,7 @@ pub struct S2SInviteSummaryRequest {
     pub token: String,
 }
 
-#[derive(Deserialize, ToSchema, Debug)]
+#[derive(Deserialize, ToSchema, Debug, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadParams {
     pub relative_path: String,

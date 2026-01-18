@@ -2,17 +2,15 @@
 
 <#
 .SYNOPSIS
-    Generates a comprehensive context for Large Language Models (LLMs) to help explain programming problems in a Rust repository.
+    Generates a comprehensive context for Large Language Models (LLMs) to help explain programming problems in a repository.
 
 .DESCRIPTION
     This script automates the collection of project information to create a detailed context for an LLM.
     It gathers:
     - A file and directory tree structure.
     - Content of files or directories selected via the clipboard.
-    - Contents of all Cargo.toml files.
     - The output of 'git diff' for uncommitted changes.
     - An OpenAPI specification from a configured URL.
-    - SQL migration files.
 
     The final context is placed on the clipboard. The script is designed to be run from the root of a Git repository.
 #>
@@ -189,16 +187,6 @@ Write-Host "Loaded $( @($ignorePatterns).Length ) ignore patterns from .gitignor
 # 2. Generate and add the ignore patterns list and the file tree
 if ((Read-YesNoPrompt -prompt "`nAdd folder structure?" -default 'n') -eq 'y')
 {
-    # Add the "Ignored Patterns" section
-    $contextBuilder.AppendLine("## Ignored File & Directory Patterns") | Out-Null
-    $contextBuilder.AppendLine("The following patterns have been excluded from the file tree below:") | Out-Null
-    $contextBuilder.AppendLine('```') | Out-Null
-    foreach ($pattern in $ignorePatterns) {
-        $contextBuilder.AppendLine($pattern) | Out-Null
-    }
-    $contextBuilder.AppendLine('```') | Out-Null
-    $contextBuilder.AppendLine() | Out-Null
-
     # Add the "File Structure" section
     $contextBuilder.AppendLine("## File & Directory Structure") | Out-Null
     $contextBuilder.AppendLine('```') | Out-Null
@@ -252,7 +240,7 @@ if (Get-Clipboard -Format FileDropList -ErrorAction SilentlyContinue)
             continue
         }
 
-        # MODIFIED: Use a more robust check for directories.
+        # Check for directories
         if (Test-Path -Path $itemPath -PathType Container)
         {
             Write-Host "`nAdding all files in directory: $( $item.Name )" -ForegroundColor Yellow
@@ -273,28 +261,7 @@ if (Get-Clipboard -Format FileDropList -ErrorAction SilentlyContinue)
     }
 }
 
-
-# 4. Add Cargo.toml files
-$cargoFiles = Get-ChildItem -Path $projectRoot -Recurse -Filter "Cargo.toml" | Where-Object { -not (Test-PathAgainstPatterns $_.FullName $ignorePatterns $projectRoot) }
-if ($cargoFiles)
-{
-    if ((Read-YesNoPrompt -prompt "`nFound $( $cargoFiles.Count ) Cargo.toml file(s). Add all of them?" -default 'n') -eq 'y')
-    {
-        foreach ($file in $cargoFiles)
-        {
-            $fileUri = [System.Uri]$file.FullName
-            $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
-            $contextBuilder.AppendLine("## File: $relativePath") | Out-Null
-            $contextBuilder.AppendLine('```toml') | Out-Null
-            $contextBuilder.AppendLine((Get-Content $file.FullName -Raw)) | Out-Null
-            $contextBuilder.AppendLine('```') | Out-Null
-            $contextBuilder.AppendLine() | Out-Null
-            Write-Host "Added content of $relativePath" -ForegroundColor Green
-        }
-    }
-}
-
-# 5. Add Git Diff
+# 4. Add Git Diff
 if ((Read-YesNoPrompt -prompt "`nAdd uncommitted changes (git diff)?" -default 'n') -eq 'y')
 {
     $gitDiff = git diff
@@ -313,7 +280,7 @@ if ((Read-YesNoPrompt -prompt "`nAdd uncommitted changes (git diff)?" -default '
     }
 }
 
-# 6. Add OpenAPI Spec
+# 5. Add OpenAPI Spec
 if (-not [string]::IsNullOrWhiteSpace($openApiUrl))
 {
     if ((Read-YesNoPrompt -prompt "`nFetch and add OpenAPI spec from $openApiUrl?" -default 'n') -eq 'y')
@@ -335,31 +302,6 @@ if (-not [string]::IsNullOrWhiteSpace($openApiUrl))
         catch
         {
             Write-Warning "Failed to fetch OpenAPI spec: $_"
-        }
-    }
-}
-
-# 7. Add SQL Migrations
-$migrationsPath = Join-Path $projectRoot "migrations"
-if (Test-Path $migrationsPath)
-{
-    $sqlFiles = Get-ChildItem -Path $migrationsPath -Filter "*.sql"
-    if ($sqlFiles)
-    {
-        if ((Read-YesNoPrompt -prompt "`nFound $( $sqlFiles.Count ) SQL migration file(s). Add all of them?" -default 'n') -eq 'y')
-        {
-            $contextBuilder.AppendLine("## SQL Migrations") | Out-Null
-            foreach ($file in $sqlFiles)
-            {
-                $fileUri = [System.Uri]$file.FullName
-                $relativePath = [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($fileUri).ToString())
-                $contextBuilder.AppendLine("### File: $relativePath") | Out-Null
-                $contextBuilder.AppendLine('```sql') | Out-Null
-                $contextBuilder.AppendLine((Get-Content $file.FullName -Raw)) | Out-Null
-                $contextBuilder.AppendLine('```') | Out-Null
-                $contextBuilder.AppendLine() | Out-Null
-                Write-Host "Added content of $relativePath" -ForegroundColor Green
-            }
         }
     }
 }

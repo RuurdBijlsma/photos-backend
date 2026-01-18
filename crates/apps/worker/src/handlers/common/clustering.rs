@@ -3,9 +3,10 @@ use crate::handlers::JobResult;
 use async_trait::async_trait;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
+use common_services::database::user_store::UserStore;
 use hdbscan::{Center, DistanceMetric, Hdbscan, HdbscanHyperParams};
 use pgvector::Vector;
-use sqlx::{PgPool, Transaction, query_scalar};
+use sqlx::{PgPool, Transaction};
 use std::collections::{HashMap, HashSet};
 use tracing::info;
 
@@ -144,10 +145,7 @@ async fn fetch_user_ids(pool: &PgPool, job: &Job) -> Result<Vec<i32>> {
     if let Some(user_id) = job.user_id {
         Ok(vec![user_id])
     } else {
-        query_scalar!("SELECT id FROM app_user")
-            .fetch_all(pool)
-            .await
-            .map_err(Into::into)
+        Ok(UserStore::list_user_ids(pool).await?)
     }
 }
 

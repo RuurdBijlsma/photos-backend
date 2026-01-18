@@ -1,13 +1,17 @@
+use crate::timeline::websocket::MediaPayload;
 use app_state::{AppSettings, IngestSettings};
 use axum::extract::FromRef;
 use common_services::s2s_client::S2SClient;
 use sqlx::PgPool;
+use std::sync::Arc;
+use tokio::sync::broadcast;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ApiContext {
     pub pool: PgPool,
     pub s2s_client: S2SClient,
     pub settings: AppSettings,
+    pub timeline_broadcaster: broadcast::Sender<Arc<MediaPayload>>,
 }
 
 // These impls allow Axum to extract the PgPool and reqwest::Client from the AppState.

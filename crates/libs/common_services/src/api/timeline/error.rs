@@ -63,7 +63,7 @@ impl From<tokio::task::JoinError> for TimelineError {
 impl From<DbError> for TimelineError {
     fn from(err: DbError) -> Self {
         match err {
-            DbError::Sqlx(sql_err) => Self::Database(sql_err),
+            DbError::UniqueViolation(err) | DbError::Sqlx(err) => Self::Database(err),
             DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }
     }

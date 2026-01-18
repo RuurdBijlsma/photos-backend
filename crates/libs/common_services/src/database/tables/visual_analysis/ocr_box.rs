@@ -1,10 +1,9 @@
 use common_types::ml_analysis::PyOCRBox;
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use utoipa::ToSchema;
 
 /// Corresponds to the '`ocr_box`' table.
-#[derive(Debug, Serialize, Deserialize, FromRow, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct OCRBox {
     pub text: String,
     pub position_x: f32,

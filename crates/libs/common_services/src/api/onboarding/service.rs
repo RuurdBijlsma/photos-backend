@@ -5,7 +5,9 @@ use crate::api::onboarding::helpers::{check_drive_info, list_folders};
 use crate::api::onboarding::interfaces::{
     DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
+use crate::database::app_user::User;
 use crate::database::jobs::JobType;
+use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
 use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_posix_string};
 use sqlx::PgPool;
@@ -252,30 +254,21 @@ pub async fn start_processing(
     settings: &AppSettings,
     user_id: i32,
     user_folder: String,
-) -> Result<(), OnboardingError> {
+) -> Result<User, OnboardingError> {
     let media_root = &settings.ingest.media_root;
     let user_folder = validate_user_folder(media_root, &user_folder).await?;
     let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
-
-    let updated = sqlx::query!(
-        "UPDATE app_user
-         SET media_folder = $1
-         WHERE id = $2 AND media_folder IS NULL",
-        relative,
-        user_id
-    )
-    .execute(pool)
-    .await?;
-
-    // If nothing changed → folder already set → return Unauthorized
-    if updated.rows_affected() == 0 {
+    let existing_folder = UserStore::get_user_media_folder(pool, user_id).await?;
+    if existing_folder.is_some() {
         return Err(OnboardingError::MediaFolderAlreadySet);
     }
+    let updated_user =
+        UserStore::update(pool, user_id, None, None, None, None, Some(relative)).await?;
 
     enqueue_job::<()>(pool, settings, JobType::Scan)
         .user_id(user_id)
         .call()
         .await?;
 
-    Ok(())
+    Ok(updated_user)
 }

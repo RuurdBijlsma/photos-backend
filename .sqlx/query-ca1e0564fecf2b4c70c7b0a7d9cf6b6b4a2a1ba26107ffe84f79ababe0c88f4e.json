@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT \n            id, email, name, media_folder, \n            created_at, updated_at,\n            role as \"role: UserRole\"\n        FROM app_user \n        WHERE email = $1",
+  "query": "\n            SELECT\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                role as \"role: UserRole\"\n            FROM app_user\n            ",
   "describe": {
     "columns": [
       {
@@ -10,28 +10,28 @@
       },
       {
         "ordinal": 1,
-        "name": "email",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 2,
-        "name": "name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 3,
-        "name": "media_folder",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 2,
         "name": "updated_at",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "media_folder",
+        "type_info": "Text"
       },
       {
         "ordinal": 6,
@@ -50,19 +50,17 @@
       }
     ],
     "parameters": {
-      "Left": [
-        "Text"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
       false,
       false,
+      false,
+      false,
       true,
-      false,
-      false,
       false
     ]
   },
-  "hash": "d1f1999f94d76c082e1f5e3e14e001a8b04f462b005f5747838c7eba55b163a2"
+  "hash": "ca1e0564fecf2b4c70c7b0a7d9cf6b6b4a2a1ba26107ffe84f79ababe0c88f4e"
 }

@@ -33,3 +33,10 @@ url = { version = "2.5.7", features = ["serde"] }
 bon = "3.8.1"
 pgvector = { version = "0.4", features = ["sqlx", "serde"] }
 futures-util = "0.3.31"
+
+[dev-dependencies]
+criterion = { version = "0.8.0", features = ["async_tokio", "html_reports"] }
+
+[[bench]]
+name = "timeline_benchmark"
+harness = false

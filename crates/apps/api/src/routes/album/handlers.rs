@@ -1,22 +1,25 @@
 use crate::api_state::ApiContext;
-use crate::auth::middleware::OptionalUser;
-use axum::extract::{Path, State};
+use crate::auth::middlewares::optional_user::OptionalUser;
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
+use axum_extra::protobuf::Protobuf;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumDetailsResponse,
-    CheckInviteRequest, CreateAlbumRequest, UpdateAlbumRequest,
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
+    CreateAlbumRequest, GetAlbumMediaParams, ListAlbumsParam, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
-    get_album_details, remove_collaborator, remove_media_from_album, update_album,
+    get_album_ids, get_album_media, get_album_media_by_groups, get_album_ratios,
+    remove_collaborator, remove_media_from_album, update_album,
 };
-use common_services::database::album::album::{Album, AlbumSummary};
+use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use tracing::instrument;
+use common_types::pb::api::{AlbumMediaResponse, AlbumRatiosResponse, FullAlbumMediaResponse};
+use tracing::{info, instrument};
 
 /// Create a new album.
 ///
@@ -32,17 +35,20 @@ use tracing::instrument;
     ),
     security(("bearer_auth" = []))
 )]
+#[instrument(skip(context, user), err(Debug))]
 pub async fn create_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Json(payload): Json<CreateAlbumRequest>,
 ) -> Result<(StatusCode, Json<Album>), AlbumError> {
+    info!("Create album handler {:?}", payload);
     let album = create_album(
         &context.pool,
         user.id,
         &payload.name,
         payload.description,
         payload.is_public,
+        &payload.media_item_ids,
     )
     .await?;
     Ok((StatusCode::CREATED, Json(album)))
@@ -56,43 +62,25 @@ pub async fn create_album_handler(
     path = "/album",
     tag = "Album",
     responses(
-        (status = 200, description = "A list of the user's albums.", body = Vec<Album>),
+        (status = 200, description = "A list of the user's albums.", body = Vec<AlbumWithCount>),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
 )]
+#[instrument(skip(context, user), err(Debug))]
 pub async fn get_user_albums_handler(
     State(context): State<ApiContext>,
+    Query(query): Query<ListAlbumsParam>,
     Extension(user): Extension<User>,
-) -> Result<Json<Vec<Album>>, AlbumError> {
-    let albums = AlbumStore::list_by_user_id(&context.pool, user.id).await?;
+) -> Result<Json<Vec<AlbumWithCount>>, AlbumError> {
+    let albums = AlbumStore::list_with_count_by_user_id(
+        &context.pool,
+        user.id,
+        query.sort_field,
+        query.sort_direction,
+    )
+    .await?;
     Ok(Json(albums))
-}
-
-/// Get details for a specific album.
-///
-/// The user must be a collaborator on the album to view its details.
-#[utoipa::path(
-    get,
-    path = "/album/{album_id}",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album.")
-    ),
-    responses(
-        (status = 200, description = "Detailed information about the album.", body = AlbumDetailsResponse),
-        (status = 404, description = "Album not found or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
-pub async fn get_album_details_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<OptionalUser>,
-    Path(album_id): Path<String>,
-) -> Result<Json<AlbumDetailsResponse>, AlbumError> {
-    let details = get_album_details(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
-    Ok(Json(details))
 }
 
 /// Update an album's details.
@@ -125,6 +113,7 @@ pub async fn update_album_handler(
         user.id,
         payload.name,
         payload.description,
+        payload.thumbnail_id,
         payload.is_public,
     )
     .await?;
@@ -337,4 +326,120 @@ pub async fn accept_invite_handler(
     )
     .await?;
     Ok(Json(album))
+}
+
+// ====================================== //
+// === --- === ALBUM TIMELINE === --- === //
+// ====================================== //
+
+/// Get album metadata and timeline ratios (grouped by rank).
+/// Replaces the need for a heavy initial load.
+#[utoipa::path(
+    get,
+    path = "/album/{album_id}/ratios",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album.")
+    ),
+    responses(
+        (status = 200, description = "Album metadata and media ratios.", body = AlbumRatiosResponse),
+        (status = 404, description = "Album not found or permission denied."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = [])) // Optional auth handled inside service
+)]
+pub async fn get_album_ratios_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<OptionalUser>,
+    Path(album_id): Path<String>,
+) -> Result<Protobuf<AlbumRatiosResponse>, AlbumError> {
+    let response = get_album_ratios(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
+    Ok(Protobuf(response))
+}
+
+/// Get all media IDs for an album.
+#[utoipa::path(
+    get,
+    path = "/album/{album_id}/ids",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album.")
+    ),
+    responses(
+        (status = 200, description = "List of media IDs in the album.", body = Vec<String>),
+        (status = 404, description = "Album not found."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_album_ids_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<OptionalUser>,
+    Path(album_id): Path<String>,
+) -> Result<Json<Vec<String>>, AlbumError> {
+    let ids = get_album_ids(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
+    Ok(Json(ids))
+}
+
+/// Get media items for specific rank groups within an album.
+#[utoipa::path(
+    get,
+    path = "/album/{album_id}/by-groups",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album."),
+        GetAlbumMediaParams
+    ),
+    responses(
+        (status = 200, description = "Media items for the requested groups.", body = AlbumMediaResponse),
+        (status = 500, description = "Internal Error."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_album_media_by_groups_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<OptionalUser>,
+    Path(album_id): Path<String>,
+    Query(params): Query<GetAlbumMediaParams>,
+) -> Result<Protobuf<AlbumMediaResponse>, AlbumError> {
+    let group_ids = params
+        .groups
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| {
+            s.parse::<f64>().map_err(|_| {
+                AlbumError::BadRequest(format!(
+                    "Invalid rank format '{s}' in 'groups' parameter. Must be float."
+                ))
+            })
+        })
+        .collect::<Result<Vec<f64>, _>>()?;
+
+    let response =
+        get_album_media_by_groups(&context.pool, &album_id, user.0.map(|u| u.id), &group_ids)
+            .await?;
+    Ok(Protobuf(response))
+}
+
+/// Get media items for specific rank groups within an album.
+#[utoipa::path(
+    get,
+    path = "/album/{album_id}/media",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album."),
+    ),
+    responses(
+        (status = 200, description = "Media items for the requested groups.", body = AlbumMediaResponse),
+        (status = 500, description = "Internal Error."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn get_album_media_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<OptionalUser>,
+    Path(album_id): Path<String>,
+) -> Result<Protobuf<FullAlbumMediaResponse>, AlbumError> {
+    let response = get_album_media(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
+    Ok(Protobuf(response))
 }

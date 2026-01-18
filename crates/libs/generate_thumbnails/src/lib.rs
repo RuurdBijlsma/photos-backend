@@ -1,5 +1,10 @@
 #![deny(clippy::unwrap_used)]
-#![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+#![allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc
+)]
 
 //! # Thumbnail Generation Crate
 //!
@@ -40,6 +45,7 @@ use color_eyre::Result;
 use color_eyre::eyre::bail;
 use std::path::Path;
 use temp_dir::TempDir;
+pub use utils::copy_dir_contents;
 
 /// Generates thumbnails for a given media file (image or video) based on the provided configuration.
 ///

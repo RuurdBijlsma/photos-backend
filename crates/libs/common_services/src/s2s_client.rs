@@ -24,7 +24,7 @@ pub fn extract_token_claims(token: &str, jwt_secret: &str) -> Result<AlbumShareC
     .map_err(Into::into)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct S2SClient {
     http_client: Client,
 }

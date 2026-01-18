@@ -9,14 +9,17 @@ CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'rejected');
 -- The main 'album' table.
 CREATE TABLE album
 (
-    id          VARCHAR(10) PRIMARY KEY,
-    owner_id    INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    name        TEXT        NOT NULL,
-    description TEXT,
+    id                          VARCHAR(10) PRIMARY KEY,
+    owner_id                    INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    name                        TEXT        NOT NULL,
+    description                 TEXT,
+    thumbnail_id                VARCHAR(10) NULL REFERENCES media_item (id) ON DELETE SET NULL,
     -- This flag enables public, view-only link sharing without requiring a login.
-    is_public   BOOLEAN     NOT NULL DEFAULT false,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    is_public                   BOOLEAN     NOT NULL DEFAULT false,
+    -- sort column: automatically updated via trigger
+    latest_media_item_timestamp TIMESTAMPTZ,
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Index to quickly find all albums owned by a specific user.
@@ -26,20 +29,22 @@ CREATE INDEX idx_album_is_public ON album (id) WHERE is_public = true;
 
 
 -- A many-to-many join table connecting albums and media_items.
+-- Ranks are strictly doubles to allow insertion between existing items without full rebalancing.
 CREATE TABLE album_media_item
 (
-    album_id      VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
-    media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
-    -- Tracks which user added the media item to the album. Can be null if the user is deleted.
-    added_by_user INT         REFERENCES app_user (id) ON DELETE SET NULL,
-    added_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    -- Ensures a media item can only appear once in any given album.
-    PRIMARY KEY (album_id, media_item_id)
+    album_id      VARCHAR(10)      NOT NULL REFERENCES album (id) ON DELETE CASCADE,
+    media_item_id VARCHAR(10)      NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
+    added_by_user INT              REFERENCES app_user (id) ON DELETE SET NULL,
+    added_at      TIMESTAMPTZ      NOT NULL DEFAULT now(),
+    -- The user can manually sort items. We use float rank for easier reordering (insert between).
+    rank          DOUBLE PRECISION NOT NULL,
+    PRIMARY KEY (album_id, media_item_id),
+    CONSTRAINT uq_album_media_rank UNIQUE (album_id, rank)
 );
 
--- Index for quickly retrieving all media items within a specific album.
+-- Indices for album_media_item
+CREATE INDEX idx_album_media_item_rank ON album_media_item (album_id, rank);
 CREATE INDEX idx_album_media_item_album_id ON album_media_item (album_id);
--- Index for quickly finding which albums a specific media item belongs to.
 CREATE INDEX idx_album_media_item_media_item_id ON album_media_item (media_item_id);
 
 

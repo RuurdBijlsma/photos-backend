@@ -1,12 +1,12 @@
 use app_state::constants;
-use color_eyre::eyre::{Result, WrapErr};
+use color_eyre::eyre::Result;
 use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
 use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
-use tracing::info;
+use tracing::{info, warn};
 
 pub fn find_migrations_dir() -> Result<PathBuf> {
     let mut current_dir = env::current_exe()?
@@ -56,11 +56,10 @@ pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Poo
     if run_migrations {
         let migrations_folder = find_migrations_dir()?;
         let migrator = Migrator::new(migrations_folder).await?;
-        migrator
-            .run(&pool)
-            .await
-            .wrap_err("Failed to run database migrations")?;
-        info!("Database migrations completed successfully.");
+        match migrator.run(&pool).await {
+            Ok(()) => info!("Database migrations completed successfully."),
+            Err(e) => warn!("Database doesn't feel like migrating today: {e:?}"),
+        }
     }
     Ok(pool)
 }

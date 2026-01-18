@@ -3,13 +3,12 @@ use crate::test_constants::{EMAIL, USERNAME};
 use crate::test_helpers::login;
 use color_eyre::eyre::{Result, bail};
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddMediaToAlbumRequest, AlbumDetailsResponse, CheckInviteRequest,
-    CreateAlbumRequest, UpdateAlbumRequest,
+    AcceptInviteRequest, AddMediaToAlbumRequest, CheckInviteRequest, CreateAlbumRequest,
+    UpdateAlbumRequest,
 };
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album_store::AlbumStore;
-use common_services::database::app_user::User;
-use common_services::database::app_user::UserRole;
+use common_services::database::user_store::UserStore;
 use reqwest::StatusCode;
 use std::time::{Duration, Instant};
 use tokio::fs;
@@ -27,6 +26,7 @@ pub async fn test_album_lifecycle(context: &TestContext) -> Result<()> {
         name: "Lifecycle Test Album".to_string(),
         description: Some("Integration test description".to_string()),
         is_public: false,
+        media_item_ids: vec![],
     };
 
     let response = client
@@ -52,16 +52,7 @@ pub async fn test_album_lifecycle(context: &TestContext) -> Result<()> {
     assert!(albums.iter().any(|a| a.id == created_album.id));
 
     // 3. Get Album Details
-    let response = client
-        .get(format!("{base_url}/album/{}", created_album.id))
-        .bearer_auth(&token)
-        .send()
-        .await?;
-
-    assert_eq!(response.status(), StatusCode::OK);
-    let details: AlbumDetailsResponse = response.json().await?;
-    assert_eq!(details.id, created_album.id);
-    assert_eq!(details.media_items.len(), 0);
+    // todo: get album details via /ratios, /ids, /by-month
 
     Ok(())
 }
@@ -80,6 +71,7 @@ pub async fn test_update_album(context: &TestContext) -> Result<()> {
             name: "Original Name".to_string(),
             description: None,
             is_public: false,
+            media_item_ids: vec![],
         })
         .send()
         .await?
@@ -90,6 +82,7 @@ pub async fn test_update_album(context: &TestContext) -> Result<()> {
     let update_payload = UpdateAlbumRequest {
         name: Some("Updated Name".to_string()),
         description: Some("Updated Description".to_string()),
+        thumbnail_id: None,
         is_public: Some(true),
     };
 
@@ -138,6 +131,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
             name: "Media Test Album".to_string(),
             description: None,
             is_public: false,
+            media_item_ids: vec![],
         })
         .send()
         .await?
@@ -157,16 +151,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     // Verify addition via details
-    let details: AlbumDetailsResponse = client
-        .get(format!("{base_url}/album/{}", album.id))
-        .bearer_auth(&token)
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    assert_eq!(details.media_items.len(), 1);
-    assert_eq!(details.media_items[0].id, media_id);
+    // todo verify with /ids, /ratios, /by-month, maybe just put back the get album details endpoint
 
     // 2. Remove Media from Album
     let response = client
@@ -178,15 +163,7 @@ pub async fn test_album_media_management(context: &TestContext) -> Result<()> {
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
     // Verify removal
-    let details: AlbumDetailsResponse = client
-        .get(format!("{base_url}/album/{}", album.id))
-        .bearer_auth(&token)
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    assert_eq!(details.media_items.len(), 0);
+    // todo verify with /ids, /ratios, /by-month, maybe just put back the get album details endpoint
 
     Ok(())
 }
@@ -214,6 +191,7 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
             name: source_album_name.to_string(),
             description: None,
             is_public: false,
+            media_item_ids: vec![],
         })
         .send()
         .await?
@@ -300,7 +278,7 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
     let album_content = AlbumStore::list_media_items(&context.pool, &album.id).await?;
     assert_eq!(album_content.len(), 1);
     let album_item = album_content.first().expect("There should be an item here");
-    let new_media_id = album_item.id.clone();
+    let new_media_id = album_item.media_item.id.clone();
     let Some(remote_user_id) = sqlx::query_scalar!(
         "SELECT remote_user_id FROM media_item WHERE id = $1",
         new_media_id
@@ -323,10 +301,9 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
         )
         .fetch_one(&context.pool)
         .await?;
-        let owning_user = sqlx::query_as!(User,
-            r#"SELECT id, email, name, media_folder, role as "role: UserRole", created_at, updated_at
-               FROM app_user"#).fetch_one(&context.pool).await?;
-
+        let owning_user = UserStore::find_by_id(&context.pool, remote_user.user_id)
+            .await?
+            .expect("This user should exist.");
         assert_eq!(remote_user.name, None);
         assert_eq!(remote_user.user_id, owning_user.id);
         assert!(remote_user.identity.contains(&format!("{USERNAME}@")));

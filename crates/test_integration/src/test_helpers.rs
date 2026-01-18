@@ -1,6 +1,7 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_constants::{EMAIL, PASSWORD};
 use color_eyre::Result;
+use color_eyre::eyre::bail;
 use common_services::api::auth::interfaces::{LoginUser, Tokens};
 use std::path::PathBuf;
 use walkdir::WalkDir;
@@ -16,9 +17,12 @@ pub async fn login(context: &TestContext) -> Result<String> {
         })
         .send()
         .await?;
-    let tokens: Tokens = response.json().await?;
-
-    Ok(tokens.access_token)
+    if response.status().is_success() {
+        let tokens: Tokens = response.json().await?;
+        Ok(tokens.access_token)
+    } else {
+        bail!("{} - {}", response.status(), response.text().await?)
+    }
 }
 
 pub fn media_dir_contents(context: &TestContext) -> Result<(Vec<PathBuf>, Vec<PathBuf>)> {
