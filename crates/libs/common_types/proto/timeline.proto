@@ -44,10 +44,11 @@ message AlbumTimelineItem {
   float ratio = 6;
 }
 
-message AlbumCollaborator {
-  int32 id = 1;
+message CollaboratorSummary {
+  int64 id = 1;
   int32 user_id = 2;
-  string role = 3;
+  string name = 3;
+  string role = 4;
 }
 
 message AlbumInfo {
@@ -60,5 +61,5 @@ message AlbumInfo {
   optional string thumbnail_id = 7;
   optional string first_date = 9;
   optional string last_date = 10;
-  repeated AlbumCollaborator collaborators = 11;
+  repeated CollaboratorSummary collaborators = 11;
 }

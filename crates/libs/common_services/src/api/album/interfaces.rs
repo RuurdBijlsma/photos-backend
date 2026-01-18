@@ -1,7 +1,7 @@
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::album::album::AlbumRole;
 use chrono::{DateTime, Utc};
-use common_types::pb::api::TimelineItem;
+use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 // --- Request Payloads ---
@@ -118,15 +118,6 @@ pub struct AlbumDetailsResponse {
 pub struct AlbumMediaItemSummary {
     pub media_item: TimelineItem,
     pub added_at: DateTime<Utc>,
-}
-
-/// A summary of a collaborator on an album.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct CollaboratorSummary {
-    pub id: i64,
-    pub name: String,
-    pub role: AlbumRole,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

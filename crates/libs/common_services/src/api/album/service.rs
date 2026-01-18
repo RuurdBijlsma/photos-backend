@@ -1,5 +1,6 @@
 use super::interfaces::{AcceptInviteRequest, AlbumShareClaims};
 use crate::api::album::error::AlbumError;
+use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
@@ -12,10 +13,7 @@ use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use common_types::pb::api::{
-    AlbumInfo,
-    AlbumTimelineItem, FullAlbumMediaResponse,
-};
+use common_types::pb::api::{AlbumInfo, AlbumTimelineItem, FullAlbumMediaResponse};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::instrument;
@@ -395,8 +393,7 @@ pub async fn get_album_media(
     album_id: &str,
     user_id: Option<i32>,
 ) -> Result<FullAlbumMediaResponse, AlbumError> {
-    // Permission Check
-    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+    let Some(album) = AlbumStore::find_timeline_info(pool, album_id).await? else {
         return Err(AlbumError::NotFound(album_id.to_owned()));
     };
     if !album.is_public {
@@ -407,26 +404,29 @@ pub async fn get_album_media(
             return Err(AlbumError::NotFound(album_id.to_string()));
         }
     }
-
-    let items = sqlx::query_as!(
-        AlbumTimelineItem,
-        r#"
-        SELECT
-            mi.id,
-            is_video,
-            use_panorama_viewer as is_panorama,
-            duration_ms::INT as duration_ms,
-            (width::real / height::real) as "ratio!"
-        FROM album_media_item as ami
-        JOIN album a ON a.id = ami.album_id
-        JOIN media_item mi ON mi.id = ami.media_item_id
-        WHERE ami.album_id = $1 AND mi.deleted = false
-        ORDER BY ami.rank
-        "#,
-        album_id
-    )
-    .fetch_all(pool)
-    .await?;
+    let items_future = async {
+        sqlx::query_as!(
+            AlbumTimelineItem,
+            r#"
+            SELECT
+                mi.id,
+                is_video,
+                use_panorama_viewer as is_panorama,
+                duration_ms::INT as duration_ms,
+                (width::real / height::real) as "ratio!"
+            FROM album_media_item as ami
+            JOIN media_item mi ON mi.id = ami.media_item_id
+            WHERE ami.album_id = $1 AND mi.deleted = false
+            ORDER BY ami.rank
+            "#,
+            album_id
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::from)
+    };
+    let collaborators_future = AlbumStore::list_collaborators(pool, album_id);
+    let (items, collaborators) = tokio::try_join!(items_future, collaborators_future)?;
 
     Ok(FullAlbumMediaResponse {
         items,
@@ -438,6 +438,9 @@ pub async fn get_album_media(
             owner_id: album.owner_id,
             thumbnail_id: album.thumbnail_id,
             created_at: album.created_at.to_rfc3339(),
+            first_date: album.first_date.map(|d| d.to_string()),
+            last_date: album.last_date.map(|d| d.to_string()),
+            collaborators,
         }),
     })
 }

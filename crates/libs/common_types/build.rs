@@ -56,7 +56,7 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
     config.type_attribute(
-        ".api.AlbumCollaborator",
+        ".api.CollaboratorSummary",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
     config.type_attribute(
