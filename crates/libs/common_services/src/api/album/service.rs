@@ -438,7 +438,6 @@ pub async fn get_album_media(
             owner_id: album.owner_id,
             thumbnail_id: album.thumbnail_id,
             created_at: album.created_at.to_rfc3339(),
-            user_role: None,
         }),
     })
 }
