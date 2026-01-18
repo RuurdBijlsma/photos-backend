@@ -176,6 +176,7 @@
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
+* improve speed of album/{id} endpoint
 
 # Features
 
