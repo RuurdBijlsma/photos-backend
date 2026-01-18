@@ -1,8 +1,8 @@
 use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSortField, CollaboratorSummary};
 use crate::api::timeline::interfaces::SortDirection;
+use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole, AlbumWithCount};
 use crate::database::album::album_collaborator::AlbumCollaborator;
-use crate::database::DbError;
 use common_types::pb::api::TimelineItem;
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
@@ -214,7 +214,7 @@ impl AlbumStore {
         added_by_user_id: i32,
     ) -> Result<PgQueryResult, DbError> {
         Ok(sqlx::query!(
-        r#"
+            r#"
         INSERT INTO album_media_item (album_id, media_item_id, rank, added_by_user)
         SELECT
             $1::TEXT,
@@ -225,12 +225,12 @@ impl AlbumStore {
         FROM UNNEST($3::TEXT[]) AS item_id
         ON CONFLICT (album_id, media_item_id) DO NOTHING
         "#,
-        album_id,
-        added_by_user_id,
-        media_item_ids
-    )
-            .execute(executor)
-            .await?)
+            album_id,
+            added_by_user_id,
+            media_item_ids
+        )
+        .execute(executor)
+        .await?)
     }
 
     pub async fn remove_media_items_by_id(
