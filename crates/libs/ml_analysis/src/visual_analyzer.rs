@@ -10,6 +10,7 @@ use common_types::variant::Variant;
 use pyo3::Python;
 use serde_json::Value;
 use std::path::Path;
+use std::time::Instant;
 use tempfile::Builder;
 
 pub struct VisualAnalyzer {
@@ -67,6 +68,8 @@ impl VisualAnalyzer {
         file: &Path,
         percentage: i32,
     ) -> color_eyre::Result<PyVisualAnalysis> {
+        let start = Instant::now();
+        let now = Instant::now();
         let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_string()) else {
             return Err(eyre!("Can't get extension from file"));
         };
@@ -79,30 +82,50 @@ impl VisualAnalyzer {
             analysis_file = temp_file.path().to_path_buf();
             convert_media_file(file, &analysis_file).await?;
         }
+        println!("Convert to jpg {:?}", now.elapsed());
 
+        let now = Instant::now();
         let color_data = get_color_data(
             &self.py_interop,
             &analysis_file,
             &config.theme_generation.variant,
             config.theme_generation.contrast_level as f32,
         )?;
+        println!("get_color_data {:?}", now.elapsed());
 
+        let now = Instant::now();
         let quality_data = get_quality_data(&analysis_file)?;
+        println!("get_quality_data {:?}", now.elapsed());
 
+        let now = Instant::now();
         let caption_data = get_caption_data(&self.py_interop, &analysis_file)?;
+        println!("get_caption_data {:?}", now.elapsed());
 
+        let now = Instant::now();
         let embedding = self.py_interop.embed_image(&analysis_file)?;
+        println!("embed_image {:?}", now.elapsed());
 
+        let now = Instant::now();
+        let _x = self.py_interop.embed_text("This is my search query i want an image")?;
+        println!("embed_text {:?}", now.elapsed());
+
+        let now = Instant::now();
         let faces = self.py_interop.facial_recognition(&analysis_file)?;
+        println!("facial_recognition {:?}", now.elapsed());
 
+        let now = Instant::now();
         let objects = self.py_interop.object_detection(&analysis_file)?;
+        println!("object_detection {:?}", now.elapsed());
 
+        let now = Instant::now();
         let ocr = self
             .py_interop
             .ocr(&analysis_file, config.ocr_languages.clone())?;
+        println!("ocr {:?}", now.elapsed());
 
-        // delete the tempfile
         tokio::fs::remove_file(&analysis_file).await?;
+
+        println!("total ml analysis {:?}", start.elapsed());
 
         Ok(PyVisualAnalysis {
             percentage,

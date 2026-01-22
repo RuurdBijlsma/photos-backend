@@ -88,7 +88,7 @@ async fn compute_analysis(
     file_path: &Path,
     media_item_id: &str,
 ) -> Result<Vec<PyVisualAnalysis>> {
-    let images_to_analyze = get_images_to_analyze(context, file_path, media_item_id)?;
+    let images_to_analyze = get_images_to_analyze(context, file_path, media_item_id);
     let mut analyses = Vec::new();
 
     for (percentage, image_path) in images_to_analyze {
@@ -117,22 +117,15 @@ fn get_images_to_analyze(
     context: &WorkerContext,
     file_path: &Path,
     media_item_id: &str,
-) -> Result<Vec<(i32, PathBuf)>> {
+) -> Vec<(i32, PathBuf)> {
     let thumbnail_root = &context.settings.ingest.thumbnail_root;
     let thumb_dir = thumbnail_root.join(media_item_id);
 
     if context.settings.ingest.is_photo_file(file_path) {
-        let max_thumb = context
-            .settings
-            .ingest
-            .thumbnails
-            .heights
-            .iter()
-            .max()
-            .ok_or_else(|| eyre!("Cannot find max thumbnail size"))?;
-        Ok(vec![(0, thumb_dir.join(format!("{max_thumb}p.avif")))])
+        let analyze_image_size = context.settings.ingest.analyzer.analyze_image_size;
+        vec![(0, thumb_dir.join(format!("{analyze_image_size}p.avif")))]
     } else {
-        let items = context
+        context
             .settings
             .ingest
             .thumbnails
@@ -145,8 +138,7 @@ fn get_images_to_analyze(
                     thumb_dir.join(format!("{p}_percent.avif")),
                 )
             })
-            .collect();
-        Ok(items)
+            .collect()
     }
 }
 
