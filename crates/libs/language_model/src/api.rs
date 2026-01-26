@@ -1,7 +1,6 @@
 use async_stream::try_stream;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use bon::bon;
-use color_eyre::Result;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -105,18 +104,19 @@ pub enum ChatEvent {
 }
 
 #[derive(Clone)]
-pub struct LlamaClient {
-    http: reqwest::Client,
-    base_url: String,
-    config: LlamaConfig,
-}
-
-#[derive(Clone)]
 pub struct LlamaConfig {
     pub temperature: f32,
     pub top_p: f32,
     pub repetition_penalty: f32,
     pub presence_penalty: f32,
+}
+
+#[derive(Clone)]
+pub struct LlamaClient {
+    http: reqwest::Client,
+    base_url: String,
+    model: String,
+    config: LlamaConfig,
 }
 
 #[bon]
@@ -125,6 +125,7 @@ impl LlamaClient {
     #[must_use]
     pub fn new(
         #[builder(start_fn)] base_url: &str,
+        model: Option<String>,
         temperature: Option<f32>,
         top_p: Option<f32>,
         repetition_penalty: Option<f32>,
@@ -133,6 +134,7 @@ impl LlamaClient {
         Self {
             http: reqwest::Client::new(),
             base_url: base_url.to_string(),
+            model: model.unwrap_or_default(),
             config: LlamaConfig {
                 temperature: temperature.unwrap_or(0.7),
                 top_p: top_p.unwrap_or(0.8),
@@ -142,48 +144,77 @@ impl LlamaClient {
         }
     }
 
-    const fn build_request(
+    pub async fn prepare_messages(
         &self,
-        model: String,
-        messages: Vec<Message>,
-        stream: bool,
-    ) -> ChatRequest {
-        ChatRequest {
-            model,
-            messages,
-            stream,
-            top_p: self.config.top_p,
-            temperature: self.config.temperature,
-            repetition_penalty: self.config.repetition_penalty,
-            presence_penalty: self.config.presence_penalty,
+        prompt: &str,
+        images: &[&Path],
+    ) -> LlamaResult<Message> {
+        let mut parts = vec![MessagePart::Text {
+            text: prompt.to_string(),
+        }];
+        for path in images {
+            let bytes = fs::read(path).await?;
+            let mime_type = infer::get(&bytes).map_or("image/jpeg", |kind| kind.mime_type());
+            let b64 = general_purpose::STANDARD.encode(&bytes);
+            parts.push(MessagePart::ImageUrl {
+                image_url: ImageUrl {
+                    url: format!("data:{mime_type};base64,{b64}"),
+                },
+            });
         }
+        Ok(Message {
+            role: "user".to_string(),
+            content: MessageContent::Parts(parts),
+        })
     }
 
-    pub async fn full_request(
+    #[builder]
+    pub async fn chat(
         &self,
-        model: String,
-        messages: Vec<Message>,
-    ) -> LlamaResult<ChatFullResponse> {
-        let req_body = self.build_request(model, messages, false);
+        #[builder(start_fn)] prompt: &str,
+        images: Option<&[&Path]>,
+    ) -> LlamaResult<String> {
+        let msg = self
+            .prepare_messages(prompt, images.unwrap_or_default())
+            .await?;
+        self.call(vec![msg]).await
+    }
+
+    #[builder]
+    pub async fn chat_stream(
+        &self,
+        #[builder(start_fn)] prompt: &str,
+        images: Option<&[&Path]>,
+    ) -> LlamaResult<Pin<Box<dyn Stream<Item = LlamaResult<ChatEvent>> + Send>>> {
+        let msg = self
+            .prepare_messages(prompt, images.unwrap_or_default())
+            .await?;
+        self.call_stream(vec![msg]).await
+    }
+
+    pub async fn call(&self, messages: Vec<Message>) -> LlamaResult<String> {
+        let req_body = self.build_request(messages, false);
         let url = format!("{}/v1/chat/completions", self.base_url);
-
         let response = self.http.post(url).json(&req_body).send().await?;
-
         if !response.status().is_success() {
             return Err(LlamaError::Api {
                 status: response.status(),
                 body: response.text().await.unwrap_or_default(),
             });
         }
-        Ok(response.json().await?)
+        let full: ChatFullResponse = response.json().await?;
+        Ok(full
+            .choices
+            .first()
+            .and_then(|c| c.message.content.clone())
+            .unwrap_or_default())
     }
 
-    pub async fn stream_request(
+    pub async fn call_stream(
         &self,
-        model: String,
         messages: Vec<Message>,
     ) -> LlamaResult<Pin<Box<dyn Stream<Item = LlamaResult<ChatEvent>> + Send>>> {
-        let req_body = self.build_request(model, messages, true);
+        let req_body = self.build_request(messages, true);
         let url = format!("{}/v1/chat/completions", self.base_url);
         let response = self.http.post(url).json(&req_body).send().await?;
         if !response.status().is_success() {
@@ -192,9 +223,7 @@ impl LlamaClient {
                 body: response.text().await.unwrap_or_default(),
             });
         }
-        let stream_bytes = response
-            .bytes_stream()
-            .map_err(std::io::Error::other);
+        let stream_bytes = response.bytes_stream().map_err(std::io::Error::other);
         let reader = StreamReader::new(stream_bytes);
         let mut lines = BufReader::new(reader).lines();
         Ok(Box::pin(try_stream! {
@@ -215,6 +244,76 @@ impl LlamaClient {
             }
         }))
     }
+
+    fn build_request(&self, messages: Vec<Message>, stream: bool) -> ChatRequest {
+        ChatRequest {
+            model: self.model.clone(),
+            messages,
+            stream,
+            top_p: self.config.top_p,
+            temperature: self.config.temperature,
+            repetition_penalty: self.config.repetition_penalty,
+            presence_penalty: self.config.presence_penalty,
+        }
+    }
+}
+
+pub struct ChatSession {
+    client: LlamaClient,
+    pub messages: Vec<Message>,
+}
+
+#[bon]
+impl ChatSession {
+    #[must_use]
+    pub const fn new(client: LlamaClient) -> Self {
+        Self {
+            client,
+            messages: Vec::new(),
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.messages.clear();
+    }
+
+    #[builder]
+    pub async fn chat(
+        &mut self,
+        #[builder(start_fn)] prompt: &str,
+        images: Option<&[&Path]>,
+    ) -> LlamaResult<String> {
+        let msg = self
+            .client
+            .prepare_messages(prompt, images.unwrap_or_default())
+            .await?;
+        self.messages.push(msg);
+        let response = self.client.call(self.messages.clone()).await?;
+        self.messages.push(Message {
+            role: "assistant".to_string(),
+            content: MessageContent::Text(response.clone()),
+        });
+        Ok(response)
+    }
+
+    #[builder]
+    pub async fn chat_stream<'a>(
+        &'a mut self,
+        #[builder(start_fn)] prompt: &str,
+        images: Option<&[&Path]>,
+    ) -> LlamaResult<ChatResponseStream<'a>> {
+        let msg = self
+            .client
+            .prepare_messages(prompt, images.unwrap_or_default())
+            .await?;
+        self.messages.push(msg);
+        let inner = self.client.call_stream(self.messages.clone()).await?;
+        Ok(ChatResponseStream {
+            inner,
+            session: self,
+            accumulated_content: String::new(),
+        })
+    }
 }
 
 pub struct ChatResponseStream<'a> {
@@ -234,106 +333,14 @@ impl Stream for ChatResponseStream<'_> {
             Poll::Ready(None) => {
                 let content = std::mem::take(&mut self.accumulated_content);
                 if !content.is_empty() {
-                    self.session.push_text("assistant", content);
+                    self.session.messages.push(Message {
+                        role: "assistant".to_string(),
+                        content: MessageContent::Text(content),
+                    });
                 }
             }
             _ => {}
         }
         result
-    }
-}
-
-pub struct ChatSession {
-    client: LlamaClient,
-    model: String,
-    messages: Vec<Message>,
-}
-
-#[bon]
-impl ChatSession {
-    #[builder(start_fn = with_client)]
-    #[must_use]
-    pub fn new(#[builder(start_fn)] client: LlamaClient, model: Option<String>) -> Self {
-        Self {
-            client,
-            model: model.unwrap_or_default(),
-            messages: Vec::new(),
-        }
-    }
-
-    async fn prepare_user_message(
-        &mut self,
-        prompt: &str,
-        images: &[impl AsRef<Path> + Sync],
-    ) -> LlamaResult<()> {
-        let mut parts = vec![MessagePart::Text {
-            text: prompt.to_string(),
-        }];
-        for path in images {
-            let bytes = fs::read(path).await?;
-            let mime_type = infer::get(&bytes).map_or("image/jpeg", |kind| kind.mime_type());
-            let b64 = general_purpose::STANDARD.encode(&bytes);
-            parts.push(MessagePart::ImageUrl {
-                image_url: ImageUrl {
-                    url: format!("data:{mime_type};base64,{b64}"),
-                },
-            });
-        }
-        self.messages.push(Message {
-            role: "user".to_string(),
-            content: MessageContent::Parts(parts),
-        });
-        Ok(())
-    }
-
-    pub fn push_text(&mut self, role: &str, text: String) {
-        self.messages.push(Message {
-            role: role.to_string(),
-            content: MessageContent::Text(text),
-        });
-    }
-
-    #[builder]
-    pub async fn chat(
-        &mut self,
-        #[builder(start_fn)] prompt: &str,
-        images: Option<&[&Path]>,
-    ) -> LlamaResult<String> {
-        self.prepare_user_message(prompt, images.unwrap_or_default())
-            .await?;
-        let response = self
-            .client
-            .full_request(self.model.clone(), self.messages.clone())
-            .await?;
-        let content = response
-            .choices
-            .first()
-            .and_then(|c| c.message.content.clone())
-            .unwrap_or_default();
-        self.push_text("assistant", content.clone());
-        Ok(content)
-    }
-
-    #[builder]
-    pub async fn chat_stream<'a>(
-        &'a mut self,
-        #[builder(start_fn)] prompt: &str,
-        images: Option<&[&Path]>,
-    ) -> LlamaResult<ChatResponseStream<'a>> {
-        self.prepare_user_message(prompt, images.unwrap_or_default())
-            .await?;
-        let inner = self
-            .client
-            .stream_request(self.model.clone(), self.messages.clone())
-            .await?;
-        Ok(ChatResponseStream {
-            inner,
-            session: self,
-            accumulated_content: String::new(),
-        })
-    }
-
-    pub fn reset(&mut self) {
-        self.messages.clear();
     }
 }

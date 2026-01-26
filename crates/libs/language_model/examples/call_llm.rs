@@ -13,7 +13,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 pub async fn run() -> Result<()> {
     let client = LlamaClient::with_base_url("http://localhost:8080").build();
-    let mut session = ChatSession::with_client(client).build();
+    let mut session = ChatSession::new(client.clone());
 
     let img_island = Path::new("assets/island.png");
     let img_farm = Path::new("assets/farm.png");
@@ -25,25 +25,23 @@ pub async fn run() -> Result<()> {
     // Warmup
     info!(
         "Island: {}",
-        session.chat(prompt).images(&[img_island]).call().await?
+        client.chat(prompt).images(&[img_island]).call().await?
     );
-    session.reset();
     let now2 = Instant::now();
+    // One-off prompts (no history)
     info!(
         "Farm: {}",
-        session.chat(prompt).images(&[img_farm]).call().await?
+        client.chat(prompt).images(&[img_farm]).call().await?
     );
-    session.reset();
     info!(
         "Torus: {}",
-        session.chat(prompt).images(&[img_torus]).call().await?
+        client.chat(prompt).images(&[img_torus]).call().await?
     );
-    session.reset();
+    // Using Session (chat history is remembered)
     info!(
-        "Island again: {}",
+        "Island with session: {}",
         session.chat(prompt).images(&[img_island]).call().await?
     );
-    // Follow up (chat history is remembered)
     info!(
         "Follow up: {}",
         session.chat("Where might this be?").call().await?
