@@ -75,7 +75,7 @@ pub struct PyRGBChannels {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct PyCaptionData {
+pub struct LlmCaptionData {
     pub default_caption: String,
     pub main_subject: String,
     pub contains_pets: bool,
@@ -110,7 +110,7 @@ pub struct PyVisualAnalysis {
     pub percentage: i32,
     pub color_data: PyColorData,
     pub quality_data: PyQualityData,
-    pub caption_data: PyCaptionData,
+    pub caption_data: LlmCaptionData,
     pub embedding: Vec<f32>,
     pub faces: Vec<PyFace>,
     pub objects: Vec<PyDetectedObject>,

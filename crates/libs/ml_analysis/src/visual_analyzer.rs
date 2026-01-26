@@ -7,6 +7,7 @@ use app_state::AnalyzerSettings;
 use color_eyre::eyre::eyre;
 use common_types::ml_analysis::PyVisualAnalysis;
 use common_types::variant::Variant;
+use language_model::{ChatSession, LlamaClient};
 use pyo3::Python;
 use serde_json::Value;
 use std::path::Path;
@@ -15,6 +16,7 @@ use tempfile::Builder;
 
 pub struct VisualAnalyzer {
     py_interop: PyInterop,
+    chat_session: ChatSession,
 }
 
 impl VisualAnalyzer {
@@ -24,9 +26,14 @@ impl VisualAnalyzer {
     ///
     /// This function will return an error if the Python environment cannot be initialized or the required Python modules are not found.
     pub fn new() -> color_eyre::Result<Self> {
+        let llm = LlamaClient::with_base_url("http://localhost:8080").build();
+        let session = ChatSession::with_client(llm).build();
         Python::attach(|py| {
             let py_interop = PyInterop::new(py)?;
-            Ok(Self { py_interop })
+            Ok(Self {
+                py_interop,
+                chat_session: session,
+            })
         })
     }
 
@@ -63,7 +70,7 @@ impl VisualAnalyzer {
     ///
     /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
     pub async fn analyze_image(
-        &self,
+        &mut self,
         config: &AnalyzerSettings,
         file: &Path,
         percentage: i32,
@@ -98,7 +105,7 @@ impl VisualAnalyzer {
         println!("get_quality_data {:?}", now.elapsed());
 
         let now = Instant::now();
-        let caption_data = get_caption_data(&self.py_interop, &analysis_file)?;
+        let caption_data = get_caption_data(&mut self.chat_session, &analysis_file).await?;
         println!("get_caption_data {:?}", now.elapsed());
 
         let now = Instant::now();
@@ -106,7 +113,9 @@ impl VisualAnalyzer {
         println!("embed_image {:?}", now.elapsed());
 
         let now = Instant::now();
-        let _x = self.py_interop.embed_text("This is my search query i want an image")?;
+        let _x = self
+            .py_interop
+            .embed_text("This is my search query i want an image")?;
         println!("embed_text {:?}", now.elapsed());
 
         let now = Instant::now();

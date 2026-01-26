@@ -1,4 +1,4 @@
-use common_types::ml_analysis::PyCaptionData;
+use common_types::ml_analysis::LlmCaptionData;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -33,8 +33,8 @@ pub struct CaptionData {
     pub activity_description: Option<String>,
 }
 
-impl From<PyCaptionData> for CaptionData {
-    fn from(caption_data: PyCaptionData) -> Self {
+impl From<LlmCaptionData> for CaptionData {
+    fn from(caption_data: LlmCaptionData) -> Self {
         Self {
             default_caption: Some(caption_data.default_caption),
             main_subject: Some(caption_data.main_subject),
