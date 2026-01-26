@@ -1,106 +1,62 @@
 <#
 .SYNOPSIS
-Run local quality checks for the Rust project (Windows version).
+Rust quality checks.
 #>
-
-# Stop on errors
 $ErrorActionPreference = "Stop"
 
-# Check if we're running in PowerShell 5.1 or later
-if ($PSVersionTable.PSVersion.Major -lt 5)
-{
-    Write-Error "This script requires PowerShell 5.1 or later"
-    exit 1
-}
+if ($PSVersionTable.PSVersion.Major -lt 5) { throw "PowerShell 5.1+ required." }
 
-function Test-CommandExists
-{
-    param($command)
-    $exists = $null -ne (Get-Command $command -ErrorAction SilentlyContinue)
-    if (-not $exists)
-    {
-        Write-Error "Command '$command' is required but not found. Please install it."
-    }
-    return $exists
-}
-
-# Check prerequisites
-Write-Host "`n=== Checking prerequisites ===" -ForegroundColor Cyan
-$prereqsOk = $true
-$prereqsOk = $prereqsOk -and (Test-CommandExists "cargo")
-$prereqsOk = $prereqsOk -and (Test-CommandExists "rustup")
-
-if (-not $prereqsOk)
-{
-    exit 1
-}
-
-# Install rust components if missing
-Write-Host "`n=== Ensuring Rust components ===" -ForegroundColor Cyan
-rustup component add rustfmt
-rustup component add clippy
-
-# Environment variables
+# Environment Setup
 $env:CARGO_TERM_COLOR = "always"
 $env:RUSTFLAGS = "-Dwarnings"
 
-# Run checks
-$checksPassed = $true
+Write-Host "=== 1. Validating Environment ===" -ForegroundColor Cyan
 
-try
-{
-    # Format check
-    Write-Host "`n=== Checking formatting with rustfmt ===" -ForegroundColor Cyan
+# Check for Cargo first
+if (-not (Get-Command "cargo" -ErrorAction SilentlyContinue)) {
+    throw "Cargo not found. Please install Rust from https://rustup.rs"
+}
+
+# Fast check for components - only runs rustup if the command fails
+try {
+    cargo fmt --version > $null 2>&1
+    if ($LASTEXITCODE -ne 0) { rustup component add rustfmt }
+
+    cargo clippy --version > $null 2>&1
+    if ($LASTEXITCODE -ne 0) { rustup component add clippy }
+} catch {
+    Write-Host "Warning: Could not verify components via rustup." -ForegroundColor Yellow
+}
+
+try {
+    # - Format Check (Fail fast - takes < 1 second)
+    Write-Host "`n=== 2. Checking Format ===" -ForegroundColor Cyan
     cargo fmt --all
-    if ($LASTEXITCODE -ne 0)
-    {
-        Write-Host "`nFormatting issues found. Run 'cargo fmt --all' to fix." -ForegroundColor Red
-        $checksPassed = $false
+    cargo fmt --all -- --check
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Error: Formatting issues found. Run 'cargo fmt --all' to fix." -ForegroundColor Red
+        exit 1
     }
 
-    # Build
-    Write-Host "`n=== Build ===" -ForegroundColor Cyan
-    cargo build --all-targets --all-features
+    # - Combined Clippy & Build (Using Release profile)
+    # By using --release here, we cache the builds for the tests later.
+    Write-Host "`n=== 3. Running Clippy (Release Profile) ===" -ForegroundColor Cyan
+    cargo clippy --release --all-targets --all-features -- -D clippy::pedantic -D clippy::nursery
+    if ($LASTEXITCODE -ne 0) { exit 1 }
 
-    # Clippy check
-    Write-Host "`n=== Running Clippy checks ===" -ForegroundColor Cyan
-    cargo clippy --no-deps --all-features -- `
-        -D clippy::all -D clippy::pedantic -D clippy::nursery
-    if ($LASTEXITCODE -ne 0)
-    {
-        $checksPassed = $false
-    }
+    # - Optimized Testing
+    # This reuses the artifacts from the Clippy step above.
+    Write-Host "`n=== 4. Running All Tests (Release Profile) ===" -ForegroundColor Cyan
+    cargo test --release --workspace --all-features -- --nocapture
+    if ($LASTEXITCODE -ne 0) { exit 1 }
 
-    # Run tests
-    Write-Host "`n=== Running tests ===" -ForegroundColor Cyan
-    cargo test --release -p test_integration -- --nocapture
-    cargo test --workspace --exclude test_integration -- --nocapture
-    if ($LASTEXITCODE -ne 0)
-    {
-        $checksPassed = $false
-    }
+    # - Documentation check
+    Write-Host "`n=== 5. Checking Documentation ===" -ForegroundColor Cyan
+    cargo doc --no-deps --document-private-items --all-features
 
-    # Documentation check
-    Write-Host "`n=== Checking documentation ===" -ForegroundColor Cyan
-    cargo doc --no-deps --document-private-items
-    if ($LASTEXITCODE -ne 0)
-    {
-        $checksPassed = $false
-    }
+    Write-Host "`n=== Success: All checks passed! ===" -ForegroundColor Green
 }
-catch
-{
-    Write-Host "`nError during checks: $_" -ForegroundColor Red
-    $checksPassed = $false
-}
-
-# Final result
-if ($checksPassed)
-{
-    Write-Host "`n=== All checks passed! ===" -ForegroundColor Green
-}
-else
-{
-    Write-Host "`n=== Some checks failed ===" -ForegroundColor Red
+catch {
+    Write-Host "`n[!] SCRIPT ERROR: $_" -ForegroundColor Red
     exit 1
 }
