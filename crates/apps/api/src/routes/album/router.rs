@@ -7,8 +7,8 @@ use crate::routes::album::handlers::{
 };
 use axum::routing::put;
 use axum::{
-    routing::{delete, get, post},
     Router,
+    routing::{delete, get, post},
 };
 
 pub fn album_auth_optional_router() -> Router<ApiContext> {

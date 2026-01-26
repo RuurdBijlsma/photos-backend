@@ -32,7 +32,7 @@ pub async fn get_quality_judgement(
     });
     let prompt = r#"
 Analyze this photo and evaluate it on the following criteria. For each category, provide a score from 1 to 10.
-Use the following meanings for each score: 1 = very poor, 5 = meh, 5 = acceptable, 7 = good, 8 = great, 9 = BEAUTIFUL, 10 = IMPOSSIBLY GOOD.
+Use the following meanings for each score: 1 = very poor, 5 = meh, 6 = acceptable, 7 = good, 8 = great, 9 = BEAUTIFUL, 10 = IMPOSSIBLY GOOD.
 Use a realistic distribution for scores. In most average photos, scores should often fall between 4 and 7.
 Only award 9–10 for truly exceptional quality. Avoid giving perfect scores unless the photo is outstanding.
 

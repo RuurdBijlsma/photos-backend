@@ -201,7 +201,11 @@ impl LlamaClient {
             });
         }
         let full: ChatFullResponse = response.json().await?;
-        Ok(full.choices.first().and_then(|c| c.message.content.clone()).unwrap_or_default())
+        Ok(full
+            .choices
+            .first()
+            .and_then(|c| c.message.content.clone())
+            .unwrap_or_default())
     }
 
     #[builder]
@@ -273,7 +277,7 @@ impl LlamaClient {
         &self,
         messages: Vec<Message>,
         stream: bool,
-        schema: Option<serde_json::Value>
+        schema: Option<serde_json::Value>,
     ) -> ChatRequest {
         let response_format = schema.map(|s| ResponseFormat::JsonObject { schema: Some(s) });
 

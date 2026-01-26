@@ -32,7 +32,7 @@ async fn main() -> color_eyre::Result<()> {
 
     let settings = load_app_settings()?;
     let now = Instant::now();
-    let mut analyzer = VisualAnalyzer::new()?;
+    let analyzer = VisualAnalyzer::new()?;
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
 
     let now = Instant::now();

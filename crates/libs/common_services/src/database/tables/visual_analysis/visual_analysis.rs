@@ -2,12 +2,12 @@ use crate::database::visual_analysis::caption_data::CategorizationData;
 use crate::database::visual_analysis::color_data::ColorData;
 use crate::database::visual_analysis::detect_object::DetectedObject;
 use crate::database::visual_analysis::face::{CreateFace, Face};
+use crate::database::visual_analysis::quality::QualityScore;
 use chrono::{DateTime, Utc};
 use common_types::ml_analysis::RawVisualAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::database::visual_analysis::quality::{QualityScore};
 
 /// Represents a single photo's embedding data fetched for clustering.
 #[derive(Debug, Clone)]

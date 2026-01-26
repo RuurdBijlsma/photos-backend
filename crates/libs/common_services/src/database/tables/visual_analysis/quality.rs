@@ -27,7 +27,8 @@ pub struct QualityScore {
 impl From<ml_analysis::CombinedQuality> for QualityScore {
     fn from(combined_quality: ml_analysis::CombinedQuality) -> Self {
         let measured = combined_quality.measured;
-        combined_quality.judged.map_or(Self {
+        combined_quality.judged.map_or(
+            Self {
                 exposure: 0,
                 contrast: 0,
                 sharpness: 0,
@@ -45,7 +46,8 @@ impl From<ml_analysis::CombinedQuality> for QualityScore {
                 measured_exposure: measured.exposure,
                 measured_blurriness: measured.blurriness,
                 measured_weighted_score: measured.weighted_score,
-            }, |judged| Self {
+            },
+            |judged| Self {
                 exposure: judged.exposure,
                 contrast: judged.contrast,
                 sharpness: judged.sharpness,
@@ -63,6 +65,7 @@ impl From<ml_analysis::CombinedQuality> for QualityScore {
                 measured_exposure: measured.exposure,
                 measured_blurriness: measured.blurriness,
                 measured_weighted_score: measured.weighted_score,
-            })
+            },
+        )
     }
 }
