@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            mi.id,\n            is_video,\n            use_panorama_viewer as is_panorama,\n            duration_ms::INT as duration_ms,\n            (width::real / height::real) as \"ratio!\"\n        FROM album_media_item as ami\n        JOIN album a ON a.id = ami.album_id\n        JOIN media_item mi ON mi.id = ami.media_item_id\n        WHERE ami.album_id = $1 AND mi.deleted = false\n        ORDER BY ami.rank\n        ",
+  "query": "\n            SELECT\n                mi.id,\n                is_video,\n                use_panorama_viewer as is_panorama,\n                duration_ms::INT as duration_ms,\n                (width::real / height::real) as \"ratio!\"\n            FROM album_media_item as ami\n            JOIN media_item mi ON mi.id = ami.media_item_id\n            WHERE ami.album_id = $1 AND mi.deleted = false\n            ORDER BY ami.rank\n            ",
   "describe": {
     "columns": [
       {
@@ -42,5 +42,5 @@
       null
     ]
   },
-  "hash": "c5de6aedcea003786a3bb6ee024999637674f89f2639ff462d36338b774f1510"
+  "hash": "9e857b59d014ca6639d49cf3f1de3ed7dea724082ec59d0b957d8c3a99be4d34"
 }

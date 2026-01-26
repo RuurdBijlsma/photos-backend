@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                a.id,\n                a.owner_id,\n                a.name,\n                a.description,\n                a.thumbnail_id,\n                a.is_public,\n                a.created_at,\n                MIN(mi.taken_at_local) as \"first_date?\",\n                MAX(mi.taken_at_local) as \"last_date?\"\n            FROM album a\n            LEFT JOIN album_media_item ami ON a.id = ami.album_id\n            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false\n            WHERE a.id = $1\n            GROUP BY a.id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "thumbnail_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "first_date?",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_date?",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "5ae9c89b5ee6fbadb6b7e124e9b7679467a0706e5cde777168904016be774e4c"
+}
