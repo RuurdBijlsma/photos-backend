@@ -10,30 +10,6 @@ CREATE TABLE visual_analysis
 CREATE INDEX idx_visual_analysis_media_item_id ON visual_analysis (media_item_id);
 CREATE INDEX ON visual_analysis USING hnsw (embedding vector_cosine_ops);
 
-CREATE TABLE ocr_data
-(
-    id                 BIGSERIAL PRIMARY KEY,
-    visual_analysis_id BIGINT  NOT NULL REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    has_legible_text   BOOLEAN NOT NULL,
-    ocr_text           TEXT
-);
-CREATE INDEX idx_ocr_data_visual_analysis_id ON ocr_data (visual_analysis_id);
-
-
--- CHANGE: `position` is now `position_x` and `position_y`.
-CREATE TABLE ocr_box
-(
-    id          BIGSERIAL PRIMARY KEY,
-    ocr_data_id BIGINT NOT NULL REFERENCES ocr_data (id) ON DELETE CASCADE,
-    text        TEXT   NOT NULL,
-    position_x  REAL   NOT NULL,
-    position_y  REAL   NOT NULL,
-    width       REAL   NOT NULL,
-    height      REAL   NOT NULL,
-    confidence  REAL   NOT NULL
-);
-CREATE INDEX idx_ocr_box_ocr_data_id ON ocr_box (ocr_data_id);
-
 
 CREATE TABLE face
 (
@@ -79,14 +55,26 @@ CREATE INDEX idx_detected_object_visual_analysis_id ON detected_object (visual_a
 CREATE INDEX idx_detected_object_label ON detected_object (label);
 
 
--- Stores image quality metrics. (No changes here)
+-- Stores image quality metrics.
 CREATE TABLE quality_data
 (
-    visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    blurriness         DOUBLE PRECISION NOT NULL,
-    noisiness          DOUBLE PRECISION NOT NULL,
-    exposure           DOUBLE PRECISION NOT NULL,
-    quality_score      DOUBLE PRECISION NOT NULL
+    visual_analysis_id      BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
+    exposure                SMALLINT         NOT NULL,
+    contrast                SMALLINT         NOT NULL,
+    sharpness               SMALLINT         NOT NULL,
+    color_accuracy          SMALLINT         NOT NULL,
+    composition             SMALLINT         NOT NULL,
+    subject_clarity         SMALLINT         NOT NULL,
+    visual_impact           SMALLINT         NOT NULL,
+    creativity              SMALLINT         NOT NULL,
+    color_harmony           SMALLINT         NOT NULL,
+    storytelling            SMALLINT         NOT NULL,
+    style_suitability       SMALLINT         NOT NULL,
+    weighted_score          DOUBLE PRECISION NOT NULL,
+    measured_blurriness     DOUBLE PRECISION NOT NULL,
+    measured_noisiness      DOUBLE PRECISION NOT NULL,
+    measured_exposure       DOUBLE PRECISION NOT NULL,
+    measured_weighted_score DOUBLE PRECISION NOT NULL
 );
 
 
@@ -114,6 +102,7 @@ CREATE TABLE caption_data
     contains_landmarks   BOOLEAN NOT NULL,
     contains_people      BOOLEAN NOT NULL,
     contains_animals     BOOLEAN NOT NULL,
+    contains_text        BOOLEAN NOT NULL,
     is_indoor            BOOLEAN NOT NULL,
     is_food_or_drink     BOOLEAN NOT NULL,
     is_event             BOOLEAN NOT NULL,
@@ -122,6 +111,7 @@ CREATE TABLE caption_data
     is_cityscape         BOOLEAN NOT NULL,
     is_activity          BOOLEAN NOT NULL,
     setting              TEXT    NOT NULL,
+    ocr_text             TEXT,
     pet_type             TEXT,
     animal_type          TEXT,
     food_or_drink_type   TEXT,

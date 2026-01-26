@@ -1,11 +1,10 @@
-use crate::database::visual_analysis::caption_data::CaptionData;
+use crate::database::visual_analysis::caption_data::CategorizationData;
 use crate::database::visual_analysis::color_data::ColorData;
 use crate::database::visual_analysis::detect_object::DetectedObject;
 use crate::database::visual_analysis::face::{CreateFace, Face};
-use crate::database::visual_analysis::ocr_data::OCRData;
-use crate::database::visual_analysis::quality_data::QualityData;
+use crate::database::visual_analysis::quality::QualityScore;
 use chrono::{DateTime, Utc};
-use common_types::ml_analysis::PyVisualAnalysis;
+use common_types::ml_analysis::RawVisualAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -22,25 +21,23 @@ pub struct MediaEmbedding {
 pub struct CreateVisualAnalysis {
     pub embedding: Vector,
     pub percentage: i32,
-    pub ocr_data: OCRData,
     pub faces: Vec<CreateFace>,
     pub detected_objects: Vec<DetectedObject>,
-    pub quality: QualityData,
+    pub quality: QualityScore,
     pub colors: ColorData,
-    pub caption: CaptionData,
+    pub caption: CategorizationData,
 }
 
-impl From<PyVisualAnalysis> for CreateVisualAnalysis {
-    fn from(data: PyVisualAnalysis) -> Self {
+impl From<RawVisualAnalysis> for CreateVisualAnalysis {
+    fn from(data: RawVisualAnalysis) -> Self {
         Self {
             embedding: data.embedding.into(),
             percentage: data.percentage,
-            ocr_data: data.ocr.into(),
             faces: data.faces.into_iter().map(Into::into).collect(),
             detected_objects: data.objects.into_iter().map(Into::into).collect(),
-            quality: data.quality_data.into(),
+            quality: data.quality.into(),
             colors: data.color_data.into(),
-            caption: data.caption_data.into(),
+            caption: data.categorization_data.into(),
         }
     }
 }
@@ -50,10 +47,9 @@ impl From<PyVisualAnalysis> for CreateVisualAnalysis {
 pub struct ReadVisualAnalysis {
     pub created_at: DateTime<Utc>,
     pub percentage: i32,
-    pub ocr_data: OCRData,
     pub faces: Vec<Face>,
     pub detected_objects: Vec<DetectedObject>,
-    pub quality: QualityData,
+    pub quality: QualityScore,
     pub colors: ColorData,
-    pub caption: CaptionData,
+    pub caption: CategorizationData,
 }

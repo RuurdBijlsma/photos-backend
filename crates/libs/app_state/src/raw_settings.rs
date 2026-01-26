@@ -25,6 +25,8 @@ pub struct RawIngestSettings {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AnalyzerSettings {
+    pub analyze_image_size: u64,
+    pub llm_base_url: String,
     pub theme_generation: ThemeSettings,
     pub ocr_languages: Vec<String>,
 }

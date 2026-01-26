@@ -1,4 +1,4 @@
-use ml_analysis::get_quality_data;
+use ml_analysis::get_quality_measurement;
 use std::path::Path;
 use std::time::Instant;
 
@@ -13,9 +13,9 @@ fn main() -> color_eyre::Result<()> {
 
     for image in images {
         let now = Instant::now();
-        let quality_data = get_quality_data(image)?;
+        let quality_data = get_quality_measurement(image)?;
         println!(
-            "{} quality: {:?}",
+            "{} measured quality: {:?}",
             image.file_name().unwrap().to_string_lossy(),
             quality_data
         );

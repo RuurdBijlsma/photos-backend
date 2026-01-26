@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT ac.id, u.name, ac.role as \"role: AlbumRole\"\n            FROM album_collaborator ac\n            JOIN app_user u ON ac.user_id = u.id\n            WHERE ac.album_id = $1\n            ",
+  "query": "\n            SELECT\n                ac.id,\n                ac.user_id,\n                u.name,\n                ac.role as \"role: String\"\n            FROM album_collaborator ac\n            JOIN app_user u ON ac.user_id = u.id\n            WHERE ac.album_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -10,12 +10,17 @@
       },
       {
         "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 2,
-        "name": "role: AlbumRole",
+        "ordinal": 3,
+        "name": "role: String",
         "type_info": {
           "Custom": {
             "name": "album_role",
@@ -38,8 +43,9 @@
     "nullable": [
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "eadcfb4ad0c88855341f6d8aa0df7be8701e2b6f9e9b0448cee27dd26f9a4753"
+  "hash": "c5de709f0e940bf2c39a234458814e5aeaa0782c3ad26f9a2411d1defee44a5c"
 }

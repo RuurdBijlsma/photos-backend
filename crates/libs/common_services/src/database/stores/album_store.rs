@@ -1,9 +1,9 @@
-use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSortField, CollaboratorSummary};
+use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSortField};
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::DbError;
-use crate::database::album::album::{Album, AlbumRole, AlbumWithCount};
+use crate::database::album::album::{Album, AlbumRole, AlbumTimelineInfo, AlbumWithCount};
 use crate::database::album::album_collaborator::AlbumCollaborator;
-use common_types::pb::api::TimelineItem;
+use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
 
@@ -104,6 +104,36 @@ impl AlbumStore {
                 a.created_at,
                 a.updated_at,
                 COUNT(mi.id)::INT AS "media_count!"
+            FROM album a
+            LEFT JOIN album_media_item ami ON a.id = ami.album_id
+            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
+            WHERE a.id = $1
+            GROUP BY a.id
+            "#,
+            album_id
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
+    /// Retrieves a single album by its ID, including the first and last date taken.
+    pub async fn find_timeline_info(
+        executor: impl Executor<'_, Database = Postgres>,
+        album_id: &str,
+    ) -> Result<Option<AlbumTimelineInfo>, DbError> {
+        Ok(sqlx::query_as!(
+            AlbumTimelineInfo,
+            r#"
+            SELECT
+                a.id,
+                a.owner_id,
+                a.name,
+                a.description,
+                a.thumbnail_id,
+                a.is_public,
+                a.created_at,
+                MIN(mi.taken_at_local) as "first_date?",
+                MAX(mi.taken_at_local) as "last_date?"
             FROM album a
             LEFT JOIN album_media_item ami ON a.id = ami.album_id
             LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
@@ -419,7 +449,11 @@ impl AlbumStore {
         Ok(sqlx::query_as!(
             CollaboratorSummary,
             r#"
-            SELECT ac.id, u.name, ac.role as "role: AlbumRole"
+            SELECT
+                ac.id,
+                ac.user_id,
+                u.name,
+                ac.role as "role: String"
             FROM album_collaborator ac
             JOIN app_user u ON ac.user_id = u.id
             WHERE ac.album_id = $1

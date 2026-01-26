@@ -3,8 +3,6 @@ syntax = "proto3";
 package api;
 
 // --- Main Timeline (Main library view) ---
-
-// Contains ratios and amount of media items per month, grouped by month.
 message TimelineRatiosResponse {
   repeated TimelineMonthRatios months = 1;
 }
@@ -15,7 +13,6 @@ message TimelineMonthRatios {
   repeated float ratios = 3;
 }
 
-// Contains information for media items for the requested months, grouped by month.
 message TimelineItemsResponse {
   repeated TimelineMonthItems months = 1;
 }
@@ -34,31 +31,6 @@ message TimelineItem {
 }
 
 // --- Album Specific ---
-
-// Returns Album Metadata + Ratios grouped by Rank
-message AlbumRatiosResponse {
-  AlbumInfo album = 1;
-  // Groups of items, e.g. 100 items per group.
-  repeated AlbumRatioGroup groups = 2;
-}
-
-message AlbumRatioGroup {
-  // The rank ID that starts this group (acts as the cursor/ID)
-  string group_id = 1;
-  // The ratios of the items in this group
-  repeated float ratios = 2;
-}
-
-// Response for specific chunks of the album
-message AlbumMediaResponse {
-  repeated AlbumMediaGroup groups = 1;
-}
-
-message AlbumMediaGroup {
-  string group_id = 1;
-  repeated TimelineItem items = 2;
-}
-
 message FullAlbumMediaResponse {
   AlbumInfo album = 1;
   repeated AlbumTimelineItem items = 2;
@@ -72,15 +44,22 @@ message AlbumTimelineItem {
   float ratio = 6;
 }
 
+message CollaboratorSummary {
+  int64 id = 1;
+  int32 user_id = 2;
+  string name = 3;
+  string role = 4;
+}
+
 message AlbumInfo {
   string id = 1;
   string name = 2;
   optional string description = 3;
   bool is_public = 4;
   int32 owner_id = 5;
-  // RFC3339 string
   string created_at = 6;
   optional string thumbnail_id = 7;
-  // If the user is a collaborator, this shows their role
-  optional string user_role = 8;
+  optional string first_date = 9;
+  optional string last_date = 10;
+  repeated CollaboratorSummary collaborators = 11;
 }

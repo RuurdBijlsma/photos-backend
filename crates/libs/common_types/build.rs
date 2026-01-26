@@ -49,10 +49,14 @@ fn main() -> std::io::Result<()> {
     );
     config.type_attribute(
         ".api.AlbumInfo",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
     );
     config.type_attribute(
         ".api.FullAlbumMediaResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.CollaboratorSummary",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
     config.type_attribute(

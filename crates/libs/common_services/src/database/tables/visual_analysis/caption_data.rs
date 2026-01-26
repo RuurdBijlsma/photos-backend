@@ -1,10 +1,10 @@
-use common_types::ml_analysis::PyCaptionData;
+use common_types::ml_analysis::LlmCategorizationData;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Corresponds to the '`caption_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct CaptionData {
+pub struct CategorizationData {
     pub default_caption: Option<String>,
     pub main_subject: Option<String>,
     pub contains_pets: bool,
@@ -12,6 +12,7 @@ pub struct CaptionData {
     pub contains_landmarks: bool,
     pub contains_people: bool,
     pub contains_animals: bool,
+    pub contains_text: bool,
     pub is_indoor: bool,
     pub is_food_or_drink: bool,
     pub is_event: bool,
@@ -21,6 +22,7 @@ pub struct CaptionData {
     pub is_activity: bool,
     pub setting: String,
     pub pet_type: Option<String>,
+    pub ocr_text: Option<String>,
     pub animal_type: Option<String>,
     pub food_or_drink_type: Option<String>,
     pub vehicle_type: Option<String>,
@@ -33,8 +35,8 @@ pub struct CaptionData {
     pub activity_description: Option<String>,
 }
 
-impl From<PyCaptionData> for CaptionData {
-    fn from(caption_data: PyCaptionData) -> Self {
+impl From<LlmCategorizationData> for CategorizationData {
+    fn from(caption_data: LlmCategorizationData) -> Self {
         Self {
             default_caption: Some(caption_data.default_caption),
             main_subject: Some(caption_data.main_subject),
@@ -43,6 +45,7 @@ impl From<PyCaptionData> for CaptionData {
             contains_landmarks: caption_data.contains_landmarks,
             contains_people: caption_data.contains_people,
             contains_animals: caption_data.contains_animals,
+            contains_text: caption_data.contains_text,
             is_indoor: caption_data.is_indoor,
             is_food_or_drink: caption_data.is_food_or_drink,
             is_event: caption_data.is_event,
@@ -51,6 +54,7 @@ impl From<PyCaptionData> for CaptionData {
             is_cityscape: caption_data.is_cityscape,
             is_activity: caption_data.is_activity,
             setting: caption_data.setting,
+            ocr_text: caption_data.ocr_text,
             pet_type: caption_data.pet_type,
             animal_type: caption_data.animal_type,
             food_or_drink_type: caption_data.food_or_drink_type,

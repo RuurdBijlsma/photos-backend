@@ -1,6 +1,5 @@
-use crate::ChatMessage;
 use color_eyre::eyre::Context;
-use common_types::ml_analysis::{PyDetectedObject, PyFace, PyOCRData};
+use common_types::ml_analysis::{PyDetectedObject, PyFace};
 use common_types::variant::Variant;
 use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
@@ -11,16 +10,13 @@ use std::path::{Path, PathBuf};
 pub struct PyInterop {
     json_dumps: Py<PyAny>,
     facial_recognition_func: Py<PyAny>,
-    captioner_func: Py<PyAny>,
     object_detection_func: Py<PyAny>,
-    ocr_func: Py<PyAny>,
     image_embed_func: Py<PyAny>,
     text_embed_func: Py<PyAny>,
     images_embed_func: Py<PyAny>,
     texts_embed_func: Py<PyAny>,
     get_image_prominent_colors_func: Py<PyAny>,
     get_theme_from_color_func: Py<PyAny>,
-    llm_chat_func: Py<PyAny>,
 }
 
 impl PyInterop {
@@ -66,10 +62,8 @@ impl PyInterop {
         sys.setattr("stderr", devnull_file)?;
 
         let module = py.import("py_analyze")?;
-        let captioner_func = module.getattr("caption")?.into_pyobject(py)?;
         let facial_recognition_func = module.getattr("recognize_faces")?.into_pyobject(py)?;
         let object_detection_func = module.getattr("detect_objects")?.into_pyobject(py)?;
-        let ocr_func = module.getattr("ocr")?.into_pyobject(py)?;
         let image_embed_func = module.getattr("embed_image")?.into_pyobject(py)?;
         let text_embed_func = module.getattr("embed_text")?.into_pyobject(py)?;
         let multi_image_embed_func = module.getattr("embed_images")?.into_pyobject(py)?;
@@ -79,7 +73,6 @@ impl PyInterop {
             .into_pyobject(py)?;
         let get_theme_from_color_func =
             module.getattr("get_theme_from_color")?.into_pyobject(py)?;
-        let llm_chat_func = module.getattr("llm_chat")?.into_pyobject(py)?;
 
         let json = py.import("json")?;
         let dumps = json.getattr("dumps")?.into_pyobject(py)?;
@@ -89,28 +82,11 @@ impl PyInterop {
             image_embed_func: image_embed_func.into(),
             texts_embed_func: multi_text_embed_func.into(),
             images_embed_func: multi_image_embed_func.into(),
-            ocr_func: ocr_func.into(),
             object_detection_func: object_detection_func.into(),
             facial_recognition_func: facial_recognition_func.into(),
-            captioner_func: captioner_func.into(),
             json_dumps: dumps.into(),
             get_image_prominent_colors_func: get_image_prominent_colors_func.into(),
             get_theme_from_color_func: get_theme_from_color_func.into(),
-            llm_chat_func: llm_chat_func.into(),
-        })
-    }
-
-    /// Generate LLM responses from by sending a chat history.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the Python call fails or if the result
-    /// cannot be converted to a `String`.
-    pub fn llm_chat(&self, messages: Vec<ChatMessage>) -> Result<String, PyErr> {
-        Python::attach(|py| {
-            let func = self.llm_chat_func.bind(py);
-            let result = func.call1((messages,))?;
-            result.extract()
         })
     }
 
@@ -230,23 +206,6 @@ impl PyInterop {
         })
     }
 
-    /// Generates a descriptive caption for the given image, with an option to provide a specific
-    /// instructional prompt.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the underlying Python captioning function fails,
-    /// which could be due to an invalid image path, a model inference error,
-    /// or if the result cannot be converted to a Rust `String`.
-    pub fn caption_image(&self, image: &Path, instruction: Option<&str>) -> Result<String, PyErr> {
-        Python::attach(|py| {
-            let func = self.captioner_func.bind(py);
-
-            let result = func.call1((image, instruction))?;
-            result.extract()
-        })
-    }
-
     /// Performs facial recognition on the provided image to detect and analyze any faces present.
     ///
     /// # Errors
@@ -293,31 +252,6 @@ impl PyInterop {
             let objects: Vec<PyDetectedObject> =
                 serde_json::from_str(&json_str).unwrap_or_default();
             Ok(objects)
-        })
-    }
-
-    /// Performs Optical Character Recognition (OCR) on an image to extract text, given a list of
-    /// target languages.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the underlying Python OCR function fails or if the
-    /// returned data cannot be serialized to a JSON string.
-    ///
-    /// # Panics
-    ///
-    /// This function will panic if the JSON string returned from the Python function does not
-    /// correctly deserialize into the `OCRData` struct, indicating a mismatch between the Python
-    /// and Rust data structures.
-    pub fn ocr(&self, image: &Path, languages: Vec<String>) -> Result<PyOCRData, PyErr> {
-        Python::attach(|py| {
-            let func = self.ocr_func.bind(py);
-            let dumps = self.json_dumps.bind(py);
-
-            let result = func.call1((image, languages))?;
-            let json_str: String = dumps.call1((result,))?.extract()?;
-            let ocr_data: PyOCRData = serde_json::from_str(&json_str).unwrap_or_default();
-            Ok(ocr_data)
         })
     }
 }
