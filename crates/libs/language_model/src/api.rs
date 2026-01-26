@@ -55,7 +55,19 @@ pub struct ImageUrl {
     pub url: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, Clone)]
+#[serde(tag = "type")]
+pub enum ResponseFormat {
+    #[serde(rename = "text")]
+    Text,
+    #[serde(rename = "json_object")]
+    JsonObject {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        schema: Option<serde_json::Value>,
+    },
+}
+
+#[derive(Serialize, Debug)]
 struct ChatRequest {
     model: String,
     messages: Vec<Message>,
@@ -64,6 +76,8 @@ struct ChatRequest {
     top_p: f32,
     repetition_penalty: f32,
     presence_penalty: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_format: Option<ResponseFormat>,
 }
 
 #[derive(Deserialize)]
@@ -144,11 +158,7 @@ impl LlamaClient {
         }
     }
 
-    pub async fn prepare_messages(
-        &self,
-        prompt: &str,
-        images: &[&Path],
-    ) -> LlamaResult<Message> {
+    pub async fn prepare_messages(&self, prompt: &str, images: &[&Path]) -> LlamaResult<Message> {
         let mut parts = vec![MessagePart::Text {
             text: prompt.to_string(),
         }];
@@ -173,11 +183,25 @@ impl LlamaClient {
         &self,
         #[builder(start_fn)] prompt: &str,
         images: Option<&[&Path]>,
+        schema: Option<serde_json::Value>,
     ) -> LlamaResult<String> {
         let msg = self
             .prepare_messages(prompt, images.unwrap_or_default())
             .await?;
-        self.call(vec![msg]).await
+
+        // Pass schema to the call method
+        let req_body = self.build_request(vec![msg], false, schema);
+        let url = format!("{}/v1/chat/completions", self.base_url);
+        let response = self.http.post(url).json(&req_body).send().await?;
+
+        if !response.status().is_success() {
+            return Err(LlamaError::Api {
+                status: response.status(),
+                body: response.text().await.unwrap_or_default(),
+            });
+        }
+        let full: ChatFullResponse = response.json().await?;
+        Ok(full.choices.first().and_then(|c| c.message.content.clone()).unwrap_or_default())
     }
 
     #[builder]
@@ -193,7 +217,7 @@ impl LlamaClient {
     }
 
     pub async fn call(&self, messages: Vec<Message>) -> LlamaResult<String> {
-        let req_body = self.build_request(messages, false);
+        let req_body = self.build_request(messages, false, None);
         let url = format!("{}/v1/chat/completions", self.base_url);
         let response = self.http.post(url).json(&req_body).send().await?;
         if !response.status().is_success() {
@@ -214,7 +238,7 @@ impl LlamaClient {
         &self,
         messages: Vec<Message>,
     ) -> LlamaResult<Pin<Box<dyn Stream<Item = LlamaResult<ChatEvent>> + Send>>> {
-        let req_body = self.build_request(messages, true);
+        let req_body = self.build_request(messages, true, None);
         let url = format!("{}/v1/chat/completions", self.base_url);
         let response = self.http.post(url).json(&req_body).send().await?;
         if !response.status().is_success() {
@@ -245,7 +269,14 @@ impl LlamaClient {
         }))
     }
 
-    fn build_request(&self, messages: Vec<Message>, stream: bool) -> ChatRequest {
+    fn build_request(
+        &self,
+        messages: Vec<Message>,
+        stream: bool,
+        schema: Option<serde_json::Value>
+    ) -> ChatRequest {
+        let response_format = schema.map(|s| ResponseFormat::JsonObject { schema: Some(s) });
+
         ChatRequest {
             model: self.model.clone(),
             messages,
@@ -254,6 +285,7 @@ impl LlamaClient {
             temperature: self.config.temperature,
             repetition_penalty: self.config.repetition_penalty,
             presence_penalty: self.config.presence_penalty,
+            response_format,
         }
     }
 }

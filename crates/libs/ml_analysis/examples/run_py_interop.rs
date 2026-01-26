@@ -60,24 +60,6 @@ fn main() -> PyResult<()> {
             }
             println!("Embedder took {:#?}.", now.elapsed());
 
-            // === CAPTIONER ===
-            let now = Instant::now();
-            let caption = py_interop.caption_image(file, None)?;
-            println!("\tcaption: {caption}");
-            let has_animal = py_interop.caption_image(
-                file,
-                Some("Question: Is there an animal in the photo? yes or no. Answer:"),
-            )?;
-            println!("\thas animal: {has_animal:#?}");
-            if has_animal.to_lowercase().contains("yes") {
-                let animal_type = py_interop.caption_image(
-                    file,
-                    Some("Question: What kind of animal is shown in the photo? Answer:"),
-                )?;
-                println!("\tAnimal type: {animal_type}");
-            }
-            println!("Captioner took {:#?}.", now.elapsed());
-
             // === FACIAL RECOGNITION ===
             let now = Instant::now();
             let faces = py_interop.facial_recognition(file)?;
@@ -97,17 +79,6 @@ fn main() -> PyResult<()> {
                 println!("\t- Found object, label: {:?}", &object.label);
             }
             println!("Object detection took {:#?}.", now.elapsed());
-
-            // === OCR ===
-            let now = Instant::now();
-            let ocr_data = py_interop.ocr(file, vec!["nld".to_string(), "eng".to_string()])?;
-            println!("\tHas text: {}", ocr_data.has_legible_text);
-            if ocr_data.has_legible_text
-                && let Some(ocr_text) = ocr_data.ocr_text
-            {
-                println!("\tOCR text: {ocr_text}");
-            }
-            println!("OCR took {:#?}.", now.elapsed());
         }
 
         Ok(())

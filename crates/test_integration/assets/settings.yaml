@@ -4,6 +4,8 @@ ingest:
   enable_cache: false
 
   analyzer:
+    llm_base_url: "http://localhost:8080"
+    analyze_image_size: 360
     theme_generation:
       variant: Vibrant
       contrast_level: 0.5

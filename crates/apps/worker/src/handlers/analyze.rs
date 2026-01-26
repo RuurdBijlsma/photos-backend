@@ -6,7 +6,7 @@ use color_eyre::eyre::{Result, eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
-use common_types::ml_analysis::PyVisualAnalysis;
+use common_types::ml_analysis::RawVisualAnalysis;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info};
 
@@ -20,15 +20,11 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let Some(relative_path) = &job.relative_path else {
         return Err(eyre!("Ingest job has no associated relative_path"));
     };
-
     let media_root = &context.settings.ingest.media_root;
     let file_path = media_root.join(relative_path);
-
-    // 1. Basic validation
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
-
     if !context
         .settings
         .ingest
@@ -41,40 +37,26 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         );
         return Ok(JobResult::DependencyReschedule);
     }
-
-    // 2. Resolve Media Item ID
     let media_item_id = MediaItemStore::find_id_by_relative_path(&context.pool, relative_path)
         .await?
         .ok_or_else(|| eyre!("Could not find media item by relative_path."))?;
-
-    // 3. Get Analysis Data (Computed or Cached)
     let analyses = get_analysis_data(context, &file_path, &media_item_id).await?;
-
-    // 4. Save results
     save_results(context, job.id, &media_item_id, &analyses, &file_path).await
 }
 
-/// Orchestrates retrieving analysis data.
-/// Checks the cache first; if missing, computes it and writes to cache.
 async fn get_analysis_data(
     context: &WorkerContext,
     file_path: &Path,
     media_item_id: &str,
-) -> Result<Vec<PyVisualAnalysis>> {
+) -> Result<Vec<RawVisualAnalysis>> {
     let file_hash = hash_file(file_path)?;
-
-    // Try Cache
     if context.settings.ingest.enable_cache
         && let Some(cached_analysis) = get_analysis_cache(&file_hash).await?
     {
         debug!("Using analysis cache for {}", media_item_id);
         return Ok(cached_analysis);
     }
-
-    // Cache Miss: Compute
     let analyses = compute_analysis(context, file_path, media_item_id).await?;
-
-    // Write Cache
     if context.settings.ingest.enable_cache {
         write_analysis_cache(&file_hash, &analyses).await?;
     }
@@ -87,14 +69,13 @@ async fn compute_analysis(
     context: &WorkerContext,
     file_path: &Path,
     media_item_id: &str,
-) -> Result<Vec<PyVisualAnalysis>> {
+) -> Result<Vec<RawVisualAnalysis>> {
     let images_to_analyze = get_images_to_analyze(context, file_path, media_item_id);
     let mut analyses = Vec::new();
 
     for (percentage, image_path) in images_to_analyze {
         let analyzer = context.visual_analyzer.clone();
         let analyzer_settings = context.settings.ingest.analyzer.clone();
-
         // This spawn blocking -> block_on is needed because analyze image does work on the
         // main thread and this disturbs the integration test.
         let analysis_result = tokio::task::spawn_blocking(move || {
@@ -148,7 +129,7 @@ async fn save_results(
     context: &WorkerContext,
     job_id: i64,
     media_item_id: &str,
-    analyses: &[PyVisualAnalysis],
+    analyses: &[RawVisualAnalysis],
     file_path: &Path,
 ) -> Result<JobResult> {
     let mut tx = context.pool.begin().await?;
@@ -157,11 +138,9 @@ async fn save_results(
     if is_job_cancelled(&mut *tx, job_id).await? || !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
-
     for analysis in analyses {
         VisualAnalysisStore::create(&mut tx, media_item_id, &analysis.to_owned().into()).await?;
     }
-
     tx.commit().await?;
     Ok(JobResult::Done)
 }

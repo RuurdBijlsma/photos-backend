@@ -35,39 +35,6 @@ impl VisualAnalysisStore {
         .fetch_one(&mut **tx)
         .await?;
 
-        // --- OCR Data ---
-        let ocr_data_id: i64 = sqlx::query_scalar!(
-            r#"
-            INSERT INTO ocr_data (visual_analysis_id, has_legible_text, ocr_text)
-            VALUES ($1, $2, $3)
-            RETURNING id
-            "#,
-            visual_analysis_id,
-            analysis.ocr_data.has_legible_text,
-            analysis.ocr_data.ocr_text,
-        )
-        .fetch_one(&mut **tx)
-        .await?;
-
-        // --- OCR Box Data ---
-        for ocr_box in &analysis.ocr_data.boxes {
-            sqlx::query!(
-                    r#"
-                    INSERT INTO ocr_box (ocr_data_id, text, position_x, position_y, width, height, confidence)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    "#,
-                    ocr_data_id,
-                    ocr_box.text,
-                    ocr_box.position_x,
-                    ocr_box.position_y,
-                    ocr_box.width,
-                    ocr_box.height,
-                    ocr_box.confidence,
-                )
-                    .execute(&mut **tx)
-                    .await?;
-        }
-
         // --- Face Data ---
         for face in &analysis.faces {
             sqlx::query!(
@@ -127,17 +94,47 @@ impl VisualAnalysisStore {
         let quality = &analysis.quality;
         sqlx::query!(
             r#"
-            INSERT INTO quality_data (visual_analysis_id, blurriness, noisiness, exposure, quality_score)
-            VALUES ($1, $2, $3, $4, $5)
-            "#,
+            INSERT INTO quality_data (
+                visual_analysis_id,
+                exposure,
+                contrast,
+                sharpness,
+                color_accuracy,
+                composition,
+                subject_clarity,
+                visual_impact,
+                creativity,
+                color_harmony,
+                storytelling,
+                style_suitability,
+                weighted_score,
+                measured_blurriness,
+                measured_noisiness,
+                measured_exposure,
+                measured_weighted_score
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        "#,
             visual_analysis_id,
-            quality.blurriness,
-            quality.noisiness,
-            quality.exposure,
-            quality.quality_score,
+            i16::from(quality.exposure),
+            i16::from(quality.contrast),
+            i16::from(quality.sharpness),
+            i16::from(quality.color_accuracy),
+            i16::from(quality.composition),
+            i16::from(quality.subject_clarity),
+            i16::from(quality.visual_impact),
+            i16::from(quality.creativity),
+            i16::from(quality.color_harmony),
+            i16::from(quality.storytelling),
+            i16::from(quality.style_suitability),
+            quality.weighted_score,
+            quality.measured_blurriness,
+            quality.measured_noisiness,
+            quality.measured_exposure,
+            quality.measured_weighted_score,
         )
-            .execute(&mut **tx)
-            .await?;
+        .execute(&mut **tx)
+        .await?;
 
         // --- Color Data ---
         let color = &analysis.colors;
@@ -169,14 +166,14 @@ impl VisualAnalysisStore {
             r#"
             INSERT INTO caption_data (
                 visual_analysis_id, default_caption, main_subject, contains_pets, contains_vehicle,
-                contains_landmarks, contains_people, contains_animals, is_indoor, is_food_or_drink,
+                contains_landmarks, contains_people, contains_animals, contains_text, is_indoor, is_food_or_drink,
                 is_event, is_document, is_landscape, is_cityscape, is_activity, setting, pet_type,
-                animal_type, food_or_drink_type, vehicle_type, event_type, landmark_name,
+                animal_type, food_or_drink_type, vehicle_type, event_type, landmark_name, ocr_text,
                 document_type, people_count, people_mood, photo_type, activity_description
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-                $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
+                $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
             )
             "#,
             visual_analysis_id,
@@ -187,6 +184,7 @@ impl VisualAnalysisStore {
             caption.contains_landmarks,
             caption.contains_people,
             caption.contains_animals,
+            caption.contains_text,
             caption.is_indoor,
             caption.is_food_or_drink,
             caption.is_event,
@@ -201,6 +199,7 @@ impl VisualAnalysisStore {
             caption.vehicle_type,
             caption.event_type,
             caption.landmark_name,
+            caption.ocr_text,
             caption.document_type,
             caption.people_count,
             caption.people_mood,

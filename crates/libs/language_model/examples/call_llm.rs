@@ -15,9 +15,9 @@ pub async fn run() -> Result<()> {
     let client = LlamaClient::with_base_url("http://localhost:8080").build();
     let mut session = ChatSession::new(client.clone());
 
-    let img_island = Path::new("assets/island.png");
-    let img_farm = Path::new("assets/farm.png");
-    let img_torus = Path::new("assets/torus.png");
+    let img_island = Path::new("media_dir/examples/island.png");
+    let img_farm = Path::new("media_dir/examples/farm.png");
+    let img_torus = Path::new("media_dir/examples/torus.png");
     let prompt = "Caption this image in one paragraph. Respond with the caption only.";
 
     let now = Instant::now();

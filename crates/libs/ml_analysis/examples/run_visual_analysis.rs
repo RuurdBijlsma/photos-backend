@@ -1,8 +1,30 @@
 use app_state::load_app_settings;
-use ml_analysis::{ChatMessage, ChatRole, VisualAnalyzer};
+use image::GenericImageView;
+use image::imageops::FilterType;
+use ml_analysis::VisualAnalyzer;
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
+
+fn resize_image(input: &Path, max_dim: u32) -> image::ImageResult<PathBuf> {
+    let img = image::open(input)?;
+    let (w, h) = img.dimensions();
+
+    let scale = (max_dim as f32 / w.max(h) as f32).min(1.0);
+    let new_w = (w as f32 * scale).round() as u32;
+    let new_h = (h as f32 * scale).round() as u32;
+
+    let resized = img.resize(new_w, new_h, FilterType::Lanczos3);
+
+    let mut out = input.to_path_buf();
+    out.set_file_name(format!(
+        "{}_small.jpg",
+        input.file_stem().unwrap().to_string_lossy()
+    ));
+
+    resized.save(&out)?;
+    Ok(out)
+}
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -14,21 +36,37 @@ async fn main() -> color_eyre::Result<()> {
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
 
     let now = Instant::now();
-    let response = analyzer.llm_chat(vec![ChatMessage {
-        role: ChatRole::User,
-        content: "What's your favourite painting?".to_string(),
-    }])?;
+    let response = analyzer
+        .llm_client
+        .chat("In one sentence, what's your favourite painting?")
+        .call()
+        .await?;
     println!("chat response {response:?}");
     println!("analyzer.llm_chat {:?}\n", now.elapsed());
 
-    let images = vec![Path::new("media_dir/rutenl/cat-pet.jpg")];
+    let images = vec![
+        Path::new("media_dir/rutenl/cat-pet.jpg"),
+        Path::new("media_dir/rutenl/ocr-bug.jpg"),
+        Path::new("media_dir/rutenl/orientation-5.jpg"),
+        Path::new("media_dir/rutenl/PICT0016.JPG"),
+        Path::new("media_dir/rutenl/road.jpg"),
+        Path::new("media_dir/rutenl/sunset.jpg"),
+        Path::new("media_dir/rutenl/tree.jpg"),
+        Path::new("media_dir/rutenl/ocr_scheef.jpg"),
+        Path::new("media_dir/rutenl/ocr_ikea.jpg"),
+    ];
 
     for image in images {
-        let image_filename = image.file_name().unwrap().to_string_lossy().to_string();
+        let resized_img_file = resize_image(image, 720)?;
+        let image_filename = resized_img_file
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
         println!("analyze image {image_filename}");
         let now = Instant::now();
         let analysis = analyzer
-            .analyze_image(&settings.ingest.analyzer, image, 0)
+            .analyze_image(&settings.ingest.analyzer, &resized_img_file, 0)
             .await?;
         let filename = format!("{image_filename}-analysis.json");
         let file = File::create(Path::new(&filename))?;

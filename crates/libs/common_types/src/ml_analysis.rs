@@ -1,22 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
-pub struct PyOCRData {
-    pub has_legible_text: bool,
-    pub ocr_text: Option<String>,
-    pub ocr_boxes: Option<Vec<PyOCRBox>>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct PyOCRBox {
-    pub text: String,
-    pub position: (f32, f32),
-    pub width: f32,
-    pub height: f32,
-    pub confidence: f32,
-}
-
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct PyFace {
     pub position: (f32, f32),
@@ -43,14 +27,6 @@ pub struct PyDetectedObject {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct PyQualityData {
-    pub blurriness: f64,
-    pub noisiness: f64,
-    pub exposure: f64,
-    pub quality_score: f64,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct PyColorData {
     pub themes: Vec<Value>,
     pub prominent_colors: Vec<String>,
@@ -73,9 +49,78 @@ pub struct PyRGBChannels {
     pub blue: Vec<i32>,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct RawQualityMeasurement {
+    pub blurriness: f64,
+    pub noisiness: f64,
+    pub exposure: f64,
+    pub weighted_score: f64,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
+pub struct LlmQualityJudgement {
+    pub exposure: u8,
+    pub contrast: u8,
+    pub sharpness: u8,
+    pub color_accuracy: u8,
+    pub composition: u8,
+    pub subject_clarity: u8,
+    pub visual_impact: u8,
+    pub creativity: u8,
+    pub color_harmony: u8,
+    pub storytelling: u8,
+    pub style_suitability: u8,
+}
+
+impl LlmQualityJudgement {
+    #[must_use]
+    pub fn weighted_score(&self) -> f32 {
+        let weights = [
+            ("exposure", 0.10),
+            ("contrast", 0.08),
+            ("sharpness", 0.10),
+            ("color_accuracy", 0.08),
+            ("composition", 0.12),
+            ("subject_clarity", 0.12),
+            ("visual_impact", 0.10),
+            ("creativity", 0.08),
+            ("color_harmony", 0.06),
+            ("storytelling", 0.12),
+            ("style_suitability", 0.04),
+        ];
+
+        let values = [
+            f32::from(self.exposure),
+            f32::from(self.contrast),
+            f32::from(self.sharpness),
+            f32::from(self.color_accuracy),
+            f32::from(self.composition),
+            f32::from(self.subject_clarity),
+            f32::from(self.visual_impact),
+            f32::from(self.creativity),
+            f32::from(self.color_harmony),
+            f32::from(self.storytelling),
+            f32::from(self.style_suitability),
+        ];
+
+        values
+            .iter()
+            .zip(weights.iter())
+            .map(|(v, (_, w))| v * w)
+            .sum()
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct CombinedQuality {
+    pub judged: Option<LlmQualityJudgement>,
+    pub measured: RawQualityMeasurement,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct LlmCaptionData {
+pub struct LlmCategorizationData {
     pub default_caption: String,
     pub main_subject: String,
     pub contains_pets: bool,
@@ -83,6 +128,7 @@ pub struct LlmCaptionData {
     pub contains_landmarks: bool,
     pub contains_people: bool,
     pub contains_animals: bool,
+    pub contains_text: bool,
     pub is_indoor: bool,
     pub is_food_or_drink: bool,
     pub is_event: bool,
@@ -91,6 +137,7 @@ pub struct LlmCaptionData {
     pub is_cityscape: bool,
     pub is_activity: bool,
     pub setting: String,
+    pub ocr_text: Option<String>,
     pub pet_type: Option<String>,
     pub animal_type: Option<String>,
     pub food_or_drink_type: Option<String>,
@@ -104,15 +151,13 @@ pub struct LlmCaptionData {
     pub activity_description: Option<String>,
 }
 
-// This top-level struct is assembled manually
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct PyVisualAnalysis {
+pub struct RawVisualAnalysis {
     pub percentage: i32,
     pub color_data: PyColorData,
-    pub quality_data: PyQualityData,
-    pub caption_data: LlmCaptionData,
+    pub quality: CombinedQuality,
+    pub categorization_data: LlmCategorizationData,
     pub embedding: Vec<f32>,
     pub faces: Vec<PyFace>,
     pub objects: Vec<PyDetectedObject>,
-    pub ocr: PyOCRData,
 }

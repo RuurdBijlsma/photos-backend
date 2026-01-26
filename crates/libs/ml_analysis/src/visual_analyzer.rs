@@ -1,11 +1,12 @@
+use crate::PyInterop;
 use crate::caption_data::get_caption_data;
 use crate::color_data::get_color_data;
-use crate::quality_data::get_quality_data;
+use crate::quality_judge::get_quality_judgement;
+use crate::quality_measure::get_quality_measurement;
 use crate::utils::convert_media_file;
-use crate::{ChatMessage, PyInterop};
 use app_state::AnalyzerSettings;
 use color_eyre::eyre::eyre;
-use common_types::ml_analysis::PyVisualAnalysis;
+use common_types::ml_analysis::{CombinedQuality, RawVisualAnalysis};
 use common_types::variant::Variant;
 use language_model::{ChatSession, LlamaClient};
 use pyo3::Python;
@@ -16,7 +17,7 @@ use tempfile::Builder;
 
 pub struct VisualAnalyzer {
     py_interop: PyInterop,
-    chat_session: ChatSession,
+    pub llm_client: LlamaClient,
 }
 
 impl VisualAnalyzer {
@@ -27,17 +28,22 @@ impl VisualAnalyzer {
     /// This function will return an error if the Python environment cannot be initialized or the required Python modules are not found.
     pub fn new() -> color_eyre::Result<Self> {
         let llm = LlamaClient::with_base_url("http://localhost:8080").build();
-        let session = ChatSession::with_client(llm).build();
         Python::attach(|py| {
             let py_interop = PyInterop::new(py)?;
             Ok(Self {
                 py_interop,
-                chat_session: session,
+                llm_client: llm,
             })
         })
     }
 
-    /// Get theme json from a given color.
+    /// Get stateful llm session from llm client
+    #[must_use]
+    pub fn get_llm_session(&self) -> ChatSession {
+        ChatSession::new(self.llm_client.clone())
+    }
+
+    /// Get theme JSON from a given color.
     ///
     /// # Errors
     ///
@@ -54,27 +60,17 @@ impl VisualAnalyzer {
         Ok(result)
     }
 
-    /// Send llm message history, and receive a response.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
-    pub fn llm_chat(&self, messages: Vec<ChatMessage>) -> color_eyre::Result<String> {
-        let result = self.py_interop.llm_chat(messages)?;
-        Ok(result)
-    }
-
     /// Performs a visual analysis of the given image file, extracting various data points like color, quality, and content.
     ///
     /// # Errors
     ///
     /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
     pub async fn analyze_image(
-        &mut self,
+        &self,
         config: &AnalyzerSettings,
         file: &Path,
         percentage: i32,
-    ) -> color_eyre::Result<PyVisualAnalysis> {
+    ) -> color_eyre::Result<RawVisualAnalysis> {
         let start = Instant::now();
         let now = Instant::now();
         let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_string()) else {
@@ -101,12 +97,21 @@ impl VisualAnalyzer {
         println!("get_color_data {:?}", now.elapsed());
 
         let now = Instant::now();
-        let quality_data = get_quality_data(&analysis_file)?;
-        println!("get_quality_data {:?}", now.elapsed());
+        let categorization_data = get_caption_data(&self.llm_client, &analysis_file).await?;
+        println!("get_caption_data {:?}", now.elapsed());
 
         let now = Instant::now();
-        let caption_data = get_caption_data(&mut self.chat_session, &analysis_file).await?;
-        println!("get_caption_data {:?}", now.elapsed());
+        let quality_measurement = get_quality_measurement(&analysis_file)?;
+        println!("get_quality_measurement {:?}", now.elapsed());
+
+        let now = Instant::now();
+        let quality_judgement = get_quality_judgement(&self.llm_client, &analysis_file).await?;
+        println!("get_quality_judgement {:?}", now.elapsed());
+
+        let quality = CombinedQuality {
+            measured: quality_measurement,
+            judged: quality_judgement,
+        };
 
         let now = Instant::now();
         let embedding = self.py_interop.embed_image(&analysis_file)?;
@@ -126,25 +131,18 @@ impl VisualAnalyzer {
         let objects = self.py_interop.object_detection(&analysis_file)?;
         println!("object_detection {:?}", now.elapsed());
 
-        let now = Instant::now();
-        let ocr = self
-            .py_interop
-            .ocr(&analysis_file, config.ocr_languages.clone())?;
-        println!("ocr {:?}", now.elapsed());
-
         tokio::fs::remove_file(&analysis_file).await?;
 
         println!("total ml analysis {:?}", start.elapsed());
 
-        Ok(PyVisualAnalysis {
+        Ok(RawVisualAnalysis {
             percentage,
             color_data,
-            quality_data,
-            caption_data,
+            quality,
+            categorization_data,
             embedding,
             faces,
             objects,
-            ocr,
         })
     }
 }

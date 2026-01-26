@@ -20,7 +20,6 @@ use tokio::fs;
 use tracing::debug;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
-    // 1. Validate Job Data
     let relative_path = job
         .relative_path
         .as_deref()
@@ -28,22 +27,14 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_id = job
         .user_id
         .ok_or_else(|| eyre!("Ingest job has no associated user_id"))?;
-
     let media_root = &context.settings.ingest.media_root;
     let file_path = media_root.join(relative_path);
-
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
-
-    // 2. Prepare Identifiers
     let file_hash = hash_file(&file_path)?;
     let media_item_id = nice_id(constants().database.media_item_id_length);
-
-    // 3. Get Media Info (Cache or Compute)
     let media_info = get_media_info(context, &file_path, &file_hash).await?;
-
-    // 4. Process Thumbnails (Cache or Generate)
     process_thumbnails(
         context,
         &file_path,
@@ -52,13 +43,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         media_info.metadata.orientation,
     )
     .await?;
-
-    // 5. Final Checks before DB Write
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
         return Ok(JobResult::Cancelled);
     }
-
-    // 6. Save to Database
     let deleted_id = store_media_item(
         &context.pool,
         user_id,
@@ -67,10 +54,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         &media_item_id,
     )
     .await?;
-
-    // 7. Cleanup
     cleanup_old_thumbnails(&context.settings.ingest.thumbnail_root, deleted_id).await?;
-
     Ok(JobResult::Done)
 }
 
@@ -86,16 +70,13 @@ async fn get_media_info(
         debug!("Using ingest cache for {:?}", file_path.file_name());
         return Ok(cached);
     }
-
     let media_info = {
         let mut analyzer = context.media_analyzer.lock().await;
         analyzer.analyze_media(file_path).await?
     };
-
     if context.settings.ingest.enable_cache {
-        write_ingest_cache(file_hash, &media_info).await?;
+        write_ingest_cache(file_hash, media_info.clone()).await?;
     }
-
     Ok(media_info)
 }
 
@@ -140,11 +121,6 @@ async fn process_thumbnails(
     Ok(())
 }
 
-/// Transactional database update:
-/// - Checks pending album items
-/// - Deletes old media item (if re-ingesting)
-/// - Creates new media item
-/// - Updates album links
 async fn store_media_item(
     pool: &PgPool,
     user_id: i32,
@@ -153,8 +129,6 @@ async fn store_media_item(
     new_id: &str,
 ) -> Result<Option<String>> {
     let mut tx = pool.begin().await?;
-
-    // Check for pending album link
     let pending = sqlx::query_as!(
         PendingAlbumMediaItem,
         r#"
@@ -166,18 +140,12 @@ async fn store_media_item(
     )
     .fetch_optional(&mut *tx)
     .await?;
-
-    // Resolve remote user if applicable
     let remote_user_id = if let Some(info) = &pending {
         Some(get_or_create_remote_user(&mut tx, user_id, &info.remote_user_identity).await?)
     } else {
         None
     };
-
-    // Remove old entry if this is a re-ingest
     let deleted_id = MediaItemStore::delete_by_relative_path(&mut *tx, relative_path).await?;
-
-    // Create new entry
     MediaItemStore::create(
         &mut tx,
         new_id,
@@ -187,13 +155,10 @@ async fn store_media_item(
         &analyze_result.into(),
     )
     .await?;
-
-    // Link to album if pending existed
     if let Some(info) = &pending {
         AlbumStore::add_media_items(&mut *tx, &info.album_id, &[new_id.to_string()], user_id)
             .await?;
     }
-
     tx.commit().await?;
     Ok(deleted_id)
 }
