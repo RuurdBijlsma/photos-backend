@@ -3,19 +3,6 @@ use pyo3::prelude::*;
 use std::path::Path;
 use std::time::Instant;
 
-/// Calculates the cosine similarity between two vectors.
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
-    let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-    let magnitude_a: f32 = a.iter().map(|x| x.powi(2)).sum::<f32>().sqrt();
-    let magnitude_b: f32 = b.iter().map(|x| x.powi(2)).sum::<f32>().sqrt();
-
-    if magnitude_a == 0.0 || magnitude_b == 0.0 {
-        0.0
-    } else {
-        dot_product / (magnitude_a * magnitude_b)
-    }
-}
-
 fn main() -> PyResult<()> {
     Python::attach(|py| {
         let py_interop = PyInterop::new(py)?;
@@ -29,36 +16,6 @@ fn main() -> PyResult<()> {
 
         for file in files {
             println!("\n\nAnalyzing file: {}", file.display());
-
-            // === EMBEDDER ===
-            let now = Instant::now();
-            let image_embedding = py_interop.embed_image(file)?;
-
-            // Define the texts and embed them all in a single batch
-            let texts_to_compare = vec![
-                "This is an image of a road during a sunset.",
-                "A photo of a tree.",
-                "This is a sunset.",
-                "Photo of a sunset taken from a boat. A crane is in the foreground.",
-            ];
-            let text_embeddings = py_interop.embed_texts(texts_to_compare.clone())?;
-
-            // Calculate similarity score for each text against the image
-            let mut similarities: Vec<(&str, f32)> = Vec::new();
-            for (i, text_embedding) in text_embeddings.iter().enumerate() {
-                let similarity = cosine_similarity(&image_embedding, text_embedding);
-                similarities.push((texts_to_compare[i], similarity));
-            }
-
-            // Sort by similarity score in descending order
-            similarities.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-            // Print the sorted results
-            println!("\tText similarity scores (higher is better):");
-            for (text, score) in similarities {
-                println!("\t- Score: {score:.4}, Text: \"{text}\"");
-            }
-            println!("Embedder took {:#?}.", now.elapsed());
 
             // === FACIAL RECOGNITION ===
             let now = Instant::now();

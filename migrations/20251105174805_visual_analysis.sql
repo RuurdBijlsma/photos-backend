@@ -4,7 +4,7 @@ CREATE TABLE visual_analysis
     id            BIGSERIAL PRIMARY KEY,
     media_item_id VARCHAR(10)  NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    embedding     VECTOR(1024) NOT NULL,
+    embedding     VECTOR(1152) NOT NULL,
     percentage    INT          NOT NULL
 );
 CREATE INDEX idx_visual_analysis_media_item_id ON visual_analysis (media_item_id);

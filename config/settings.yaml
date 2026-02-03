@@ -5,6 +5,7 @@ ingest:
 
   analyzer:
     llm_base_url: "http://localhost:8080"
+    embedder_model_id: RuteNL/ViT-SO400M-16-SigLIP2-384-ONNX
     analyze_image_size: 720
     theme_generation:
       variant: Vibrant

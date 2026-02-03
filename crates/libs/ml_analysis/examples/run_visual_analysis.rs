@@ -1,3 +1,8 @@
+#![allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 use app_state::load_app_settings;
 use image::GenericImageView;
 use image::imageops::FilterType;
@@ -32,7 +37,7 @@ async fn main() -> color_eyre::Result<()> {
 
     let settings = load_app_settings()?;
     let now = Instant::now();
-    let analyzer = VisualAnalyzer::new()?;
+    let mut analyzer = VisualAnalyzer::new(&settings.ingest.analyzer.embedder_model_id).await?;
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
 
     let now = Instant::now();

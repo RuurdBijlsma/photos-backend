@@ -9,6 +9,7 @@ use color_eyre::eyre::eyre;
 use common_types::ml_analysis::{CombinedQuality, RawVisualAnalysis};
 use common_types::variant::Variant;
 use language_model::{ChatSession, LlamaClient};
+use open_clip_inference::VisionEmbedder;
 use pyo3::Python;
 use serde_json::Value;
 use std::path::Path;
@@ -17,6 +18,7 @@ use tempfile::Builder;
 
 pub struct VisualAnalyzer {
     py_interop: PyInterop,
+    pub embedder: VisionEmbedder,
     pub llm_client: LlamaClient,
 }
 
@@ -26,13 +28,15 @@ impl VisualAnalyzer {
     /// # Errors
     ///
     /// This function will return an error if the Python environment cannot be initialized or the required Python modules are not found.
-    pub fn new() -> color_eyre::Result<Self> {
+    pub async fn new(embedder_model_id: &str) -> color_eyre::Result<Self> {
+        let embedder = VisionEmbedder::from_hf(embedder_model_id).build().await?;
         let llm = LlamaClient::with_base_url("http://localhost:8080").build();
         Python::attach(|py| {
             let py_interop = PyInterop::new(py)?;
             Ok(Self {
                 py_interop,
                 llm_client: llm,
+                embedder,
             })
         })
     }
@@ -66,7 +70,7 @@ impl VisualAnalyzer {
     ///
     /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
     pub async fn analyze_image(
-        &self,
+        &mut self,
         config: &AnalyzerSettings,
         file: &Path,
         percentage: i32,
@@ -114,14 +118,9 @@ impl VisualAnalyzer {
         };
 
         let now = Instant::now();
-        let embedding = self.py_interop.embed_image(&analysis_file)?;
+        let img = image::open(&analysis_file)?;
+        let embedding = self.embedder.embed_image(&img)?.to_vec();
         println!("embed_image {:?}", now.elapsed());
-
-        let now = Instant::now();
-        let _x = self
-            .py_interop
-            .embed_text("This is my search query i want an image")?;
-        println!("embed_text {:?}", now.elapsed());
 
         let now = Instant::now();
         let faces = self.py_interop.facial_recognition(&analysis_file)?;

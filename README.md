@@ -16,7 +16,8 @@ and search.
 * **nasm**: `winget install -e --id NASM.NASM`
 * **protoc**: `winget install -e --id Google.Protobuf`
 * **sqlx**: `cargo install sqlx-cli`
-* **llama.cpp**: Required for LLM-based image categorization, OCR, and quality judging. [Installation Guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/install.md)
+* **llama.cpp**: Required for LLM-based image categorization, OCR, and quality
+  judging. [Installation Guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/install.md)
 * **Python** installed and added to `PATH` (e.g., `C:\Users\YourName\AppData\Local\Programs\Python\Python312` on
   Windows; Linux support needs testing)
 * **uv** installed for setting up the virtualenv in `ml_analysis`
@@ -32,6 +33,8 @@ git clone https://github.com/RuurdBijlsma/photos-backend.git
 cd photos-backend
 ```
 
+### 2. 
+
 ### 2. Set up `ml_analysis` environment
 
 ```bash
@@ -41,12 +44,15 @@ uv sync
 
 ### 3. Start the LLM Server
 
-The worker requires a running `llama-server` to perform visual analysis. It is recommended to use a Vision-Language model like Qwen3-VL.
+The worker requires a running `llama-server` to perform visual analysis. It is recommended to use a Vision-Language
+model like Qwen3-VL.
 
 ```bash
 llama-server -hf unsloth/Qwen3-VL-4B-Instruct-GGUF:Q4_K_M --n-gpu-layers 99 --jinja --top-p 0.8 --temp 0.7 --min-p 0.0 --flash-attn on --presence-penalty 1.5 --ctx-size 8192 --models-max 1 --sleep-idle-seconds 60
 ```
-*Note: Ensure the `llm_base_url` in `config/settings.yaml` matches your server address (default is `http://localhost:8080`).*
+
+*Note: Ensure the `llm_base_url` in `config/settings.yaml` matches your server address (default
+is `http://localhost:8080`).*
 
 ### 4. Set environment variables
 

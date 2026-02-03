@@ -14,7 +14,7 @@ pub struct WorkerContext {
     pub pool: PgPool,
     pub settings: AppSettings,
     pub media_analyzer: Arc<Mutex<MediaAnalyzer>>,
-    pub visual_analyzer: Arc<VisualAnalyzer>,
+    pub visual_analyzer: Arc<Mutex<VisualAnalyzer>>,
     pub s2s_client: S2SClient,
 }
 
@@ -30,13 +30,14 @@ impl WorkerContext {
         worker_id: String,
         handle_analysis: bool,
     ) -> Result<Self> {
+        let embedder_model_id = &settings.ingest.analyzer.embedder_model_id.clone();
         Ok(Self {
             worker_id,
             handle_analysis,
             pool,
             settings,
             media_analyzer: Arc::new(Mutex::new(MediaAnalyzer::builder().build().await?)),
-            visual_analyzer: Arc::new(VisualAnalyzer::new()?),
+            visual_analyzer: Arc::new(Mutex::new(VisualAnalyzer::new(embedder_model_id).await?)),
             s2s_client: S2SClient::new(Client::new()),
         })
     }

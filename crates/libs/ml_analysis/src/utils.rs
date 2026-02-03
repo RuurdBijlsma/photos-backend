@@ -1,5 +1,7 @@
-use crate::VisualAnalyzer;
+use crate::PyInterop;
+use color_eyre::eyre::ContextCompat;
 use common_types::variant::Variant;
+use pyo3::Python;
 use serde_json::Value;
 use std::io;
 use std::path::Path;
@@ -28,7 +30,9 @@ pub fn get_color_theme(
     variant: &Variant,
     contrast_level: f32,
 ) -> color_eyre::Result<Value> {
-    let visual_analyzer = VisualAnalyzer::new()?;
-    let theme = visual_analyzer.theme_from_color(color, variant, contrast_level)?;
-    Ok(theme)
+    Python::attach(|py| {
+        let interop = PyInterop::new(py).ok()?;
+        Some(interop.get_theme_from_color(color, variant, contrast_level))
+    })
+    .context("Python attach failed for theme color generation")?
 }

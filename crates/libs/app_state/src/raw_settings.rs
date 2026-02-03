@@ -27,6 +27,7 @@ pub struct RawIngestSettings {
 pub struct AnalyzerSettings {
     pub analyze_image_size: u64,
     pub llm_base_url: String,
+    pub embedder_model_id: String,
     pub theme_generation: ThemeSettings,
     pub ocr_languages: Vec<String>,
 }
