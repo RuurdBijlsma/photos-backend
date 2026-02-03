@@ -1,6 +1,5 @@
 -- Ensure the vector extension is available.
-CREATE
-EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Represents a person, which is a cluster of similar faces.
 CREATE TABLE person
