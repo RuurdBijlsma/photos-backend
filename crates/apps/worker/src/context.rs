@@ -37,7 +37,7 @@ impl WorkerContext {
             pool,
             settings,
             media_analyzer: Arc::new(Mutex::new(MediaAnalyzer::builder().build().await?)),
-            visual_analyzer: Arc::new(Mutex::new(VisualAnalyzer::new(&embedder_model_id).await?)),
+            visual_analyzer: Arc::new(Mutex::new(VisualAnalyzer::new(embedder_model_id).await?)),
             s2s_client: S2SClient::new(Client::new()),
         })
     }

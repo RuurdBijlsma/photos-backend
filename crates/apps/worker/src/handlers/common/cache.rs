@@ -107,10 +107,10 @@ pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<RawVisualAnalys
     if let Ok(cached_analysis) = serde_json::from_str::<CachedAnalysisResult>(&data)
         && cached_analysis.version == ANALYSIS_CACHE_VERSION
     {
-        if let Some(va) = cached_analysis.visual_analyses.first() {
-            if va.embedding.len() != EXPECTED_EMBEDDING_LENGTH {
-                return Ok(None);
-            }
+        if let Some(va) = cached_analysis.visual_analyses.first()
+            && va.embedding.len() != EXPECTED_EMBEDDING_LENGTH
+        {
+            return Ok(None);
         }
         return Ok(Some(cached_analysis.visual_analyses));
     }
