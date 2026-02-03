@@ -1,5 +1,6 @@
 -- Ensure the vector extension is available.
-CREATE EXTENSION IF NOT EXISTS vector;
+CREATE
+EXTENSION IF NOT EXISTS vector;
 
 -- Represents a person, which is a cluster of similar faces.
 CREATE TABLE person
@@ -22,9 +23,9 @@ CREATE TABLE photo_cluster
 (
     id                      BIGSERIAL PRIMARY KEY,
     user_id                 INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    title                    TEXT,        -- Optional auto generated title, e.g., "Beach Sunsets"
+    title                   TEXT,         -- Optional auto generated title, e.g., "Beach Sunsets"
     thumbnail_media_item_id VARCHAR(10) REFERENCES media_item (id) ON DELETE SET NULL,
-    centroid                VECTOR(1024), -- The average photo embedding (from visual_analysis) for this cluster
+    centroid                VECTOR(1152), -- The average photo embedding (from visual_analysis) for this cluster
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -13,6 +13,7 @@ const INGEST_RESULT_FILENAME: &str = "ingest_result.json";
 const ANALYSIS_RESULT_FILENAME: &str = "analysis_result.json";
 const INGEST_CACHE_VERSION: u32 = 1;
 const ANALYSIS_CACHE_VERSION: u32 = 1;
+const EXPECTED_EMBEDDING_LENGTH: usize = 1152;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CachedIngestResult {
@@ -106,6 +107,11 @@ pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<RawVisualAnalys
     if let Ok(cached_analysis) = serde_json::from_str::<CachedAnalysisResult>(&data)
         && cached_analysis.version == ANALYSIS_CACHE_VERSION
     {
+        if let Some(va) = cached_analysis.visual_analyses.first() {
+            if va.embedding.len() != EXPECTED_EMBEDDING_LENGTH {
+                return Ok(None);
+            }
+        }
         return Ok(Some(cached_analysis.visual_analyses));
     }
     warn!(

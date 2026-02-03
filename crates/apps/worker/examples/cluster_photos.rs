@@ -21,7 +21,7 @@ struct PhotoData {
 async fn main() -> Result<()> {
     // --- Configuration ---
     const USER_ID_TO_TEST: i32 = 1;
-    const OUTPUT_DIR: &str = "photo_clusters_output";
+    const OUTPUT_DIR: &str = "photo_cluster_output";
     let settings = load_app_settings()?;
 
     // --- Setup ---
@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
     // --- 2. Run Clustering Algorithm ---
     info!("Running HDBSCAN clustering...");
     let embeddings: Vec<Vec<f32>> = photos.iter().map(|p| p.embedding.to_vec()).collect();
-    let (labels, _centroids) = run_hdbscan(&embeddings, 3, 4)?;
+    let (labels, _centroids) = run_hdbscan(&embeddings, 2, 2)?;
     info!(
         "Clustering complete. Found {} clusters (excluding noise).",
         labels

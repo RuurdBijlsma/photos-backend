@@ -1,7 +1,6 @@
 use color_eyre::eyre::Context;
 use common_types::ml_analysis::{PyDetectedObject, PyFace};
 use common_types::variant::Variant;
-use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::prelude::*;
 use serde_json::Value;
 use std::env;
@@ -11,10 +10,6 @@ pub struct PyInterop {
     json_dumps: Py<PyAny>,
     facial_recognition_func: Py<PyAny>,
     object_detection_func: Py<PyAny>,
-    image_embed_func: Py<PyAny>,
-    text_embed_func: Py<PyAny>,
-    images_embed_func: Py<PyAny>,
-    texts_embed_func: Py<PyAny>,
     get_image_prominent_colors_func: Py<PyAny>,
     get_theme_from_color_func: Py<PyAny>,
 }
@@ -64,10 +59,6 @@ impl PyInterop {
         let module = py.import("py_analyze")?;
         let facial_recognition_func = module.getattr("recognize_faces")?.into_pyobject(py)?;
         let object_detection_func = module.getattr("detect_objects")?.into_pyobject(py)?;
-        let image_embed_func = module.getattr("embed_image")?.into_pyobject(py)?;
-        let text_embed_func = module.getattr("embed_text")?.into_pyobject(py)?;
-        let multi_image_embed_func = module.getattr("embed_images")?.into_pyobject(py)?;
-        let multi_text_embed_func = module.getattr("embed_texts")?.into_pyobject(py)?;
         let get_image_prominent_colors_func = module
             .getattr("get_image_prominent_colors")?
             .into_pyobject(py)?;
@@ -78,10 +69,6 @@ impl PyInterop {
         let dumps = json.getattr("dumps")?.into_pyobject(py)?;
 
         Ok(Self {
-            text_embed_func: text_embed_func.into(),
-            image_embed_func: image_embed_func.into(),
-            texts_embed_func: multi_text_embed_func.into(),
-            images_embed_func: multi_image_embed_func.into(),
             object_detection_func: object_detection_func.into(),
             facial_recognition_func: facial_recognition_func.into(),
             json_dumps: dumps.into(),
@@ -125,84 +112,6 @@ impl PyInterop {
                 serde_json::from_str(&json_str).context("Could not parse json from Python.")?;
 
             Ok(theme)
-        })
-    }
-
-    /// Embeds text by calling a Python function.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the Python call fails or if the result
-    /// cannot be converted into a 1D `NumPy` array of f32 values.
-    pub fn embed_text(&self, text: &str) -> Result<Vec<f32>, PyErr> {
-        Python::attach(|py| {
-            let func = self.text_embed_func.bind(py);
-            let result = func.call1((text,))?;
-            let py_array: PyReadonlyArray1<'_, f32> = result.extract()?;
-            let owned_vec = py_array.to_vec()?;
-
-            Ok(owned_vec)
-        })
-    }
-
-    /// Embeds a list of texts by calling a Python function.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the Python call fails or if the result
-    /// cannot be converted into a 2D `NumPy` array of f32 values.
-    pub fn embed_texts(&self, texts: Vec<&str>) -> Result<Vec<Vec<f32>>, PyErr> {
-        Python::attach(|py| {
-            let func = self.texts_embed_func.bind(py);
-            let result = func.call1((texts,))?;
-            let py_array: PyReadonlyArray2<'_, f32> = result.extract()?;
-            let embeddings = py_array
-                .as_array()
-                .rows()
-                .into_iter()
-                .map(|row| row.to_vec())
-                .collect();
-
-            Ok(embeddings)
-        })
-    }
-
-    /// Embeds an image by calling a Python function.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the Python call fails or if the result
-    /// cannot be converted into a 1D `NumPy` array of f32 values.
-    pub fn embed_image(&self, image: &Path) -> Result<Vec<f32>, PyErr> {
-        Python::attach(|py| {
-            let func = self.image_embed_func.bind(py);
-            let result = func.call1((image,))?;
-            let py_array: PyReadonlyArray1<'_, f32> = result.extract()?;
-            let owned_vec = py_array.to_vec()?;
-
-            Ok(owned_vec)
-        })
-    }
-
-    /// Embeds a list of images by calling a Python function.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the Python call fails or if the result
-    /// cannot be converted into a 2D `NumPy` array of f32 values.
-    pub fn embed_images(&self, images: Vec<&Path>) -> Result<Vec<Vec<f32>>, PyErr> {
-        Python::attach(|py| {
-            let func = self.images_embed_func.bind(py);
-            let result = func.call1((images,))?;
-            let py_array: PyReadonlyArray2<'_, f32> = result.extract()?;
-            let embeddings = py_array
-                .as_array()
-                .rows()
-                .into_iter()
-                .map(|row| row.to_vec())
-                .collect();
-
-            Ok(embeddings)
         })
     }
 

@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 tracing = "0.1.44"
 color-eyre = "0.6.5"
-# API deps:
 tokio = { version = "1.49.0", features = ["full"] }
 reqwest = { version = "0.13.1", features = ["json", "stream"] }
 serde_json = "1.0.149"

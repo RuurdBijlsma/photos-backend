@@ -74,12 +74,13 @@ async fn compute_analysis(
     let mut analyses = Vec::new();
 
     for (percentage, image_path) in images_to_analyze {
-        let analyzer = context.visual_analyzer.clone();
         let analyzer_settings = context.settings.ingest.analyzer.clone();
         // This spawn blocking -> block_on is needed because analyze image does work on the
         // main thread and this disturbs the integration test.
+        let vis_analyzer = context.visual_analyzer.clone();
         let analysis_result = tokio::task::spawn_blocking(move || {
             tokio::runtime::Handle::current().block_on(async move {
+                let mut analyzer = vis_analyzer.lock().await;
                 analyzer
                     .analyze_image(&analyzer_settings, &image_path, percentage)
                     .await
