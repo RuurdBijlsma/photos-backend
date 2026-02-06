@@ -80,8 +80,7 @@ async fn compute_analysis(
         let vis_analyzer = context.visual_analyzer.clone();
         let analysis_result = tokio::task::spawn_blocking(move || {
             tokio::runtime::Handle::current().block_on(async move {
-                let mut analyzer = vis_analyzer.lock().await;
-                analyzer
+                vis_analyzer
                     .analyze_image(&analyzer_settings, &image_path, percentage)
                     .await
             })

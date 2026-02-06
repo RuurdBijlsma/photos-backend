@@ -70,10 +70,7 @@ async fn get_media_info(
         debug!("Using ingest cache for {:?}", file_path.file_name());
         return Ok(cached);
     }
-    let media_info = {
-        let mut analyzer = context.media_analyzer.lock().await;
-        analyzer.analyze_media(file_path).await?
-    };
+    let media_info = context.media_analyzer.analyze_media(file_path).await?;
     if context.settings.ingest.enable_cache {
         write_ingest_cache(file_hash, media_info.clone()).await?;
     }

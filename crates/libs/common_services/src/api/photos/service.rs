@@ -6,7 +6,7 @@ use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
 use color_eyre::Report;
 use http::{Response, StatusCode, header};
-use rand::Rng;
+use rand::RngExt;
 use sqlx::PgPool;
 use std::path::Path;
 use tokio::fs::File;

@@ -17,7 +17,7 @@ const EXPECTED_EMBEDDING_LENGTH: usize = 1152;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CachedIngestResult {
-    pub analyze_result: AnalyzeResult,
+    pub ingest_result: AnalyzeResult,
     pub version: u32,
 }
 
@@ -76,7 +76,7 @@ pub async fn get_ingest_cache(hash: &str) -> Result<Option<AnalyzeResult>> {
     if let Ok(cached_ingest) = serde_json::from_str::<CachedIngestResult>(&data)
         && cached_ingest.version == INGEST_CACHE_VERSION
     {
-        return Ok(Some(cached_ingest.analyze_result));
+        return Ok(Some(cached_ingest.ingest_result));
     }
     warn!(
         "Found invalid cache file for ingest. Deleting {}/{}.",
@@ -91,7 +91,7 @@ pub async fn write_ingest_cache(hash: &str, analyze_result: AnalyzeResult) -> Re
     let ingest_cache_file = hash_folder.join(INGEST_RESULT_FILENAME);
     let json = serde_json::to_string(&CachedIngestResult {
         version: INGEST_CACHE_VERSION,
-        analyze_result,
+        ingest_result: analyze_result,
     })?;
     fs::write(ingest_cache_file, json).await?;
     Ok(())

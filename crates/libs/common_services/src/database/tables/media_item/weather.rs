@@ -50,10 +50,10 @@ impl From<WeatherInfo> for Weather {
             pressure: hourly.as_ref().and_then(|h| h.pressure.map(|p| p as f32)),
             sunshine_minutes: hourly.as_ref().and_then(|h| h.sunshine_minutes),
             condition: hourly.and_then(|h| h.condition.map(|c| c.to_string())),
-            sunrise: Some(weather_info.sun_info.sunrise),
-            sunset: Some(weather_info.sun_info.sunset),
-            dawn: Some(weather_info.sun_info.dawn),
-            dusk: Some(weather_info.sun_info.dusk),
+            sunrise: weather_info.sun_info.sunrise,
+            sunset: weather_info.sun_info.sunset,
+            dawn: weather_info.sun_info.dawn,
+            dusk: weather_info.sun_info.dusk,
             is_daytime: Some(weather_info.sun_info.is_daytime),
         }
     }

@@ -70,7 +70,7 @@ impl VisualAnalyzer {
     ///
     /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
     pub async fn analyze_image(
-        &mut self,
+        &self,
         config: &AnalyzerSettings,
         file: &Path,
         percentage: i32,

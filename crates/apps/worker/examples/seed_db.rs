@@ -14,7 +14,7 @@ use common_services::utils::nice_id;
 use media_analyzer::{
     AnalyzeResult, CaptureDetails, FileMetadata, PanoInfo, SourceDetails, TagData, TimeInfo,
 };
-use rand::Rng;
+use rand::RngExt;
 use sqlx::{PgPool, PgTransaction};
 use std::time::Instant;
 use tracing::info;
