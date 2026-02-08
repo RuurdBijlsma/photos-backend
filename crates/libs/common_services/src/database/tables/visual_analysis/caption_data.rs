@@ -65,7 +65,7 @@ impl From<LlmCategorizationData> for CategorizationData {
             people_count: caption_data.people_count,
             people_mood: caption_data.people_mood,
             photo_type: caption_data.photo_type,
-            activity_description: caption_data.activity_description,
+            activity_description: caption_data.activity_name,
         }
     }
 }

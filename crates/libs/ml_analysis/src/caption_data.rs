@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use std::path::Path;
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Deserialize)]
 pub struct RequiredOutput {
     pub caption: String,
@@ -35,17 +36,23 @@ pub async fn get_caption_data(
             "caption": { "type": "string" },
             "main_subject": { "type": "string" },
             "setting": { "type": "string" },
-            "contains_pets": { "type": "boolean" },
-            "contains_animals": { "type": "boolean" },
-            "contains_vehicle": { "type": "boolean" },
-            "contains_landmarks": { "type": "boolean" },
-            "contains_people": { "type": "boolean" },
+            "contains_pets": { "type": "boolean", "description": "Is there a prominent pet shown in the photo? examples: [cat, dog, bird, etc.]" },
+            "contains_animals": { "type": "boolean", "description": "Is an animal prominently shown in the photo? Examples: [lion, dog, deer, ant, spider]" },
+            "contains_vehicle": { "type": "boolean", "description": "Is a vehicle shown prominently in the photo? Examples: [car, boat, bicycle, scooter]" },
+            "contains_landmarks": { "type": "boolean", "description": "Is a landmark shown prominently in the photo? Examples: [Eiffel tower, notre dame, parthenon, statue of liberty, colosseum, golden gate bridge]" },
+            "contains_people": { "type": "boolean", "description": "Is this a document, like a \
+            passport, receipt, ticket, book, magazine, notes, payment card, id card, menu, \
+            or recipe?"},
             "is_indoor": { "type": "boolean" },
-            "is_food_or_drink": { "type": "boolean" },
-            "is_event": { "type": "boolean" },
-            "is_document": { "type": "boolean" },
-            "is_activity": { "type": "boolean" },
-            "contains_text": { "type": "boolean", "description": "Is there legible text visible in this photo?" },
+            "is_food_or_drink": { "type": "boolean", "description": "Is this a photo of a food or drink item? Example: [spaghetti, pizza, cheeseburger, lasagna, cola, coffee, tea]" },
+            "is_event": { "type": "boolean", "description": "Is this a specific event (e.g., \
+            birthday party, wedding, concert, holiday)?" },
+            "is_document": { "type": "boolean", "description": "Is this a document? Examples: [passport, receipt, ticket, book, magazine, notes, payment card, id card, menu, or recipe?]" },
+            "is_activity": { "type": "boolean", "description": "Is a clear, intentional physical \
+            action being performed in this photo (e.g., walking, cooking, exercising), not \
+            including passive states such as sitting, standing, resting, posing, or watching?" },
+            "contains_text": { "type": "boolean", "description": "Is there legible text visible in \
+            this photo?" },
             "is_landscape": { "type": "boolean" },
             "is_cityscape": { "type": "boolean" },
         },
@@ -136,8 +143,8 @@ setting:
         s2_required.push("document_type".to_string());
     }
     if required.is_activity {
-        s2_props["activity_description"] = json!({ "type": "string", "description": "The specific physical action being performed." });
-        s2_required.push("activity_description".to_string());
+        s2_props["activity_name"] = json!({ "type": "string", "description": "The main, singular physical action being performed, examples: [football, running, rowing, swimming]." });
+        s2_required.push("activity_name".to_string());
     }
     if required.contains_text {
         s2_props["ocr_text"] = json!({ "type": "string", "description": "Extract all legible text exactly as it appears." });
@@ -193,7 +200,7 @@ setting:
             people_count: s2["people_count"].as_i64().map(|v| v as i32),
             people_mood: s2["people_mood"].as_str().map(String::from),
             photo_type: s2["photo_type"].as_str().map(String::from),
-            activity_description: s2["activity_description"].as_str().map(String::from),
+            activity_name: s2["activity_name"].as_str().map(String::from),
             ocr_text: s2["ocr_text"].as_str().map(String::from),
         }
     } else {
@@ -225,7 +232,7 @@ setting:
             people_count: None,
             people_mood: None,
             photo_type: None,
-            activity_description: None,
+            activity_name: None,
             ocr_text: None,
         }
     };

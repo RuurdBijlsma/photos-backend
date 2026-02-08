@@ -148,7 +148,7 @@ pub struct LlmCategorizationData {
     pub people_count: Option<i32>,
     pub people_mood: Option<String>,
     pub photo_type: Option<String>,
-    pub activity_description: Option<String>,
+    pub activity_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
