@@ -20,5 +20,6 @@ pub use color_data::get_color_data;
 pub use py_interop::PyInterop;
 pub use quality_judge::get_quality_judgement;
 pub use quality_measure::get_quality_measurement;
+pub use caption_data::get_caption_data;
 pub use utils::*;
 pub use visual_analyzer::VisualAnalyzer;

@@ -22,3 +22,6 @@ ort = { version = "2.0.0-rc.11" }
 [features]
 default = ["load-dynamic"]
 load-dynamic = ["open_clip_inference/load-dynamic", "ort/load-dynamic"]
+
+[dev-dependencies]
+walkdir = "2.5.0"

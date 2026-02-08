@@ -177,7 +177,7 @@ impl VisualAnalysisStore {
             )
             "#,
             visual_analysis_id,
-            caption.default_caption,
+            caption.caption,
             caption.main_subject,
             caption.contains_pets,
             caption.contains_vehicle,

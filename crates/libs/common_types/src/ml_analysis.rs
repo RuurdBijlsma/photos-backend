@@ -121,8 +121,9 @@ pub struct CombinedQuality {
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct LlmCategorizationData {
-    pub default_caption: String,
+    pub caption: String,
     pub main_subject: String,
+    pub setting: String,
     pub contains_pets: bool,
     pub contains_vehicle: bool,
     pub contains_landmarks: bool,
@@ -136,7 +137,6 @@ pub struct LlmCategorizationData {
     pub is_landscape: bool,
     pub is_cityscape: bool,
     pub is_activity: bool,
-    pub setting: String,
     pub ocr_text: Option<String>,
     pub pet_type: Option<String>,
     pub animal_type: Option<String>,
