@@ -32,6 +32,10 @@ async fn main() -> color_eyre::Result<()> {
 
     let llm_client = LlamaClient::with_base_url("http://localhost:8080").build();
     let root_folder = "C:/Users/Ruurd/Pictures/small_media_dir/rutenl";
+    let out_folder = Path::new("captions/old");
+    if !out_folder.exists() {
+        std::fs::create_dir_all(out_folder)?;
+    }
 
     for entry in WalkDir::new(root_folder).into_iter().filter_map(Result::ok) {
         if entry.file_type().is_file() {
@@ -43,8 +47,8 @@ async fn main() -> color_eyre::Result<()> {
             let caption_data = get_caption_data(&llm_client, &resized_img_file).await?;
 
             if let Some(cd) = caption_data {
-                let filename = format!("{image_filename}-caption.json");
-                let file = File::create(Path::new(&filename))?;
+                let out_path = out_folder.join(format!("{image_filename}-caption.json"));
+                let file = File::create(&out_path)?;
                 serde_json::to_writer_pretty(file, &cd)?;
                 println!("{image_filename} {:?}", now.elapsed());
             } else {
