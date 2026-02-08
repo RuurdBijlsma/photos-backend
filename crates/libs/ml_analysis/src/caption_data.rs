@@ -11,7 +11,6 @@ to two paragraphs.";
 
 async fn ask(client: &LlamaClient, file: &Path, question: &str) -> Result<String> {
     let response = client.chat(question).images(&[file]).call().await?;
-    println!("Q: '{question}': \nA: \t{response}\n");
     Ok(response)
 }
 

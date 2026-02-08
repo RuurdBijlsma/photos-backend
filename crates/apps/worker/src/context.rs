@@ -13,7 +13,7 @@ pub struct WorkerContext {
     pub pool: PgPool,
     pub settings: AppSettings,
     pub media_analyzer: Arc<MediaAnalyzer>,
-    pub visual_analyzer: Arc<VisualAnalyzer>,
+    pub visual_analyzer: Option<Arc<VisualAnalyzer>>,
     pub s2s_client: S2SClient,
 }
 
@@ -30,13 +30,18 @@ impl WorkerContext {
         handle_analysis: bool,
     ) -> Result<Self> {
         let embedder_model_id = &settings.ingest.analyzer.embedder_model_id.clone();
+        let visual_analyzer = if handle_analysis {
+            Some(Arc::new(VisualAnalyzer::new(embedder_model_id).await?))
+        } else {
+            None
+        };
         Ok(Self {
             worker_id,
             handle_analysis,
             pool,
             settings,
             media_analyzer: Arc::new(MediaAnalyzer::builder().build().await?),
-            visual_analyzer: Arc::new(VisualAnalyzer::new(embedder_model_id).await?),
+            visual_analyzer,
             s2s_client: S2SClient::new(Client::new()),
         })
     }

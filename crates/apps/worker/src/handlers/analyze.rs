@@ -2,7 +2,7 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::cache::{get_analysis_cache, hash_file, write_analysis_cache};
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::eyre::{Result, eyre};
+use color_eyre::eyre::{Result, bail, eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
@@ -80,9 +80,15 @@ async fn compute_analysis(
         let vis_analyzer = context.visual_analyzer.clone();
         let analysis_result = tokio::task::spawn_blocking(move || {
             tokio::runtime::Handle::current().block_on(async move {
-                vis_analyzer
-                    .analyze_image(&analyzer_settings, &image_path, percentage)
-                    .await
+                if let Some(analyzer) = vis_analyzer {
+                    analyzer
+                        .analyze_image(&analyzer_settings, &image_path, percentage)
+                        .await
+                } else {
+                    bail!(
+                        "No `VisualAnalyzer` in `WorkerContext`, but analyze job handler was called."
+                    )
+                }
             })
         })
         .await??;

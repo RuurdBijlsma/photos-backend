@@ -171,8 +171,7 @@
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
 * improve speed of album/{id} endpoint
-* non-analysis-worker spawns embedder
-* use json output to fill caption table (is_animal, etc.)
+* ✅ non-analysis-worker spawns embedder
 
 # Features
 
