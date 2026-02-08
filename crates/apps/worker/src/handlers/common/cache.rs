@@ -1,8 +1,9 @@
 use color_eyre::Result;
+use color_eyre::eyre::bail;
 use common_types::ml_analysis::RawVisualAnalysis;
 use directories::ProjectDirs;
 use generate_thumbnails::copy_dir_contents;
-use media_analyzer::AnalyzeResult;
+use media_analyzer::MediaMetadata;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::fs;
@@ -13,11 +14,11 @@ const INGEST_RESULT_FILENAME: &str = "ingest_result.json";
 const ANALYSIS_RESULT_FILENAME: &str = "analysis_result.json";
 const INGEST_CACHE_VERSION: u32 = 1;
 const ANALYSIS_CACHE_VERSION: u32 = 1;
-const EXPECTED_EMBEDDING_LENGTH: usize = 1152;
+const EXPECTED_EMBEDDING_LENGTH: usize = 1024;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CachedIngestResult {
-    pub ingest_result: AnalyzeResult,
+    pub media_metadata: MediaMetadata,
     pub version: u32,
 }
 
@@ -67,7 +68,7 @@ pub async fn write_thumbnail_cache(hash: &str, source_folder: &Path) -> Result<(
     Ok(())
 }
 
-pub async fn get_ingest_cache(hash: &str) -> Result<Option<AnalyzeResult>> {
+pub async fn get_ingest_cache(hash: &str) -> Result<Option<MediaMetadata>> {
     let process_cache_file = cache_folder().join(hash).join(INGEST_RESULT_FILENAME);
     if !process_cache_file.exists() {
         return Ok(None);
@@ -76,7 +77,7 @@ pub async fn get_ingest_cache(hash: &str) -> Result<Option<AnalyzeResult>> {
     if let Ok(cached_ingest) = serde_json::from_str::<CachedIngestResult>(&data)
         && cached_ingest.version == INGEST_CACHE_VERSION
     {
-        return Ok(Some(cached_ingest.ingest_result));
+        return Ok(Some(cached_ingest.media_metadata));
     }
     warn!(
         "Found invalid cache file for ingest. Deleting {}/{}.",
@@ -86,12 +87,12 @@ pub async fn get_ingest_cache(hash: &str) -> Result<Option<AnalyzeResult>> {
     Ok(None)
 }
 
-pub async fn write_ingest_cache(hash: &str, analyze_result: AnalyzeResult) -> Result<()> {
+pub async fn write_ingest_cache(hash: &str, media_metadata: MediaMetadata) -> Result<()> {
     let hash_folder = hash_cache_folder(hash).await?;
     let ingest_cache_file = hash_folder.join(INGEST_RESULT_FILENAME);
     let json = serde_json::to_string(&CachedIngestResult {
         version: INGEST_CACHE_VERSION,
-        ingest_result: analyze_result,
+        media_metadata,
     })?;
     fs::write(ingest_cache_file, json).await?;
     Ok(())
@@ -123,6 +124,15 @@ pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<RawVisualAnalys
 }
 
 pub async fn write_analysis_cache(hash: &str, analyses: &[RawVisualAnalysis]) -> Result<()> {
+    for analysis in analyses {
+        if analysis.embedding.len() != EXPECTED_EMBEDDING_LENGTH {
+            bail!(
+                "Trying to write incorrect embedding length to cache. Expected: {}, found {}",
+                EXPECTED_EMBEDDING_LENGTH,
+                analysis.embedding.len()
+            );
+        }
+    }
     let hash_folder = hash_cache_folder(hash).await?;
     let ingest_cache_file = hash_folder.join(ANALYSIS_RESULT_FILENAME);
     let json = serde_json::to_string(&CachedAnalysisResult {

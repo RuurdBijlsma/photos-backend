@@ -4,7 +4,7 @@ CREATE TABLE visual_analysis
     id            BIGSERIAL PRIMARY KEY,
     media_item_id VARCHAR(10)  NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    embedding     VECTOR(1152) NOT NULL,
+    embedding     VECTOR(1024) NOT NULL,
     percentage    INT          NOT NULL
 );
 CREATE INDEX idx_visual_analysis_media_item_id ON visual_analysis (media_item_id);
@@ -56,7 +56,7 @@ CREATE INDEX idx_detected_object_label ON detected_object (label);
 
 
 -- Stores image quality metrics.
-CREATE TABLE quality_data
+CREATE TABLE quality
 (
     visual_analysis_id      BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
     exposure                SMALLINT         NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE quality_data
 
 
 -- CHANGE: themes is now an array of JSONB (JSONB[]).
-CREATE TABLE color_data
+CREATE TABLE color
 (
     visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
     themes             JSONB[] NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE color_data
 
 
 -- CHANGE: All boolean flags are now explicitly marked as NOT NULL.
-CREATE TABLE caption_data
+CREATE TABLE caption
 (
     visual_analysis_id   BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
     default_caption      TEXT    NOT NULL,
@@ -124,10 +124,10 @@ CREATE TABLE caption_data
     photo_type           TEXT,
     activity_description TEXT
 );
-CREATE INDEX idx_caption_data_contains_people ON caption_data (contains_people) WHERE contains_people = true;
-CREATE INDEX idx_caption_data_contains_pets ON caption_data (contains_pets) WHERE contains_pets = true;
-CREATE INDEX idx_caption_data_is_landscape ON caption_data (is_landscape) WHERE is_landscape = true;
-CREATE INDEX idx_caption_data_contains_landmarks ON caption_data (contains_landmarks) WHERE contains_landmarks = true;
+CREATE INDEX idx_caption_data_contains_people ON caption (contains_people) WHERE contains_people = true;
+CREATE INDEX idx_caption_data_contains_pets ON caption (contains_pets) WHERE contains_pets = true;
+CREATE INDEX idx_caption_data_is_landscape ON caption (is_landscape) WHERE is_landscape = true;
+CREATE INDEX idx_caption_data_contains_landmarks ON caption (contains_landmarks) WHERE contains_landmarks = true;
 
-CREATE INDEX idx_caption_data_landmark_name ON caption_data (landmark_name);
-CREATE INDEX idx_caption_data_setting ON caption_data (setting);
+CREATE INDEX idx_caption_data_landmark_name ON caption (landmark_name);
+CREATE INDEX idx_caption_data_setting ON caption (setting);

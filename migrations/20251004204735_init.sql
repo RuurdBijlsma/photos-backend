@@ -86,7 +86,7 @@ CREATE TABLE gps
     compass_direction DOUBLE PRECISION
 );
 
-CREATE TABLE time_details
+CREATE TABLE time
 (
     media_item_id           VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
     timezone_name           TEXT,
@@ -117,7 +117,7 @@ CREATE TABLE weather
     is_daytime        BOOLEAN
 );
 
-CREATE TABLE media_details
+CREATE TABLE media_features
 (
     media_item_id                       VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
     mime_type                           TEXT    NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE media_details
     exif                                JSONB   NOT NULL
 );
 
-CREATE TABLE capture_details
+CREATE TABLE camera_settings
 (
     media_item_id VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
     iso           INT,

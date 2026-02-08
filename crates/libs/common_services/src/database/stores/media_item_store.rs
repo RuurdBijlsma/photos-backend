@@ -1,8 +1,8 @@
 use crate::database::DbError;
-use crate::database::media_item::capture_details::CaptureDetails;
+use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
-use crate::database::media_item::media_details::MediaDetails;
+use crate::database::media_item::media_features::MediaFeatures;
 use crate::database::media_item::media_item::{
     CreateFullMediaItem, FullMediaItem, FullMediaItemRow,
 };
@@ -60,15 +60,15 @@ impl MediaItemStore {
                         'percentage', va.percentage,
                         'quality', (
                             SELECT to_jsonb(qd)
-                            FROM quality_data qd WHERE qd.visual_analysis_id = va.id
+                            FROM quality qd WHERE qd.visual_analysis_id = va.id
                         ),
                         'colors', (
                             SELECT to_jsonb(cld)
-                            FROM color_data cld WHERE cld.visual_analysis_id = va.id
+                            FROM color cld WHERE cld.visual_analysis_id = va.id
                         ),
                         'caption', (
                             SELECT to_jsonb(cpd)
-                            FROM caption_data cpd WHERE cpd.visual_analysis_id = va.id
+                            FROM caption cpd WHERE cpd.visual_analysis_id = va.id
                         ),
                         'faces', (
                             SELECT COALESCE(
@@ -112,17 +112,17 @@ impl MediaItemStore {
                 FROM gps g WHERE g.media_item_id = mi.id
             ) AS "gps: Json<Gps>",
 
-            (SELECT to_jsonb(td) FROM time_details td WHERE td.media_item_id = mi.id)
-                AS "time_details!: Json<TimeDetails>",
+            (SELECT to_jsonb(td) FROM time td WHERE td.media_item_id = mi.id)
+                AS "time!: Json<TimeDetails>",
 
             (SELECT to_jsonb(w) FROM weather w WHERE w.media_item_id = mi.id)
                 AS "weather: Json<Weather>",
 
-            (SELECT to_jsonb(d) FROM media_details d WHERE d.media_item_id = mi.id)
-                AS "media_details!: Json<MediaDetails>",
+            (SELECT to_jsonb(d) FROM media_features d WHERE d.media_item_id = mi.id)
+                AS "media_features!: Json<MediaFeatures>",
 
-            (SELECT to_jsonb(cd) FROM capture_details cd WHERE cd.media_item_id = mi.id)
-                AS "capture_details!: Json<CaptureDetails>",
+            (SELECT to_jsonb(cd) FROM camera_settings cd WHERE cd.media_item_id = mi.id)
+                AS "camera_settings!: Json<CameraSettings>",
 
             (SELECT to_jsonb(p) FROM panorama p WHERE p.media_item_id = mi.id)
                 AS "panorama!: Json<Panorama>"
@@ -248,25 +248,25 @@ impl MediaItemStore {
 
         sqlx::query!(
             r#"
-                INSERT INTO time_details (
+                INSERT INTO time (
                     media_item_id, timezone_name, timezone_offset_seconds,
                     timezone_source, source_details, source_confidence
                 )
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
             id,
-            media_item.time_details.timezone_name,
-            media_item.time_details.timezone_offset_seconds,
-            media_item.time_details.timezone_source,
-            &media_item.time_details.source_details,
-            &media_item.time_details.source_confidence,
+            media_item.time.timezone_name,
+            media_item.time.timezone_offset_seconds,
+            media_item.time.timezone_source,
+            &media_item.time.source_details,
+            &media_item.time.source_confidence,
         )
         .execute(&mut **tx)
         .await?;
 
         sqlx::query!(
             r#"
-                INSERT INTO media_details (
+                INSERT INTO media_features (
                     media_item_id, mime_type, size_bytes, is_motion_photo,
                     motion_photo_presentation_timestamp, is_hdr, is_burst, burst_id,
                     capture_fps, video_fps, is_nightsight, is_timelapse, exif
@@ -274,36 +274,38 @@ impl MediaItemStore {
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 "#,
             id,
-            media_item.media_details.mime_type,
-            media_item.media_details.size_bytes,
-            media_item.media_details.is_motion_photo,
-            media_item.media_details.motion_photo_presentation_timestamp,
-            media_item.media_details.is_hdr,
-            media_item.media_details.is_burst,
-            media_item.media_details.burst_id,
-            media_item.media_details.capture_fps,
-            media_item.media_details.video_fps,
-            media_item.media_details.is_nightsight,
-            media_item.media_details.is_timelapse,
-            media_item.media_details.exif,
+            media_item.media_features.mime_type,
+            media_item.media_features.size_bytes,
+            media_item.media_features.is_motion_photo,
+            media_item
+                .media_features
+                .motion_photo_presentation_timestamp,
+            media_item.media_features.is_hdr,
+            media_item.media_features.is_burst,
+            media_item.media_features.burst_id,
+            media_item.media_features.capture_fps,
+            media_item.media_features.video_fps,
+            media_item.media_features.is_nightsight,
+            media_item.media_features.is_timelapse,
+            media_item.media_features.exif,
         )
         .execute(&mut **tx)
         .await?;
 
         sqlx::query!(
                 r#"
-                INSERT INTO capture_details (
+                INSERT INTO camera_settings (
                     media_item_id, iso, exposure_time, aperture, focal_length, camera_make, camera_model
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                 "#,
                 id,
-                media_item.capture_details.iso,
-                media_item.capture_details.exposure_time,
-                media_item.capture_details.aperture,
-                media_item.capture_details.focal_length,
-                media_item.capture_details.camera_make,
-                media_item.capture_details.camera_model,
+                media_item.camera_settings.iso,
+                media_item.camera_settings.exposure_time,
+                media_item.camera_settings.aperture,
+                media_item.camera_settings.focal_length,
+                media_item.camera_settings.camera_make,
+                media_item.camera_settings.camera_model,
             )
                 .execute(&mut **tx)
                 .await?;

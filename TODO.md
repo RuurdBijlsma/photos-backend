@@ -130,9 +130,10 @@
     * ✅ analysis_info
 * ✅ Clean up timeline/service.rs duplicated code
 * ✅ BIG CHANGE 2
-  * ✅ MISSCHIEN KAN JE VOOR ALBUMS WEL GEWOON ALLES REQUESTEN
-  * ✅ hele timeline (ratios+item jsons (zonder timestamp)) =  117ms / 185kb voor 10k items
-  * ✅ frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid functie maken)
+    * ✅ MISSCHIEN KAN JE VOOR ALBUMS WEL GEWOON ALLES REQUESTEN
+    * ✅ hele timeline (ratios+item jsons (zonder timestamp)) = 117ms / 185kb voor 10k items
+    * ✅ frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid
+      functie maken)
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -164,13 +165,14 @@
     * is auth wel goed implemented? met is_public enzo
     * minder repeated code maken voor de auth check daar
 * kan camelcase op de proto generated structs?
-* current albums pb interface misses collaborators 
+* current albums pb interface misses collaborators
 * better error if exiftool or numpy isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
 * improve speed of album/{id} endpoint
 * non-analysis-worker spawns embedder
+* use json output to fill caption table (is_animal, etc.)
 
 # Features
 

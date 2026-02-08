@@ -94,7 +94,7 @@ impl VisualAnalysisStore {
         let quality = &analysis.quality;
         sqlx::query!(
             r#"
-            INSERT INTO quality_data (
+            INSERT INTO quality (
                 visual_analysis_id,
                 exposure,
                 contrast,
@@ -143,7 +143,7 @@ impl VisualAnalysisStore {
 
         sqlx::query!(
             r#"
-            INSERT INTO color_data (
+            INSERT INTO color (
                 visual_analysis_id, themes, prominent_colors,
                 average_hue, average_saturation, average_lightness, histogram
             )
@@ -164,7 +164,7 @@ impl VisualAnalysisStore {
         let caption = &analysis.caption;
         sqlx::query!(
             r#"
-            INSERT INTO caption_data (
+            INSERT INTO caption (
                 visual_analysis_id, default_caption, main_subject, contains_pets, contains_vehicle,
                 contains_landmarks, contains_people, contains_animals, contains_text, is_indoor, is_food_or_drink,
                 is_event, is_document, is_landscape, is_cityscape, is_activity, setting, pet_type,

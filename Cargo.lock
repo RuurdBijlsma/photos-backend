@@ -3669,9 +3669,9 @@ dependencies = [
 
 [[package]]
 name = "media_analyzer"
-version = "0.4.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5022fa55cd6b334fd981aa481c6d1d6c46946e13154b530c64da99ba8c6d9bf"
+checksum = "8ede0f8f77921e3b13d898aeeca3a47e754424cd4e197b045071b2daa0a52d6c"
 dependencies = [
  "blake3",
  "bon",
@@ -3680,6 +3680,7 @@ dependencies = [
  "exiftool",
  "meteostat",
  "rand 0.10.0-rc.9",
+ "rayon",
  "regex",
  "reverse_geocoder",
  "rust_iso3166",

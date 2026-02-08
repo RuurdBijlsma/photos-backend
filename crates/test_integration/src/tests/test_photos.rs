@@ -222,7 +222,7 @@ pub async fn test_get_random_photo(context: &TestContext) -> Result<()> {
     info!("Waiting for 1 analysis job to complete...");
     loop {
         // First we need to wait for at least 1 analysis job to complete
-        let ids = sqlx::query_scalar!("SELECT visual_analysis_id FROM color_data")
+        let ids = sqlx::query_scalar!("SELECT visual_analysis_id FROM color")
             .fetch_all(&context.pool)
             .await?;
         if !ids.is_empty() {
