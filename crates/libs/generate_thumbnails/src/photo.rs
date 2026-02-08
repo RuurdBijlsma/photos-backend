@@ -3,11 +3,11 @@ use app_state::ThumbnailSettings;
 use color_eyre::eyre::{Result, eyre};
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};
-use image::{ImageBuffer, ImageReader, Rgba};
+use image::ImageReader;
 use imgref::Img;
 use ravif::Encoder;
 use rayon::prelude::*;
-use rgb::RGBA;
+use rgb::FromSlice;
 use std::fs;
 use std::num::NonZeroU32;
 use std::path::Path;
@@ -59,50 +59,21 @@ pub fn generate_native_photo_thumbnails(
         .heights
         .par_iter()
         .try_for_each(|&target_h| -> Result<()> {
-            let mut resizer = Resizer::new();
+            let mut target_w = ((u64::from(orig_w) * target_h) / u64::from(orig_h)) as u32;
+            if target_w > 0 && !target_w.is_multiple_of(2) {
+                target_w += 1;
+            }
+            let mut dst_img = Image::new(target_w, target_h as u32, PixelType::U8x4);
+            let mut r = Resizer::new();
+            r.resize(&src_image, &mut dst_img, None)?;
+            let raw_pixels = dst_img.buffer();
+            let rgba_pixels = raw_pixels.as_rgba();
+            let img_ref = Img::new(rgba_pixels, target_w as usize, target_h as usize);
             let encoder = Encoder::new()
                 .with_quality(config.avif_options.quality)
                 .with_speed(config.avif_options.speed)
                 .with_alpha_quality(config.avif_options.alpha_quality);
-
-            let mut target_w = ((u64::from(orig_w) * target_h) / u64::from(orig_h)) as u32;
-
-            if target_w > 0 && !target_w.is_multiple_of(2) {
-                target_w += 1;
-            }
-
-            if target_w == 0 || target_h == 0 {
-                return Ok(());
-            }
-
-            let mut dst_img = Image::new(
-                NonZeroU32::new(target_w)
-                    .ok_or_else(|| eyre!("thumb target width is zero"))?
-                    .into(),
-                NonZeroU32::new(target_h as u32)
-                    .ok_or_else(|| eyre!("thumb target height is zero"))?
-                    .into(),
-                PixelType::U8x4,
-            );
-
-            resizer.resize(&src_image, &mut dst_img, None)?;
-
-            let resized_img =
-                ImageBuffer::<Rgba<u8>, _>::from_raw(target_w, target_h as u32, dst_img.into_vec())
-                    .ok_or_else(|| eyre!("Failed to construct resized image"))?;
-
-            let rgba_vec: Vec<RGBA<u8>> = resized_img
-                .pixels()
-                .map(|p| RGBA {
-                    r: p[0],
-                    g: p[1],
-                    b: p[2],
-                    a: p[3],
-                })
-                .collect();
-            let img_ref = Img::new(&rgba_vec[..], target_w as usize, target_h as usize);
             let avif_data = encoder.encode_rgba(img_ref)?;
-
             fs::write(
                 output_dir.join(format!("{target_h}p.avif")),
                 avif_data.avif_file,

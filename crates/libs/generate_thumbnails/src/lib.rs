@@ -73,7 +73,7 @@ pub async fn generate_thumbnails(
         .file_name()
         .map(|s| s.to_string_lossy().to_string())
     else {
-        bail!("Thumbnail subfolder must have a subfolder name");
+        bail!("Thumbnail subfolder must have a name");
     };
 
     if ingestion.thumbnails.recreate_if_exists && ingestion.thumbs_exist(file, &sub_folder_name)? {

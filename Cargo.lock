@@ -2048,26 +2048,14 @@ checksum = "dd2e7510819d6fbf51a5545c8f922716ecfb14df168a3242f7d33e0239efe6a1"
 
 [[package]]
 name = "fast_image_resize"
-version = "5.3.0"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bd1eda71e8af93f8b00e189404235d82f4de77ea4a0d182b44a7f03994d647c"
+checksum = "12dd43e5011e8d8411a3215a0d57a2ec5c68282fb90eb5d7221fab0113442174"
 dependencies = [
  "bytemuck",
  "cfg-if",
  "document-features",
  "image",
- "num-traits",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "fast_image_resize"
-version = "6.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12dd43e5011e8d8411a3215a0d57a2ec5c68282fb90eb5d7221fab0113442174"
-dependencies = [
- "cfg-if",
- "document-features",
  "num-traits",
  "thiserror 2.0.18",
 ]
@@ -2359,7 +2347,7 @@ version = "0.1.0"
 dependencies = [
  "app_state",
  "color-eyre",
- "fast_image_resize 5.3.0",
+ "fast_image_resize",
  "image",
  "imgref",
  "ravif",
@@ -4204,12 +4192,12 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
 name = "open_clip_inference"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1018dc07db63b0b107b6d9bc0039c14393ca3ca38921009b8c6edd85c9fbe2b8"
+checksum = "836f2eac75bf5346fafb9f9cd330a441bfc3e279bb8d255b42aae1b14f6b97ae"
 dependencies = [
  "bon",
- "fast_image_resize 6.0.0",
+ "fast_image_resize",
  "hf-hub",
  "image",
  "ndarray",

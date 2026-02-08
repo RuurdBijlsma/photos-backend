@@ -13,7 +13,7 @@ color-eyre = "0.6.5"
 ravif = { version = "0.12.0", features = ["asm"] }
 rayon = "1.11.0"
 image = { version = "0.25.8", features = ["jpeg", "png", "gif"] }
-fast_image_resize = { version = "5.3.0", features = ["image"] }
+fast_image_resize = { version = "6.0.0", features = ["image"] }
 rgb = "0.8"
 imgref = "1.12.0"
 walkdir = "2.5.0"
