@@ -166,14 +166,14 @@ impl VisualAnalysisStore {
             r#"
             INSERT INTO caption (
                 visual_analysis_id, default_caption, main_subject, contains_pets, contains_vehicle,
-                contains_landmarks, contains_people, contains_animals, contains_text, is_indoor, is_food_or_drink,
-                is_event, is_document, is_landscape, is_cityscape, is_activity, setting, pet_type,
-                animal_type, food_or_drink_type, vehicle_type, event_type, landmark_name, ocr_text,
+                contains_landmarks, contains_people, contains_animals, contains_text, is_indoor, is_food, is_drink,
+                is_event, is_document, is_landscape, is_cityscape, is_activity, setting,
+                animal_type, food_name, drink_name, vehicle_type, event_type, landmark_name, ocr_text,
                 document_type, people_count, people_mood, photo_type, activity_description
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-                $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+                $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
             )
             "#,
             visual_analysis_id,
@@ -186,16 +186,17 @@ impl VisualAnalysisStore {
             caption.contains_animals,
             caption.contains_text,
             caption.is_indoor,
-            caption.is_food_or_drink,
+            caption.is_food,
+            caption.is_drink,
             caption.is_event,
             caption.is_document,
             caption.is_landscape,
             caption.is_cityscape,
             caption.is_activity,
             caption.setting,
-            caption.pet_type,
             caption.animal_type,
-            caption.food_or_drink_type,
+            caption.food_name,
+            caption.drink_name,
             caption.vehicle_type,
             caption.event_type,
             caption.landmark_name,
