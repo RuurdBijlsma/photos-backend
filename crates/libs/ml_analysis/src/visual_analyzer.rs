@@ -1,9 +1,8 @@
-use crate::PyInterop;
-use crate::caption_data::get_caption_data;
 use crate::color_data::get_color_data;
 use crate::quality_judge::get_quality_judgement;
 use crate::quality_measure::get_quality_measurement;
 use crate::utils::convert_media_file;
+use crate::{PyInterop, get_llm_classification};
 use app_state::AnalyzerSettings;
 use color_eyre::eyre::eyre;
 use common_types::ml_analysis::{CombinedQuality, RawVisualAnalysis};
@@ -70,7 +69,7 @@ impl VisualAnalyzer {
     ///
     /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
     pub async fn analyze_image(
-        &mut self,
+        &self,
         config: &AnalyzerSettings,
         file: &Path,
         percentage: i32,
@@ -101,7 +100,7 @@ impl VisualAnalyzer {
         println!("get_color_data {:?}", now.elapsed());
 
         let now = Instant::now();
-        let categorization_data = get_caption_data(&self.llm_client, &analysis_file).await?;
+        let llm_classification = get_llm_classification(&self.llm_client, &analysis_file).await?;
         println!("get_caption_data {:?}", now.elapsed());
 
         let now = Instant::now();
@@ -138,7 +137,7 @@ impl VisualAnalyzer {
             percentage,
             color_data,
             quality,
-            categorization_data,
+            llm_classification,
             embedding,
             faces,
             objects,

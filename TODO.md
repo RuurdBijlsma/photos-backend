@@ -129,6 +129,11 @@
     * ✅ processed_info
     * ✅ analysis_info
 * ✅ Clean up timeline/service.rs duplicated code
+* ✅ BIG CHANGE 2
+    * ✅ MISSCHIEN KAN JE VOOR ALBUMS WEL GEWOON ALLES REQUESTEN
+    * ✅ hele timeline (ratios+item jsons (zonder timestamp)) = 117ms / 185kb voor 10k items
+    * ✅ frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid
+      functie maken)
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -161,22 +166,12 @@
     * minder repeated code maken voor de auth check daar
 * kan camelcase op de proto generated structs?
 * current albums pb interface misses collaborators
-* BIG CHANGE
-    * timeline by-month veranderen van month-based naar iets van offset+limit (keep in mind dat we beide kanten op
-      kunnen scrollen en in het midden beginnen)
-    * album timeline ook met offset+limit maar dan sorted by rank
-    * ^ PROBLEEM: limit+offset is langzamer dan huidige systeem
-    * & OPLOSSING: hou logic voor timeline t zelfde, album & search kan met cursor 
-    * question: hoe hou ik de timeline scroll voor album? 
-* BIG CHANGE 2
-  * MISSCHIEN KAN JE VOOR ALBUMS WEL GEWOON ALLES REQUESTEN
-  * hele timeline (ratios+item jsons (zonder timestamp)) =  117ms / 185kb voor 10k items
-  * frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid functie maken)
 * better error if exiftool or numpy isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
 * improve speed of album/{id} endpoint
+* ✅ non-analysis-worker spawns embedder
 
 # Features
 

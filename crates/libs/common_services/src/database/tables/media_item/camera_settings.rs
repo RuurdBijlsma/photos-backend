@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 /// Corresponds to the '`capture_details`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct CaptureDetails {
+pub struct CameraSettings {
     pub iso: Option<i32>,
     pub exposure_time: Option<f32>,
     pub aperture: Option<f32>,
@@ -13,8 +13,8 @@ pub struct CaptureDetails {
 }
 
 /// Converts from the analysis result's `SourceCaptureDetails` to the database model `CaptureDetails`.
-impl From<media_analyzer::CaptureDetails> for CaptureDetails {
-    fn from(details: media_analyzer::CaptureDetails) -> Self {
+impl From<media_analyzer::CameraSettings> for CameraSettings {
+    fn from(details: media_analyzer::CameraSettings) -> Self {
         Self {
             iso: details.iso.map(|iso| iso as i32),
             exposure_time: details.exposure_time.map(|et| et as f32),

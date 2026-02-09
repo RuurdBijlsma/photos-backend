@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO caption (\n                visual_analysis_id, default_caption, main_subject, contains_pets, contains_vehicle,\n                contains_landmarks, contains_people, contains_animals, contains_text, is_indoor, is_food, is_drink,\n                is_event, is_document, is_landscape, is_cityscape, is_activity, setting,\n                animal_type, food_name, drink_name, vehicle_type, event_type, landmark_name, ocr_text,\n                document_type, people_count, people_mood, photo_type, activity_description\n            )\n            VALUES (\n                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,\n                $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30\n            )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2207360f102b563425a89c0d98b19c05d099be4a32743b9062d805322c9c3a6b"
+}

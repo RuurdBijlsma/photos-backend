@@ -16,7 +16,6 @@ pub async fn create_worker(
 ) -> Result<()> {
     let worker_id = nice_id(8);
     info!("🛠️ [Worker ID: {}] Starting.", worker_id);
-
     let context = WorkerContext::new(pool, settings, worker_id.clone(), handle_analysis).await?;
 
     run_worker_loop(&context).await

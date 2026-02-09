@@ -12,9 +12,9 @@ use common_services::database::get_db_pool;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::utils::nice_id;
 use media_analyzer::{
-    AnalyzeResult, CaptureDetails, FileMetadata, PanoInfo, SourceDetails, TagData, TimeInfo,
+    BasicMetadata, CameraSettings, MediaFeatures, MediaMetadata, PanoInfo, SourceDetails, TimeInfo,
 };
-use rand::Rng;
+use rand::RngExt;
 use sqlx::{PgPool, PgTransaction};
 use std::time::Instant;
 use tracing::info;
@@ -102,10 +102,10 @@ async fn seed_mock_photos_in_tx(
         let taken_at: DateTime<Utc> = Utc::now() - Duration::seconds(random_seconds_ago);
         let taken_at_local: NaiveDateTime = taken_at.naive_utc();
 
-        let data = AnalyzeResult {
+        let data = MediaMetadata {
             hash: nice_id(32),
             exif: serde_json::Value::Null,
-            metadata: FileMetadata {
+            basic: BasicMetadata {
                 width: rng.random_range(800..=4000),
                 height: rng.random_range(800..=4000),
                 mime_type: "image/jpeg".to_string(),
@@ -113,7 +113,7 @@ async fn seed_mock_photos_in_tx(
                 size_bytes: rng.random_range(1_000_000..=8_000_000),
                 orientation: None,
             },
-            capture_details: CaptureDetails {
+            camera: CameraSettings {
                 iso: None,
                 exposure_time: None,
                 aperture: None,
@@ -121,7 +121,7 @@ async fn seed_mock_photos_in_tx(
                 camera_make: None,
                 camera_model: None,
             },
-            tags: TagData {
+            features: MediaFeatures {
                 is_motion_photo: false,
                 motion_photo_presentation_timestamp: None,
                 is_night_sight: false,
@@ -134,7 +134,7 @@ async fn seed_mock_photos_in_tx(
                 capture_fps: None,
                 video_fps: None,
             },
-            time_info: TimeInfo {
+            time: TimeInfo {
                 datetime_utc: Some(taken_at),
                 datetime_local: taken_at_local,
                 timezone: None,
@@ -143,14 +143,14 @@ async fn seed_mock_photos_in_tx(
                     confidence: "high".to_string(),
                 },
             },
-            pano_info: PanoInfo {
+            panorama: PanoInfo {
                 use_panorama_viewer: false,
                 is_photosphere: false,
                 view_info: None,
                 projection_type: None,
             },
-            gps_info: None,
-            weather_info: None,
+            gps: None,
+            weather: None,
         };
 
         MediaItemStore::create(

@@ -13,7 +13,7 @@ use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::utils::nice_id;
 use generate_thumbnails::{copy_dir_contents, generate_thumbnails};
-use media_analyzer::AnalyzeResult;
+use media_analyzer::MediaMetadata;
 use sqlx::PgPool;
 use std::path::Path;
 use tokio::fs;
@@ -40,7 +40,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         &file_path,
         &file_hash,
         &media_item_id,
-        media_info.metadata.orientation,
+        media_info.basic.orientation,
     )
     .await?;
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
@@ -63,17 +63,14 @@ async fn get_media_info(
     context: &WorkerContext,
     file_path: &Path,
     file_hash: &str,
-) -> Result<AnalyzeResult> {
+) -> Result<MediaMetadata> {
     if context.settings.ingest.enable_cache
         && let Some(cached) = get_ingest_cache(file_hash).await?
     {
         debug!("Using ingest cache for {:?}", file_path.file_name());
         return Ok(cached);
     }
-    let media_info = {
-        let mut analyzer = context.media_analyzer.lock().await;
-        analyzer.analyze_media(file_path).await?
-    };
+    let media_info = context.media_analyzer.analyze_media(file_path).await?;
     if context.settings.ingest.enable_cache {
         write_ingest_cache(file_hash, media_info.clone()).await?;
     }
@@ -125,7 +122,7 @@ async fn store_media_item(
     pool: &PgPool,
     user_id: i32,
     relative_path: &str,
-    analyze_result: AnalyzeResult,
+    analyze_result: MediaMetadata,
     new_id: &str,
 ) -> Result<Option<String>> {
     let mut tx = pool.begin().await?;

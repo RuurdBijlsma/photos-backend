@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 
-/// Corresponds to the 'details' table.
+/// Corresponds to the '`media_features`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct MediaDetails {
+pub struct MediaFeatures {
     pub mime_type: String,
     pub size_bytes: i64,
     pub is_motion_photo: bool,

@@ -120,9 +120,10 @@ pub struct CombinedQuality {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct LlmCategorizationData {
-    pub default_caption: String,
+pub struct LlmClassification {
+    pub caption: String,
     pub main_subject: String,
+    pub setting: String,
     pub contains_pets: bool,
     pub contains_vehicle: bool,
     pub contains_landmarks: bool,
@@ -130,17 +131,17 @@ pub struct LlmCategorizationData {
     pub contains_animals: bool,
     pub contains_text: bool,
     pub is_indoor: bool,
-    pub is_food_or_drink: bool,
+    pub is_food: bool,
+    pub is_drink: bool,
     pub is_event: bool,
     pub is_document: bool,
     pub is_landscape: bool,
     pub is_cityscape: bool,
     pub is_activity: bool,
-    pub setting: String,
     pub ocr_text: Option<String>,
-    pub pet_type: Option<String>,
     pub animal_type: Option<String>,
-    pub food_or_drink_type: Option<String>,
+    pub food_name: Option<String>,
+    pub drink_name: Option<String>,
     pub vehicle_type: Option<String>,
     pub event_type: Option<String>,
     pub landmark_name: Option<String>,
@@ -148,7 +149,7 @@ pub struct LlmCategorizationData {
     pub people_count: Option<i32>,
     pub people_mood: Option<String>,
     pub photo_type: Option<String>,
-    pub activity_description: Option<String>,
+    pub activity_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -156,7 +157,7 @@ pub struct RawVisualAnalysis {
     pub percentage: i32,
     pub color_data: PyColorData,
     pub quality: CombinedQuality,
-    pub categorization_data: LlmCategorizationData,
+    pub llm_classification: LlmClassification,
     pub embedding: Vec<f32>,
     pub faces: Vec<PyFace>,
     pub objects: Vec<PyDetectedObject>,

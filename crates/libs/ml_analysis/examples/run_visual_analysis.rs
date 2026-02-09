@@ -19,7 +19,7 @@ fn resize_image(input: &Path, max_dim: u32) -> image::ImageResult<PathBuf> {
     let new_w = (w as f32 * scale).round() as u32;
     let new_h = (h as f32 * scale).round() as u32;
 
-    let resized = img.resize(new_w, new_h, FilterType::Lanczos3);
+    let resized = img.resize(new_w, new_h, FilterType::CatmullRom);
 
     let mut out = input.to_path_buf();
     out.set_file_name(format!(
@@ -37,7 +37,7 @@ async fn main() -> color_eyre::Result<()> {
 
     let settings = load_app_settings()?;
     let now = Instant::now();
-    let mut analyzer = VisualAnalyzer::new(&settings.ingest.analyzer.embedder_model_id).await?;
+    let analyzer = VisualAnalyzer::new(&settings.ingest.analyzer.embedder_model_id).await?;
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
 
     let now = Instant::now();

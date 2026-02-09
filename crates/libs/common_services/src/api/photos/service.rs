@@ -6,7 +6,7 @@ use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
 use color_eyre::Report;
 use http::{Response, StatusCode, header};
-use rand::Rng;
+use rand::RngExt;
 use sqlx::PgPool;
 use std::path::Path;
 use tokio::fs::File;
@@ -26,7 +26,7 @@ pub async fn random_photo(
     let count: i64 = sqlx::query_scalar!(
         r#"
         SELECT COUNT(cd.visual_analysis_id)
-        FROM color_data AS cd
+        FROM color AS cd
         JOIN visual_analysis AS va ON cd.visual_analysis_id = va.id
         JOIN media_item AS mi ON va.media_item_id = mi.id
         WHERE mi.user_id = $1 AND mi.deleted = false
@@ -53,11 +53,11 @@ pub async fn random_photo(
         SELECT
             cd.themes,
             mi.id as media_id
-        FROM color_data AS cd
+        FROM color AS cd
         JOIN visual_analysis AS va ON cd.visual_analysis_id = va.id
         JOIN media_item AS mi ON va.media_item_id = mi.id
         WHERE mi.user_id = $1 AND mi.deleted = false
-        ORDER BY mi.id -- Consistent ordering is important for OFFSET
+        ORDER BY mi.id
         LIMIT 1
         OFFSET $2
         "#,
