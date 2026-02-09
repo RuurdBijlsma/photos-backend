@@ -1,7 +1,13 @@
+#![allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use image::GenericImageView;
 use image::imageops::FilterType;
 use language_model::LlamaClient;
-use ml_analysis::get_caption_data;
+use ml_analysis::get_llm_classification;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -30,9 +36,11 @@ fn resize_image(input: &Path, max_dim: u32) -> image::ImageResult<PathBuf> {
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let llm_client = LlamaClient::with_base_url("http://localhost:8080").build();
-    let root_folder = "C:/Users/Ruurd/Pictures/small_media_dir/rutenl";
-    let out_folder = Path::new("captions/old");
+    let llm_client = LlamaClient::with_base_url("http://localhost:8080")
+        .repetition_penalty(1.2)
+        .build();
+    let root_folder = "C:/Users/Ruurd/Pictures/Bouke Zweden";
+    let out_folder = Path::new("captions/fast_refactor");
     if !out_folder.exists() {
         std::fs::create_dir_all(out_folder)?;
     }
@@ -41,19 +49,21 @@ async fn main() -> color_eyre::Result<()> {
         if entry.file_type().is_file() {
             let image = entry.path();
             let image_filename = image.file_name().unwrap().to_string_lossy().to_string();
+            let out_path = out_folder.join(format!("{image_filename}-caption.json"));
+
+            if out_path.exists() {
+                println!("{} already exists.", out_path.display());
+                continue;
+            }
+
             let resized_img_file = resize_image(image, 720)?;
 
             let now = Instant::now();
-            let caption_data = get_caption_data(&llm_client, &resized_img_file).await?;
+            let caption_data = get_llm_classification(&llm_client, &resized_img_file).await?;
 
-            if let Some(cd) = caption_data {
-                let out_path = out_folder.join(format!("{image_filename}-caption.json"));
-                let file = File::create(&out_path)?;
-                serde_json::to_writer_pretty(file, &cd)?;
-                println!("{image_filename} {:?}", now.elapsed());
-            } else {
-                eprintln!("Couldn't get caption data");
-            }
+            let file = File::create(&out_path)?;
+            serde_json::to_writer_pretty(file, &caption_data)?;
+            println!("{image_filename} {:?}", now.elapsed());
         }
     }
 

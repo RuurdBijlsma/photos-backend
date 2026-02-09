@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO color (\n                visual_analysis_id, themes, prominent_colors,\n                average_hue, average_saturation, average_lightness, histogram\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "JsonbArray",
+        "TextArray",
+        "Float4",
+        "Float4",
+        "Float4",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0deee6757d3778d803dfd15dff34f113da1e159dc8ab7a93acdf72522eb1a466"
+}
