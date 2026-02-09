@@ -4,13 +4,9 @@ use language_model::LlamaClient;
 use serde::Deserialize;
 use serde_json::json;
 use std::path::Path;
+use tracing::warn;
 
-// todo:
-// Deze is te dom voor document type om een of andere reden, ik denk dat ocr_text er ook beter uit kan
-// Verder werkt new-caption wel goed lijkt t.
-// Test nog even de andere fields maar t lijkt wel geod
-
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct RequiredStrings {
     pub caption: String,
     pub main_subject: String,
@@ -18,7 +14,7 @@ pub struct RequiredStrings {
 }
 
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct RequiredBools {
     pub contains_pets: bool,
     pub contains_vehicle: bool,
@@ -33,10 +29,10 @@ pub struct RequiredBools {
     pub contains_document: bool,
     pub depicts_landscape: bool,
     pub depicts_cityscape: bool,
-    pub depicts_activity: bool,
+    pub depicts_physical_activity: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Default)]
 pub struct OptionalOutput {
     pub animal_name: Option<String>,
     pub food_name: Option<String>,
@@ -45,15 +41,13 @@ pub struct OptionalOutput {
     pub event_type: Option<String>,
     pub landmark_name: Option<String>,
     pub activity_name: Option<String>,
+    pub document_type: Option<String>,
     pub people_mood: Option<String>,
     pub photo_type: Option<String>,
     pub people_count: Option<i32>,
 }
 
-pub async fn get_caption_data(
-    llm: &LlamaClient,
-    file: &Path,
-) -> Result<Option<LlmCategorizationData>> {
+pub async fn get_caption_data(llm: &LlamaClient, file: &Path) -> Result<LlmCategorizationData> {
     let stage1_schema = json!({
         "type": "object",
         "properties": {
@@ -89,7 +83,17 @@ setting:
         .schema(stage1_schema)
         .call()
         .await?;
-    let required: RequiredStrings = serde_json::from_str(&s1_response)?;
+    let required_result: Result<RequiredStrings, _> = serde_json::from_str(&s1_response);
+    let required = match required_result {
+        Ok(r) => r,
+        Err(e) => {
+            warn!(
+                "Could not deserialize LLM response to RequiredStrings. {}\nLLM output: {}",
+                e, s1_response
+            );
+            RequiredStrings::default()
+        }
+    };
 
     let categories_schema = json!({
         "type": "object",
@@ -133,7 +137,7 @@ setting:
             recipe, price_card, product_label, medical, letter, brochure, screenshot, diagram, \
             handwritten, sketch, generic_document." },
 
-            "depicts_activity": { "type": "boolean", "description": "Is a clear, intentional physical \
+            "depicts_physical_activity": { "type": "boolean", "description": "Is a clear, intentional physical \
             action being performed in this photo (e.g., walking, cooking, exercising), not \
             including passive states such as sitting, standing, resting, posing, or watching?" },
 
@@ -148,7 +152,7 @@ setting:
         "required": [
             "contains_pets", "contains_animals", "contains_vehicle", "famous_landmarks",
             "contains_people", "is_indoor", "depicts_food", "depicts_drink", "depicts_event",
-            "contains_document", "depicts_activity", "contains_legible_text", "depicts_landscape",
+            "contains_document", "depicts_physical_activity", "contains_legible_text", "depicts_landscape",
             "depicts_cityscape"
         ]
     });
@@ -162,7 +166,17 @@ setting:
         .schema(categories_schema)
         .call()
         .await?;
-    let categories: RequiredBools = serde_json::from_str(&categories_response)?;
+    let categories_result = serde_json::from_str(&categories_response);
+    let categories = match categories_result {
+        Ok(r) => r,
+        Err(e) => {
+            warn!(
+                "Could not deserialize LLM response to RequiredStrings. {}\nLLM output: {}",
+                e, categories_response
+            );
+            RequiredBools::default()
+        }
+    };
 
     let mut s2_props = json!({});
     let mut s2_required = vec![];
@@ -226,10 +240,25 @@ setting:
         ]});
         s2_required.push("event_type".to_string());
     }
-    if categories.depicts_activity {
+    if categories.depicts_physical_activity {
         s2_props["activity_name"] = json!({ "type": "string", "description": "The main physical \
         action, activity, or sport being performed, examples: [football, running, rowing, swimming]." });
         s2_required.push("activity_name".to_string());
+    }
+    if categories.contains_document {
+        s2_props["document_type"] = json!({
+            "type": "string",
+            "enum": [
+                "passport", "id_card", "driver_license", "certificate", "receipt", "invoice", "bill",
+                "bank_statement", "tax_document", "payslip", "payment_card", "ticket", "boarding_pass",
+                "reservation", "itinerary", "contract", "license", "warranty", "manual", "notes",
+                "exam_paper", "assignment", "diploma", "presentation_slide", "book", "magazine",
+                "newspaper", "article", "menu", "recipe", "price_card", "product_label", "medical",
+                "letter", "brochure", "screenshot", "diagram", "handwritten", "sketch",
+                "generic_document"
+            ]
+        });
+        s2_required.push("document_type".to_string());
     }
 
     let optional_output = if s2_required.is_empty() {
@@ -251,7 +280,17 @@ setting:
             .call()
             .await?;
         println!("optional_fields:\n{}", &s2_response);
-        Some(serde_json::from_str::<OptionalOutput>(&s2_response)?)
+        let from_result = serde_json::from_str::<OptionalOutput>(&s2_response);
+        match from_result {
+            Ok(r) => Some(r),
+            Err(e) => {
+                warn!(
+                    "Could not deserialize LLM response to OptionalOutput. {}\nLLM output: {}",
+                    e, s1_response
+                );
+                None
+            }
+        }
     };
 
     let ocr_text = if categories.contains_legible_text {
@@ -264,58 +303,6 @@ setting:
             .call()
             .await?,
         )
-    } else {
-        None
-    };
-
-    let document_type = if categories.contains_document {
-        #[derive(Deserialize)]
-        struct DocTypeOutput {
-            pub document_type: String,
-        }
-        let doc_type_schema = json!({
-            "type": "object",
-            "properties": {
-                "document_type": {
-                    "type": "string",
-                    "description": "This photo has been identified as a document, classify it \
-                    into a specific subtype.",
-                    "enum": [
-                        "passport", "id_card", "driver_license", "certificate", "receipt", "invoice", "bill",
-                        "bank_statement", "tax_document", "payslip", "payment_card", "ticket", "boarding_pass",
-                        "reservation", "itinerary", "contract", "license", "warranty", "manual", "notes",
-                        "exam_paper", "assignment", "diploma", "presentation_slide", "book", "magazine",
-                        "newspaper", "article", "menu", "recipe", "price_card", "product_label", "medical",
-                        "letter", "brochure", "screenshot", "diagram", "handwritten", "sketch",
-                        "generic_document"
-                    ]
-                }
-            },
-            "required": [
-                "document_type"
-            ],
-            "additionalProperties": false
-        });
-        let prompt = format!(
-            r"You are an image classification bot. Analyze the provided photo to fill the
-requested schema fields. Keep your answers as concise as possible, don't explain your choices.
-Your answers will be used to organize and group photos.
-
-Image caption:
-```
-{}
-```
-",
-            &required.caption
-        );
-        let doc_out_string = llm
-            .chat(&prompt)
-            .images(&[file])
-            .schema(doc_type_schema)
-            .call()
-            .await?;
-        println!("document_type{}", &doc_out_string);
-        Some(serde_json::from_str::<DocTypeOutput>(&doc_out_string)?)
     } else {
         None
     };
@@ -335,11 +322,13 @@ Image caption:
         is_document: categories.contains_document,
         is_landscape: categories.depicts_landscape,
         is_cityscape: categories.depicts_cityscape,
-        is_activity: categories.depicts_activity,
+        is_activity: categories.depicts_physical_activity,
         contains_text: categories.contains_legible_text,
 
         ocr_text,
-        document_type: document_type.map(|d| d.document_type),
+        document_type: optional_output
+            .as_ref()
+            .and_then(|o| o.document_type.clone()),
         animal_type: optional_output.as_ref().and_then(|o| o.animal_name.clone()),
         food_name: optional_output.as_ref().and_then(|o| o.food_name.clone()),
         drink_name: optional_output.as_ref().and_then(|o| o.drink_name.clone()),
@@ -363,5 +352,5 @@ Image caption:
         },
     };
 
-    Ok(Some(data))
+    Ok(data)
 }
