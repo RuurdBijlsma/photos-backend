@@ -38,7 +38,7 @@ pub struct RequiredBools {
 
 #[derive(Deserialize)]
 pub struct OptionalOutput {
-    pub animal_type: Option<String>,
+    pub animal_name: Option<String>,
     pub food_name: Option<String>,
     pub drink_name: Option<String>,
     pub vehicle_type: Option<String>,
@@ -167,11 +167,10 @@ setting:
     let mut s2_props = json!({});
     let mut s2_required = vec![];
     if categories.contains_animals || categories.contains_pets {
-        s2_props["animal_type"] = json!({ "type": "string", "description": "Best guess as to what \
-        animal is shown, give a singular term broadly naming the animal. Examples: \
-        [lion, giraffe, goose, fox, dog, ant]. Answer concisely in at most two words. \
-        Do not explain your choice." });
-        s2_required.push("animal_type".to_string());
+        s2_props["animal_name"] = json!({ "type": "string", "description": "Best guess as to what \
+        animal is shown, give a singular term naming the animal. Examples: \
+        [lion, giraffe, goose, fox, dog, ant]" });
+        s2_required.push("animal_name".to_string());
     }
     if categories.contains_vehicle {
         s2_props["vehicle_type"] = json!({ "type": "string", "enum": [
@@ -208,7 +207,8 @@ setting:
         ]);
     }
     if categories.depicts_food {
-        s2_props["food_name"] = json!({ "type": "string", "description": "What food is shown in this photo? Answer concisely in at most two words. Do not explain your choice." });
+        s2_props["food_name"] =
+            json!({ "type": "string", "description": "What food is shown in this photo?" });
         s2_required.push("food_name".to_string());
     }
     if categories.depicts_drink {
@@ -227,8 +227,8 @@ setting:
         s2_required.push("event_type".to_string());
     }
     if categories.depicts_activity {
-        s2_props["activity_name"] = json!({ "type": "string", "description": "The main, singular \
-        physical action being performed, examples: [football, running, rowing, swimming]." });
+        s2_props["activity_name"] = json!({ "type": "string", "description": "The main physical \
+        action, activity, or sport being performed, examples: [football, running, rowing, swimming]." });
         s2_required.push("activity_name".to_string());
     }
 
@@ -243,7 +243,7 @@ setting:
         });
         let prompt = "You are an image classification bot. Analyze the provided photo to \
         fill the requested schema fields. Keep your answers as concise as possible, don't explain \
-        your choices.";
+        your choices. Your answers will be used to organize and group photos.";
         let s2_response = llm
             .chat(prompt)
             .images(&[file])
@@ -297,13 +297,15 @@ setting:
             "additionalProperties": false
         });
         let prompt = format!(
-            r"Analyze the provided photo in detail to fill the requested schema fields.
+            r"You are an image classification bot. Analyze the provided photo to fill the
+requested schema fields. Keep your answers as concise as possible, don't explain your choices.
+Your answers will be used to organize and group photos.
 
-        Image caption:
-        ```
-        {}
-        ```
-        ",
+Image caption:
+```
+{}
+```
+",
             &required.caption
         );
         let doc_out_string = llm
@@ -338,7 +340,7 @@ setting:
 
         ocr_text,
         document_type: document_type.map(|d| d.document_type),
-        animal_type: optional_output.as_ref().and_then(|o| o.animal_type.clone()),
+        animal_type: optional_output.as_ref().and_then(|o| o.animal_name.clone()),
         food_name: optional_output.as_ref().and_then(|o| o.food_name.clone()),
         drink_name: optional_output.as_ref().and_then(|o| o.drink_name.clone()),
         vehicle_type: optional_output
@@ -350,7 +352,7 @@ setting:
             .and_then(|o| o.landmark_name.clone()),
         activity_name: optional_output
             .as_ref()
-            .and_then(|o| o.activity_name.clone()),
+            .and_then(|o| o.activity_name.clone().map(|a| a.to_lowercase())),
         people_mood: optional_output.as_ref().and_then(|o| o.people_mood.clone()),
         photo_type: optional_output.as_ref().and_then(|o| o.photo_type.clone()),
         people_count: optional_output.as_ref().and_then(|o| o.people_count),
