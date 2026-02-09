@@ -161,7 +161,7 @@ impl VisualAnalysisStore {
         .await?;
 
         // --- Caption Data ---
-        let caption = &analysis.caption;
+        let caption = &analysis.classification;
         sqlx::query!(
             r#"
             INSERT INTO caption (

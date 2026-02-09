@@ -1,4 +1,4 @@
-use crate::database::visual_analysis::caption_data::CategorizationData;
+use crate::database::visual_analysis::caption_data::ClassificationData;
 use crate::database::visual_analysis::color_data::ColorData;
 use crate::database::visual_analysis::detect_object::DetectedObject;
 use crate::database::visual_analysis::face::{CreateFace, Face};
@@ -25,7 +25,7 @@ pub struct CreateVisualAnalysis {
     pub detected_objects: Vec<DetectedObject>,
     pub quality: QualityScore,
     pub colors: ColorData,
-    pub caption: CategorizationData,
+    pub classification: ClassificationData,
 }
 
 impl From<RawVisualAnalysis> for CreateVisualAnalysis {
@@ -37,7 +37,7 @@ impl From<RawVisualAnalysis> for CreateVisualAnalysis {
             detected_objects: data.objects.into_iter().map(Into::into).collect(),
             quality: data.quality.into(),
             colors: data.color_data.into(),
-            caption: data.categorization_data.into(),
+            classification: data.llm_classification.into(),
         }
     }
 }
@@ -51,5 +51,5 @@ pub struct ReadVisualAnalysis {
     pub detected_objects: Vec<DetectedObject>,
     pub quality: QualityScore,
     pub colors: ColorData,
-    pub caption: CategorizationData,
+    pub caption: ClassificationData,
 }

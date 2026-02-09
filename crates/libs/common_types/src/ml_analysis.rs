@@ -120,7 +120,7 @@ pub struct CombinedQuality {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct LlmCategorizationData {
+pub struct LlmClassification {
     pub caption: String,
     pub main_subject: String,
     pub setting: String,
@@ -157,7 +157,7 @@ pub struct RawVisualAnalysis {
     pub percentage: i32,
     pub color_data: PyColorData,
     pub quality: CombinedQuality,
-    pub categorization_data: LlmCategorizationData,
+    pub llm_classification: LlmClassification,
     pub embedding: Vec<f32>,
     pub faces: Vec<PyFace>,
     pub objects: Vec<PyDetectedObject>,

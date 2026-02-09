@@ -1,7 +1,13 @@
+#![allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use image::GenericImageView;
 use image::imageops::FilterType;
 use language_model::LlamaClient;
-use ml_analysis::get_caption_data;
+use ml_analysis::get_llm_classification;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -34,7 +40,7 @@ async fn main() -> color_eyre::Result<()> {
         .repetition_penalty(1.2)
         .build();
     let root_folder = "C:/Users/Ruurd/Pictures/Bouke Zweden";
-    let out_folder = Path::new("captions/fast3");
+    let out_folder = Path::new("captions/fast_refactor");
     if !out_folder.exists() {
         std::fs::create_dir_all(out_folder)?;
     }
@@ -53,15 +59,11 @@ async fn main() -> color_eyre::Result<()> {
             let resized_img_file = resize_image(image, 720)?;
 
             let now = Instant::now();
-            let caption_data = get_caption_data(&llm_client, &resized_img_file).await?;
+            let caption_data = get_llm_classification(&llm_client, &resized_img_file).await?;
 
-            if let Some(cd) = caption_data {
-                let file = File::create(&out_path)?;
-                serde_json::to_writer_pretty(file, &cd)?;
-                println!("{image_filename} {:?}", now.elapsed());
-            } else {
-                eprintln!("Couldn't get caption data");
-            }
+            let file = File::create(&out_path)?;
+            serde_json::to_writer_pretty(file, &caption_data)?;
+            println!("{image_filename} {:?}", now.elapsed());
         }
     }
 

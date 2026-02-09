@@ -1,10 +1,10 @@
-use common_types::ml_analysis::LlmCategorizationData;
+use common_types::ml_analysis::LlmClassification;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Corresponds to the '`caption_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct CategorizationData {
+pub struct ClassificationData {
     pub caption: Option<String>,
     pub main_subject: Option<String>,
     pub contains_pets: bool,
@@ -36,8 +36,8 @@ pub struct CategorizationData {
     pub activity_description: Option<String>,
 }
 
-impl From<LlmCategorizationData> for CategorizationData {
-    fn from(caption_data: LlmCategorizationData) -> Self {
+impl From<LlmClassification> for ClassificationData {
+    fn from(caption_data: LlmClassification) -> Self {
         Self {
             caption: Some(caption_data.caption),
             main_subject: Some(caption_data.main_subject),
