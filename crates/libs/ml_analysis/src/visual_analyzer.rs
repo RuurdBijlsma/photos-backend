@@ -138,7 +138,7 @@ impl VisualAnalyzer {
             percentage,
             color_data,
             quality,
-            categorization_data: categorization_data.expect("No categorization data received"),
+            categorization_data,
             embedding,
             faces,
             objects,

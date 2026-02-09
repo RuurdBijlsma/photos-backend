@@ -32,7 +32,7 @@ pub struct RequiredBools {
     pub depicts_physical_activity: bool,
 }
 
-#[derive(Deserialize,Default)]
+#[derive(Deserialize, Default)]
 pub struct OptionalOutput {
     pub animal_name: Option<String>,
     pub food_name: Option<String>,
@@ -345,11 +345,11 @@ setting:
         people_mood: optional_output.as_ref().and_then(|o| o.people_mood.clone()),
         photo_type: optional_output.as_ref().and_then(|o| o.photo_type.clone()),
         people_count: optional_output.as_ref().and_then(|o| o.people_count),
-        contains_people: if let Some(ref opt) = optional_output {
-            categories.contains_people && opt.people_count.unwrap_or(0) > 0
-        } else {
-            categories.contains_people
-        },
+        contains_people: optional_output
+            .as_ref()
+            .map_or(categories.contains_people, |opt| {
+                categories.contains_people && opt.people_count.unwrap_or(0) > 0
+            }),
     };
 
     Ok(data)
