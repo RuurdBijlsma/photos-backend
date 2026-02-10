@@ -2,9 +2,10 @@ use crate::api_state::ApiContext;
 use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use common_services::api::search::error::SearchError;
-use common_services::api::search::interfaces::{SearchParams, SearchResponse};
+use common_services::api::search::interfaces::{SearchParams, SearchResultItem};
 use common_services::api::search::service::search_media;
 use common_services::database::app_user::User;
+use tracing::instrument;
 
 /// Get a timeline of all media ratios, grouped by month.
 ///
@@ -19,24 +20,24 @@ use common_services::database::app_user::User;
         SearchParams
     ),
     responses(
-        (status = 200, description = "Search results", body = SearchResponse),
+        (status = 200, description = "Search results", body = Vec<SearchResultItem>),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
 )]
-#[axum::debug_handler]
+#[instrument(skip(context, user), err(Debug))]
 pub async fn get_search_results(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<SearchParams>,
-) -> Result<Json<SearchResponse>, SearchError> {
-    // todo: only look through this user's photos
+) -> Result<Json<Vec<SearchResultItem>>, SearchError> {
     let search_result = search_media(
         &user,
         &context.pool,
         &params.query,
         params.limit,
-        &context.settings.ingest.analyzer.embedder_model_id,
+        params.threshold,
+        &context.embedder,
     )
     .await?;
     Ok(Json(search_result))

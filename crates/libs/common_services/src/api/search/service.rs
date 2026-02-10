@@ -1,5 +1,5 @@
 use crate::api::search::error::SearchError;
-use crate::api::search::interfaces::{SearchResponse, SearchResultItem};
+use crate::api::search::interfaces::SearchResultItem;
 use crate::database::app_user::User;
 use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
@@ -10,21 +10,21 @@ pub async fn search_media(
     pool: &PgPool,
     query: &str,
     requested_limit: Option<i64>,
-    embed_model_id: &str,
-) -> Result<SearchResponse, SearchError> {
-    // todo: make this return vector similarity, FTS similarity, and total similarity for debug purposes
-    // todo: make this return more complete items (width/height/id,etc.)
-    // todo: sort this by time sort column? that's how google photos does it.
-    // todo: make quick UI to show results, along with the three scores
-    // todo: don't create text embedder here every time lol
-    let embedder = TextEmbedder::from_hf(embed_model_id).build().await?;
+    threshold: Option<f32>,
+    embedder: &TextEmbedder,
+) -> Result<Vec<SearchResultItem>, SearchError> {
     let query_embedding = embedder.embed_text(query)?.to_vec();
     let vector_param = Vector::from(query_embedding);
-    let limit = requested_limit.unwrap_or(50).min(100);
 
-    // Internal "Candidate" limit. We pull more candidates than requested
-    // to ensure the join has enough data to find the best hybrid matches.
-    let candidate_limit = limit * 2;
+    let limit = requested_limit.unwrap_or(50).min(100);
+    let cutoff = threshold.unwrap_or(0.0);
+    // todo: set weights from settings
+    // todo: set language from settings?
+
+    // We fetch more candidates than the limit to ensure that after
+    // the combined score calculation and thresholding, we still have results.
+    let candidate_limit = limit * 3;
+
     let items = sqlx::query_as::<_, SearchResultItem>(
         r"
         WITH fts_search AS (
@@ -49,11 +49,21 @@ pub async fn search_media(
             LIMIT $4
         )
         SELECT
-            coalesce(f.id, v.id) as id,
-            (coalesce(f.rank, 0) * 0.4 + coalesce(v.similarity, 0) * 0.6)::real as score
-        FROM fts_search f
-        FULL OUTER JOIN vector_search v ON f.id = v.id
-        ORDER BY score DESC
+            mi.id,
+            mi.is_video,
+            mi.use_panorama_viewer as is_panorama,
+            mi.duration_ms,
+            mi.taken_at_local,
+            (mi.width::real / mi.height::real) as ratio,
+            coalesce(f.rank, 0)::real as fts_score,
+            coalesce(v.similarity, 0)::real as vector_score,
+            (coalesce(f.rank, 0) * 0.4 + coalesce(v.similarity, 0) * 0.6)::real as combined_score
+        FROM media_item mi
+        LEFT JOIN fts_search f ON mi.id = f.id
+        LEFT JOIN vector_search v ON mi.id = v.id
+        WHERE (f.id IS NOT NULL OR v.id IS NOT NULL)
+          AND (coalesce(f.rank, 0) * 0.4 + coalesce(v.similarity, 0) * 0.6) >= $6
+        ORDER BY mi.sort_timestamp DESC
         LIMIT $5
         ",
     )
@@ -62,8 +72,9 @@ pub async fn search_media(
     .bind(vector_param)
     .bind(candidate_limit)
     .bind(limit)
+    .bind(cutoff)
     .fetch_all(pool)
     .await?;
 
-    Ok(SearchResponse { items })
+    Ok(items)
 }

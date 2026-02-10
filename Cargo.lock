@@ -190,6 +190,7 @@ dependencies = [
  "jsonwebtoken",
  "mime_guess",
  "ml_analysis",
+ "open_clip_inference",
  "reqwest 0.13.2",
  "serde",
  "serde_json",
@@ -4196,9 +4197,9 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
 name = "open_clip_inference"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "836f2eac75bf5346fafb9f9cd330a441bfc3e279bb8d255b42aae1b14f6b97ae"
+checksum = "47c8121da99275e448aadc898ee1c88af4dcaea2be2a8f043dd463a5b2217674"
 dependencies = [
  "bon",
  "fast_image_resize",

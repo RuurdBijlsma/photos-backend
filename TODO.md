@@ -172,6 +172,9 @@
 * er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
 * improve speed of album/{id} endpoint
 * ✅ non-analysis-worker spawns embedder
+* i think ocr_text should have higher prio
+* play with weights for full text search
+* make search result item protobuf
 
 # Features
 

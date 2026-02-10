@@ -2,6 +2,7 @@ use crate::timeline::websocket::MediaPayload;
 use app_state::{AppSettings, IngestSettings};
 use axum::extract::FromRef;
 use common_services::s2s_client::S2SClient;
+use open_clip_inference::TextEmbedder;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -12,10 +13,9 @@ pub struct ApiContext {
     pub s2s_client: S2SClient,
     pub settings: AppSettings,
     pub timeline_broadcaster: broadcast::Sender<Arc<MediaPayload>>,
+    pub embedder: Arc<TextEmbedder>,
 }
 
-// These impls allow Axum to extract the PgPool and reqwest::Client from the AppState.
-// This is useful for middleware and extractors that might only need one part of the state.
 impl FromRef<ApiContext> for PgPool {
     fn from_ref(state: &ApiContext) -> Self {
         state.pool.clone()

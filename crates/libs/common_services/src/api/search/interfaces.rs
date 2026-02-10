@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -6,17 +7,21 @@ use utoipa::{IntoParams, ToSchema};
 pub struct SearchParams {
     pub query: String,
     pub limit: Option<i64>,
+    pub threshold: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, ToSchema, Debug, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchResultItem {
     pub id: String,
-    pub score: f32,
-}
+    pub is_video: bool,
+    pub is_panorama: bool,
+    pub duration_ms: Option<i64>,
+    pub taken_at_local: NaiveDateTime,
+    pub ratio: f32,
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct SearchResponse {
-    pub items: Vec<SearchResultItem>,
+    // Score breakdown
+    pub fts_score: f32,
+    pub vector_score: f32,
+    pub combined_score: f32,
 }
