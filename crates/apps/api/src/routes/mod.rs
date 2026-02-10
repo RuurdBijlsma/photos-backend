@@ -5,6 +5,7 @@ pub mod onboarding;
 pub mod photos;
 pub mod root;
 pub mod s2s;
+pub mod search;
 pub mod timeline;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
@@ -27,6 +28,7 @@ use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use common_services::database::app_user::UserRole;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use crate::search::router::search_protected_router;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {
@@ -67,6 +69,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
         .merge(auth_protected_router())
         .merge(photos_protected_router())
         .merge(timeline_protected_router())
+        .merge(search_protected_router())
         .merge(album_protected_router())
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }

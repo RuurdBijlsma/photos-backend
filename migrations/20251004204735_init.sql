@@ -31,7 +31,7 @@ CREATE TABLE remote_user
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     identity   TEXT        NOT NULL UNIQUE,
-    name       TEXT, -- Friendly name, can be set by user.
+    name       TEXT,
     user_id    INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE
 );
 CREATE INDEX idx_remote_user_user_id ON remote_user (user_id);
@@ -68,6 +68,7 @@ CREATE TABLE media_item
     use_panorama_viewer BOOLEAN     NOT NULL,
     deleted             BOOLEAN     NOT NULL DEFAULT false,
     month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
+    search_vector       TSVECTOR,
     CONSTRAINT width_positive CHECK (width > 0),
     CONSTRAINT height_positive CHECK (height > 0)
 );
@@ -157,6 +158,9 @@ CREATE TABLE panorama
 );
 
 -- Create indices for foreign keys and frequently queried columns for performance.
+
+-- Full text search index:
+CREATE INDEX idx_media_item_search ON media_item USING GIN (search_vector);
 
 -- Index for the foreign key in the gps table.
 CREATE INDEX idx_gps_location_id ON gps (location_id);

@@ -329,6 +329,8 @@ impl MediaItemStore {
         .execute(&mut **tx)
         .await?;
 
+        Self::rebuild_search_vector(&mut **tx, id).await?;
+
         Ok(())
     }
 
@@ -402,5 +404,54 @@ impl MediaItemStore {
             .await?;
             Ok(new_id)
         }
+    }
+
+    /// Re-calculates the search vector based on current metadata.
+    /// This should be called whenever searchable metadata (location, weather, etc.) changes.
+    pub async fn rebuild_search_vector(
+        executor: impl Executor<'_, Database = Postgres>,
+        id: &str,
+    ) -> Result<(), DbError> {
+        sqlx::query!(
+            r#"
+            UPDATE media_item
+            SET search_vector =
+                -- HIGH CONFIDENCE ('A')
+                setweight(to_tsvector('english', coalesce(mi.relative_path, '')), 'A') ||
+                setweight(to_tsvector('english', coalesce(l.name, '')), 'A') ||
+                setweight(to_tsvector('english', coalesce(l.admin1, '')), 'A') ||
+                setweight(to_tsvector('english', coalesce(l.admin2, '')), 'A') ||
+                setweight(to_tsvector('english', coalesce(l.country_name, '')), 'A') ||
+                setweight(to_tsvector('english', coalesce(p_agg.names, '')), 'A') ||
+                -- MEDIUM CONFIDENCE ('B')
+                setweight(to_tsvector('english', coalesce(w.condition, '')), 'B') ||
+                setweight(to_tsvector('english', coalesce(c.ocr_text, '')), 'B') ||
+                setweight(to_tsvector('english', coalesce(c.event_type, '')), 'B') ||
+                setweight(to_tsvector('english', coalesce(c.setting, '')), 'B') ||
+                -- LOWER CONFIDENCE ('C' & 'D')
+                setweight(to_tsvector('english', to_char(mi.taken_at_local, 'YYYY Month Day')), 'C') ||
+                setweight(to_tsvector('english', CASE WHEN mi.is_video THEN 'video' ELSE 'photo' END), 'D')
+            FROM media_item mi
+            LEFT JOIN gps g ON mi.id = g.media_item_id
+            LEFT JOIN location l ON g.location_id = l.id
+            LEFT JOIN weather w ON mi.id = w.media_item_id
+            -- Joins for Visual Analysis data (Faces/OCR)
+            LEFT JOIN visual_analysis va ON mi.id = va.media_item_id
+            LEFT JOIN caption c ON va.id = c.visual_analysis_id
+            LEFT JOIN (
+                SELECT va_inner.media_item_id, string_agg(pers.name, ' ') as names
+                FROM face f
+                JOIN person pers ON f.person_id = pers.id
+                JOIN visual_analysis va_inner ON f.visual_analysis_id = va_inner.id
+                GROUP BY va_inner.media_item_id
+            ) p_agg ON mi.id = p_agg.media_item_id
+            WHERE media_item.id = mi.id AND mi.id = $1
+            "#,
+            id
+        )
+            .execute(executor)
+            .await?;
+
+        Ok(())
     }
 }
