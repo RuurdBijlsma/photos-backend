@@ -1060,6 +1060,7 @@ dependencies = [
  "jsonwebtoken",
  "media_analyzer",
  "mime_guess",
+ "open_clip_inference",
  "pgvector",
  "rand 0.10.0-rc.9",
  "reqwest 0.13.2",

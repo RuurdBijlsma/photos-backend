@@ -1,7 +1,6 @@
-use crate::database::DbError;
 use crate::database::visual_analysis::visual_analysis::CreateVisualAnalysis;
+use crate::database::DbError;
 use sqlx::PgTransaction;
-use crate::database::media_item_store::MediaItemStore;
 
 pub struct VisualAnalysisStore;
 
@@ -210,8 +209,6 @@ impl VisualAnalysisStore {
         )
         .execute(&mut **tx)
         .await?;
-
-        MediaItemStore::rebuild_search_vector(&mut **tx, media_item_id).await?;
 
         Ok(visual_analysis_id)
     }

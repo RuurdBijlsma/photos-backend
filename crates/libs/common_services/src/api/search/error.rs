@@ -3,6 +3,7 @@ use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use color_eyre::eyre;
+use open_clip_inference::ClipError;
 use serde_json::json;
 use thiserror::Error;
 use tracing::error;
@@ -14,12 +15,16 @@ pub enum SearchError {
 
     #[error("internal error")]
     Internal(#[from] eyre::Report),
+
+    #[error("embedding error")]
+    Embedding(#[from] ClipError),
 }
 
 fn log_error(error: &SearchError) {
     match error {
         SearchError::Database(e) => error!("Database query failed: {}", e),
         SearchError::Internal(e) => error!("Internal error: {}", e),
+        SearchError::Embedding(e) => error!("Embedding error: {}", e),
     }
 }
 
@@ -35,6 +40,10 @@ impl IntoResponse for SearchError {
             Self::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An unexpected internal error occurred.".to_string(),
+            ),
+            Self::Embedding(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An embedding error occurred.".to_string(),
             ),
         };
 
