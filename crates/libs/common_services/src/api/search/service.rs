@@ -11,6 +11,8 @@ pub async fn search_media(
     query: &str,
     requested_limit: Option<i64>,
     threshold: Option<f32>,
+    semantic_weight: f64,
+    text_weight: f64,
     embedder: &TextEmbedder,
 ) -> Result<Vec<SearchResultItem>, SearchError> {
     let query_embedding = embedder.embed_text(query)?.to_vec();
@@ -57,12 +59,12 @@ pub async fn search_media(
             (mi.width::real / mi.height::real) as ratio,
             coalesce(f.rank, 0)::real as fts_score,
             coalesce(v.similarity, 0)::real as vector_score,
-            (coalesce(f.rank, 0) * 0.4 + coalesce(v.similarity, 0) * 0.6)::real as combined_score
+            (coalesce(f.rank, 0) * $8 + coalesce(v.similarity, 0) * $7)::real as combined_score
         FROM media_item mi
         LEFT JOIN fts_search f ON mi.id = f.id
         LEFT JOIN vector_search v ON mi.id = v.id
         WHERE (f.id IS NOT NULL OR v.id IS NOT NULL)
-          AND (coalesce(f.rank, 0) * 0.4 + coalesce(v.similarity, 0) * 0.6) >= $6
+          AND (coalesce(f.rank, 0) * $8 + coalesce(v.similarity, 0) * $7) >= $6
         ORDER BY mi.sort_timestamp DESC
         LIMIT $5
         ",
@@ -73,6 +75,8 @@ pub async fn search_media(
     .bind(candidate_limit)
     .bind(limit)
     .bind(cutoff)
+    .bind(semantic_weight)
+    .bind(text_weight)
     .fetch_all(pool)
     .await?;
 

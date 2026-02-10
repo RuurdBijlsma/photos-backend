@@ -39,7 +39,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         settings: settings.clone(),
         timeline_broadcaster: create_media_item_transmitter(&pool)?,
         embedder: Arc::new(
-            TextEmbedder::from_hf(&settings.ingest.analyzer.embedder_model_id)
+            TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
                 .build()
                 .await?,
         ),

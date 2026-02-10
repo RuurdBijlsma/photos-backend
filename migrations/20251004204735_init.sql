@@ -52,8 +52,9 @@ CREATE TABLE refresh_token
 CREATE TABLE media_item
 (
     id                  VARCHAR(10) PRIMARY KEY,
-    hash                TEXT        NOT NULL,
     relative_path       TEXT        NOT NULL UNIQUE,
+    hash                TEXT        NOT NULL,
+    filename            TEXT        NOT NULL,
     user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     remote_user_id      INT         REFERENCES remote_user (id) ON DELETE SET NULL,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),

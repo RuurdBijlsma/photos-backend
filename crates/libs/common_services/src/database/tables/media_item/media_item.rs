@@ -98,6 +98,7 @@ pub struct FullMediaItemRow {
     pub id: String,
     pub user_id: i32,
     pub hash: String,
+    pub filename: String,
     pub relative_path: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

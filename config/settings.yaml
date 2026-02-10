@@ -5,14 +5,14 @@ ingest:
 
   analyzer:
     llm_base_url: "http://localhost:8080"
-    embedder_model_id: RuteNL/DFN5B-CLIP-ViT-H-14-378-ONNX
+    search:
+      embedder_model_id: RuteNL/DFN5B-CLIP-ViT-H-14-378-ONNX
+      semantic_weight: 1.5
+      text_weight: 0.2
     analyze_image_size: 720
     theme_generation:
       variant: Vibrant
       contrast_level: 0.5
-    ocr_languages:
-      - nld
-      - eng
 
   file_detection:
     video_extensions:

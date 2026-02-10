@@ -51,5 +51,5 @@ pub struct ReadVisualAnalysis {
     pub detected_objects: Vec<DetectedObject>,
     pub quality: QualityScore,
     pub colors: ColorData,
-    pub caption: ClassificationData,
+    pub classification: ClassificationData,
 }

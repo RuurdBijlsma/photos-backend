@@ -92,10 +92,10 @@ CREATE TABLE color
 
 
 -- CHANGE: All boolean flags are now explicitly marked as NOT NULL.
-CREATE TABLE caption
+CREATE TABLE classification
 (
     visual_analysis_id   BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    default_caption      TEXT    NOT NULL,
+    caption              TEXT    NOT NULL,
     main_subject         TEXT    NOT NULL,
     contains_pets        BOOLEAN NOT NULL,
     contains_vehicle     BOOLEAN NOT NULL,
@@ -125,10 +125,10 @@ CREATE TABLE caption
     photo_type           TEXT,
     activity_description TEXT
 );
-CREATE INDEX idx_caption_data_contains_people ON caption (contains_people) WHERE contains_people = true;
-CREATE INDEX idx_caption_data_contains_pets ON caption (contains_pets) WHERE contains_pets = true;
-CREATE INDEX idx_caption_data_is_landscape ON caption (is_landscape) WHERE is_landscape = true;
-CREATE INDEX idx_caption_data_contains_landmarks ON caption (contains_landmarks) WHERE contains_landmarks = true;
+CREATE INDEX idx_classification_contains_people ON classification (contains_people) WHERE contains_people = true;
+CREATE INDEX idx_classification_contains_pets ON classification (contains_pets) WHERE contains_pets = true;
+CREATE INDEX idx_classification_is_landscape ON classification (is_landscape) WHERE is_landscape = true;
+CREATE INDEX idx_classification_contains_landmarks ON classification (contains_landmarks) WHERE contains_landmarks = true;
 
-CREATE INDEX idx_caption_data_landmark_name ON caption (landmark_name);
-CREATE INDEX idx_caption_data_setting ON caption (setting);
+CREATE INDEX idx_classification_landmark_name ON classification (landmark_name);
+CREATE INDEX idx_classification_setting ON classification (setting);

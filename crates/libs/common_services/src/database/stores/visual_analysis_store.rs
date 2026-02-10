@@ -160,12 +160,12 @@ impl VisualAnalysisStore {
         .execute(&mut **tx)
         .await?;
 
-        // --- Caption Data ---
-        let caption = &analysis.classification;
+        // --- Classification Data ---
+        let classification = &analysis.classification;
         sqlx::query!(
             r#"
-            INSERT INTO caption (
-                visual_analysis_id, default_caption, main_subject, contains_pets, contains_vehicle,
+            INSERT INTO classification (
+                visual_analysis_id, caption, main_subject, contains_pets, contains_vehicle,
                 contains_landmarks, contains_people, contains_animals, contains_text, is_indoor, is_food, is_drink,
                 is_event, is_document, is_landscape, is_cityscape, is_activity, setting,
                 animal_type, food_name, drink_name, vehicle_type, event_type, landmark_name, ocr_text,
@@ -177,35 +177,35 @@ impl VisualAnalysisStore {
             )
             "#,
             visual_analysis_id,
-            caption.caption,
-            caption.main_subject,
-            caption.contains_pets,
-            caption.contains_vehicle,
-            caption.contains_landmarks,
-            caption.contains_people,
-            caption.contains_animals,
-            caption.contains_text,
-            caption.is_indoor,
-            caption.is_food,
-            caption.is_drink,
-            caption.is_event,
-            caption.is_document,
-            caption.is_landscape,
-            caption.is_cityscape,
-            caption.is_activity,
-            caption.setting,
-            caption.animal_type,
-            caption.food_name,
-            caption.drink_name,
-            caption.vehicle_type,
-            caption.event_type,
-            caption.landmark_name,
-            caption.ocr_text,
-            caption.document_type,
-            caption.people_count,
-            caption.people_mood,
-            caption.photo_type,
-            caption.activity_description,
+            classification.caption,
+            classification.main_subject,
+            classification.contains_pets,
+            classification.contains_vehicle,
+            classification.contains_landmarks,
+            classification.contains_people,
+            classification.contains_animals,
+            classification.contains_text,
+            classification.is_indoor,
+            classification.is_food,
+            classification.is_drink,
+            classification.is_event,
+            classification.is_document,
+            classification.is_landscape,
+            classification.is_cityscape,
+            classification.is_activity,
+            classification.setting,
+            classification.animal_type,
+            classification.food_name,
+            classification.drink_name,
+            classification.vehicle_type,
+            classification.event_type,
+            classification.landmark_name,
+            classification.ocr_text,
+            classification.document_type,
+            classification.people_count,
+            classification.people_mood,
+            classification.photo_type,
+            classification.activity_description,
         )
         .execute(&mut **tx)
         .await?;

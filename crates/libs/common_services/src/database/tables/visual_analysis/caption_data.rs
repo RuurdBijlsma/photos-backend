@@ -5,8 +5,9 @@ use utoipa::ToSchema;
 /// Corresponds to the '`caption_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct ClassificationData {
-    pub caption: Option<String>,
-    pub main_subject: Option<String>,
+    pub caption: String,
+    pub main_subject: String,
+    pub setting: String,
     pub contains_pets: bool,
     pub contains_vehicle: bool,
     pub contains_landmarks: bool,
@@ -21,7 +22,6 @@ pub struct ClassificationData {
     pub is_landscape: bool,
     pub is_cityscape: bool,
     pub is_activity: bool,
-    pub setting: String,
     pub ocr_text: Option<String>,
     pub animal_type: Option<String>,
     pub food_name: Option<String>,
@@ -39,8 +39,8 @@ pub struct ClassificationData {
 impl From<LlmClassification> for ClassificationData {
     fn from(caption_data: LlmClassification) -> Self {
         Self {
-            caption: Some(caption_data.caption),
-            main_subject: Some(caption_data.main_subject),
+            caption: caption_data.caption,
+            main_subject: caption_data.main_subject,
             contains_pets: caption_data.contains_pets,
             contains_vehicle: caption_data.contains_vehicle,
             contains_landmarks: caption_data.contains_landmarks,

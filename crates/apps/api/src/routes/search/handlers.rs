@@ -37,6 +37,8 @@ pub async fn get_search_results(
         &params.query,
         params.limit,
         params.threshold,
+        context.settings.ingest.analyzer.search.semantic_weight,
+        context.settings.ingest.analyzer.search.text_weight,
         &context.embedder,
     )
     .await?;

@@ -29,7 +29,7 @@ impl WorkerContext {
         worker_id: String,
         handle_analysis: bool,
     ) -> Result<Self> {
-        let embedder_model_id = &settings.ingest.analyzer.embedder_model_id.clone();
+        let embedder_model_id = &settings.ingest.analyzer.search.embedder_model_id.clone();
         let visual_analyzer = if handle_analysis {
             Some(Arc::new(VisualAnalyzer::new(embedder_model_id).await?))
         } else {

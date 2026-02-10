@@ -7,19 +7,20 @@ BEGIN
     UPDATE media_item
     SET search_vector = (SELECT
                              -- HIGH CONFIDENCE ('A')
-                             setweight(to_tsvector('english', mi.relative_path), 'A') ||
+                             setweight(to_tsvector('english', mi.filename), 'A') ||
                              setweight(to_tsvector('english', coalesce(l.name, '')), 'A') ||
                              setweight(to_tsvector('english', coalesce(l.admin1, '')), 'A') ||
-                             setweight(to_tsvector('english', coalesce(l.admin2, '')), 'A') ||
                              setweight(to_tsvector('english', coalesce(l.country_name, '')), 'A') ||
                              setweight(to_tsvector('english', coalesce(p_agg.names, '')), 'A') ||
                                  -- MEDIUM CONFIDENCE ('B')
-                             setweight(to_tsvector('english', coalesce(w.condition, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(l.admin2, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(c.ocr_text, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(w.condition, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(c.event_type, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(c.setting, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(c.landmark_name, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(c.caption, '')), 'B') ||
                                  -- LOWER CONFIDENCE ('C' & 'D')
-                             setweight(to_tsvector('english', coalesce(c.default_caption, '')), 'C') ||
                              setweight(to_tsvector('english', to_char(mi.taken_at_local, 'YYYY Month Day')), 'C') ||
                              setweight(to_tsvector('english', CASE WHEN mi.is_video THEN 'video' ELSE 'photo' END), 'D')
                          FROM media_item mi
@@ -27,7 +28,7 @@ BEGIN
                                   LEFT JOIN location l ON g.location_id = l.id
                                   LEFT JOIN weather w ON mi.id = w.media_item_id
                                   LEFT JOIN visual_analysis va ON mi.id = va.media_item_id
-                                  LEFT JOIN caption c ON va.id = c.visual_analysis_id
+                                  LEFT JOIN classification c ON va.id = c.visual_analysis_id
                                   LEFT JOIN (SELECT va_inner.media_item_id, string_agg(pers.name, ' ') as names
                                              FROM face f
                                                       JOIN person pers
@@ -53,7 +54,7 @@ BEGIN
         TG_TABLE_NAME = 'gps' OR TG_TABLE_NAME = 'weather' OR TG_TABLE_NAME = 'visual_analysis' THEN
         PERFORM rebuild_media_item_search_vector(NEW.media_item_id);
     ELSIF
-        TG_TABLE_NAME = 'caption' THEN
+        TG_TABLE_NAME = 'classification' THEN
         -- Link back via visual_analysis
         PERFORM rebuild_media_item_search_vector((SELECT media_item_id
                                                   FROM visual_analysis
@@ -90,9 +91,9 @@ CREATE TRIGGER trg_va_search_update
     ON visual_analysis
     FOR EACH ROW
 EXECUTE FUNCTION tg_rebuild_search_vector();
-CREATE TRIGGER trg_caption_search_update
+CREATE TRIGGER trg_classification_search_update
     AFTER INSERT OR UPDATE
-    ON caption
+    ON classification
     FOR EACH ROW
 EXECUTE FUNCTION tg_rebuild_search_vector();
 CREATE TRIGGER trg_face_search_update

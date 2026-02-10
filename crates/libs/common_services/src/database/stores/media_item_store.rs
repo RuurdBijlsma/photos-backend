@@ -15,6 +15,7 @@ use chrono::{TimeZone, Utc};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
+use std::path::Path;
 
 pub struct MediaItemStore;
 
@@ -66,9 +67,9 @@ impl MediaItemStore {
                             SELECT to_jsonb(cld)
                             FROM color cld WHERE cld.visual_analysis_id = va.id
                         ),
-                        'caption', (
+                        'classification', (
                             SELECT to_jsonb(cpd)
-                            FROM caption cpd WHERE cpd.visual_analysis_id = va.id
+                            FROM classification cpd WHERE cpd.visual_analysis_id = va.id
                         ),
                         'faces', (
                             SELECT COALESCE(
@@ -93,6 +94,7 @@ impl MediaItemStore {
             mi.id,
             mi.user_id,
             mi.hash,
+            mi.filename,
             mi.relative_path,
             mi.created_at,
             mi.updated_at,
@@ -166,19 +168,24 @@ impl MediaItemStore {
                 },
             )
         });
+        let filename = Path::new(relative_path).file_name().map_or_else(
+            || relative_path.to_string(),
+            |f| f.to_string_lossy().to_string(),
+        );
 
         // Insert into the main media_item table
         sqlx::query!(
             r#"
             INSERT INTO media_item (
-                id, relative_path, user_id, remote_user_id, hash, width, height,
+                id, relative_path, filename, user_id, remote_user_id, hash, width, height,
                 is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp,
                 use_panorama_viewer
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             "#,
             id,
             relative_path,
+            filename,
             user_id,
             remote_user_id,
             &media_item.hash,

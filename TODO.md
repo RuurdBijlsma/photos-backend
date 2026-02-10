@@ -175,6 +175,10 @@
 * i think ocr_text should have higher prio
 * play with weights for full text search
 * make search result item protobuf
+* vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
+  search zit meer in de 0-0.3 range, FTS kan wel tot 4.0 gaan ofzo, dus weight voor FTS moet lager dan vector. nu 0.8 en
+  0.2 dat lijkt wel goeie resultaten te geven. Toch meer experimenteren.
+* ocr_languages in settings doet niks meer
 
 # Features
 
