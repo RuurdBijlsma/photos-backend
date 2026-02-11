@@ -20,6 +20,22 @@ use std::path::Path;
 pub struct MediaItemStore;
 
 impl MediaItemStore {
+    pub async fn find_relative_path_by_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        media_item_id: &str,
+    ) -> Result<Option<String>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            SELECT relative_path
+            FROM media_item
+            WHERE id = $1
+            "#,
+            media_item_id
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
     pub async fn find_id_by_relative_path(
         executor: impl Executor<'_, Database = Postgres>,
         relative_path: &str,
@@ -35,7 +51,7 @@ impl MediaItemStore {
         .fetch_optional(executor)
         .await?)
     }
-    
+
     pub async fn find_user_by_id(
         executor: impl Executor<'_, Database = Postgres>,
         media_item_id: &str,

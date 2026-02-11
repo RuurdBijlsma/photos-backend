@@ -44,7 +44,7 @@ ingest:
       - 720
       - 1080
       - 1440
-    thumbnail_extension: "webp"
+    thumbnail_extension: "avif"
     avif_options:
       quality: 80
       alpha_quality: 80
@@ -72,6 +72,7 @@ api:
   port: 9475
   allowed_origins:
     - "http://localhost:5173"
+    - "https://localhost:5173"
     - "http://localhost:3000"
     - "http://127.0.0.1:3000"
     - "https://ruurdbijlsma.github.io"

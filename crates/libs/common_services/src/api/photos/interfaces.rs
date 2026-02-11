@@ -26,3 +26,9 @@ pub struct ColorThemeParams {
 pub struct DownloadMediaParams {
     pub path: String,
 }
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PhotoThumbnailParams {
+    pub size: Option<i32>,
+}

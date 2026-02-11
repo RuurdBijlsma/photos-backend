@@ -16,7 +16,7 @@ use crate::auth::middlewares::user::ApiUser;
 use crate::auth::middlewares::websocket::WsUser;
 use crate::auth::router::{auth_protected_router, auth_public_router};
 use crate::onboarding::router::onboarding_admin_routes;
-use crate::photos::router::photos_protected_router;
+use crate::photos::router::{photos_protected_router, photos_public_router};
 use crate::root::handlers::root;
 use crate::root::router::root_public_router;
 use crate::routes::api_doc::ApiDoc;
@@ -47,6 +47,7 @@ fn public_routes(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
         .merge(auth_public_router(rate_limiting))
         .merge(root_public_router())
         .merge(s2s_public_router())
+        .merge(photos_public_router())
 }
 
 // New WebSocket Route Group

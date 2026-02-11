@@ -11,7 +11,9 @@ ml_analysis = { path = "../../libs/ml_analysis" }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter"] }
 color-eyre = "0.6.5"
-axum = { version = "0.8.6", features = ["macros", "ws"] }
+axum = { version = "0.8.6", features = ["macros", "ws", "http2"] }
+axum-server = { version = "0.8.0", features = ["tls-rustls"] }
+rustls = { version = "0.23", features = ["ring"] }
 tokio = { version = "1.47.1", features = ["full"] }
 jsonwebtoken = { version = "10.0.0", features = ["rust_crypto"] }
 chrono = { version = "0.4.42", features = ["serde"] }
@@ -28,3 +30,7 @@ reqwest = { version = "0.13.2", features = ["json"] }
 tower_governor = { version = "0.8.0" }
 serde = { version = "1.0.228", features = ["derive"] }
 open_clip_inference = { version = "0.2.6", features = ["load-dynamic"] }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+fast_image_resize = { version = "6.0.0", features = ["image"] }
+webp = "0.3.1"
+futures = "0.3.31"

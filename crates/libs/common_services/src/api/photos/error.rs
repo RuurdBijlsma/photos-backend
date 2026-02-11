@@ -25,6 +25,9 @@ pub enum PhotosError {
 
     #[error("The requested file is not a supported media type.")]
     UnsupportedMediaType,
+
+    #[error("Cancelled.")]
+    Cancelled,
 }
 
 impl IntoResponse for PhotosError {
@@ -45,6 +48,7 @@ impl IntoResponse for PhotosError {
             Self::InvalidPath => (StatusCode::BAD_REQUEST, self.to_string()),
             Self::AccessDenied => (StatusCode::FORBIDDEN, self.to_string()),
             Self::UnsupportedMediaType => (StatusCode::UNSUPPORTED_MEDIA_TYPE, self.to_string()),
+            Self::Cancelled=>(StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
         };
 
         let body = Json(json!({ "error": error_message }));
