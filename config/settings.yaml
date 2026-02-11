@@ -1,5 +1,5 @@
 ingest:
-  media_folder: C:\Users\Ruurd\Pictures\small_media_dir
+  media_folder: C:\Users\Ruurd\Pictures\Photos
   thumbnail_folder: thumbnails
   enable_cache: true
 
@@ -44,7 +44,7 @@ ingest:
       - 720
       - 1080
       - 1440
-    thumbnail_extension: "avif"
+    thumbnail_extension: "webp"
     avif_options:
       quality: 80
       alpha_quality: 80

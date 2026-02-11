@@ -201,7 +201,7 @@
       model, main_subject, setting, animal type, pet type, food type, landmark, document type, photo_type, activity}
     * sunset/sunrise photos
 * fun "albums" notifications & in UI frontpage
-    * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
+    * refresh daily (changes daily): "10 years ago today" → as long as there's enough photos on that day.
     * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at
       the lake", "Cat pics")
     * group by  (only changes with significantly more photos)

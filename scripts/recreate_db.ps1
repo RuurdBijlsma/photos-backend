@@ -10,4 +10,7 @@ sqlx database drop -y
 sqlx database create
 sqlx migrate run
 
+$env:ORT_DYLIB_PATH="C:/Apps/onnxruntime/lib/onnxruntime.dll"
+cargo run --package worker --example auto_do_setup --profile release
+
 Pop-Location

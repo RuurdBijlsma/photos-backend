@@ -1,5 +1,4 @@
 use crate::runner::context::test_context::TestContext;
-use crate::test_constants::{EMAIL, USERNAME};
 use crate::test_helpers::login;
 use color_eyre::eyre::{Result, bail};
 use common_services::api::album::interfaces::{
@@ -14,6 +13,7 @@ use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::time::sleep;
 use tracing::info;
+use common_types::dev_constants::{EMAIL, USERNAME};
 
 pub async fn test_album_lifecycle(context: &TestContext) -> Result<()> {
     // ARRANGE

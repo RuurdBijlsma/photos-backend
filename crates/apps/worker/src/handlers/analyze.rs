@@ -41,7 +41,22 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .await?
         .ok_or_else(|| eyre!("Could not find media item by relative_path."))?;
     let analyses = get_analysis_data(context, &file_path, &media_item_id).await?;
-    save_results(context, job.id, &media_item_id, &analyses, &file_path).await
+    let user_id = if let Some(uid) = job.user_id {
+        uid
+    } else {
+        MediaItemStore::find_user_by_id(&context.pool, &media_item_id)
+            .await?
+            .ok_or_else(|| eyre!("Invalid media item linked to visual analysis"))?
+    };
+    save_results(
+        context,
+        job.id,
+        &media_item_id,
+        user_id,
+        &analyses,
+        &file_path,
+    )
+    .await
 }
 
 async fn get_analysis_data(
@@ -91,7 +106,7 @@ async fn compute_analysis(
                 }
             })
         })
-        .await??;
+            .await??;
 
         analyses.push(analysis_result);
     }
@@ -135,6 +150,7 @@ async fn save_results(
     context: &WorkerContext,
     job_id: i64,
     media_item_id: &str,
+    user_id: i32,
     analyses: &[RawVisualAnalysis],
     file_path: &Path,
 ) -> Result<JobResult> {
@@ -145,7 +161,8 @@ async fn save_results(
         return Ok(JobResult::Cancelled);
     }
     for analysis in analyses {
-        VisualAnalysisStore::create(&mut tx, media_item_id, &analysis.to_owned().into()).await?;
+        VisualAnalysisStore::create(&mut tx, media_item_id, user_id, &analysis.to_owned().into())
+            .await?;
     }
     tx.commit().await?;
     Ok(JobResult::Done)

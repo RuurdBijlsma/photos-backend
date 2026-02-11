@@ -6,6 +6,7 @@ use crate::handlers::common::cache::{
 use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::jobs::management::is_job_cancelled;
 use app_state::constants;
+use color_eyre::eyre::Context;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::album_store::AlbumStore;
@@ -70,7 +71,11 @@ async fn get_media_info(
         debug!("Using ingest cache for {:?}", file_path.file_name());
         return Ok(cached);
     }
-    let media_info = context.media_analyzer.analyze_media(file_path).await?;
+    let media_info = context
+        .media_analyzer
+        .analyze_media(file_path)
+        .await
+        .wrap_err(file_path.to_string_lossy().to_string())?;
     if context.settings.ingest.enable_cache {
         write_ingest_cache(file_hash, media_info.clone()).await?;
     }

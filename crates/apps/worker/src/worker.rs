@@ -13,12 +13,13 @@ pub async fn create_worker(
     pool: PgPool,
     settings: AppSettings,
     handle_analysis: bool,
+    stop_on_sleep: bool,
 ) -> Result<()> {
     let worker_id = nice_id(8);
     info!("🛠️ [Worker ID: {}] Starting.", worker_id);
     let context = WorkerContext::new(pool, settings, worker_id.clone(), handle_analysis).await?;
 
-    run_worker_loop(&context).await
+    run_worker_loop(&context, stop_on_sleep).await
 }
 
 /// The main loop for the worker process, continuously fetching and processing jobs.
@@ -27,7 +28,7 @@ pub async fn create_worker(
 ///
 /// This function will return an error if there is a problem communicating with the
 /// database when claiming or updating a job. The loop will terminate in such a case.
-pub async fn run_worker_loop(context: &WorkerContext) -> Result<()> {
+pub async fn run_worker_loop(context: &WorkerContext, stop_on_sleep: bool) -> Result<()> {
     let mut sleeping = false;
 
     loop {
@@ -50,6 +51,9 @@ pub async fn run_worker_loop(context: &WorkerContext) -> Result<()> {
             if !sleeping {
                 sleeping = true;
                 info!("💤 No jobs, going to sleep...");
+                if stop_on_sleep {
+                    return Ok(());
+                }
             }
             sleep(Duration::from_millis(3000)).await;
         }

@@ -35,7 +35,7 @@ pub struct AnalyzerSettings {
 pub struct SearchSettings {
     pub embedder_model_id: String,
     pub semantic_weight: f64,
-    pub text_weight: f64,
+    pub text_weight: f32,
 }
 
 #[derive(Debug, Deserialize, Clone)]

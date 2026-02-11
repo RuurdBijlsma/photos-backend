@@ -19,16 +19,18 @@ impl VisualAnalysisStore {
     pub async fn create(
         tx: &mut PgTransaction<'_>,
         media_item_id: &str,
+        user_id: i32,
         analysis: &CreateVisualAnalysis,
     ) -> Result<i64, DbError> {
         // Insert the main analysis record and get its new ID.
         let visual_analysis_id: i64 = sqlx::query_scalar!(
-            r#"
-            INSERT INTO visual_analysis (media_item_id, embedding, percentage)
-            VALUES ($1, $2, $3)
+            r"
+            INSERT INTO visual_analysis (media_item_id, user_id, embedding, percentage)
+            VALUES ($1, $2, $3, $4)
             RETURNING id
-            "#,
+            ",
             media_item_id,
+            user_id,
             analysis.embedding as _,
             analysis.percentage,
         )

@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 pub struct SearchParams {
     pub query: String,
     pub limit: Option<i64>,
-    pub threshold: Option<f32>,
+    pub threshold: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, ToSchema, Debug, sqlx::FromRow)]
