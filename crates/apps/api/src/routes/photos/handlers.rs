@@ -1,22 +1,26 @@
-use crate::api_state::ApiContext;
 use app_state::IngestSettings;
-use axum::extract::{Path, Query, State};
-use axum::http::header;
-use axum::response::IntoResponse;
 use axum::{Extension, Json};
-use color_eyre::eyre::eyre;
-use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::{
-    ColorThemeParams, DownloadMediaParams, GetMediaItemParams, PhotoThumbnailParams,
-    RandomPhotoResponse,
+    ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse,
 };
 use common_services::api::photos::service::{download_media_file, random_photo};
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
-use common_services::database::media_item_store::MediaItemStore;
-use fast_image_resize as fr;
+use image::ImageDecoder;
 use ml_analysis::get_color_theme;
-use serde_json::Value;
+
+use crate::api_state::ApiContext;
+use axum::extract::{Path, Query, State};
+use axum::http::header;
+use axum::response::IntoResponse;
+use color_eyre::eyre::eyre;
+use common_services::api::photos::error::PhotosError;
+use common_services::api::photos::interfaces::PhotoThumbnailParams;
+use common_services::database::media_item_store::MediaItemStore;
+use exif::{In, Tag, Value};
+use fast_image_resize as fr;
+use image::ImageReader;
+use std::io::Cursor;
 use std::time::Instant;
 use tokio::{fs, task};
 use tracing::instrument;
@@ -100,7 +104,7 @@ pub async fn get_random_photo(
 pub async fn get_color_theme_handler(
     State(ingestion): State<IngestSettings>,
     Query(params): Query<ColorThemeParams>,
-) -> Result<Json<Value>, PhotosError> {
+) -> Result<Json<serde_json::Value>, PhotosError> {
     let variant = &ingestion.analyzer.theme_generation.variant;
     let contrast_level = ingestion.analyzer.theme_generation.contrast_level;
     Ok(Json(get_color_theme(
@@ -155,21 +159,22 @@ pub async fn get_photo_thumbnail(
         return Err(PhotosError::AccessDenied);
     }
 
-    // 1. Check Cache (Fastest path, no semaphore needed)
-    let cache_dir = context.settings.ingest.thumbnail_root.join("webp-cache");
-    let cache_path = cache_dir.join(format!("{media_item_id}_{size}.webp"));
+    // 1. Check Cache (Now looking for .jpg)
+    let cache_dir = context.settings.ingest.thumbnail_root.join(".jpg-cache");
+    let cache_path = cache_dir.join(format!("{media_item_id}_{size}.jpg"));
 
     if let Ok(cached_data) = fs::read(&cache_path).await {
+        println!("Using cache");
         return Ok((
             [
-                (header::CONTENT_TYPE, "image/webp"),
+                (header::CONTENT_TYPE, "image/jpeg"),
                 (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
             ],
             cached_data,
         ));
     }
 
-    // 3. Database lookup
+    // 2. Database lookup for file path
     let Some(rel_path) =
         MediaItemStore::find_relative_path_by_id(&context.pool, &media_item_id).await?
     else {
@@ -177,19 +182,78 @@ pub async fn get_photo_thumbnail(
     };
     let image_path = context.settings.ingest.media_root.join(&rel_path);
 
+    // 3. Process Image
     let handle = task::spawn_blocking(move || -> Result<Vec<u8>, PhotosError> {
         let now = Instant::now();
-        // 1. Load and decode image
-        let img = image::ImageReader::open(image_path)
-            .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to open image")))?
-            .with_guessed_format()
-            .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to guess image format")))?
-            .decode() // This is still the slow part
-            .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to decode image")))?;
-        let dbg_decode_time = now.elapsed();
-        let now = Instant::now();
+        let file_bytes = std::fs::read(&image_path)
+            .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to read image")))?;
+        let time_read_bytes = now.elapsed();
+        let start = Instant::now();
 
-        // 2. Calculate dimensions (Keeping aspect ratio)
+        let is_jpeg =
+            rel_path.to_lowercase().ends_with(".jpg") || rel_path.to_lowercase().ends_with(".jpeg");
+
+        // --- PATH A: EXIF Thumbnail (JPEG only) ---
+        if is_jpeg {
+            let mut cursor = Cursor::new(&file_bytes);
+            if let Ok(exif_data) = exif::Reader::new().read_from_container(&mut cursor) {
+                // Find Thumbnail Offset and Length in IFD1 (In(1))
+                let offset = exif_data.get_field(Tag::JPEGInterchangeFormat, In(1));
+                let length = exif_data.get_field(Tag::JPEGInterchangeFormatLength, In(1));
+
+                if let (Some(off_f), Some(len_f)) = (offset, length) {
+                    // Extract values from EXIF types (Short or Long)
+                    let off_val = match off_f.value {
+                        Value::Long(ref v) if !v.is_empty() => Some(v[0]),
+                        Value::Short(ref v) if !v.is_empty() => Some(v[0] as u32),
+                        _ => None,
+                    };
+                    let len_val = match len_f.value {
+                        Value::Long(ref v) if !v.is_empty() => Some(v[0]),
+                        Value::Short(ref v) if !v.is_empty() => Some(v[0] as u32),
+                        _ => None,
+                    };
+
+                    if let (Some(o), Some(l)) = (off_val, len_val) {
+                        let start = o as usize;
+                        let end = start + l as usize;
+
+                        if end <= exif_data.buf().len() {
+                            let thumb_bytes = &exif_data.buf()[start..end];
+
+                            // Check dimensions using imagesize crate (no full decoding)
+                            if let Ok(dim) = imagesize::blob_size(thumb_bytes)
+                                && dim.height >= ((size as f32 * 0.9) as usize)
+                            {
+                                println!(
+                                    "Req size {size}. Using EXIF thumb ({}x{}) path. {:?}, read_bytes: {time_read_bytes:?}",
+                                    dim.width,
+                                    dim.height,
+                                    now.elapsed()
+                                );
+                                return Ok(thumb_bytes.to_vec());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- PATH B: Resize Path ---
+        let mut img = image::load_from_memory(&file_bytes)
+            .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to decode image")))?;
+
+        let orient_start = Instant::now();
+        let mut decoder = ImageReader::open(image_path)
+            .map_err(|e| eyre!("Failed to open image: {}", e))?
+            .into_decoder()
+            .map_err(|e| eyre!("Failed to read image: {}", e))?;
+        let orientation = decoder
+            .orientation()
+            .map_err(|e| eyre!("Failed to get image orientation: {}", e))?;
+        img.apply_orientation(orientation);
+        println!("Fix orientation took: {:?}", orient_start.elapsed());
+
         let (width, height) = (img.width(), img.height());
         let aspect_ratio = width as f32 / height as f32;
         let (dst_width, dst_height) = if width > height {
@@ -198,50 +262,52 @@ pub async fn get_photo_thumbnail(
             ((size as f32 * aspect_ratio) as u32, size as u32)
         };
 
-        // 3. Prepare Resize
         let src_image = fr::images::Image::from_vec_u8(
             width,
             height,
             img.to_rgb8().into_raw(),
             fr::PixelType::U8x3,
         )
-        .map_err(|e| PhotosError::Internal(eyre!(format!("Resize source error: {e}"))))?;
+        .map_err(|e| PhotosError::Internal(eyre!("Resize source error: {e}")))?;
 
         let mut dst_image = fr::images::Image::new(dst_width, dst_height, fr::PixelType::U8x3);
-        let dbg_prepare_resize_time = now.elapsed();
-        let now = Instant::now();
-
-        // 4. Resize using the fastest high-quality filter (CatmullRom or Bilinear for speed)
         let mut resizer = fr::Resizer::new();
         resizer
             .resize(&src_image, &mut dst_image, None)
-            .map_err(|e| PhotosError::Internal(eyre!(format!("Resizing failed: {e}"))))?;
+            .map_err(|e| PhotosError::Internal(eyre!("Resizing failed: {e}")))?;
 
-        let dbg_resize_time = now.elapsed();
-        let now = Instant::now();
+        // Encode to JPEG
+        let mut buffer = Vec::new();
+        let mut cursor = Cursor::new(&mut buffer);
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut cursor, 80);
 
-        // 5. Encode to WebP using the `webp` crate (libwebp wrapper)
-        let encoder = webp::Encoder::from_rgb(dst_image.buffer(), dst_width, dst_height);
-        let memory = encoder.encode(80.0);
+        encoder
+            .encode(
+                dst_image.buffer(),
+                dst_width,
+                dst_height,
+                image::ExtendedColorType::Rgb8,
+            )
+            .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to encode JPEG")))?;
 
-        let dbg_encode_time = now.elapsed();
         println!(
-            "Decode: {dbg_decode_time:?}, PrepResize: {dbg_prepare_resize_time:?}, Resize: {dbg_resize_time:?}, Encode: {dbg_encode_time:?}"
+            "Full resize: {:?}, read_bytes: {time_read_bytes:?}",
+            start.elapsed()
         );
-
-        Ok(memory.to_vec())
+        Ok(buffer)
     });
-    let webp_buffer = handle.await??;
 
-    // 7. Save to cache
+    let jpeg_buffer = handle.await??;
+
+    // 4. Save to cache
     let _ = fs::create_dir_all(&cache_dir).await;
-    let _ = fs::write(&cache_path, &webp_buffer).await;
+    let _ = fs::write(&cache_path, &jpeg_buffer).await;
 
     Ok((
         [
-            (header::CONTENT_TYPE, "image/webp"),
+            (header::CONTENT_TYPE, "image/jpeg"),
             (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
         ],
-        webp_buffer,
+        jpeg_buffer,
     ))
 }

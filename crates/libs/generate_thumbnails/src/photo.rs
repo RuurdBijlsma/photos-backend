@@ -4,6 +4,7 @@ use color_eyre::eyre::{Result, eyre};
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};
 use image::ImageReader;
+use image::metadata::Orientation;
 use imgref::Img;
 use ravif::Encoder;
 use rayon::prelude::*;
@@ -30,16 +31,17 @@ pub fn generate_native_photo_thumbnails(
         .decode()?;
 
     // Correct the orientation based on the EXIF data.
-    img = match orientation {
-        2 => img.fliph(),
-        3 => img.rotate180(),
-        4 => img.flipv(),
-        5 => img.rotate90().fliph(),
-        6 => img.rotate90(),
-        7 => img.rotate270().fliph(),
-        8 => img.rotate270(),
-        _ => img,
+    let image_orientation = match orientation {
+        2 => Orientation::FlipHorizontal,
+        3 => Orientation::Rotate180,
+        4 => Orientation::FlipVertical,
+        5 => Orientation::Rotate90FlipH,
+        6 => Orientation::Rotate90,
+        7 => Orientation::Rotate270FlipH,
+        8 => Orientation::Rotate270,
+        _ => Orientation::NoTransforms,
     };
+    img.apply_orientation(image_orientation);
 
     let src_img = img.into_rgba8();
     let (orig_w, orig_h) = src_img.dimensions();

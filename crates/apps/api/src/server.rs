@@ -48,7 +48,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         ),
     };
 
-    fs::create_dir_all(&settings.ingest.thumbnail_root.join("webp-cache")).await?;
+    fs::create_dir_all(&settings.ingest.thumbnail_root.join(".jpg-cache")).await?;
 
     // --- CORS Configuration ---
     let allowed_origins: Vec<HeaderValue> = settings
