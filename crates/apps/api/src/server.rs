@@ -7,7 +7,7 @@
     clippy::missing_panics_doc,
     clippy::cast_possible_truncation
 )]
-use crate::api_state::{ApiContext, LifoSemaphore};
+use crate::api_state::{ApiContext};
 use crate::create_router;
 use crate::timeline::websocket::create_media_item_transmitter;
 use app_state::AppSettings;
@@ -46,7 +46,6 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
                 .build()
                 .await?,
         ),
-        thumbnail_semaphore: Arc::new(LifoSemaphore::new(8)),
     };
 
     fs::create_dir_all(&settings.ingest.thumbnail_root.join("webp-cache")).await?;

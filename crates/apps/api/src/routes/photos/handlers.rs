@@ -144,22 +144,6 @@ pub async fn download_full_file(
     Ok(response)
 }
 
-pub struct AbortOnDrop<T>(Option<tokio::task::JoinHandle<T>>);
-
-impl<T> AbortOnDrop<T> {
-    pub fn new(handle: tokio::task::JoinHandle<T>) -> Self {
-        Self(Some(handle))
-    }
-}
-
-impl<T> Drop for AbortOnDrop<T> {
-    fn drop(&mut self) {
-        if let Some(handle) = self.0.take() {
-            handle.abort();
-        }
-    }
-}
-
 #[instrument(skip(context), err(Debug))]
 pub async fn get_photo_thumbnail(
     State(context): State<ApiContext>,
@@ -167,10 +151,13 @@ pub async fn get_photo_thumbnail(
     Path(media_item_id): Path<String>,
 ) -> Result<impl IntoResponse, PhotosError> {
     let size = query.size.unwrap_or(360);
+    if size > 1440 {
+        return Err(PhotosError::AccessDenied);
+    }
 
     // 1. Check Cache (Fastest path, no semaphore needed)
     let cache_dir = context.settings.ingest.thumbnail_root.join("webp-cache");
-    let cache_path = cache_dir.join(format!("{}_{}.webp", media_item_id, size));
+    let cache_path = cache_dir.join(format!("{media_item_id}_{size}.webp"));
 
     if let Ok(cached_data) = fs::read(&cache_path).await {
         return Ok((
@@ -181,10 +168,6 @@ pub async fn get_photo_thumbnail(
             cached_data,
         ));
     }
-
-    // 2. LIFO Acquire (Permit is dropped at end of function)
-    // This ensures if 50 requests are waiting, the newest one gets the next slot.
-    let _permit = context.thumbnail_semaphore.acquire().await;
 
     // 3. Database lookup
     let Some(rel_path) =
@@ -248,19 +231,7 @@ pub async fn get_photo_thumbnail(
 
         Ok(memory.to_vec())
     });
-
-    // 5. Wrap in Abort Guard
-    let mut guard = AbortOnDrop::new(handle);
-
-    // 6. Await the handle by taking it out of the guard
-    let webp_buffer = guard.0.take().unwrap().await.map_err(|e| {
-        if e.is_cancelled() {
-            println!("Aborting due to cancelled thread");
-            PhotosError::Cancelled
-        } else {
-            PhotosError::Internal(eyre!("Task panicked"))
-        }
-    })??;
+    let webp_buffer = handle.await??;
 
     // 7. Save to cache
     let _ = fs::create_dir_all(&cache_dir).await;

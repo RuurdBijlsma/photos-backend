@@ -33,4 +33,5 @@ open_clip_inference = { version = "0.2.6", features = ["load-dynamic"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 fast_image_resize = { version = "6.0.0", features = ["image"] }
 webp = "0.3.1"
-futures = "0.3.31"
+kamadak-exif  = "0.6.1"
+imagesize = "0.14.0"
