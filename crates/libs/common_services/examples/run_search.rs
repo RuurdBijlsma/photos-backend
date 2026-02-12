@@ -5,11 +5,11 @@
 )]
 
 use app_state::load_app_settings;
-use common_services::api::search::service::search_media;
+use common_services::api::search::service::{SearchMediaConfig, search_media};
 use common_services::database::get_db_pool;
 use common_services::database::user_store::UserStore;
-use open_clip_inference::TextEmbedder;
 use common_types::dev_constants::EMAIL;
+use open_clip_inference::TextEmbedder;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -28,12 +28,14 @@ async fn main() -> color_eyre::Result<()> {
     let search_result = search_media(
         &user,
         &pool,
-        "kayak",
-        Some(100),
-        Some(0.2),
-        1.0,
-        0.2,
         &embedder,
+        "kayak",
+        SearchMediaConfig {
+            text_weight: 0.3,
+            semantic_weight: 1.0,
+            threshold: Some(0.2),
+            limit: Some(100),
+        },
     )
     .await?;
 

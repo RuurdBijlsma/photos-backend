@@ -5,21 +5,25 @@ use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::PgPool;
 
+pub struct SearchMediaConfig {
+    pub limit: Option<i64>,
+    pub threshold: Option<f64>,
+    pub semantic_weight: f64,
+    pub text_weight: f32,
+}
+
 pub async fn search_media(
     user: &User,
     pool: &PgPool,
-    query: &str,
-    requested_limit: Option<i64>,
-    threshold: Option<f64>,
-    semantic_weight: f64,
-    text_weight: f32,
     embedder: &TextEmbedder,
+    query: &str,
+    config: SearchMediaConfig,
 ) -> Result<Vec<SearchResultItem>, SearchError> {
     let query_embedding = embedder.embed_text(query)?.to_vec();
     let vector_param = Vector::from(query_embedding);
 
-    let limit = requested_limit.unwrap_or(50).min(100);
-    let cutoff = threshold.unwrap_or(0.0);
+    let limit = config.limit.unwrap_or(50).min(100);
+    let cutoff = config.threshold.unwrap_or(0.0);
     let candidate_limit = limit * 3;
 
     // --- TEMPORARY EXPLAIN ANALYZE BLOCK ---
@@ -71,8 +75,8 @@ pub async fn search_media(
         .bind(candidate_limit)
         .bind(limit)
         .bind(cutoff)
-        .bind(semantic_weight)
-        .bind(text_weight)
+        .bind(config.semantic_weight)
+        .bind(config.text_weight)
         .fetch_all(pool)
         .await?;
 
@@ -131,8 +135,8 @@ pub async fn search_media(
         candidate_limit,
         limit,
         cutoff,
-        semantic_weight,
-        text_weight
+        config.semantic_weight,
+        config.text_weight
     )
     .fetch_all(pool)
     .await?;

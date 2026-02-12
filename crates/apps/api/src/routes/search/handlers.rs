@@ -3,7 +3,7 @@ use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use common_services::api::search::error::SearchError;
 use common_services::api::search::interfaces::{SearchParams, SearchResultItem};
-use common_services::api::search::service::search_media;
+use common_services::api::search::service::{SearchMediaConfig, search_media};
 use common_services::database::app_user::User;
 use tracing::instrument;
 
@@ -34,12 +34,14 @@ pub async fn get_search_results(
     let search_result = search_media(
         &user,
         &context.pool,
-        &params.query,
-        params.limit,
-        params.threshold,
-        context.settings.ingest.analyzer.search.semantic_weight,
-        context.settings.ingest.analyzer.search.text_weight,
         &context.embedder,
+        &params.query,
+        SearchMediaConfig {
+            text_weight: context.settings.ingest.analyzer.search.text_weight,
+            semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
+            limit: params.limit,
+            threshold: params.threshold,
+        },
     )
     .await?;
     Ok(Json(search_result))

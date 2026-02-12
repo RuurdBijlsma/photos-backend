@@ -1,15 +1,24 @@
 use crate::api::photos::error::PhotosError;
+use image::ImageDecoder;
+use std::io::Cursor;
 
 use crate::api::photos::interfaces::RandomPhotoResponse;
 use crate::database::app_user::{User, UserRole};
+use crate::database::media_item_store::MediaItemStore;
 use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
 use color_eyre::Report;
+use color_eyre::eyre::eyre;
+use exif::{In, Tag, Value};
+use fast_image_resize as fr;
 use http::{Response, StatusCode, header};
+use image::ImageReader;
 use rand::RngExt;
 use sqlx::PgPool;
 use std::path::Path;
+use std::time::Instant;
 use tokio::fs::File;
+use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
 
@@ -168,4 +177,153 @@ pub async fn download_media_file(
         .header(header::CONTENT_DISPOSITION, disposition_header)
         .body(body)
         .map_err(|e| Report::new(e).wrap_err("Failed to build response"))?)
+}
+
+pub async fn thumbnail_on_demand_cached(
+    pool: &PgPool,
+    size: i32,
+    media_item_id: &str,
+    media_root: &Path,
+    thumbnail_root: &Path,
+) -> Result<Vec<u8>, PhotosError> {
+    let now = Instant::now();
+    let cache_dir = thumbnail_root.join(".jpg-cache");
+    let cache_filename = format!("{media_item_id}_{size}.jpg");
+    let cache_path = cache_dir.join(&cache_filename);
+
+    if let Ok(cached_data) = fs::read(&cache_path).await {
+        println!("Using cached thumb: {:?}", now.elapsed());
+        return Ok(cached_data);
+    }
+
+    let Some(rel_path) = MediaItemStore::find_relative_path_by_id(pool, media_item_id).await?
+    else {
+        return Err(PhotosError::MediaNotFound(media_item_id.to_owned()));
+    };
+
+    let image_path = media_root.join(&rel_path);
+    let image_bytes = task::spawn_blocking(move || thumbnail_on_demand(&image_path, size, now))
+        .await
+        .map_err(|e| PhotosError::Internal(eyre!("Task join error: {}", e)))??;
+
+    if let Err(e) = fs::write(&cache_path, &image_bytes).await {
+        tracing::log::warn!("Failed to write thumbnail to cache: {e}");
+    }
+
+    Ok(image_bytes)
+}
+
+fn thumbnail_on_demand(
+    path: &Path,
+    target_size: i32,
+    now: Instant,
+) -> Result<Vec<u8>, PhotosError> {
+    let file_bytes = std::fs::read(path)
+        .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to read image source")))?;
+
+    let is_jpeg = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|s| s.eq_ignore_ascii_case("jpg") || s.eq_ignore_ascii_case("jpeg"));
+    if is_jpeg && let Some(thumb_bytes) = try_extract_exif_thumbnail(&file_bytes, target_size) {
+        println!("Exif Thumb: {:?}", now.elapsed());
+        return Ok(thumb_bytes);
+    }
+
+    let thumb_bytes = quick_image_resize(path, &file_bytes, target_size)?;
+    println!("Full Resize: {:?}", now.elapsed());
+    Ok(thumb_bytes)
+}
+
+fn try_extract_exif_thumbnail(file_bytes: &[u8], target_size: i32) -> Option<Vec<u8>> {
+    let mut cursor = Cursor::new(file_bytes);
+    let exif_reader = exif::Reader::new();
+    let Ok(exif_data) = exif_reader.read_from_container(&mut cursor) else {
+        return None;
+    };
+
+    let offset_field = exif_data.get_field(Tag::JPEGInterchangeFormat, In(1));
+    let length_field = exif_data.get_field(Tag::JPEGInterchangeFormatLength, In(1));
+    let (Some(off_f), Some(len_f)) = (offset_field, length_field) else {
+        return None;
+    };
+
+    let off_val = match off_f.value {
+        Value::Long(ref v) if !v.is_empty() => Some(v[0]),
+        Value::Short(ref v) if !v.is_empty() => Some(u32::from(v[0])),
+        _ => None,
+    }?;
+
+    let len_val = match len_f.value {
+        Value::Long(ref v) if !v.is_empty() => Some(v[0]),
+        Value::Short(ref v) if !v.is_empty() => Some(u32::from(v[0])),
+        _ => None,
+    }?;
+    let start = off_val as usize;
+    let end = start + len_val as usize;
+    if end > file_bytes.len() {
+        return None;
+    }
+
+    let thumb_bytes = &exif_data.buf()[start..end];
+    let min_height = (target_size as f32 * 0.9) as usize;
+    if let Ok(dim) = imagesize::blob_size(thumb_bytes)
+        && (dim.height >= min_height)
+    {
+        return Some(thumb_bytes.to_vec());
+    }
+
+    None
+}
+
+fn quick_image_resize(path: &Path, file_bytes: &[u8], size: i32) -> Result<Vec<u8>, PhotosError> {
+    let mut img = image::load_from_memory(file_bytes).map_err(|e| {
+        PhotosError::Internal(eyre!(e).wrap_err("Failed to decode image for resize"))
+    })?;
+
+    let mut decoder = ImageReader::open(path)
+        .map_err(|e| PhotosError::Internal(eyre!("Failed to open image for orientation: {}", e)))?
+        .into_decoder()
+        .map_err(|e| PhotosError::Internal(eyre!("Failed to init decoder: {}", e)))?;
+
+    if let Ok(orientation) = decoder.orientation() {
+        img.apply_orientation(orientation);
+    }
+
+    let (width, height) = (img.width(), img.height());
+    let aspect_ratio = width as f32 / height as f32;
+    let (dst_width, dst_height) = if width > height {
+        (size as u32, (size as f32 / aspect_ratio) as u32)
+    } else {
+        ((size as f32 * aspect_ratio) as u32, size as u32)
+    };
+
+    let src_image = fr::images::Image::from_vec_u8(
+        width,
+        height,
+        img.to_rgb8().into_raw(),
+        fr::PixelType::U8x3,
+    )
+    .map_err(|e| PhotosError::Internal(eyre!("Resize source creation error: {e}")))?;
+
+    let mut dst_image = fr::images::Image::new(dst_width, dst_height, fr::PixelType::U8x3);
+    let mut resizer = fr::Resizer::new();
+    resizer
+        .resize(&src_image, &mut dst_image, None)
+        .map_err(|e| PhotosError::Internal(eyre!("Resizing failed: {e}")))?;
+
+    let mut buffer = Vec::new();
+    let mut cursor = Cursor::new(&mut buffer);
+    let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut cursor, 80);
+
+    encoder
+        .encode(
+            dst_image.buffer(),
+            dst_width,
+            dst_height,
+            image::ExtendedColorType::Rgb8,
+        )
+        .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to encode JPEG")))?;
+
+    Ok(buffer)
 }
