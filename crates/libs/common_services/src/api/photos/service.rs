@@ -16,7 +16,6 @@ use image::ImageReader;
 use rand::RngExt;
 use sqlx::PgPool;
 use std::path::Path;
-use std::time::Instant;
 use tokio::fs::File;
 use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
@@ -186,13 +185,11 @@ pub async fn thumbnail_on_demand_cached(
     media_root: &Path,
     thumbnail_root: &Path,
 ) -> Result<Vec<u8>, PhotosError> {
-    let now = Instant::now();
     let cache_dir = thumbnail_root.join(".jpg-cache");
     let cache_filename = format!("{media_item_id}_{size}.jpg");
     let cache_path = cache_dir.join(&cache_filename);
 
     if let Ok(cached_data) = fs::read(&cache_path).await {
-        println!("Using cached thumb: {:?}", now.elapsed());
         return Ok(cached_data);
     }
 
@@ -202,7 +199,7 @@ pub async fn thumbnail_on_demand_cached(
     };
 
     let image_path = media_root.join(&rel_path);
-    let image_bytes = task::spawn_blocking(move || thumbnail_on_demand(&image_path, size, now))
+    let image_bytes = task::spawn_blocking(move || thumbnail_on_demand(&image_path, size))
         .await
         .map_err(|e| PhotosError::Internal(eyre!("Task join error: {}", e)))??;
 
@@ -216,7 +213,6 @@ pub async fn thumbnail_on_demand_cached(
 fn thumbnail_on_demand(
     path: &Path,
     target_size: i32,
-    now: Instant,
 ) -> Result<Vec<u8>, PhotosError> {
     let file_bytes = std::fs::read(path)
         .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to read image source")))?;
@@ -226,12 +222,10 @@ fn thumbnail_on_demand(
         .and_then(|ext| ext.to_str())
         .is_some_and(|s| s.eq_ignore_ascii_case("jpg") || s.eq_ignore_ascii_case("jpeg"));
     if is_jpeg && let Some(thumb_bytes) = try_extract_exif_thumbnail(&file_bytes, target_size) {
-        println!("Exif Thumb: {:?}", now.elapsed());
         return Ok(thumb_bytes);
     }
 
     let thumb_bytes = quick_image_resize(path, &file_bytes, target_size)?;
-    println!("Full Resize: {:?}", now.elapsed());
     Ok(thumb_bytes)
 }
 

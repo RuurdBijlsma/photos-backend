@@ -68,6 +68,7 @@ CREATE TABLE media_item
     sort_timestamp      TIMESTAMPTZ NOT NULL,
     use_panorama_viewer BOOLEAN     NOT NULL,
     orientation         INT         NOT NULL DEFAULT 1,
+    has_thumbnails       BOOLEAN     NOT NULL DEFAULT false,
     deleted             BOOLEAN     NOT NULL DEFAULT false,
     month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
     search_vector       TSVECTOR,

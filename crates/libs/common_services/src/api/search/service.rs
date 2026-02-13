@@ -52,7 +52,7 @@ pub async fn search_media(
         SELECT
             mi.id,
             mi.is_video,
-            mi.use_panorama_viewer as is_panorama,
+            mi.has_thumbnails,
             mi.duration_ms,
             mi.taken_at_local,
             (mi.width::real / mi.height::real) as ratio,
@@ -114,7 +114,7 @@ pub async fn search_media(
         SELECT
             mi.id,
             mi.is_video,
-            mi.use_panorama_viewer as is_panorama,
+            mi.has_thumbnails,
             mi.duration_ms,
             mi.taken_at_local,
             (mi.width::real / mi.height::real) as "ratio!",

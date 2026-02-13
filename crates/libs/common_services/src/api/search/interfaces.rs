@@ -15,7 +15,7 @@ pub struct SearchParams {
 pub struct SearchResultItem {
     pub id: String,
     pub is_video: bool,
-    pub is_panorama: bool,
+    pub has_thumbnails: bool,
     pub duration_ms: Option<i64>,
     pub taken_at_local: NaiveDateTime,
     pub ratio: f32,

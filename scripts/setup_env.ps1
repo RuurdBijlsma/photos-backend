@@ -1,6 +1,6 @@
 Push-Location $( Resolve-Path (Join-Path $PSScriptRoot "..") )
 
-$env:ORT_DYLIB_PATH="C:/Apps/onnxruntime/lib/onnxruntime.dll"
+$env:ORT_DYLIB_PATH = "C:/Apps/onnxruntime/lib/onnxruntime.dll"
 
 scripts/start_postgres.ps1
 

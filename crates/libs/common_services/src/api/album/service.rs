@@ -411,7 +411,7 @@ pub async fn get_album_media(
             SELECT
                 mi.id,
                 is_video,
-                use_panorama_viewer as is_panorama,
+                has_thumbnails,
                 duration_ms::INT as duration_ms,
                 (width::real / height::real) as "ratio!"
             FROM album_media_item as ami

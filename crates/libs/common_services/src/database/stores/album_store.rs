@@ -290,7 +290,7 @@ impl AlbumStore {
             SELECT
                 mi.id,
                 mi.is_video,
-                mi.use_panorama_viewer as is_panorama,
+                mi.has_thumbnails,
                 mi.duration_ms::INT as duration_ms,
                 mi.taken_at_local::TEXT as "timestamp!",
                 ami.added_at
@@ -312,7 +312,7 @@ impl AlbumStore {
                 media_item: TimelineItem {
                     id: r.id,
                     is_video: r.is_video,
-                    is_panorama: r.is_panorama,
+                    has_thumbnails: r.has_thumbnails,
                     duration_ms: r.duration_ms,
                     timestamp: r.timestamp,
                 },

@@ -14,11 +14,9 @@ use common_services::utils::nice_id;
 use media_analyzer::MediaMetadata;
 use sqlx::PgPool;
 use std::path::Path;
-use std::time::Instant;
 use tracing::debug;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
-    let start = Instant::now();
     let relative_path = job
         .relative_path
         .as_deref()
@@ -31,15 +29,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
-    println!("init_metadata_handler {:?}", start.elapsed());
-    let now = Instant::now();
     let file_hash = hash_file(&file_path)?;
     let media_item_id = nice_id(constants().database.media_item_id_length);
-    println!("hash+id {:?}", now.elapsed());
-    let now = Instant::now();
     let media_info = get_media_info(context, &file_path, &file_hash).await?;
-    println!("get_media_info {:?}", now.elapsed());
-    let now = Instant::now();
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
         return Ok(JobResult::Cancelled);
     }
@@ -51,8 +43,6 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         &media_item_id,
     )
     .await?;
-    println!("store_media_item {:?}", now.elapsed());
-    println!("Handle ingest metadata total: {:?}", start.elapsed());
     Ok(JobResult::Done)
 }
 
@@ -65,17 +55,14 @@ async fn get_media_info(
     if context.settings.ingest.enable_cache
         && let Some(cached) = get_ingest_cache(file_hash).await?
     {
-        println!("\tUse Cache");
         debug!("Using ingest cache for {:?}", file_path.file_name());
         return Ok(cached);
     }
-    let now = Instant::now();
     let media_info = context
         .media_analyzer
         .analyze_media(file_path)
         .await
         .wrap_err(file_path.to_string_lossy().to_string())?;
-    println!("\tAnalyze media: {:?}", now.elapsed());
     if context.settings.ingest.enable_cache {
         write_ingest_cache(file_hash, media_info.clone()).await?;
     }

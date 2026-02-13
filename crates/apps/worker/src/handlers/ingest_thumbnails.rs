@@ -1,14 +1,12 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{
-    get_thumbnail_cache, write_thumbnail_cache,
-};
+use crate::handlers::common::cache::{get_thumbnail_cache, write_thumbnail_cache};
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
 use generate_thumbnails::{copy_dir_contents, generate_thumbnails};
 use std::path::Path;
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let relative_path = job
@@ -17,12 +15,16 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .ok_or_else(|| eyre!("Ingest job has no associated relative_path"))?;
     let media_root = &context.settings.ingest.media_root;
     let file_path = media_root.join(relative_path);
-    let row = sqlx::query!(
+    let Some(row) = sqlx::query!(
         "SELECT id, hash, orientation FROM media_item WHERE relative_path = $1",
         relative_path
     )
-    .fetch_one(&context.pool)
-    .await?;
+    .fetch_optional(&context.pool)
+    .await?
+    else {
+        warn!("IngestThumbnail was called but no media_item row exists for {relative_path}");
+        return Ok(JobResult::Cancelled);
+    };
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
@@ -30,6 +32,16 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
         return Ok(JobResult::Cancelled);
     }
+    sqlx::query!(
+        r"
+        UPDATE media_item
+        SET has_thumbnails = TRUE,
+        updated_at = now()
+        WHERE id = $1;",
+        &row.id
+    )
+        .execute(&context.pool)
+        .await?;
     Ok(JobResult::Done)
 }
 

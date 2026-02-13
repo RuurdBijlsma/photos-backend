@@ -25,7 +25,7 @@ message TimelineMonthItems {
 message TimelineItem {
   string id = 1;
   bool is_video = 2;
-  bool is_panorama = 3;
+  bool has_thumbnails = 3;
   optional int32 duration_ms = 4;
   string timestamp = 5;
 }
@@ -39,7 +39,7 @@ message FullAlbumMediaResponse {
 message AlbumTimelineItem {
   string id = 1;
   bool is_video = 2;
-  bool is_panorama = 3;
+  bool has_thumbnails = 3;
   optional int32 duration_ms = 4;
   float ratio = 6;
 }

@@ -134,6 +134,9 @@
     * ✅ hele timeline (ratios+item jsons (zonder timestamp)) = 117ms / 185kb voor 10k items
     * ✅ frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid
       functie maken)
+* ✅ non-analysis-worker spawns embedder
+* ✅ i think ocr_text should have higher prio
+* ✅ ocr_languages in settings doet niks meer
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -171,21 +174,25 @@
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
 * improve speed of album/{id} endpoint
-* ✅ non-analysis-worker spawns embedder
-* i think ocr_text should have higher prio
 * play with weights for full text search
 * make search result item protobuf
 * vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
   search zit meer in de 0-0.3 range, FTS kan wel tot 4.0 gaan ofzo, dus weight voor FTS moet lager dan vector. nu 0.8 en
   0.2 dat lijkt wel goeie resultaten te geven. Toch meer experimenteren.
-* ocr_languages in settings doet niks meer
+* probeer reciprocal rank fusion ofzo
+* on demand video thumbnails
+* on demand videos?
+* maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
+* als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
+  embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
+* broke: https://localhost:5173/view/fctSaxg4qb
 
 # Features
 
 * storage indicator bottom left, like googly photos
 * albums
 * front page -> 1 year ago, 4 years ago today, etc. in top balk
-* photo trash bin?
+* photo rubbish bin?
 * facial recognition
 * upload photos
     * robust! stable!

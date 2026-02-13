@@ -73,7 +73,7 @@ pub async fn get_photos_by_month(
         SELECT
             id,
             is_video,
-            use_panorama_viewer as is_panorama,
+            has_thumbnails,
             duration_ms::INT as duration_ms,
             taken_at_local::TEXT as timestamp
         FROM
