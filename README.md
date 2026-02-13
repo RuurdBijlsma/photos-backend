@@ -14,15 +14,14 @@ and search.
 ## Prerequisites
 
 * **nasm**: `winget install -e --id NASM.NASM`
-* **protoc**: `winget install -e --id Google.Protobuf`
 * **sqlx**: `cargo install sqlx-cli`
 * **llama.cpp**: Required for LLM-based image categorization, OCR, and quality
-  judging. [Installation Guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/install.md)
+  judging. [Installation Guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/install.md). Exact command for llama-server found in `./scripts/setup_env.ps1`.
 * **Python** installed and added to `PATH` (e.g., `C:\Users\YourName\AppData\Local\Programs\Python\Python312` on
   Windows; Linux support needs testing)
 * **uv** installed for setting up the virtualenv in `ml_analysis`
 * **Rust** to compile the backend
-* **Postgres** database set up
+* **Postgres** database set up with `pgvector` installed, docker/podman command for this available in `./scripts/start_postgres.ps1`.
 
 ## Installation
 
@@ -33,7 +32,7 @@ git clone https://github.com/RuurdBijlsma/photos-backend.git
 cd photos-backend
 ```
 
-### 2. 
+### 2.
 
 ### 2. Set up `ml_analysis` environment
 
