@@ -210,10 +210,10 @@ impl MediaItemStore {
             r#"
             INSERT INTO media_item (
                 id, relative_path, filename, user_id, remote_user_id, hash, width, height,
-                is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp,
+                is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp, orientation,
                 use_panorama_viewer
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             "#,
             id,
             relative_path,
@@ -228,6 +228,7 @@ impl MediaItemStore {
             media_item.taken_at_local,
             media_item.taken_at_utc,
             sort_timestamp,
+            media_item.orientation,
             media_item.use_panorama_viewer
         )
         .execute(&mut **tx)

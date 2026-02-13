@@ -28,6 +28,7 @@ pub struct CreateFullMediaItem {
     pub media_features: MediaFeatures,
     pub camera_settings: CameraSettings,
     pub panorama: Panorama,
+    pub orientation: i32,
 }
 
 impl From<MediaMetadata> for CreateFullMediaItem {
@@ -64,6 +65,7 @@ impl From<MediaMetadata> for CreateFullMediaItem {
             media_features,
             camera_settings: result.camera.into(),
             panorama: result.panorama.into(),
+            orientation: result.basic.orientation.unwrap_or(1) as i32,
         }
     }
 }

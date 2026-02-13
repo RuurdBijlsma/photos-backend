@@ -19,7 +19,7 @@ pub fn generate_native_photo_thumbnails(
     input_path: &Path,
     output_dir: &Path,
     config: &ThumbnailSettings,
-    orientation: u64,
+    orientation: i32,
 ) -> Result<()> {
     fs::create_dir_all(output_dir)?;
     if config.heights.is_empty() {

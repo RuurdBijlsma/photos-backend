@@ -1,5 +1,5 @@
-use crate::database::jobs::JobType;
-use app_state::AppSettings;
+use crate::database::jobs::{JobStatus, JobType};
+use app_state::{AppSettings, IngestSettings};
 use bon::builder;
 use color_eyre::eyre::Result;
 use serde::Serialize;
@@ -83,12 +83,17 @@ pub async fn enqueue_full_ingest(
     relative_path: &str,
     user_id: i32,
 ) -> Result<()> {
-    enqueue_job::<()>(pool, settings, JobType::Ingest)
+    enqueue_job::<()>(pool, settings, JobType::IngestMetadata)
         .relative_path(relative_path)
         .user_id(user_id)
         .call()
         .await?;
-    enqueue_job::<()>(pool, settings, JobType::Analysis)
+    enqueue_job::<()>(pool, settings, JobType::IngestThumbnails)
+        .relative_path(relative_path)
+        .user_id(user_id)
+        .call()
+        .await?;
+    enqueue_job::<()>(pool, settings, JobType::IngestAnalysis)
         .relative_path(relative_path)
         .user_id(user_id)
         .call()
@@ -108,7 +113,9 @@ pub async fn per_job_logic(
 ) -> Result<()> {
     match job_type {
         JobType::Remove => cancel_ingest_analysis_jobs(tx, relative_path).await?,
-        JobType::Ingest | JobType::Analysis => cancel_remove_jobs(tx, relative_path).await?,
+        JobType::IngestMetadata | JobType::IngestThumbnails | JobType::IngestAnalysis => {
+            cancel_remove_jobs(tx, relative_path).await?;
+        }
         _ => (),
     }
 
@@ -158,7 +165,7 @@ async fn cancel_ingest_analysis_jobs(
         WHERE
             relative_path = $1
             AND status IN ('queued', 'running')
-            AND job_type IN ('ingest', 'analysis')
+            AND job_type IN ('ingest_metadata', 'ingest_thumbnails', 'ingest_analysis')
         "#,
         relative_path
     )
@@ -167,11 +174,70 @@ async fn cancel_ingest_analysis_jobs(
 
     if result.rows_affected() > 0 {
         info!(
-            "Cancelled {} queued/running ingest/analysis job(s) for file: {}",
+            "Cancelled {} queued/running ingest_* job(s) for file: {}",
             result.rows_affected(),
             relative_path
         );
     }
+
+    Ok(())
+}
+
+pub async fn bulk_enqueue_full_ingest(
+    pool: &PgPool,
+    ingest_settings: &IngestSettings,
+    relative_paths: &[String],
+    user_id: i32,
+) -> Result<()> {
+    if relative_paths.is_empty() {
+        return Ok(());
+    }
+
+    let mut all_paths = Vec::with_capacity(relative_paths.len() * 3);
+    let mut all_types = Vec::with_capacity(relative_paths.len() * 3);
+    let mut all_priorities = Vec::with_capacity(relative_paths.len() * 3);
+
+    for path in relative_paths {
+        let file_path = ingest_settings.media_root.join(path);
+        let is_video = ingest_settings.is_video_file(&file_path);
+
+        for job_type in [
+            JobType::IngestMetadata,
+            JobType::IngestThumbnails,
+            JobType::IngestAnalysis,
+        ] {
+            all_paths.push(path.clone());
+            all_types.push(job_type);
+            all_priorities.push(job_type.get_priority(is_video));
+        }
+    }
+
+    let status_str = format!("{:?}", JobStatus::Queued).to_lowercase();
+    let statuses = vec![status_str; all_paths.len()];
+
+    sqlx::query!(
+        r#"
+        INSERT INTO jobs (relative_path, job_type, priority, user_id, status)
+        SELECT
+            u.path,
+            u.jt::job_type,
+            u.pri,
+            u.uid,
+            u.stat::job_status
+        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::int[], $5::text[])
+          AS u(path, jt, pri, uid, stat)
+        ON CONFLICT (job_type, coalesce(user_id, -1), coalesce(md5(payload::text), ''), coalesce(relative_path, ''))
+        WHERE (status IN ('queued', 'running'))
+        DO NOTHING
+        "#,
+        &all_paths,
+        &all_types as &[_],
+        &all_priorities,
+        &vec![user_id; all_paths.len()],
+        &statuses,
+    )
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

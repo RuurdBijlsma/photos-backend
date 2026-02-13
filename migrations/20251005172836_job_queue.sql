@@ -1,4 +1,4 @@
-CREATE TYPE job_type AS ENUM ('ingest', 'remove', 'analysis', 'scan', 'clean_db', 'cluster_faces', 'cluster_photos', 'import_album_item');
+CREATE TYPE job_type AS ENUM ('ingest_metadata', 'ingest_thumbnails', 'ingest_analysis', 'remove', 'scan', 'clean_db', 'cluster_faces', 'cluster_photos', 'import_album_item');
 CREATE TYPE job_status AS ENUM ('queued', 'running', 'failed', 'done', 'cancelled');
 
 CREATE TABLE jobs
@@ -33,8 +33,9 @@ CREATE UNIQUE INDEX uq_jobs_active_job
     WHERE (status IN ('queued', 'running'));
 
 -- For the job claiming worker
-CREATE INDEX idx_jobs_claim_queued ON jobs (priority, relative_path, scheduled_at, created_at);
-CREATE INDEX idx_jobs_claim_running ON jobs (priority, relative_path, last_heartbeat);
+CREATE INDEX idx_jobs_claim_active
+    ON jobs (priority ASC, relative_path DESC, scheduled_at ASC, created_at ASC)
+    WHERE status IN ('queued', 'running');
 
 -- For general application queries
 CREATE INDEX jobs_active_relative_path_idx ON jobs (relative_path);

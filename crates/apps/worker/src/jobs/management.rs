@@ -25,7 +25,7 @@ pub async fn claim_next_job(context: &WorkerContext) -> Result<Option<Job>> {
             SELECT id FROM jobs
             WHERE ((status = 'queued' AND scheduled_at <= now())
                OR (status = 'running' AND last_heartbeat < now() - interval '1 second' * $2))
-              AND ($3 OR job_type != 'analysis')
+              AND ($3 OR job_type != 'ingest_analysis')
             ORDER BY priority, relative_path DESC, scheduled_at, created_at
             FOR UPDATE SKIP LOCKED
             LIMIT 1

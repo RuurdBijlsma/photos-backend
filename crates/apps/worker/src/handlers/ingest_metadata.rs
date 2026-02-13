@@ -1,8 +1,6 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{
-    get_ingest_cache, get_thumbnail_cache, hash_file, write_ingest_cache, write_thumbnail_cache,
-};
+use crate::handlers::common::cache::{get_ingest_cache, hash_file, write_ingest_cache};
 use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::jobs::management::is_job_cancelled;
 use app_state::constants;
@@ -13,14 +11,14 @@ use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::utils::nice_id;
-use generate_thumbnails::{copy_dir_contents, generate_thumbnails};
 use media_analyzer::MediaMetadata;
 use sqlx::PgPool;
 use std::path::Path;
-use tokio::fs;
+use std::time::Instant;
 use tracing::debug;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
+    let start = Instant::now();
     let relative_path = job
         .relative_path
         .as_deref()
@@ -33,21 +31,19 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
+    println!("init_metadata_handler {:?}", start.elapsed());
+    let now = Instant::now();
     let file_hash = hash_file(&file_path)?;
     let media_item_id = nice_id(constants().database.media_item_id_length);
+    println!("hash+id {:?}", now.elapsed());
+    let now = Instant::now();
     let media_info = get_media_info(context, &file_path, &file_hash).await?;
-    process_thumbnails(
-        context,
-        &file_path,
-        &file_hash,
-        &media_item_id,
-        media_info.basic.orientation,
-    )
-    .await?;
+    println!("get_media_info {:?}", now.elapsed());
+    let now = Instant::now();
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
         return Ok(JobResult::Cancelled);
     }
-    let deleted_id = store_media_item(
+    store_media_item(
         &context.pool,
         user_id,
         relative_path,
@@ -55,7 +51,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         &media_item_id,
     )
     .await?;
-    cleanup_old_thumbnails(&context.settings.ingest.thumbnail_root, deleted_id).await?;
+    println!("store_media_item {:?}", now.elapsed());
+    println!("Handle ingest metadata total: {:?}", start.elapsed());
     Ok(JobResult::Done)
 }
 
@@ -68,59 +65,21 @@ async fn get_media_info(
     if context.settings.ingest.enable_cache
         && let Some(cached) = get_ingest_cache(file_hash).await?
     {
+        println!("\tUse Cache");
         debug!("Using ingest cache for {:?}", file_path.file_name());
         return Ok(cached);
     }
+    let now = Instant::now();
     let media_info = context
         .media_analyzer
         .analyze_media(file_path)
         .await
         .wrap_err(file_path.to_string_lossy().to_string())?;
+    println!("\tAnalyze media: {:?}", now.elapsed());
     if context.settings.ingest.enable_cache {
         write_ingest_cache(file_hash, media_info.clone()).await?;
     }
     Ok(media_info)
-}
-
-/// Handles thumbnail creation. Checks cache first, generates if missing.
-async fn process_thumbnails(
-    context: &WorkerContext,
-    file_path: &Path,
-    file_hash: &str,
-    media_item_id: &str,
-    orientation: Option<u64>,
-) -> Result<()> {
-    let thumbnail_root = &context.settings.ingest.thumbnail_root;
-    let thumbnails_out_folder = thumbnail_root.join(media_item_id);
-
-    // Try Cache
-    if context.settings.ingest.enable_cache
-        && let Some(cached_folder) = get_thumbnail_cache(file_hash).await?
-    {
-        debug!(
-            "Using thumbnail cache for {:?}: {}",
-            file_path.file_name(),
-            cached_folder.display()
-        );
-        copy_dir_contents(&cached_folder, &thumbnails_out_folder).await?;
-        return Ok(());
-    }
-
-    // Cache Miss: Generate
-    generate_thumbnails(
-        &context.settings.ingest,
-        file_path,
-        &thumbnails_out_folder,
-        orientation,
-    )
-    .await?;
-
-    // Write Cache
-    if context.settings.ingest.enable_cache {
-        write_thumbnail_cache(file_hash, &thumbnails_out_folder).await?;
-    }
-
-    Ok(())
 }
 
 async fn store_media_item(
@@ -129,7 +88,7 @@ async fn store_media_item(
     relative_path: &str,
     analyze_result: MediaMetadata,
     new_id: &str,
-) -> Result<Option<String>> {
+) -> Result<()> {
     let mut tx = pool.begin().await?;
     let pending = sqlx::query_as!(
         PendingAlbumMediaItem,
@@ -147,7 +106,7 @@ async fn store_media_item(
     } else {
         None
     };
-    let deleted_id = MediaItemStore::delete_by_relative_path(&mut *tx, relative_path).await?;
+    MediaItemStore::delete_by_relative_path(&mut *tx, relative_path).await?;
     MediaItemStore::create(
         &mut tx,
         new_id,
@@ -162,16 +121,5 @@ async fn store_media_item(
             .await?;
     }
     tx.commit().await?;
-    Ok(deleted_id)
-}
-
-/// Delete replaced thumbnails from the filesystem
-async fn cleanup_old_thumbnails(thumbnail_root: &Path, old_id: Option<String>) -> Result<()> {
-    if let Some(id) = old_id {
-        let path = thumbnail_root.join(id);
-        if path.exists() {
-            fs::remove_dir_all(path).await?;
-        }
-    }
     Ok(())
 }

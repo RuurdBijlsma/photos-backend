@@ -5,7 +5,7 @@ use app_state::AppSettings;
 use color_eyre::Result;
 use common_services::utils::nice_id;
 use sqlx::PgPool;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::time::sleep;
 use tracing::info;
 
@@ -32,7 +32,10 @@ pub async fn run_worker_loop(context: &WorkerContext, stop_on_sleep: bool) -> Re
     let mut sleeping = false;
 
     loop {
+        let start = Instant::now();
         let maybe_job = claim_next_job(context).await?;
+        println!("claim_next_job {:?}", start.elapsed());
+        let now = Instant::now();
 
         if let Some(job) = maybe_job {
             sleeping = false;
@@ -42,11 +45,14 @@ pub async fn run_worker_loop(context: &WorkerContext, stop_on_sleep: bool) -> Re
             );
 
             let job_result = handle_job(context, &job).await;
+            println!("handle_job {:?}", now.elapsed());
+            let now = Instant::now();
 
             match job_result {
                 Ok(result) => update_job_on_completion(&context.pool, &job, result).await?,
                 Err(e) => update_job_on_failure(&context.pool, &job, &e).await?,
             }
+            println!("process job_result {:?}", now.elapsed());
         } else {
             if !sleeping {
                 sleeping = true;
@@ -57,5 +63,6 @@ pub async fn run_worker_loop(context: &WorkerContext, stop_on_sleep: bool) -> Re
             }
             sleep(Duration::from_millis(3000)).await;
         }
+        println!("worker_loop_iteration: {:?}", start.elapsed());
     }
 }

@@ -6,7 +6,7 @@ use color_eyre::eyre::eyre;
 use common_services::alert;
 use common_services::database::jobs::{Job, JobType};
 use common_services::database::user_store::UserStore;
-use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
+use common_services::job_queue::{bulk_enqueue_full_ingest, enqueue_full_ingest, enqueue_job};
 use sqlx::PgPool;
 use std::collections::HashSet;
 use std::path::Path;
@@ -23,10 +23,6 @@ fn has_allowed_ext(path: &Path, allowed: &HashSet<&str>) -> bool {
 }
 
 /// Recursively finds all media files in a folder that have an allowed extension.
-///
-/// # Errors
-///
-/// * Can return an I/O error if the specified folder cannot be read.
 fn get_media_files(folder: &Path, allowed_exts: &HashSet<&str>) -> Vec<std::path::PathBuf> {
     let mut files = Vec::new();
     for entry in WalkDir::new(folder).into_iter().filter_map(Result::ok) {
@@ -38,10 +34,6 @@ fn get_media_files(folder: &Path, allowed_exts: &HashSet<&str>) -> Vec<std::path
 }
 
 /// Synchronizes the filesystem state with the database by enqueuing new files for ingest and old files for removal.
-///
-/// # Errors
-///
-/// * Returns an error if file system scanning, database queries, or job enqueuing fails.
 pub async fn sync_user_files_to_db(
     pool: &PgPool,
     settings: &AppSettings,
@@ -74,11 +66,13 @@ pub async fn sync_user_files_to_db(
     let to_ingest: Vec<_> = fs_paths.difference(&db_paths).cloned().collect();
     let to_remove: Vec<_> = db_paths.difference(&fs_paths).cloned().collect();
 
-    for rel_path in to_ingest {
-        if let Err(e) = enqueue_full_ingest(pool, settings, &rel_path, user_id).await {
-            error!("Error enqueueing file ingest: {:?}", e.to_string());
-        }
-    }
+    bulk_enqueue_full_ingest(pool, &settings.ingest, &to_ingest, user_id).await?;
+
+    // for rel_path in to_ingest {
+    //     if let Err(e) = enqueue_full_ingest(pool, settings, &rel_path, user_id).await {
+    //         error!("Error enqueueing file ingest: {:?}", e.to_string());
+    //     }
+    // }
     for rel_path in to_remove {
         if let Err(e) = enqueue_job::<()>(pool, settings, JobType::Remove)
             .relative_path(rel_path)
@@ -93,10 +87,6 @@ pub async fn sync_user_files_to_db(
 }
 
 /// Reads the thumbnails directory and returns a set of all subdirectory names (media item IDs).
-///
-/// # Errors
-///
-/// * Returns an I/O error if the thumbnails directory or its entries cannot be read.
 async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String>> {
     let mut set = HashSet::new();
     let mut entries = fs::read_dir(thumbnail_folder).await?;
@@ -110,14 +100,10 @@ async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String
     Ok(set)
 }
 
-/// Synchronizes thumbnail folders with the database, deleting orphans and re-ingesting items with missing thumbnails.
-///
-/// # Errors
-///
-/// * Returns an error for database query failures or file system I/O errors during deletion.
+/// Synchronises thumbnail folders with the database, deleting orphans and re-ingesting items with missing thumbnails.
 async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     let Some(job_count) = sqlx::query_scalar!(
-        "SELECT count(id) FROM jobs WHERE status IN ('running', 'queued') AND job_type in ('ingest', 'remove')"
+        "SELECT count(id) FROM jobs WHERE status IN ('running', 'queued') AND job_type in ('ingest_thumbnails', 'remove')"
     )
         .fetch_one(pool)
         .await?
@@ -167,10 +153,6 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
 }
 
 /// Run the indexing scan.
-///
-/// # Errors
-///
-/// Error if creating thumbnails dir doesn't work out
 pub async fn run_scan(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     let users = UserStore::list_users_with_media_folders(pool).await?;
     let media_root = &settings.ingest.media_root;
@@ -188,12 +170,7 @@ pub async fn run_scan(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     Ok(())
 }
 
-/// Triggers a full scan to synchronize the filesystem and database.
-///
-/// # Errors
-///
-/// This function will return an error if the synchronization scan fails,
-/// which can be caused by database or filesystem I/O errors.
+/// Triggers a full scan to synchronise the filesystem and database.
 pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
     run_scan(&context.pool, &context.settings).await?;
 

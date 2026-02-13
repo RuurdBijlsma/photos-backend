@@ -11,7 +11,7 @@ async fn main() -> color_eyre::Result<()> {
     let out_folder = Path::new("test_out");
     fs::create_dir_all(out_folder)?;
     let settings = load_app_settings()?;
-    generate_thumbnails(&settings.ingest, file, out_folder, Some(5)).await?;
+    generate_thumbnails(&settings.ingest, file, out_folder, 5).await?;
 
     Ok(())
 }

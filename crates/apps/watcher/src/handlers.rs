@@ -7,6 +7,11 @@ use std::path::Path;
 use tracing::{debug, info, warn};
 use walkdir::WalkDir;
 
+enum WatcherJobType {
+    Ingest,
+    Remove,
+}
+
 /// Handles a create event from the watcher.
 pub async fn handle_create(
     pool: &PgPool,
@@ -14,12 +19,12 @@ pub async fn handle_create(
     path: &Path,
 ) -> color_eyre::Result<()> {
     if path.is_file() {
-        enqueue_file_job(pool, settings, path, JobType::Ingest).await?;
+        enqueue_file_job(pool, settings, path, WatcherJobType::Ingest).await?;
     } else {
         info!("Directory created: {:?}. Scanning for new files.", path);
         for entry in WalkDir::new(path).into_iter().filter_map(Result::ok) {
             if entry.file_type().is_file() {
-                enqueue_file_job(pool, settings, entry.path(), JobType::Ingest).await?;
+                enqueue_file_job(pool, settings, entry.path(), WatcherJobType::Ingest).await?;
             }
         }
     }
@@ -34,7 +39,7 @@ pub async fn handle_remove(
 ) -> color_eyre::Result<()> {
     // This logic is preserved as per your request to differentiate file from folder deletes.
     if is_path_in_db(pool, settings, path).await? {
-        enqueue_file_job(pool, settings, path, JobType::Remove).await?;
+        enqueue_file_job(pool, settings, path, WatcherJobType::Remove).await?;
     } else {
         info!(
             "Directory removed: {:?}. Removing all media items within.",
@@ -50,7 +55,7 @@ async fn enqueue_file_job(
     pool: &PgPool,
     settings: &AppSettings,
     path: &Path,
-    job_type: JobType,
+    job_type: WatcherJobType,
 ) -> color_eyre::Result<()> {
     let relative_path = &path.make_relative(&settings.ingest.media_root)?;
     let Some(user) = UserStore::find_user_by_relative_path(pool, relative_path).await? else {
@@ -62,15 +67,16 @@ async fn enqueue_file_job(
     };
 
     match job_type {
-        JobType::Ingest => enqueue_full_ingest(pool, settings, relative_path, user.id).await?,
-        JobType::Remove => {
+        WatcherJobType::Ingest => {
+            enqueue_full_ingest(pool, settings, relative_path, user.id).await?
+        }
+        WatcherJobType::Remove => {
             enqueue_job::<()>(pool, settings, JobType::Remove)
                 .relative_path(relative_path)
                 .user_id(user.id)
                 .call()
                 .await?;
         }
-        _ => warn!("Unsupported job type for watcher: {:?}", job_type),
     }
 
     Ok(())
@@ -102,7 +108,7 @@ async fn handle_remove_folder(
 
     for path in relative_paths {
         let absolute_path = settings.ingest.media_root.join(path);
-        enqueue_file_job(pool, settings, &absolute_path, JobType::Remove).await?;
+        enqueue_file_job(pool, settings, &absolute_path, WatcherJobType::Remove).await?;
     }
 
     Ok(())
