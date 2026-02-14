@@ -4,7 +4,7 @@ use common_services::api::photos::interfaces::{
     ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse,
 };
 use common_services::api::photos::service::{
-    download_media_file, random_photo, thumbnail_on_demand_cached,
+    download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
 };
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
@@ -13,6 +13,8 @@ use ml_analysis::get_color_theme;
 use crate::api_state::ApiContext;
 use axum::http::header;
 use axum::response::IntoResponse;
+use axum_extra::TypedHeader;
+use axum_extra::headers::Range;
 use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::PhotoThumbnailParams;
 use common_services::database::media_item_store::MediaItemStore;
@@ -143,4 +145,25 @@ pub async fn get_photo_thumbnail(
         ],
         image_bytes,
     ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/photos/video/{media_item_id}",
+    tag = "Photos",
+    responses((status = 206, description = "Partial video content"))
+)]
+pub async fn stream_video_handler(
+    extract::State(context): extract::State<ApiContext>,
+    extract::Path(media_item_id): extract::Path<String>,
+    range: Option<TypedHeader<Range>>,
+) -> Result<impl IntoResponse, PhotosError> {
+    let range_inner = range.map(|TypedHeader(r)| r);
+    stream_video_file(
+        &context.pool,
+        &context.settings.ingest,
+        &media_item_id,
+        range_inner,
+    )
+    .await
 }

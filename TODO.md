@@ -180,12 +180,11 @@
   search zit meer in de 0-0.3 range, FTS kan wel tot 4.0 gaan ofzo, dus weight voor FTS moet lager dan vector. nu 0.8 en
   0.2 dat lijkt wel goeie resultaten te geven. Toch meer experimenteren.
 * probeer reciprocal rank fusion ofzo
-* on demand video thumbnails
-* on demand videos?
+* ✅ on demand video thumbnails
+* ✅ on demand videos?
 * maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
-* broke: https://localhost:5173/view/fctSaxg4qb
 
 # Features
 

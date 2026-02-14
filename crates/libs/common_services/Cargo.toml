@@ -34,10 +34,11 @@ bon = "3.8.1"
 pgvector = { version = "0.4", features = ["sqlx", "serde"] }
 futures-util = "0.3.31"
 open_clip_inference = { version = "0.2.6", features = ["load-dynamic"] }
-kamadak-exif  = "0.6.1"
+kamadak-exif = "0.6.1"
 imagesize = "0.14.0"
 fast_image_resize = { version = "6.0.0", features = ["image"] }
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
+axum-extra = { version = "0.12.5", features = ["typed-header"] }
 
 [dev-dependencies]
 criterion = { version = "0.8.0", features = ["async_tokio", "html_reports"] }

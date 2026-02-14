@@ -28,6 +28,9 @@ pub enum PhotosError {
 
     #[error("Cancelled.")]
     Cancelled,
+
+    #[error("Invalid range requested")]
+    InvalidRange,
 }
 
 impl IntoResponse for PhotosError {
@@ -49,6 +52,7 @@ impl IntoResponse for PhotosError {
             Self::AccessDenied => (StatusCode::FORBIDDEN, self.to_string()),
             Self::UnsupportedMediaType => (StatusCode::UNSUPPORTED_MEDIA_TYPE, self.to_string()),
             Self::Cancelled=>(StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
+            Self::InvalidRange => (StatusCode::RANGE_NOT_SATISFIABLE, self.to_string()),
         };
 
         let body = Json(json!({ "error": error_message }));

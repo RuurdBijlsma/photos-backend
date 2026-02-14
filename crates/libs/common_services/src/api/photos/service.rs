@@ -1,23 +1,25 @@
 use crate::api::photos::error::PhotosError;
-use image::ImageDecoder;
-use std::io::Cursor;
-
 use crate::api::photos::interfaces::RandomPhotoResponse;
 use crate::database::app_user::{User, UserRole};
 use crate::database::media_item_store::MediaItemStore;
 use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
+use axum_extra::headers::Range;
 use color_eyre::Report;
 use color_eyre::eyre::eyre;
 use exif::{In, Tag, Value};
 use fast_image_resize as fr;
 use http::{Response, StatusCode, header};
+use image::ImageDecoder;
 use image::ImageReader;
 use rand::RngExt;
 use sqlx::PgPool;
+use std::io::Cursor;
+use std::ops::Bound;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use tokio::fs::File;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
@@ -31,7 +33,7 @@ pub async fn random_photo(
     user: &User,
     pool: &PgPool,
 ) -> Result<Option<RandomPhotoResponse>, PhotosError> {
-    // Count the total number of photos with associated color data for the given user.
+    // Count the total number of photos with associated colour data for the given user.
     let count: i64 = sqlx::query_scalar!(
         r#"
         SELECT COUNT(cd.visual_analysis_id)
@@ -390,4 +392,81 @@ fn quick_image_resize(path: &Path, file_bytes: &[u8], size: i32) -> Result<Vec<u
         .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to encode JPEG")))?;
 
     Ok(buffer)
+}
+
+pub async fn stream_video_file(
+    pool: &PgPool,
+    ingest_settings: &IngestSettings,
+    media_item_id: &str,
+    range_header: Option<Range>,
+) -> Result<Response<Body>, PhotosError> {
+    let Some(rel_path) = MediaItemStore::find_relative_path_by_id(pool, media_item_id).await?
+    else {
+        return Err(PhotosError::MediaNotFound(media_item_id.to_owned()));
+    };
+    let media_path = ingest_settings.media_root.join(&rel_path);
+
+    let mut file = File::open(&media_path)
+        .await
+        .map_err(|_| PhotosError::AccessDenied)?;
+    let metadata = file
+        .metadata()
+        .await
+        .map_err(|e| eyre!("Can't get file metadata {e}"))?;
+    let file_size = metadata.len();
+
+    let mut start = 0;
+    let mut end = file_size - 1;
+    let mut is_partial = false;
+
+    if let Some(range) = range_header {
+        if let Some((start_bound, end_bound)) = range.satisfiable_ranges(file_size).next() {
+            is_partial = true;
+
+            start = match start_bound {
+                Bound::Included(n) => n,
+                Bound::Excluded(n) => n + 1,
+                Bound::Unbounded => 0,
+            };
+
+            end = match end_bound {
+                Bound::Included(n) => n,
+                Bound::Excluded(n) => n - 1,
+                Bound::Unbounded => file_size - 1,
+            };
+        }
+    }
+
+    // Safety check for bounds
+    if start > end || start >= file_size {
+        return Err(PhotosError::InvalidRange);
+    }
+
+    let content_length = end - start + 1;
+
+    file.seek(std::io::SeekFrom::Start(start))
+        .await
+        .map_err(|e| eyre!("Can't seek in video file {e}"))?;
+
+    let reader = file.take(content_length);
+    let stream = FramedRead::new(reader, BytesCodec::new());
+    let body = Body::from_stream(stream);
+
+    let mut response = Response::builder()
+        .header(header::CONTENT_TYPE, "video/mp4")
+        .header(header::ACCEPT_RANGES, "bytes");
+
+    if is_partial {
+        response = response.status(StatusCode::PARTIAL_CONTENT).header(
+            header::CONTENT_RANGE,
+            format!("bytes {}-{}/{}", start, end, file_size),
+        );
+    } else {
+        response = response.status(StatusCode::OK);
+    }
+
+    Ok(response
+        .header(header::CONTENT_LENGTH, content_length)
+        .body(body)
+        .map_err(|e| eyre!("Can't create video stream response {e}"))?)
 }
