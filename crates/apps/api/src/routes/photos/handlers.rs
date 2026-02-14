@@ -132,8 +132,7 @@ pub async fn get_photo_thumbnail(
         &context.pool,
         size,
         &media_item_id,
-        &context.settings.ingest.media_root,
-        &context.settings.ingest.thumbnail_root,
+        &context.settings.ingest,
     )
     .await?;
 

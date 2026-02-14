@@ -16,6 +16,7 @@ use image::ImageReader;
 use rand::RngExt;
 use sqlx::PgPool;
 use std::path::Path;
+use std::process::{Command, Stdio};
 use tokio::fs::File;
 use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
@@ -182,10 +183,9 @@ pub async fn thumbnail_on_demand_cached(
     pool: &PgPool,
     size: i32,
     media_item_id: &str,
-    media_root: &Path,
-    thumbnail_root: &Path,
+    ingest_settings: &IngestSettings,
 ) -> Result<Vec<u8>, PhotosError> {
-    let cache_dir = thumbnail_root.join(".jpg-cache");
+    let cache_dir = ingest_settings.thumbnail_root.join(".jpg-cache");
     let cache_filename = format!("{media_item_id}_{size}.jpg");
     let cache_path = cache_dir.join(&cache_filename);
 
@@ -197,11 +197,18 @@ pub async fn thumbnail_on_demand_cached(
     else {
         return Err(PhotosError::MediaNotFound(media_item_id.to_owned()));
     };
+    let media_path = ingest_settings.media_root.join(&rel_path);
+    let is_video = ingest_settings.is_video_file(&media_path);
 
-    let image_path = media_root.join(&rel_path);
-    let image_bytes = task::spawn_blocking(move || thumbnail_on_demand(&image_path, size))
-        .await
-        .map_err(|e| PhotosError::Internal(eyre!("Task join error: {}", e)))??;
+    let image_bytes = task::spawn_blocking(move || {
+        if is_video {
+            video_thumb_on_demand(&media_path, size)
+        } else {
+            image_thumb_on_demand(&media_path, size)
+        }
+    })
+    .await
+    .map_err(|e| PhotosError::Internal(eyre!("Task join error: {e}")))??;
 
     if let Err(e) = fs::write(&cache_path, &image_bytes).await {
         tracing::log::warn!("Failed to write thumbnail to cache: {e}");
@@ -210,10 +217,73 @@ pub async fn thumbnail_on_demand_cached(
     Ok(image_bytes)
 }
 
-fn thumbnail_on_demand(
-    path: &Path,
-    target_size: i32,
-) -> Result<Vec<u8>, PhotosError> {
+fn video_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
+    let seek_time = "0.5";
+
+    let output = Command::new("ffmpeg")
+        .args([
+            "-ss",
+            seek_time, // Fast seek (before -i)
+            "-i",
+            path.to_str().ok_or(PhotosError::InvalidPath)?,
+            "-vf",
+            &format!("scale={target_size}:-2"), // Resize during decode
+            "-frames:v",
+            "1", // Extract exactly one frame
+            "-f",
+            "image2", // Force image output format
+            "-c:v",
+            "mjpeg", // Use JPEG encoder
+            "-q:v",
+            "4", // Quality scale (1-31, lower is better)
+            "-update",
+            "1",
+            "pipe:1", // Output to stdout
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| {
+            PhotosError::Internal(eyre!(e).wrap_err("Failed to execute ffmpeg for video thumbnail"))
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // If 0.5s failed (video might be very short), try again at 0s
+        if stderr.contains("Output file is empty") && seek_time != "0" {
+            return video_thumb_on_demand_at_zero(path, target_size);
+        }
+        return Err(PhotosError::Internal(eyre!("ffmpeg failed: {}", stderr)));
+    }
+
+    Ok(output.stdout)
+}
+
+fn video_thumb_on_demand_at_zero(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
+    let output = Command::new("ffmpeg")
+        .args([
+            "-i",
+            path.to_str().ok_or(PhotosError::InvalidPath)?,
+            "-vf",
+            &format!("scale={target_size}:-2"),
+            "-frames:v",
+            "1",
+            "-f",
+            "image2",
+            "-c:v",
+            "mjpeg",
+            "-q:v",
+            "4",
+            "pipe:1",
+        ])
+        .output()
+        .map_err(|e| PhotosError::Internal(eyre!(e)))?;
+
+    Ok(output.stdout)
+}
+
+fn image_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
     let file_bytes = std::fs::read(path)
         .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to read image source")))?;
 
