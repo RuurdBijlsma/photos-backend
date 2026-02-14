@@ -419,8 +419,8 @@ pub async fn stream_video_file(
     let mut end = file_size - 1;
     let mut is_partial = false;
 
-    if let Some(range) = range_header {
-        if let Some((start_bound, end_bound)) = range.satisfiable_ranges(file_size).next() {
+    if let Some(range) = range_header
+        && let Some((start_bound, end_bound)) = range.satisfiable_ranges(file_size).next() {
             is_partial = true;
 
             start = match start_bound {
@@ -435,7 +435,6 @@ pub async fn stream_video_file(
                 Bound::Unbounded => file_size - 1,
             };
         }
-    }
 
     // Safety check for bounds
     if start > end || start >= file_size {
@@ -459,7 +458,7 @@ pub async fn stream_video_file(
     if is_partial {
         response = response.status(StatusCode::PARTIAL_CONTENT).header(
             header::CONTENT_RANGE,
-            format!("bytes {}-{}/{}", start, end, file_size),
+            format!("bytes {start}-{end}/{file_size}"),
         );
     } else {
         response = response.status(StatusCode::OK);

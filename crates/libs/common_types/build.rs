@@ -2,7 +2,7 @@ fn main() -> std::io::Result<()> {
     println!("cargo:rerun-if-changed=proto/timeline.proto");
 
     let file_descriptors = protox::compile(["proto/timeline.proto"], ["proto/"])
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
 
     // 3. Create the prost_build configuration
     let mut config = prost_build::Config::new();

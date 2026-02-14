@@ -68,7 +68,7 @@ async fn enqueue_file_job(
 
     match job_type {
         WatcherJobType::Ingest => {
-            enqueue_full_ingest(pool, settings, relative_path, user.id).await?
+            enqueue_full_ingest(pool, settings, relative_path, user.id).await?;
         }
         WatcherJobType::Remove => {
             enqueue_job::<()>(pool, settings, JobType::Remove)
