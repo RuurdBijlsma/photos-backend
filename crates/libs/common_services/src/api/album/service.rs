@@ -503,14 +503,20 @@ pub async fn move_album_item(
     // Update the rank
     sqlx::query!(
         "UPDATE album_media_item SET rank = $1 WHERE album_id = $2 AND media_item_id = $3",
-        new_rank, album_id, media_item_id
-    ).execute(&mut *tx).await?;
+        new_rank,
+        album_id,
+        media_item_id
+    )
+    .execute(&mut *tx)
+    .await?;
 
     // Mark album as manually sorted
     sqlx::query!(
         "UPDATE album SET manual_sort = true WHERE id = $1",
         album_id
-    ).execute(&mut *tx).await?;
+    )
+    .execute(&mut *tx)
+    .await?;
 
     tx.commit().await?;
     Ok(())

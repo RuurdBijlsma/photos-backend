@@ -9,7 +9,7 @@ common_types = { path = "../../libs/common_types" }
 media_analyzer = "0.6.2"
 tracing = "0.1.41"
 color-eyre = "0.6.5"
-axum = { version = "0.8.6", features = ["macros"] }
+axum = { version = "0.8.8", features = ["macros", "ws", "http2"] }
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["full"] }
 jsonwebtoken = { version = "10.0.0", features = ["rust_crypto"] }

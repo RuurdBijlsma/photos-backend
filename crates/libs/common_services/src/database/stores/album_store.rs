@@ -5,7 +5,7 @@ use crate::database::album::album::{Album, AlbumRole, AlbumTimelineInfo, AlbumWi
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use sqlx::postgres::PgQueryResult;
-use sqlx::{Executor, PgTransaction, Postgres};
+use sqlx::{PgExecutor, PgTransaction};
 
 pub struct AlbumStore;
 
@@ -16,7 +16,7 @@ impl AlbumStore {
 
     /// Helper to get the absolute owner ID from the album table (Source of Truth).
     pub async fn get_owner_id(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
     ) -> Result<Option<i32>, DbError> {
         let rec = sqlx::query!("SELECT owner_id FROM album WHERE id = $1", album_id)
@@ -27,7 +27,7 @@ impl AlbumStore {
     }
 
     pub async fn create(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
         user_id: i32,
         name: &str,
@@ -55,7 +55,7 @@ impl AlbumStore {
 
     /// Updates the details of a specific album.
     pub async fn update(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
         name: Option<String>,
         description: Option<String>,
@@ -87,7 +87,7 @@ impl AlbumStore {
 
     /// Updates the details of a specific album.
     pub async fn remove_description(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
     ) -> Result<PgQueryResult, DbError> {
         Ok(sqlx::query!(
@@ -104,7 +104,7 @@ impl AlbumStore {
 
     /// Retrieves a single album by its ID, including the count of media items.
     pub async fn find_by_id(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
     ) -> Result<Option<AlbumWithCount>, DbError> {
         Ok(sqlx::query_as!(
@@ -135,7 +135,7 @@ impl AlbumStore {
 
     /// Retrieves a single album by its ID, including the first and last date taken.
     pub async fn find_timeline_info(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
     ) -> Result<Option<AlbumTimelineInfo>, DbError> {
         Ok(sqlx::query_as!(
@@ -165,7 +165,7 @@ impl AlbumStore {
 
     /// Retrieves all albums a user is a collaborator on.
     pub async fn list_by_user_id(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         user_id: i32,
     ) -> Result<Vec<Album>, DbError> {
         Ok(sqlx::query_as!(
@@ -185,7 +185,7 @@ impl AlbumStore {
 
     /// Retrieves all albums a user is a collaborator on with sorting.
     pub async fn list_with_count_by_user_id(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         user_id: i32,
         sort_field: AlbumSortField,
         sort_dir: SortDirection,
@@ -260,7 +260,7 @@ impl AlbumStore {
     /// Ranks are assigned by taking the current max rank and adding increments
     /// based on the 'sort_timestamp' of the new items.
     pub async fn add_media_items(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
         media_item_ids: &[String],
         added_by_user_id: i32,
@@ -287,8 +287,10 @@ impl AlbumStore {
     }
 
     /// Resets the ranks of all items in an album based on their chronological `sort_timestamp`.
-    pub async fn reorder_by_date(tx: &mut PgTransaction<'_>, album_id: &str) -> Result<(), DbError>
-    {
+    pub async fn reorder_by_date(
+        tx: &mut PgTransaction<'_>,
+        album_id: &str,
+    ) -> Result<(), DbError> {
         // Re-rank everything
         sqlx::query!(
             r#"
@@ -323,7 +325,7 @@ impl AlbumStore {
     }
 
     pub async fn remove_media_items_by_id(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
         media_item_ids: &[String],
     ) -> Result<PgQueryResult, DbError> {
@@ -341,7 +343,7 @@ impl AlbumStore {
 
     /// Retrieves all media items associated with an album, joined with their metadata.
     pub async fn list_media_items(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
     ) -> Result<Vec<AlbumMediaItemSummary>, DbError> {
         let rows = sqlx::query!(
@@ -384,7 +386,7 @@ impl AlbumStore {
 
     /// Checks if a specific media item exists in an album and is not deleted.
     pub async fn has_media_item(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
         media_item_id: &str,
     ) -> Result<bool, DbError> {
@@ -410,7 +412,7 @@ impl AlbumStore {
     /// Finds the media item ID located at the middle of the album.
     /// Useful for generating a representative thumbnail.
     pub async fn find_middle_media_item_id(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
     ) -> Result<Option<String>, DbError> {
         struct Row {
@@ -446,7 +448,7 @@ impl AlbumStore {
 
     /// Adds a collaborator to an album or updates their role if they already exist.
     pub async fn upsert_collaborator(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
         user_id: i32,
         role: AlbumRole,
@@ -469,7 +471,7 @@ impl AlbumStore {
 
     /// Removes a collaborator from an album by their collaborator ID.
     pub async fn remove_collaborator_by_id(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         collaborator_id: i64,
     ) -> Result<PgQueryResult, DbError> {
         Ok(sqlx::query!(
@@ -482,7 +484,7 @@ impl AlbumStore {
 
     /// Retrieves a collaborator by their ID.
     pub async fn find_collaborator_by_id(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         collaborator_id: i64,
     ) -> Result<Option<AlbumCollaborator>, DbError> {
         Ok(sqlx::query_as!(
@@ -500,7 +502,7 @@ impl AlbumStore {
 
     /// Retrieves all collaborators for a given album.
     pub async fn list_collaborators(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
     ) -> Result<Vec<CollaboratorSummary>, DbError> {
         Ok(sqlx::query_as!(
@@ -523,7 +525,7 @@ impl AlbumStore {
 
     /// Gets the role of a user for a specific album.
     pub async fn find_user_role(
-        executor: impl Executor<'_, Database = Postgres>,
+        executor: impl PgExecutor<'_>,
         album_id: &str,
         user_id: i32,
     ) -> Result<Option<AlbumRole>, DbError> {
