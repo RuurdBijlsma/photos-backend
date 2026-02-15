@@ -53,9 +53,9 @@ impl JobType {
             Self::Remove => 0,
             Self::Scan => 10,
             Self::CleanDB => 20,
+            Self::ImportAlbumItem => 25,
             Self::ClusterFaces => 30,
             Self::ClusterPhotos => 35,
-            Self::ImportAlbumItem => 25,
         }
     }
 }

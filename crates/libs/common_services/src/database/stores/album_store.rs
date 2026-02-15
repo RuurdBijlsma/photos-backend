@@ -86,6 +86,23 @@ impl AlbumStore {
         .await?)
     }
 
+    /// Updates the details of a specific album.
+    pub async fn remove_description(
+        executor: impl Executor<'_, Database = Postgres>,
+        album_id: &str,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            r#"
+            UPDATE album
+            SET description = NULL
+            WHERE id = $1
+            "#,
+            album_id
+        )
+        .execute(executor)
+        .await?)
+    }
+
     /// Retrieves a single album by its ID, including the count of media items.
     pub async fn find_by_id(
         executor: impl Executor<'_, Database = Postgres>,

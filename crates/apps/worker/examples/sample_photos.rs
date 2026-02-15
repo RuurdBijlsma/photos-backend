@@ -8,7 +8,7 @@ use std::process;
 fn main() -> Result<()> {
     let source = Path::new("C:/Users/Ruurd/Pictures/Photos");
     let destination = Path::new("C:/Users/Ruurd/Pictures/media_dir");
-    let number = 20000;
+    let number = 5000;
     let settings = load_app_settings()?;
 
     // 1. Validate Source
@@ -32,8 +32,7 @@ fn main() -> Result<()> {
         Ok(entries) => {
             for entry in entries.flatten() {
                 let path = entry.path();
-                // Using your assumed function here
-                if path.is_file() && settings.ingest.is_photo_file(&path) {
+                if path.is_file() {
                     candidates.push(path);
                 }
             }

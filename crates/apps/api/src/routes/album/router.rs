@@ -1,4 +1,4 @@
-use crate::album::handlers::get_album_media_handler;
+use crate::album::handlers::{get_album_media_handler, remove_album_description_handler};
 use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
     accept_invite_handler, add_collaborator_handler, add_media_to_album_handler,
@@ -22,6 +22,10 @@ pub fn album_protected_router() -> Router<ApiContext> {
             post(create_album_handler).get(get_user_albums_handler),
         )
         .route("/album/{album_id}", put(update_album_handler))
+        .route(
+            "/album/{album_id}/description",
+            delete(remove_album_description_handler),
+        )
         .route("/album/{album_id}/media", post(add_media_to_album_handler))
         .route(
             "/album/{album_id}/media/{media_item_id}",

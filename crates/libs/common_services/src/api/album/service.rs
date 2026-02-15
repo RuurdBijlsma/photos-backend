@@ -292,6 +292,20 @@ pub async fn update_album(
     Ok(updated_album)
 }
 
+pub async fn remove_album_description(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+) -> Result<(), AlbumError> {
+    if !is_album_owner(pool, user_id, album_id).await? {
+        return Err(AlbumError::NotFound(
+            "Album not found or permission denied.".to_string(),
+        ));
+    }
+    AlbumStore::remove_description(pool, album_id).await?;
+    Ok(())
+}
+
 #[instrument(skip(pool))]
 pub async fn generate_invite(
     pool: &PgPool,
