@@ -123,14 +123,23 @@ pub async fn add_media_to_album(
 
     let mut tx = pool.begin().await?;
 
-    let Some(album_before) = AlbumStore::find_by_id(&mut *tx, album_id).await? else {
+    // Get current album state
+    let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? else {
         return Err(AlbumError::NotFound("Album not found.".to_string()));
     };
+
+    // Add the items
     AlbumStore::add_media_items(&mut *tx, album_id, media_item_ids, user_id).await?;
-    if album_before.thumbnail_id.is_none() {
+
+    // If NOT manually sorted, run the reorder logic immediately to interleave them
+    if !album.manual_sort {
+        AlbumStore::reorder_by_date(&mut tx, album_id).await?;
+    }
+
+    if album.thumbnail_id.is_none() {
         let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
-        if let Some(thumbnail_id) = thumbnail_id {
-            AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None).await?;
+        if let Some(tid) = thumbnail_id {
+            AlbumStore::update(&mut *tx, album_id, None, None, Some(tid), None).await?;
         }
     }
 
@@ -457,4 +466,52 @@ pub async fn get_album_media(
             collaborators,
         }),
     })
+}
+
+// Re-ordering album logic
+
+#[instrument(skip(pool))]
+pub async fn sort_album_by_date(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+) -> Result<(), AlbumError> {
+    if !can_edit_album(pool, user_id, album_id).await? {
+        return Err(AlbumError::Forbidden("Permission denied".into()));
+    }
+
+    let mut tx = pool.begin().await?;
+    AlbumStore::reorder_by_date(&mut tx, album_id).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+#[instrument(skip(pool))]
+pub async fn move_album_item(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+    media_item_id: &str,
+    new_rank: f64,
+) -> Result<(), AlbumError> {
+    if !can_edit_album(pool, user_id, album_id).await? {
+        return Err(AlbumError::Forbidden("Permission denied".into()));
+    }
+
+    let mut tx = pool.begin().await?;
+
+    // Update the rank
+    sqlx::query!(
+        "UPDATE album_media_item SET rank = $1 WHERE album_id = $2 AND media_item_id = $3",
+        new_rank, album_id, media_item_id
+    ).execute(&mut *tx).await?;
+
+    // Mark album as manually sorted
+    sqlx::query!(
+        "UPDATE album SET manual_sort = true WHERE id = $1",
+        album_id
+    ).execute(&mut *tx).await?;
+
+    tx.commit().await?;
+    Ok(())
 }

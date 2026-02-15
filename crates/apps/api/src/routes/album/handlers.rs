@@ -12,7 +12,7 @@ use common_services::api::album::interfaces::{
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
     get_album_media, remove_album_description, remove_collaborator, remove_media_from_album,
-    update_album,
+    sort_album_by_date, update_album,
 };
 use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
@@ -246,6 +246,16 @@ pub async fn remove_collaborator_handler(
 ) -> Result<StatusCode, AlbumError> {
     remove_collaborator(&context.pool, &album_id, collaborator_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[instrument(skip(context), err(Debug))]
+pub async fn sort_album_by_date_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(album_id): Path<String>,
+) -> Result<(), AlbumError> {
+    sort_album_by_date(&context.pool, &album_id, user.id).await?;
+    Ok(())
 }
 
 /// Generate a cross-server invitation link for an album.

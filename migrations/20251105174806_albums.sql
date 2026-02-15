@@ -18,6 +18,7 @@ CREATE TABLE album
     is_public                   BOOLEAN     NOT NULL DEFAULT false,
     -- sort column: automatically updated via trigger
     latest_media_item_timestamp TIMESTAMPTZ,
+    manual_sort                 BOOLEAN     NOT NULL DEFAULT false,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -39,7 +40,7 @@ CREATE TABLE album_media_item
     -- The user can manually sort items. We use float rank for easier reordering (insert between).
     rank          DOUBLE PRECISION NOT NULL,
     PRIMARY KEY (album_id, media_item_id),
-    CONSTRAINT uq_album_media_rank UNIQUE (album_id, rank)
+    CONSTRAINT uq_album_media_rank UNIQUE (album_id, rank) DEFERRABLE INITIALLY DEFERRED
 );
 
 -- Indices for album_media_item

@@ -46,6 +46,7 @@ pub struct AlbumWithCount {
     pub name: String,
     pub thumbnail_id: Option<String>,
     pub description: Option<String>,
+    pub manual_sort: bool,
     pub is_public: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -62,6 +63,7 @@ pub struct Album {
     pub thumbnail_id: Option<String>,
     pub description: Option<String>,
     pub is_public: bool,
+    pub manual_sort: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -77,6 +79,7 @@ impl From<AlbumWithCount> for Album {
             is_public: album.is_public,
             created_at: album.created_at,
             updated_at: album.updated_at,
+            manual_sort: album.manual_sort,
         }
     }
 }

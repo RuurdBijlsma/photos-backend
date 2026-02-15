@@ -32,7 +32,7 @@ BEGIN
                      JOIN media_item mi ON ami.media_item_id = mi.id
             WHERE ami.album_id = a.id
               AND mi.deleted = false)
-        -- !!! CRITICAL FIX: Use DISTINCT to ensure we only update each album ONCE per batch !!!
+        -- ! Use DISTINCT to ensure we only update each album ONCE per batch !
         FROM (SELECT DISTINCT album_id FROM new_table) nt
         WHERE a.id = nt.album_id;
 
@@ -44,7 +44,7 @@ BEGIN
                                                     JOIN media_item mi ON ami.media_item_id = mi.id
                                            WHERE ami.album_id = a.id
                                              AND mi.deleted = false)
-        -- !!! CRITICAL FIX: Use DISTINCT here too !!!
+        -- ! Use DISTINCT here too !
         FROM (SELECT DISTINCT album_id FROM old_table) ot
         WHERE a.id = ot.album_id;
     END IF;
