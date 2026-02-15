@@ -174,11 +174,12 @@ struct FfprobeOutput {
 #[derive(Deserialize)]
 struct StreamInfo {
     codec_type: String,
+    duration: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct FormatInfo {
-    duration: String,
+    duration: Option<String>,
 }
 
 #[derive(Debug)]
@@ -199,7 +200,7 @@ pub async fn get_video_metadata(video_path: &Path) -> Result<VideoMetadata> {
         "-print_format",
         "json",
         "-show_format",
-        "-show_streams", // Added to see stream types
+        "-show_streams",
         &video_path_str,
     ];
 
@@ -216,7 +217,21 @@ pub async fn get_video_metadata(video_path: &Path) -> Result<VideoMetadata> {
 
     let data: FfprobeOutput = serde_json::from_slice(&output.stdout)?;
 
-    let duration = data.format.duration.parse().context("Invalid duration")?;
+    // Fallback logic for duration:
+    // 1. Try the format container duration.
+    // 2. If missing, try the duration of the first stream that has one.
+    // 3. If still missing, default to 0.0.
+    let duration = data
+        .format
+        .duration
+        .or_else(|| {
+            data.streams
+                .iter()
+                .find_map(|s| s.duration.as_ref().cloned())
+        })
+        .and_then(|d| d.parse::<f64>().ok())
+        .unwrap_or(0.0);
+
     let has_audio = data.streams.iter().any(|s| s.codec_type == "audio");
 
     Ok(VideoMetadata {
