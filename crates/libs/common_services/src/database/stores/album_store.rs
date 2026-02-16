@@ -1,7 +1,7 @@
 use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSortField};
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::DbError;
-use crate::database::album::album::{Album, AlbumRole, AlbumTimelineInfo, AlbumWithCount};
+use crate::database::album::album::{Album, AlbumRole, AlbumTimelineInfo};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use sqlx::postgres::PgQueryResult;
@@ -40,7 +40,7 @@ impl AlbumStore {
             r#"
             INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public, manual_sort)
             VALUES ($1, $2, $3, $4, $5, $6, false)
-            RETURNING id, owner_id, name, description, thumbnail_id, is_public, manual_sort, created_at, updated_at
+            RETURNING id, owner_id, name, description, thumbnail_id, is_public, manual_sort, media_count, latest_media_item_timestamp, created_at, updated_at
             "#,
             album_id,
             user_id,
@@ -73,7 +73,7 @@ impl AlbumStore {
                 is_public = COALESCE($4, is_public),
                 updated_at = now()
             WHERE id = $5
-            RETURNING id, owner_id, name, description, thumbnail_id, is_public, updated_at, created_at, manual_sort
+            RETURNING id, owner_id, name, description, thumbnail_id, is_public, media_count, latest_media_item_timestamp, updated_at, created_at, manual_sort
             "#,
             name,
             description,
@@ -106,26 +106,24 @@ impl AlbumStore {
     pub async fn find_by_id(
         executor: impl PgExecutor<'_>,
         album_id: &str,
-    ) -> Result<Option<AlbumWithCount>, DbError> {
+    ) -> Result<Option<Album>, DbError> {
         Ok(sqlx::query_as!(
-            AlbumWithCount,
+            Album,
             r#"
             SELECT
-                a.id,
-                a.owner_id,
-                a.name,
-                a.description,
-                a.thumbnail_id,
-                a.is_public,
-                a.manual_sort,
-                a.created_at,
-                a.updated_at,
-                COUNT(mi.id)::INT AS "media_count!"
-            FROM album a
-            LEFT JOIN album_media_item ami ON a.id = ami.album_id
-            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
-            WHERE a.id = $1
-            GROUP BY a.id
+                id,
+                owner_id,
+                name,
+                description,
+                thumbnail_id,
+                is_public,
+                manual_sort,
+                created_at,
+                updated_at,
+                latest_media_item_timestamp,
+                media_count
+            FROM album
+            WHERE id = $1
             "#,
             album_id
         )
@@ -171,7 +169,7 @@ impl AlbumStore {
         Ok(sqlx::query_as!(
             Album,
             r#"
-            SELECT a.id, owner_id, name, description, thumbnail_id, is_public, manual_sort, created_at, updated_at
+            SELECT a.id, owner_id, name, description, thumbnail_id, is_public, latest_media_item_timestamp, manual_sort, media_count, created_at, updated_at
             FROM album a
             JOIN album_collaborator ac ON a.id = ac.album_id
             WHERE ac.user_id = $1
@@ -189,10 +187,9 @@ impl AlbumStore {
         user_id: i32,
         sort_field: AlbumSortField,
         sort_dir: SortDirection,
-    ) -> Result<Vec<AlbumWithCount>, DbError> {
-        // todo: benchmark
+    ) -> Result<Vec<Album>, DbError> {
         Ok(sqlx::query_as!(
-        AlbumWithCount,
+        Album,
         r#"
             SELECT
                 a.id,
@@ -204,41 +201,18 @@ impl AlbumStore {
                 a.manual_sort,
                 a.created_at,
                 a.updated_at,
-                COUNT(mi.id)::INT AS "media_count!"
-            FROM album a
-            -- Check collaboration status
-            LEFT JOIN album_collaborator ac ON a.id = ac.album_id AND ac.user_id = $1
-            -- Join for media items
-            LEFT JOIN album_media_item ami ON a.id = ami.album_id
-            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
-            WHERE
-                a.owner_id = $1      -- User is the owner
-                OR
-                ac.user_id = $1      -- OR User is a collaborator
-            GROUP BY
-                a.id,
-                a.owner_id,
-                a.name,
-                a.description,
-                a.thumbnail_id,
-                a.is_public,
-                a.created_at,
-                a.updated_at,
+                a.media_count,
                 a.latest_media_item_timestamp
+            FROM album a
+            LEFT JOIN album_collaborator ac ON a.id = ac.album_id AND ac.user_id = $1
+            WHERE a.owner_id = $1 OR ac.user_id = $1
             ORDER BY
-                -- 1. Sort by Name
-                CASE WHEN $2 = 'name' AND $3 = 'ASC' THEN a.name END,
+                CASE WHEN $2 = 'name' AND $3 = 'ASC' THEN a.name END ASC,
                 CASE WHEN $2 = 'name' AND $3 = 'DESC' THEN a.name END DESC,
-
-                -- 2. Sort by Updated At
-                CASE WHEN $2 = 'updated_at' AND $3 = 'ASC' THEN a.updated_at END,
+                CASE WHEN $2 = 'updated_at' AND $3 = 'ASC' THEN a.updated_at END ASC,
                 CASE WHEN $2 = 'updated_at' AND $3 = 'DESC' THEN a.updated_at END DESC,
-
-                -- 3. Sort by Latest Photo (Optimized: using cached column)
-                CASE WHEN $2 = 'latest_photo' AND $3 = 'ASC' THEN a.latest_media_item_timestamp END NULLS LAST,
+                CASE WHEN $2 = 'latest_photo' AND $3 = 'ASC' THEN a.latest_media_item_timestamp END ASC NULLS LAST,
                 CASE WHEN $2 = 'latest_photo' AND $3 = 'DESC' THEN a.latest_media_item_timestamp END DESC NULLS LAST,
-
-                -- Secondary sort
                 a.id
         "#,
         user_id,
@@ -253,12 +227,9 @@ impl AlbumStore {
     // Album Media Item Management
     //================================================================================
 
-    /// Adds multiple media items to an album.
-    /// Ignores duplicates if a media item is already in the album.
-
     /// Adds multiple media items.
     /// Ranks are assigned by taking the current max rank and adding increments
-    /// based on the 'sort_timestamp' of the new items.
+    /// based on the `sort_timestamp` of the new items.
     pub async fn add_media_items(
         executor: impl PgExecutor<'_>,
         album_id: &str,

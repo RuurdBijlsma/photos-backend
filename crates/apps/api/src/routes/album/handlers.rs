@@ -14,12 +14,12 @@ use common_services::api::album::service::{
     get_album_media, remove_album_description, remove_collaborator, remove_media_from_album,
     sort_album_by_date, update_album,
 };
-use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
+use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
 use common_types::pb::api::FullAlbumMediaResponse;
-use tracing::{info, instrument};
+use tracing::instrument;
 
 /// Create a new album.
 ///
@@ -35,13 +35,12 @@ use tracing::{info, instrument};
     ),
     security(("bearer_auth" = []))
 )]
-#[instrument(skip(context, user), err(Debug))]
+#[instrument(skip(context, user, payload), err(Debug))]
 pub async fn create_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Json(payload): Json<CreateAlbumRequest>,
 ) -> Result<(StatusCode, Json<Album>), AlbumError> {
-    info!("Create album handler {:?}", payload);
     let album = create_album(
         &context.pool,
         user.id,
@@ -62,7 +61,7 @@ pub async fn create_album_handler(
     path = "/album",
     tag = "Album",
     responses(
-        (status = 200, description = "A list of the user's albums.", body = Vec<AlbumWithCount>),
+        (status = 200, description = "A list of the user's albums.", body = Vec<Album>),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
@@ -72,7 +71,7 @@ pub async fn get_user_albums_handler(
     State(context): State<ApiContext>,
     Query(query): Query<ListAlbumsParam>,
     Extension(user): Extension<User>,
-) -> Result<Json<Vec<AlbumWithCount>>, AlbumError> {
+) -> Result<Json<Vec<Album>>, AlbumError> {
     let albums = AlbumStore::list_with_count_by_user_id(
         &context.pool,
         user.id,
@@ -125,7 +124,6 @@ pub async fn remove_album_description_handler(
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
 ) -> Result<(), AlbumError> {
-    println!("Remove description {:?}", album_id);
     remove_album_description(&context.pool, &album_id, user.id).await?;
     Ok(())
 }

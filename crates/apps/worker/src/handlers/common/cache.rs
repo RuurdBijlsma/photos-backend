@@ -12,7 +12,7 @@ use tracing::warn;
 const THUMBNAILS_FOLDER: &str = "thumbnails";
 const INGEST_RESULT_FILENAME: &str = "ingest_result.json";
 const ANALYSIS_RESULT_FILENAME: &str = "analysis_result.json";
-const INGEST_CACHE_VERSION: u32 = 1;
+const INGEST_CACHE_VERSION: u32 = 2;
 const ANALYSIS_CACHE_VERSION: u32 = 1;
 const EXPECTED_EMBEDDING_LENGTH: usize = 1024;
 

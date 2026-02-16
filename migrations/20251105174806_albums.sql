@@ -19,6 +19,7 @@ CREATE TABLE album
     -- sort column: automatically updated via trigger
     latest_media_item_timestamp TIMESTAMPTZ,
     manual_sort                 BOOLEAN     NOT NULL DEFAULT false,
+    media_count                 INT         NOT NULL DEFAULT 0,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -64,6 +65,7 @@ CREATE TABLE album_collaborator
     CONSTRAINT uq_album_local_collaborator UNIQUE (album_id, user_id)
 );
 
+CREATE INDEX idx_album_collaborator_user_album ON album_collaborator (user_id, album_id);
 
 -- A table to link imported media to a target album and remote owner before ingestion is complete.
 CREATE TABLE pending_album_media_items

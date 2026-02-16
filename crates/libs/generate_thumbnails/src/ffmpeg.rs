@@ -227,7 +227,7 @@ pub async fn get_video_metadata(video_path: &Path) -> Result<VideoMetadata> {
         .or_else(|| {
             data.streams
                 .iter()
-                .find_map(|s| s.duration.as_ref().cloned())
+                .find_map(|s| s.duration.clone())
         })
         .and_then(|d| d.parse::<f64>().ok())
         .unwrap_or(0.0);

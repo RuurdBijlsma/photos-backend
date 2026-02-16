@@ -284,7 +284,7 @@ pub async fn update_album(
         let album = AlbumStore::find_by_id(pool, album_id)
             .await?
             .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()))?;
-        return Ok(album.into());
+        return Ok(album);
     }
 
     if let Some(thumbnail_id) = &thumbnail_id {

@@ -173,6 +173,7 @@ CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
 CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);
+CREATE INDEX idx_media_item_not_deleted ON media_item (id) WHERE deleted = false;
 
 -- For /timeline/ids
 CREATE INDEX idx_media_item_ids_timeline
