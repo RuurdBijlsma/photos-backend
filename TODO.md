@@ -185,6 +185,7 @@
 * maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
+* zwarte pics komen te hoog in zoek resultaten
 
 # Features
 

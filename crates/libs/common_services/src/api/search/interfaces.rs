@@ -24,4 +24,8 @@ pub struct SearchResultItem {
     pub fts_score: f32,
     pub vector_score: f32,
     pub combined_score: f32,
+
+    // Ranks (1-indexed)
+    pub fts_rank: Option<i32>,
+    pub vector_rank: Option<i32>,
 }

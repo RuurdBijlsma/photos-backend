@@ -33,7 +33,6 @@ async fn main() -> color_eyre::Result<()> {
         SearchMediaConfig {
             text_weight: 0.3,
             semantic_weight: 1.0,
-            threshold: Some(0.2),
             limit: Some(100),
         },
     )

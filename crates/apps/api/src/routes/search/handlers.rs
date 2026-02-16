@@ -40,7 +40,6 @@ pub async fn get_search_results(
             text_weight: context.settings.ingest.analyzer.search.text_weight,
             semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
             limit: params.limit,
-            threshold: params.threshold,
         },
     )
     .await?;
