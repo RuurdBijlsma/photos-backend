@@ -34,7 +34,7 @@ pub async fn get_search_results(
     let search_result = search_media(
         &user,
         &context.pool,
-        &context.embedder,
+        context.embedder,
         &params.query,
         SearchMediaConfig {
             text_weight: context.settings.ingest.analyzer.search.text_weight,

@@ -9,6 +9,8 @@ CREATE TABLE visual_analysis
     embedding     VECTOR(1024) NOT NULL,
     percentage    INT          NOT NULL
 );
+ALTER TABLE visual_analysis ALTER COLUMN embedding SET STORAGE MAIN;
+
 CREATE INDEX idx_visual_analysis_media_item_id ON visual_analysis (media_item_id);
 CREATE INDEX ON visual_analysis USING hnsw (embedding vector_cosine_ops);
 

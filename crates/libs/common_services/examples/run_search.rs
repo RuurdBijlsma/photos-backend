@@ -4,6 +4,7 @@
     clippy::cast_sign_loss
 )]
 
+use std::sync::Arc;
 use app_state::load_app_settings;
 use common_services::api::search::service::{SearchMediaConfig, search_media};
 use common_services::database::get_db_pool;
@@ -21,14 +22,14 @@ async fn main() -> color_eyre::Result<()> {
     let user = UserStore::find_by_email(&pool, EMAIL)
         .await?
         .expect("no such user");
-    let embedder = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
+    let embedder =TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
         .build()
         .await?;
 
     let search_result = search_media(
         &user,
         &pool,
-        &embedder,
+        Arc::new(embedder).clone(),
         "kayak",
         SearchMediaConfig {
             text_weight: 0.3,

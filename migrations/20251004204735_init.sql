@@ -68,7 +68,7 @@ CREATE TABLE media_item
     sort_timestamp      TIMESTAMPTZ NOT NULL,
     use_panorama_viewer BOOLEAN     NOT NULL,
     orientation         INT         NOT NULL DEFAULT 1,
-    has_thumbnails       BOOLEAN     NOT NULL DEFAULT false,
+    has_thumbnails      BOOLEAN     NOT NULL DEFAULT false,
     deleted             BOOLEAN     NOT NULL DEFAULT false,
     month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
     search_vector       TSVECTOR,
@@ -174,6 +174,7 @@ CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
 CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);
 CREATE INDEX idx_media_item_not_deleted ON media_item (id) WHERE deleted = false;
+CREATE INDEX idx_media_item_search_lookup ON media_item (user_id, deleted, id);
 
 -- For /timeline/ids
 CREATE INDEX idx_media_item_ids_timeline
