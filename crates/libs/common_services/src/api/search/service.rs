@@ -109,6 +109,6 @@ pub async fn search_media(
     Ok(items)
 }
 
-pub async fn get_search_suggestions(user: &User, pool: &PgPool) -> Result<String, SearchError> {
+pub async fn get_search_suggestions(_user: &User, _pool: &PgPool) -> Result<String, SearchError> {
     Ok("asdf".to_owned())
 }

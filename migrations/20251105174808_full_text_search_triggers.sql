@@ -1,6 +1,5 @@
 -- 1. Create the function that performs the update for a specific ID
-CREATE
-    OR REPLACE FUNCTION rebuild_media_item_search_vector(target_id VARCHAR(10))
+CREATE OR REPLACE FUNCTION rebuild_media_item_search_vector(target_id VARCHAR(10))
     RETURNS VOID AS
 $$
 BEGIN
@@ -15,12 +14,12 @@ BEGIN
                              setweight(to_tsvector('english', mi.filename), 'B') ||
                              setweight(to_tsvector('english', coalesce(l.admin2, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(w.condition, '')), 'B') ||
-                             setweight(to_tsvector('english', coalesce(c.ocr_text, '')), 'B') ||
-                             setweight(to_tsvector('english', coalesce(c.event_type, '')), 'B') ||
-                             setweight(to_tsvector('english', coalesce(c.setting, '')), 'B') ||
-                             setweight(to_tsvector('english', coalesce(c.search_term, '')), 'B') ||
-                             setweight(to_tsvector('english', coalesce(c.landmark_name, '')), 'B') ||
-                             setweight(to_tsvector('english', coalesce(c.caption, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(class_agg.ocr_text, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(class_agg.event_type, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(class_agg.setting, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(class_agg.search_term, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(class_agg.landmark_name, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(class_agg.caption, '')), 'B') ||
                              -- LOWER CONFIDENCE ('C' & 'D')
                              setweight(to_tsvector('english', to_char(mi.taken_at_local, 'YYYY Month Day')), 'C') ||
                              setweight(to_tsvector('english', CASE WHEN mi.is_video THEN 'video' ELSE 'photo' END), 'D')
@@ -28,8 +27,20 @@ BEGIN
                                   LEFT JOIN gps g ON mi.id = g.media_item_id
                                   LEFT JOIN location l ON g.location_id = l.id
                                   LEFT JOIN weather w ON mi.id = w.media_item_id
-                                  LEFT JOIN visual_analysis va ON mi.id = va.media_item_id
-                                  LEFT JOIN classification c ON va.id = c.visual_analysis_id
+
+                             -- Aggregate classification data into one row per media_item
+                                  LEFT JOIN (SELECT va.media_item_id,
+                                                    string_agg(c.ocr_text, ' ')      as ocr_text,
+                                                    string_agg(c.event_type, ' ')    as event_type,
+                                                    string_agg(c.setting, ' ')       as setting,
+                                                    string_agg(c.search_term, ' ')   as search_term,
+                                                    string_agg(c.landmark_name, ' ') as landmark_name,
+                                                    string_agg(c.caption, ' ')       as caption
+                                             FROM visual_analysis va
+                                                      JOIN classification c ON va.id = c.visual_analysis_id
+                                             GROUP BY va.media_item_id) class_agg ON mi.id = class_agg.media_item_id
+
+                             -- Faces aggregation
                                   LEFT JOIN (SELECT va_inner.media_item_id, string_agg(pers.name, ' ') as names
                                              FROM face f
                                                       JOIN person pers
