@@ -124,6 +124,7 @@ pub struct LlmClassification {
     pub caption: String,
     pub main_subject: String,
     pub setting: String,
+    pub search_term: String,
     pub contains_pets: bool,
     pub contains_vehicle: bool,
     pub contains_landmarks: bool,

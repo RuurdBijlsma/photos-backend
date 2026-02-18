@@ -40,7 +40,7 @@ async fn main() -> color_eyre::Result<()> {
         .repetition_penalty(1.2)
         .build();
     let root_folder = "C:/Users/Ruurd/Pictures/Bouke Zweden";
-    let out_folder = Path::new("captions/fast_refactor");
+    let out_folder = Path::new("captions/with_search_term");
     if !out_folder.exists() {
         std::fs::create_dir_all(out_folder)?;
     }

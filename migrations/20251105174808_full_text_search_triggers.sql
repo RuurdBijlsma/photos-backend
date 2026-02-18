@@ -7,20 +7,21 @@ BEGIN
     UPDATE media_item
     SET search_vector = (SELECT
                              -- HIGH CONFIDENCE ('A')
-                             setweight(to_tsvector('english', mi.filename), 'A') ||
                              setweight(to_tsvector('english', coalesce(l.name, '')), 'A') ||
                              setweight(to_tsvector('english', coalesce(l.admin1, '')), 'A') ||
                              setweight(to_tsvector('english', coalesce(l.country_name, '')), 'A') ||
                              setweight(to_tsvector('english', coalesce(p_agg.names, '')), 'A') ||
-                                 -- MEDIUM CONFIDENCE ('B')
+                             -- MEDIUM CONFIDENCE ('B')
+                             setweight(to_tsvector('english', mi.filename), 'B') ||
                              setweight(to_tsvector('english', coalesce(l.admin2, '')), 'B') ||
-                             setweight(to_tsvector('english', coalesce(c.ocr_text, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(w.condition, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(c.ocr_text, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(c.event_type, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(c.setting, '')), 'B') ||
+                             setweight(to_tsvector('english', coalesce(c.search_term, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(c.landmark_name, '')), 'B') ||
                              setweight(to_tsvector('english', coalesce(c.caption, '')), 'B') ||
-                                 -- LOWER CONFIDENCE ('C' & 'D')
+                             -- LOWER CONFIDENCE ('C' & 'D')
                              setweight(to_tsvector('english', to_char(mi.taken_at_local, 'YYYY Month Day')), 'C') ||
                              setweight(to_tsvector('english', CASE WHEN mi.is_video THEN 'video' ELSE 'photo' END), 'D')
                          FROM media_item mi

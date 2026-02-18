@@ -167,7 +167,7 @@ impl VisualAnalysisStore {
         sqlx::query!(
             r#"
             INSERT INTO classification (
-                visual_analysis_id, caption, main_subject, contains_pets, contains_vehicle,
+                visual_analysis_id, caption, main_subject, search_term, contains_pets, contains_vehicle,
                 contains_landmarks, contains_people, contains_animals, contains_text, is_indoor, is_food, is_drink,
                 is_event, is_document, is_landscape, is_cityscape, is_activity, setting,
                 animal_type, food_name, drink_name, vehicle_type, event_type, landmark_name, ocr_text,
@@ -175,12 +175,13 @@ impl VisualAnalysisStore {
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-                $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
+                $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
             )
             "#,
             visual_analysis_id,
             classification.caption,
             classification.main_subject,
+            classification.search_term,
             classification.contains_pets,
             classification.contains_vehicle,
             classification.contains_landmarks,

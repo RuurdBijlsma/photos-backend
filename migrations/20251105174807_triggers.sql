@@ -105,7 +105,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Replace the previous trg_album_media_item_count with this:
 DROP TRIGGER IF EXISTS trg_album_media_item_count ON album_media_item;
 
 CREATE TRIGGER trg_album_media_item_count_insert
