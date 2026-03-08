@@ -1,4 +1,5 @@
-use common_types::ml_analysis::PyFace;
+use face_id::analyzer::FaceAnalysis;
+use face_id::gender_age::Gender;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -20,16 +21,6 @@ pub struct Face {
     pub confidence: f32,
     pub age: i32,
     pub sex: String,
-    pub mouth_left_x: f32,
-    pub mouth_left_y: f32,
-    pub mouth_right_x: f32,
-    pub mouth_right_y: f32,
-    pub nose_tip_x: f32,
-    pub nose_tip_y: f32,
-    pub eye_left_x: f32,
-    pub eye_left_y: f32,
-    pub eye_right_x: f32,
-    pub eye_right_y: f32,
 }
 
 /// Corresponds to the 'face' table.
@@ -43,39 +34,24 @@ pub struct CreateFace {
     pub confidence: f32,
     pub age: i32,
     pub sex: String,
-    pub mouth_left_x: f32,
-    pub mouth_left_y: f32,
-    pub mouth_right_x: f32,
-    pub mouth_right_y: f32,
-    pub nose_tip_x: f32,
-    pub nose_tip_y: f32,
-    pub eye_left_x: f32,
-    pub eye_left_y: f32,
-    pub eye_right_x: f32,
-    pub eye_right_y: f32,
 }
 
-impl From<PyFace> for CreateFace {
-    fn from(face_box: PyFace) -> Self {
+impl From<FaceAnalysis> for CreateFace {
+    fn from(face_box: FaceAnalysis) -> Self {
+        let emb = face_box.embedding.unwrap();
         Self {
-            embedding: face_box.embedding.into(),
-            position_x: face_box.position.0,
-            position_y: face_box.position.1,
-            width: face_box.width,
-            height: face_box.height,
-            confidence: face_box.confidence,
-            age: face_box.age,
-            sex: face_box.sex,
-            mouth_left_x: face_box.mouth_left.0,
-            mouth_left_y: face_box.mouth_left.1,
-            mouth_right_x: face_box.mouth_right.0,
-            mouth_right_y: face_box.mouth_right.1,
-            nose_tip_x: face_box.nose_tip.0,
-            nose_tip_y: face_box.nose_tip.1,
-            eye_left_x: face_box.eye_left.0,
-            eye_left_y: face_box.eye_left.1,
-            eye_right_x: face_box.eye_right.0,
-            eye_right_y: face_box.eye_right.1,
+            embedding: emb.into(),
+            position_x: face_box.detection.bbox.x1,
+            position_y: face_box.detection.bbox.y1,
+            width: face_box.detection.bbox.width(),
+            height: face_box.detection.bbox.height(),
+            confidence: face_box.detection.score,
+            age: face_box.gender_age.clone().unwrap().age as i32,
+            sex: if face_box.gender_age.unwrap().gender == Gender::Male {
+                "Male".to_owned()
+            } else {
+                "Female".to_owned()
+            },
         }
     }
 }

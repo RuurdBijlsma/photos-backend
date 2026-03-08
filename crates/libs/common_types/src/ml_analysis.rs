@@ -1,56 +1,32 @@
+use face_id::analyzer::FaceAnalysis;
+use material_color_utils::MaterializedTheme;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct PyFace {
-    pub position: (f32, f32),
-    pub width: f32,
-    pub height: f32,
-    pub confidence: f32,
-    pub age: i32,
-    pub sex: String,
-    pub mouth_left: (f32, f32),
-    pub mouth_right: (f32, f32),
-    pub nose_tip: (f32, f32),
-    pub eye_left: (f32, f32),
-    pub eye_right: (f32, f32),
-    pub embedding: Vec<f32>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct PyDetectedObject {
-    pub position: (f32, f32),
-    pub width: f32,
-    pub height: f32,
-    pub confidence: f32,
-    pub label: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct PyColorData {
-    pub themes: Vec<Value>,
+pub struct MLColorData {
+    pub themes: Vec<MaterializedTheme>,
     pub prominent_colors: Vec<String>,
     pub average_hue: f32,
     pub average_saturation: f32,
     pub average_lightness: f32,
-    pub histogram: PyColorHistogram,
+    pub histogram: MLColorHistogram,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct PyColorHistogram {
+pub struct MLColorHistogram {
     pub bins: i32,
-    pub channels: PyRGBChannels,
+    pub channels: MLRGBChannels,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct PyRGBChannels {
+pub struct MLRGBChannels {
     pub red: Vec<i32>,
     pub green: Vec<i32>,
     pub blue: Vec<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct RawQualityMeasurement {
+pub struct MLQualityMeasurement {
     pub blurriness: f64,
     pub noisiness: f64,
     pub exposure: f64,
@@ -59,7 +35,7 @@ pub struct RawQualityMeasurement {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
-pub struct LlmQualityJudgement {
+pub struct MLLlmQualityJudgement {
     pub exposure: u8,
     pub contrast: u8,
     pub sharpness: u8,
@@ -73,7 +49,7 @@ pub struct LlmQualityJudgement {
     pub style_suitability: u8,
 }
 
-impl LlmQualityJudgement {
+impl MLLlmQualityJudgement {
     #[must_use]
     pub fn weighted_score(&self) -> f32 {
         let weights = [
@@ -113,14 +89,14 @@ impl LlmQualityJudgement {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct CombinedQuality {
-    pub judged: Option<LlmQualityJudgement>,
-    pub measured: RawQualityMeasurement,
+pub struct MLCombinedQuality {
+    pub judged: Option<MLLlmQualityJudgement>,
+    pub measured: MLQualityMeasurement,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct LlmClassification {
+pub struct MLLlmClassification {
     pub caption: String,
     pub main_subject: String,
     pub setting: String,
@@ -154,12 +130,11 @@ pub struct LlmClassification {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct RawVisualAnalysis {
+pub struct MLVisualAnalysis {
     pub percentage: i32,
-    pub color_data: PyColorData,
-    pub quality: CombinedQuality,
-    pub llm_classification: LlmClassification,
+    pub color_data: MLColorData,
+    pub quality: MLCombinedQuality,
+    pub llm_classification: MLLlmClassification,
     pub embedding: Vec<f32>,
-    pub faces: Vec<PyFace>,
-    pub objects: Vec<PyDetectedObject>,
+    pub faces: Vec<FaceAnalysis>,
 }

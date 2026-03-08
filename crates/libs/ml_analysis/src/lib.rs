@@ -9,7 +9,6 @@
 mod chat_types;
 mod classify;
 mod color_data;
-mod py_interop;
 mod quality_judge;
 mod quality_measure;
 mod utils;
@@ -18,7 +17,6 @@ mod visual_analyzer;
 pub use chat_types::*;
 pub use classify::get_llm_classification;
 pub use color_data::get_color_data;
-pub use py_interop::PyInterop;
 pub use quality_judge::get_quality_judgement;
 pub use quality_measure::get_quality_measurement;
 pub use utils::*;

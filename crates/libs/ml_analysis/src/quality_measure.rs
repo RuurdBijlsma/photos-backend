@@ -1,5 +1,5 @@
 use color_eyre::eyre::Result;
-use common_types::ml_analysis::RawQualityMeasurement;
+use common_types::ml_analysis::MLQualityMeasurement;
 use image::{DynamicImage, GrayImage, imageops};
 use imageproc::filter::{laplacian_filter, median_filter};
 use std::path::Path;
@@ -9,7 +9,7 @@ use std::path::Path;
 /// # Errors
 ///
 /// This function will return an error if the image path is invalid or the image cannot be decoded.
-pub fn get_quality_measurement(image_path: &Path) -> Result<RawQualityMeasurement> {
+pub fn get_quality_measurement(image_path: &Path) -> Result<MLQualityMeasurement> {
     let img = image::ImageReader::open(image_path)?.decode()?;
     let gray_img = resize_if_large(img, 2000).to_luma8();
 
@@ -20,7 +20,7 @@ pub fn get_quality_measurement(image_path: &Path) -> Result<RawQualityMeasuremen
 
     let weighted_score = (blurriness * 0.5 + noisiness * 0.3 + exposure * 0.2) / 1.0 * 100.0;
 
-    Ok(RawQualityMeasurement {
+    Ok(MLQualityMeasurement {
         weighted_score,
         blurriness,
         noisiness,

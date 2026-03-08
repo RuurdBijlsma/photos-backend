@@ -1,10 +1,9 @@
 use crate::database::visual_analysis::caption_data::ClassificationData;
 use crate::database::visual_analysis::color_data::ColorData;
-use crate::database::visual_analysis::detect_object::DetectedObject;
 use crate::database::visual_analysis::face::{CreateFace, Face};
 use crate::database::visual_analysis::quality::QualityScore;
 use chrono::{DateTime, Utc};
-use common_types::ml_analysis::RawVisualAnalysis;
+use common_types::ml_analysis::MLVisualAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -22,19 +21,17 @@ pub struct CreateVisualAnalysis {
     pub embedding: Vector,
     pub percentage: i32,
     pub faces: Vec<CreateFace>,
-    pub detected_objects: Vec<DetectedObject>,
     pub quality: QualityScore,
     pub colors: ColorData,
     pub classification: ClassificationData,
 }
 
-impl From<RawVisualAnalysis> for CreateVisualAnalysis {
-    fn from(data: RawVisualAnalysis) -> Self {
+impl From<MLVisualAnalysis> for CreateVisualAnalysis {
+    fn from(data: MLVisualAnalysis) -> Self {
         Self {
             embedding: data.embedding.into(),
             percentage: data.percentage,
             faces: data.faces.into_iter().map(Into::into).collect(),
-            detected_objects: data.objects.into_iter().map(Into::into).collect(),
             quality: data.quality.into(),
             colors: data.color_data.into(),
             classification: data.llm_classification.into(),
@@ -48,7 +45,6 @@ pub struct ReadVisualAnalysis {
     pub created_at: DateTime<Utc>,
     pub percentage: i32,
     pub faces: Vec<Face>,
-    pub detected_objects: Vec<DetectedObject>,
     pub quality: QualityScore,
     pub colors: ColorData,
     pub classification: ClassificationData,

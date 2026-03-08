@@ -1,5 +1,5 @@
 use color_eyre::eyre::Result;
-use common_types::ml_analysis::LlmQualityJudgement;
+use common_types::ml_analysis::MLLlmQualityJudgement;
 use language_model::LlamaClient;
 use serde_json::json;
 use std::path::Path;
@@ -7,7 +7,7 @@ use std::path::Path;
 pub async fn get_quality_judgement(
     client: &LlamaClient,
     file: &Path,
-) -> Result<Option<LlmQualityJudgement>> {
+) -> Result<Option<MLLlmQualityJudgement>> {
     let judgement_schema: serde_json::Value = json!({
         "type": "object",
         "properties": {
@@ -57,6 +57,6 @@ Only award 9–10 for truly exceptional quality. Avoid giving perfect scores unl
         .call()
         .await?;
 
-    let deserialize_result = serde_json::from_str::<LlmQualityJudgement>(&response_text);
+    let deserialize_result = serde_json::from_str::<MLLlmQualityJudgement>(&response_text);
     Ok(deserialize_result.ok())
 }

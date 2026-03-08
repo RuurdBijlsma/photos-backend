@@ -43,11 +43,9 @@ impl VisualAnalysisStore {
                 r#"
                 INSERT INTO face (
                     visual_analysis_id, position_x, position_y, width, height, confidence, age, sex,
-                    mouth_left_x, mouth_left_y, mouth_right_x, mouth_right_y,
-                    nose_tip_x, nose_tip_y, eye_left_x, eye_left_y, eye_right_x, eye_right_y,
                     embedding
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 "#,
                 visual_analysis_id,
                 face.position_x,
@@ -57,36 +55,7 @@ impl VisualAnalysisStore {
                 face.confidence,
                 face.age,
                 &face.sex,
-                face.mouth_left_x,
-                face.mouth_left_y,
-                face.mouth_right_x,
-                face.mouth_right_y,
-                face.nose_tip_x,
-                face.nose_tip_y,
-                face.eye_left_x,
-                face.eye_left_y,
-                face.eye_right_x,
-                face.eye_right_y,
                 face.embedding as _,
-            )
-                .execute(&mut **tx)
-                .await?;
-        }
-
-        // --- Detected Objects ---
-        for object in &analysis.detected_objects {
-            sqlx::query!(
-                r#"
-                INSERT INTO detected_object (visual_analysis_id, position_x, position_y, width, height, confidence, label)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                "#,
-                visual_analysis_id,
-                object.position_x,
-                object.position_y,
-                object.width,
-                object.height,
-                object.confidence,
-                &object.label,
             )
                 .execute(&mut **tx)
                 .await?;

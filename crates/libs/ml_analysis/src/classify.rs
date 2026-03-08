@@ -1,5 +1,5 @@
 use color_eyre::eyre::{Context, Result};
-use common_types::ml_analysis::LlmClassification;
+use common_types::ml_analysis::MLLlmClassification;
 use language_model::LlamaClient;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -52,7 +52,7 @@ struct ClassifyDetails {
 pub async fn get_llm_classification(
     llm: &LlamaClient,
     img_path: &Path,
-) -> Result<LlmClassification> {
+) -> Result<MLLlmClassification> {
     let basic_info: BasicClassifyCaption =
         request_structured_data(llm, img_path, prompts::BASIC_INFO, schemas::basic_info()).await?;
     let flags: ClassifyFlags = request_structured_data(
@@ -466,10 +466,10 @@ fn map_to_final_result(
     categories: &ClassifyFlags,
     details: Option<ClassifyDetails>,
     ocr: Option<String>,
-) -> LlmClassification {
+) -> MLLlmClassification {
     let det = details.unwrap_or_default();
 
-    LlmClassification {
+    MLLlmClassification {
         caption: basic.caption,
         main_subject: basic.main_subject.to_lowercase(),
         setting: basic.setting.to_lowercase(),

@@ -24,8 +24,8 @@ pub struct QualityScore {
     pub measured_weighted_score: f64,
 }
 
-impl From<ml_analysis::CombinedQuality> for QualityScore {
-    fn from(combined_quality: ml_analysis::CombinedQuality) -> Self {
+impl From<ml_analysis::MLCombinedQuality> for QualityScore {
+    fn from(combined_quality: ml_analysis::MLCombinedQuality) -> Self {
         let measured = combined_quality.measured;
         combined_quality.judged.map_or(
             Self {

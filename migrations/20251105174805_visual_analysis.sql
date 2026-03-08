@@ -27,37 +27,12 @@ CREATE TABLE face
     confidence         REAL        NOT NULL,
     age                INT         NOT NULL,
     sex                TEXT        NOT NULL,
-    mouth_left_x       REAL        NOT NULL,
-    mouth_left_y       REAL        NOT NULL,
-    mouth_right_x      REAL        NOT NULL,
-    mouth_right_y      REAL        NOT NULL,
-    nose_tip_x         REAL        NOT NULL,
-    nose_tip_y         REAL        NOT NULL,
-    eye_left_x         REAL        NOT NULL,
-    eye_left_y         REAL        NOT NULL,
-    eye_right_x        REAL        NOT NULL,
-    eye_right_y        REAL        NOT NULL,
     embedding          VECTOR(512) NOT NULL,
     person_id          BIGINT      REFERENCES person (id) ON DELETE SET NULL
 );
 CREATE INDEX idx_face_visual_analysis_id ON face (visual_analysis_id);
 CREATE INDEX ON face USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX idx_face_person_id ON face (person_id);
-
-
-CREATE TABLE detected_object
-(
-    id                 BIGSERIAL PRIMARY KEY,
-    visual_analysis_id BIGINT NOT NULL REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    position_x         REAL   NOT NULL,
-    position_y         REAL   NOT NULL,
-    width              REAL   NOT NULL,
-    height             REAL   NOT NULL,
-    confidence         REAL   NOT NULL,
-    label              TEXT   NOT NULL
-);
-CREATE INDEX idx_detected_object_visual_analysis_id ON detected_object (visual_analysis_id);
-CREATE INDEX idx_detected_object_label ON detected_object (label);
 
 
 -- Stores image quality metrics.

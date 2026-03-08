@@ -6,7 +6,7 @@ use color_eyre::eyre::{Result, bail, eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
-use common_types::ml_analysis::RawVisualAnalysis;
+use common_types::ml_analysis::MLVisualAnalysis;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info};
 
@@ -63,7 +63,7 @@ async fn get_analysis_data(
     context: &WorkerContext,
     file_path: &Path,
     media_item_id: &str,
-) -> Result<Vec<RawVisualAnalysis>> {
+) -> Result<Vec<MLVisualAnalysis>> {
     let file_hash = hash_file(file_path)?;
     if context.settings.ingest.enable_cache
         && let Some(cached_analysis) = get_analysis_cache(&file_hash).await?
@@ -84,7 +84,7 @@ async fn compute_analysis(
     context: &WorkerContext,
     file_path: &Path,
     media_item_id: &str,
-) -> Result<Vec<RawVisualAnalysis>> {
+) -> Result<Vec<MLVisualAnalysis>> {
     let images_to_analyze = get_images_to_analyze(context, file_path, media_item_id);
     let mut analyses = Vec::new();
 
@@ -151,7 +151,7 @@ async fn save_results(
     job_id: i64,
     media_item_id: &str,
     user_id: i32,
-    analyses: &[RawVisualAnalysis],
+    analyses: &[MLVisualAnalysis],
     file_path: &Path,
 ) -> Result<JobResult> {
     let mut tx = context.pool.begin().await?;

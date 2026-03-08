@@ -1,4 +1,4 @@
-use common_types::ml_analysis::LlmClassification;
+use common_types::ml_analysis::MLLlmClassification;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -37,8 +37,8 @@ pub struct ClassificationData {
     pub activity_description: Option<String>,
 }
 
-impl From<LlmClassification> for ClassificationData {
-    fn from(caption_data: LlmClassification) -> Self {
+impl From<MLLlmClassification> for ClassificationData {
+    fn from(caption_data: MLLlmClassification) -> Self {
         Self {
             caption: caption_data.caption,
             setting: caption_data.setting,

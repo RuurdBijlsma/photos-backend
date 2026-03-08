@@ -1,6 +1,6 @@
 use color_eyre::Result;
 use color_eyre::eyre::bail;
-use common_types::ml_analysis::RawVisualAnalysis;
+use common_types::ml_analysis::MLVisualAnalysis;
 use directories::ProjectDirs;
 use generate_thumbnails::copy_dir_contents;
 use media_analyzer::MediaMetadata;
@@ -24,7 +24,7 @@ pub struct CachedIngestResult {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CachedAnalysisResult {
-    pub visual_analyses: Vec<RawVisualAnalysis>,
+    pub visual_analyses: Vec<MLVisualAnalysis>,
     pub version: u32,
 }
 
@@ -98,7 +98,7 @@ pub async fn write_ingest_cache(hash: &str, media_metadata: MediaMetadata) -> Re
     Ok(())
 }
 
-pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<RawVisualAnalysis>>> {
+pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<MLVisualAnalysis>>> {
     let process_cache_file = cache_folder().join(hash).join(ANALYSIS_RESULT_FILENAME);
     if !process_cache_file.exists() {
         return Ok(None);
@@ -123,7 +123,7 @@ pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<RawVisualAnalys
     Ok(None)
 }
 
-pub async fn write_analysis_cache(hash: &str, analyses: &[RawVisualAnalysis]) -> Result<()> {
+pub async fn write_analysis_cache(hash: &str, analyses: &[MLVisualAnalysis]) -> Result<()> {
     for analysis in analyses {
         if analysis.embedding.len() != EXPECTED_EMBEDDING_LENGTH {
             bail!(

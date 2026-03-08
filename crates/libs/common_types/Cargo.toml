@@ -7,10 +7,11 @@ build = "build.rs"
 [dependencies]
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json", "uuid"] }
 serde = { version = "1.0.228", features = ["derive"] }
-utoipa = { version = "5", features = ["axum_extras", "chrono"] }
-serde_json = "1.0.145"
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono"] }
 prost = "0.14.3"
 url = "2.5.7"
+material-color-utils = "0.1.3"
+face_id = "0.3.0"
 
 [build-dependencies]
 prost-build = "0.14.3"
