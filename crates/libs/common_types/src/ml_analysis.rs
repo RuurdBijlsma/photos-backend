@@ -130,11 +130,16 @@ pub struct MLLlmClassification {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct MLVisualAnalysis {
+pub struct MLFastAnalysis {
     pub percentage: i32,
     pub color_data: MLColorData,
-    pub quality: MLCombinedQuality,
-    pub llm_classification: MLLlmClassification,
     pub embedding: Vec<f32>,
     pub faces: Vec<FaceAnalysis>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct MLChatAnalysis {
+    pub percentage: i32,
+    pub quality: MLCombinedQuality,
+    pub llm_classification: MLLlmClassification,
 }

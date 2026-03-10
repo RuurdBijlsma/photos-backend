@@ -98,6 +98,11 @@ pub async fn enqueue_full_ingest(
         .user_id(user_id)
         .call()
         .await?;
+    enqueue_job::<()>(pool, settings, JobType::IngestLlm)
+        .relative_path(relative_path)
+        .user_id(user_id)
+        .call()
+        .await?;
 
     Ok(())
 }
@@ -113,7 +118,10 @@ pub async fn per_job_logic(
 ) -> Result<()> {
     match job_type {
         JobType::Remove => cancel_ingest_analysis_jobs(tx, relative_path).await?,
-        JobType::IngestMetadata | JobType::IngestThumbnails | JobType::IngestAnalysis => {
+        JobType::IngestMetadata
+        | JobType::IngestThumbnails
+        | JobType::IngestAnalysis
+        | JobType::IngestLlm => {
             cancel_remove_jobs(tx, relative_path).await?;
         }
         _ => (),
@@ -165,7 +173,7 @@ async fn cancel_ingest_analysis_jobs(
         WHERE
             relative_path = $1
             AND status IN ('queued', 'running')
-            AND job_type IN ('ingest_metadata', 'ingest_thumbnails', 'ingest_analysis')
+            AND job_type IN ('ingest_metadata', 'ingest_thumbnails', 'ingest_analysis', 'ingest_llm')
         "#,
         relative_path
     )
@@ -205,6 +213,7 @@ pub async fn bulk_enqueue_full_ingest(
             JobType::IngestMetadata,
             JobType::IngestThumbnails,
             JobType::IngestAnalysis,
+            JobType::IngestLlm,
         ] {
             all_paths.push(path.clone());
             all_types.push(job_type);

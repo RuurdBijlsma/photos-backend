@@ -1,6 +1,6 @@
 use color_eyre::Result;
 use color_eyre::eyre::bail;
-use common_types::ml_analysis::MLVisualAnalysis;
+use common_types::ml_analysis::{MLChatAnalysis, MLFastAnalysis};
 use directories::ProjectDirs;
 use generate_thumbnails::copy_dir_contents;
 use media_analyzer::MediaMetadata;
@@ -12,8 +12,10 @@ use tracing::warn;
 const THUMBNAILS_FOLDER: &str = "thumbnails";
 const INGEST_RESULT_FILENAME: &str = "ingest_result.json";
 const ANALYSIS_RESULT_FILENAME: &str = "analysis_result.json";
+const LLM_RESULT_FILENAME: &str = "llm_result.json";
 const INGEST_CACHE_VERSION: u32 = 2;
 const ANALYSIS_CACHE_VERSION: u32 = 1;
+const LLM_CACHE_VERSION: u32 = 1;
 const EXPECTED_EMBEDDING_LENGTH: usize = 768;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -24,7 +26,13 @@ pub struct CachedIngestResult {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CachedAnalysisResult {
-    pub visual_analyses: Vec<MLVisualAnalysis>,
+    pub fast_analyses: Vec<MLFastAnalysis>,
+    pub version: u32,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CachedLlmResult {
+    pub llm_analyses: Vec<MLChatAnalysis>,
     pub version: u32,
 }
 
@@ -98,7 +106,7 @@ pub async fn write_ingest_cache(hash: &str, media_metadata: MediaMetadata) -> Re
     Ok(())
 }
 
-pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<MLVisualAnalysis>>> {
+pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<MLFastAnalysis>>> {
     let process_cache_file = cache_folder().join(hash).join(ANALYSIS_RESULT_FILENAME);
     if !process_cache_file.exists() {
         return Ok(None);
@@ -108,12 +116,12 @@ pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<MLVisualAnalysi
     if let Ok(cached_analysis) = serde_json::from_str::<CachedAnalysisResult>(&data)
         && cached_analysis.version == ANALYSIS_CACHE_VERSION
     {
-        if let Some(va) = cached_analysis.visual_analyses.first()
+        if let Some(va) = cached_analysis.fast_analyses.first()
             && va.embedding.len() != EXPECTED_EMBEDDING_LENGTH
         {
             return Ok(None);
         }
-        return Ok(Some(cached_analysis.visual_analyses));
+        return Ok(Some(cached_analysis.fast_analyses));
     }
     warn!(
         "Found invalid cache file for analysis. Deleting {}/{}.",
@@ -123,7 +131,7 @@ pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<MLVisualAnalysi
     Ok(None)
 }
 
-pub async fn write_analysis_cache(hash: &str, analyses: &[MLVisualAnalysis]) -> Result<()> {
+pub async fn write_analysis_cache(hash: &str, analyses: &[MLFastAnalysis]) -> Result<()> {
     for analysis in analyses {
         if analysis.embedding.len() != EXPECTED_EMBEDDING_LENGTH {
             bail!(
@@ -137,7 +145,38 @@ pub async fn write_analysis_cache(hash: &str, analyses: &[MLVisualAnalysis]) -> 
     let ingest_cache_file = hash_folder.join(ANALYSIS_RESULT_FILENAME);
     let json = serde_json::to_string(&CachedAnalysisResult {
         version: ANALYSIS_CACHE_VERSION,
-        visual_analyses: Vec::from(analyses),
+        fast_analyses: Vec::from(analyses),
+    })?;
+    fs::write(ingest_cache_file, json).await?;
+    Ok(())
+}
+
+pub async fn get_llm_cache(hash: &str) -> Result<Option<Vec<MLChatAnalysis>>> {
+    let process_cache_file = cache_folder().join(hash).join(LLM_RESULT_FILENAME);
+    if !process_cache_file.exists() {
+        return Ok(None);
+    }
+
+    let data = fs::read_to_string(&process_cache_file).await?;
+    if let Ok(cached_analysis) = serde_json::from_str::<CachedLlmResult>(&data)
+        && cached_analysis.version == LLM_CACHE_VERSION
+    {
+        return Ok(Some(cached_analysis.llm_analyses));
+    }
+    warn!(
+        "Found invalid cache file for llm analysis. Deleting {}/{}.",
+        hash, LLM_RESULT_FILENAME
+    );
+    fs::remove_file(&process_cache_file).await?;
+    Ok(None)
+}
+
+pub async fn write_llm_cache(hash: &str, analyses: &[MLChatAnalysis]) -> Result<()> {
+    let hash_folder = hash_cache_folder(hash).await?;
+    let ingest_cache_file = hash_folder.join(LLM_RESULT_FILENAME);
+    let json = serde_json::to_string(&CachedLlmResult {
+        version: LLM_CACHE_VERSION,
+        llm_analyses: Vec::from(analyses),
     })?;
     fs::write(ingest_cache_file, json).await?;
     Ok(())

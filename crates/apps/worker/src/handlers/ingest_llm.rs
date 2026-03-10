@@ -1,17 +1,19 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{get_analysis_cache, hash_file, write_analysis_cache};
+use crate::handlers::common::cache::{
+    get_llm_cache, hash_file, write_llm_cache,
+};
 use crate::handlers::common::utils::get_images_to_analyze;
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::eyre::{Result, bail, eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
-use common_types::ml_analysis::MLFastAnalysis;
+use common_types::ml_analysis::MLChatAnalysis;
 use std::path::{Path};
 use tracing::{debug, info};
 
-/// Handles the analysis of a given job.
+/// Handles the llm analysis of a given job.
 ///
 /// # Errors
 ///
@@ -41,75 +43,80 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let media_item_id = MediaItemStore::find_id_by_relative_path(&context.pool, relative_path)
         .await?
         .ok_or_else(|| eyre!("Could not find media item by relative_path."))?;
-    let analyses = get_llm_data(context, &file_path, &media_item_id).await?;
-    let user_id = if let Some(uid) = job.user_id {
-        uid
-    } else {
-        MediaItemStore::find_user_by_id(&context.pool, &media_item_id)
-            .await?
-            .ok_or_else(|| eyre!("Invalid media item linked to visual analysis"))?
-    };
-    save_results(
+    let (percentages, v_ids): (Vec<_>, Vec<_>) = sqlx::query!(
+        "SELECT percentage, id
+        FROM visual_analysis
+        WHERE media_item_id = $1",
+        media_item_id
+    )
+    .fetch_all(&context.pool)
+    .await?
+    .iter()
+    .map(|row| (row.percentage, row.id))
+    .unzip();
+    let percentages = percentages.iter().map(|p| *p as u64).collect::<Vec<_>>();
+
+    let llm_analyses =
+        get_cached_llm_data(context, &file_path, &media_item_id, &percentages).await?;
+
+    let result: Vec<(i64, MLChatAnalysis)> = v_ids
+        .into_iter()
+        .zip(llm_analyses)
+        .collect();
+
+    save_llm_results(
         context,
         job.id,
-        &media_item_id,
-        user_id,
-        &analyses,
+        result,
         &file_path,
     )
     .await
 }
 
-async fn get_llm_data(
+async fn get_cached_llm_data(
     context: &WorkerContext,
     file_path: &Path,
     media_item_id: &str,
-) -> Result<Vec<MLFastAnalysis>> {
+    percentages: &[u64],
+) -> Result<Vec<MLChatAnalysis>> {
     let file_hash = hash_file(file_path)?;
     if context.settings.ingest.enable_cache
-        && let Some(cached_analysis) = get_analysis_cache(&file_hash).await?
+        && let Some(cached_analysis) = get_llm_cache(&file_hash).await?
     {
-        debug!("Using analysis cache for {}", media_item_id);
+        debug!(
+            "Using analysis cache for {}",
+            file_path
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or_default()
+        );
         return Ok(cached_analysis);
     }
-    let analyses = compute_analysis(context, file_path, media_item_id).await?;
+    let analyses = get_llm_data(context, file_path, media_item_id, percentages).await?;
     if context.settings.ingest.enable_cache {
-        write_analysis_cache(&file_hash, &analyses).await?;
+        write_llm_cache(&file_hash, &analyses).await?;
     }
 
     Ok(analyses)
 }
 
 /// Performs the actual ML analysis by spawning blocking tasks.
-async fn compute_analysis(
+async fn get_llm_data(
     context: &WorkerContext,
     file_path: &Path,
     media_item_id: &str,
-) -> Result<Vec<MLFastAnalysis>> {
-    let images_to_analyze = get_images_to_analyze(
-        context,
-        file_path,
-        media_item_id,
-        &context.settings.ingest.thumbnails.video_options.percentages,
-    );
+    percentages: &[u64],
+) -> Result<Vec<MLChatAnalysis>> {
+    let images_to_analyze = get_images_to_analyze(context, file_path, media_item_id, percentages);
     let mut analyses = Vec::new();
 
     for (percentage, image_path) in images_to_analyze {
-        let analyzer_settings = context.settings.ingest.analyzer.clone();
-        // This spawn blocking -> block_on is needed because analyze image does work on the
-        // main thread and this disturbs the integration test.
-        let Some(analyzer) = context.visual_analyzer.clone() else {
+        let Some(vis_analyzer) = context.visual_analyzer.clone() else {
             bail!("No `VisualAnalyzer` in `WorkerContext`, but analyze job handler was called.")
         };
-        let analysis_result = tokio::task::spawn_blocking(move || {
-            tokio::runtime::Handle::current().block_on(async move {
-                analyzer
-                    .fast_image_analysis(&analyzer_settings, &image_path, percentage)
-                    .await
-            })
-        })
-        .await??;
-
+        let analysis_result = vis_analyzer
+            .llm_analysis(&context.settings.ingest.analyzer, &image_path, percentage)
+            .await?;
         analyses.push(analysis_result);
     }
 
@@ -118,12 +125,10 @@ async fn compute_analysis(
 
 /// Saves the analysis results to the database in a transaction.
 /// Also checks for cancellation one last time before committing.
-async fn save_results(
+async fn save_llm_results(
     context: &WorkerContext,
     job_id: i64,
-    media_item_id: &str,
-    user_id: i32,
-    analyses: &[MLFastAnalysis],
+    results: Vec<(i64, MLChatAnalysis)>,
     file_path: &Path,
 ) -> Result<JobResult> {
     let mut tx = context.pool.begin().await?;
@@ -132,12 +137,12 @@ async fn save_results(
     if is_job_cancelled(&mut *tx, job_id).await? || !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
-    for analysis in analyses {
-        VisualAnalysisStore::create_fast_analysis(
+    for (visual_analysis_id, ml_chat_analysis) in results {
+        VisualAnalysisStore::add_llm_analysis(
             &mut tx,
-            media_item_id,
-            user_id,
-            &analysis.to_owned().into(),
+            visual_analysis_id,
+            &ml_chat_analysis.llm_classification.clone().into(),
+            &ml_chat_analysis.quality.clone().into(),
         )
         .await?;
     }

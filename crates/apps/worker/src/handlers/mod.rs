@@ -14,6 +14,7 @@ pub mod remove;
 pub mod scan;
 
 pub mod common;
+pub mod ingest_llm;
 
 /// The outcome of a job handler's execution.
 #[derive(Debug, PartialEq, Eq)]
@@ -35,6 +36,7 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::IngestMetadata => ingest_metadata::handle(context, job).await,
         JobType::IngestThumbnails => ingest_thumbnails::handle(context, job).await,
         JobType::IngestAnalysis => ingest_analysis::handle(context, job).await,
+        JobType::IngestLlm => ingest_llm::handle(context, job).await,
         JobType::Remove => remove::handle(context, job).await,
         JobType::Scan => scan::handle(context, job).await,
         JobType::CleanDB => clean_db::handle(context, job).await,

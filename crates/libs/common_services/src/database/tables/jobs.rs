@@ -21,6 +21,7 @@ pub enum JobType {
     IngestMetadata,
     IngestThumbnails,
     IngestAnalysis,
+    IngestLlm,
     Remove,
     Scan,
     CleanDB,
@@ -33,9 +34,7 @@ impl JobType {
     #[must_use]
     pub const fn get_priority(&self, is_video: bool) -> i32 {
         match self {
-            Self::IngestMetadata => {
-                50
-            }
+            Self::IngestMetadata => 50,
             Self::IngestThumbnails => {
                 if is_video {
                     65
@@ -48,6 +47,13 @@ impl JobType {
                     95
                 } else {
                     90
+                }
+            }
+            Self::IngestLlm => {
+                if is_video {
+                    155
+                } else {
+                    150
                 }
             }
             Self::Remove => 0,

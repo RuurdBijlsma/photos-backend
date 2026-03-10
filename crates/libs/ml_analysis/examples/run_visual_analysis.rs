@@ -71,7 +71,7 @@ async fn main() -> color_eyre::Result<()> {
         println!("analyze image {image_filename}");
         let now = Instant::now();
         let analysis = analyzer
-            .analyze_image(&settings.ingest.analyzer, &resized_img_file, 0)
+            .fast_image_analysis(&settings.ingest.analyzer, &resized_img_file, 0)
             .await?;
         let filename = format!("{image_filename}-analysis.json");
         let file = File::create(Path::new(&filename))?;
