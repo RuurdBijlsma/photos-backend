@@ -2,8 +2,9 @@ use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::{login, media_dir_contents};
 use app_state::MakeRelativePath;
 use color_eyre::eyre::{ContextCompat, Result, bail};
-use common_services::api::photos::interfaces::RandomPhotoResponse;
+use common_services::api::photos::interfaces::{ColorThemeParams, RandomPhotoResponse};
 use common_services::database::media_item::media_item::FullMediaItem;
+use material_color_utils::dynamic::variant::Variant;
 use reqwest::StatusCode;
 use serde_json::Value;
 use sqlx::__rt::sleep;
@@ -201,15 +202,10 @@ pub async fn test_get_color_theme(context: &TestContext) -> Result<()> {
             .get("variant")
             .and_then(|v| v.as_str())
             .expect("key: variant not found");
+        let variant_from_json: Variant = serde_json::from_str(variant)?;
         assert_eq!(
-            variant,
-            context
-                .settings
-                .ingest
-                .analyzer
-                .theme_generation
-                .variant
-                .as_str()
+            variant_from_json,
+            context.settings.ingest.analyzer.theme_generation.variant
         );
     }
 

@@ -6,7 +6,7 @@ ingest:
   analyzer:
     llm_base_url: "http://localhost:8080"
     search:
-      embedder_model_id: RuteNL/DFN5B-CLIP-ViT-H-14-378-ONNX
+      embedder_model_id: RuteNL/MobileCLIP2-S3-OpenCLIP-ONNX
       semantic_weight: 0.5
       text_weight: 0.5
     analyze_image_size: 720

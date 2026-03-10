@@ -108,12 +108,6 @@ impl MediaItemStore {
                                 jsonb_agg(to_jsonb(f)),
                                 '[]'::jsonb
                             ) FROM face f WHERE f.visual_analysis_id = va.id
-                        ),
-                        'detected_objects', (
-                            SELECT COALESCE(
-                                jsonb_agg(to_jsonb(obj)),
-                                '[]'::jsonb
-                            ) FROM detected_object obj WHERE obj.visual_analysis_id = va.id
                         )
                     )
                     ORDER BY va.created_at DESC

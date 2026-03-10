@@ -14,7 +14,7 @@ const INGEST_RESULT_FILENAME: &str = "ingest_result.json";
 const ANALYSIS_RESULT_FILENAME: &str = "analysis_result.json";
 const INGEST_CACHE_VERSION: u32 = 2;
 const ANALYSIS_CACHE_VERSION: u32 = 1;
-const EXPECTED_EMBEDDING_LENGTH: usize = 1024;
+const EXPECTED_EMBEDDING_LENGTH: usize = 768;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CachedIngestResult {

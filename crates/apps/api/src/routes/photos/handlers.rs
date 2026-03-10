@@ -8,7 +8,6 @@ use common_services::api::photos::service::{
 };
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
-use ml_analysis::get_color_theme;
 
 use crate::api_state::ApiContext;
 use axum::http::header;
@@ -18,6 +17,8 @@ use axum_extra::headers::Range;
 use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::PhotoThumbnailParams;
 use common_services::database::media_item_store::MediaItemStore;
+use material_color_utils::utils::color_utils::Argb;
+use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
 
 #[utoipa::path(
@@ -84,14 +85,14 @@ pub async fn get_random_photo(
 pub async fn get_color_theme_handler(
     extract::State(ingestion): extract::State<IngestSettings>,
     extract::Query(params): extract::Query<ColorThemeParams>,
-) -> Result<Json<serde_json::Value>, PhotosError> {
+) -> Result<Json<MaterializedTheme>, PhotosError> {
     let variant = &ingestion.analyzer.theme_generation.variant;
     let contrast_level = ingestion.analyzer.theme_generation.contrast_level;
-    Ok(Json(get_color_theme(
-        &params.color,
-        variant,
-        contrast_level as f32,
-    )?))
+    let theme = theme_from_color(Argb::from_hex(&params.color)?)
+        .variant(*variant)
+        .contrast_level(contrast_level)
+        .call();
+    Ok(Json(theme))
 }
 
 #[utoipa::path(

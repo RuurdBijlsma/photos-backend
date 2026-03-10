@@ -189,8 +189,8 @@ dependencies = [
  "common_types",
  "http",
  "jsonwebtoken",
+ "material-color-utils",
  "mime_guess",
- "ml_analysis",
  "open_clip_inference",
  "reqwest 0.13.2",
  "rustls",
@@ -1104,6 +1104,7 @@ dependencies = [
  "imagesize",
  "jsonwebtoken",
  "kamadak-exif",
+ "material-color-utils",
  "media_analyzer",
  "mime_guess",
  "open_clip_inference",
@@ -2095,9 +2096,9 @@ dependencies = [
 
 [[package]]
 name = "face_id"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5caf4ee5432c54616f2e03a9fd94a9dbcde3c8598a8778c21d75995e57f5770"
+checksum = "103f0e099482836fb5d2b5cdb987d177333c9b03157602d6a1c2061ee47d448c"
 dependencies = [
  "bon",
  "hdbscan",
@@ -3947,7 +3948,6 @@ dependencies = [
  "language_model",
  "material-color-utils",
  "open_clip_inference",
- "ort",
  "palette",
  "serde",
  "serde_json",
@@ -7168,6 +7168,7 @@ dependencies = [
  "common_services",
  "common_types",
  "futures-util",
+ "material-color-utils",
  "prost",
  "reqwest 0.13.2",
  "serde_json",

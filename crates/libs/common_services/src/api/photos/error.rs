@@ -3,6 +3,7 @@ use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use color_eyre::eyre;
+use material_color_utils::utils::error::ColorParseError;
 use serde_json::json;
 use thiserror::Error;
 
@@ -31,6 +32,9 @@ pub enum PhotosError {
 
     #[error("Invalid range requested")]
     InvalidRange,
+
+    #[error("Error generating a material color theme.")]
+    ColorTheme(#[from] ColorParseError),
 }
 
 impl IntoResponse for PhotosError {
@@ -53,6 +57,7 @@ impl IntoResponse for PhotosError {
             Self::UnsupportedMediaType => (StatusCode::UNSUPPORTED_MEDIA_TYPE, self.to_string()),
             Self::Cancelled=>(StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
             Self::InvalidRange => (StatusCode::RANGE_NOT_SATISFIABLE, self.to_string()),
+            Self::ColorTheme(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
         };
 
         let body = Json(json!({ "error": error_message }));

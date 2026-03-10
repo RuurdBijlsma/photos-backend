@@ -65,7 +65,7 @@ impl VisualAnalyzer {
                 .disable_cleanup(true)
                 .tempfile()?;
             analysis_file = temp_file.path().to_path_buf();
-            convert_media_file(file, &analysis_file).await?;
+            convert_media_file(file, &analysis_file, config.analyze_image_size).await?;
         }
         println!("Convert to jpg {:?}", now.elapsed());
 

@@ -1,36 +1,51 @@
-use material_color_utils::dynamic::variant::Variant;
-use material_color_utils::utils::color_utils::Argb;
-use material_color_utils::{theme_from_color, MaterializedTheme};
+use image::imageops::FilterType;
 use std::io;
 use std::path::Path;
 use tokio::process::Command;
+use tracing::warn;
 
-/// Use ffmpeg to convert a photo or video.
-pub async fn convert_media_file(input_path: &Path, output_path: &Path) -> io::Result<()> {
-    let output = Command::new("ffmpeg")
+pub async fn convert_media_file(
+    input_path: &Path,
+    output_path: &Path,
+    image_out_size: u64,
+) -> io::Result<()> {
+    let input = input_path.to_owned();
+    let output = output_path.to_owned();
+    let image_result = tokio::task::spawn_blocking(move || {
+        let img = image::open(&input).map_err(|e| io::Error::other(e.to_string()))?;
+        let resized = img.resize(u32::MAX, image_out_size as u32, FilterType::Lanczos3);
+
+        resized
+            .save(&output)
+            .map_err(|e| io::Error::other(e.to_string()))?;
+        Ok::<(), io::Error>(())
+    })
+    .await;
+    if matches!(image_result, Ok(Ok(()))) {
+        return Ok(());
+    }
+
+    // 2. Fallback to ffmpeg
+    warn!(
+        "Failed to convert {} using `image` crate. Falling back to ffmpeg.",
+        input_path.display()
+    );
+    let scale_filter = format!("scale=-2:{image_out_size}");
+    let ffmpeg_output = Command::new("ffmpeg")
         .arg("-i")
         .arg(input_path)
+        .arg("-vf")
+        .arg(scale_filter)
+        .arg("-y") // Overwrite output files without asking
         .arg(output_path)
-        .arg("-y")
         .output()
         .await?;
 
-    if output.status.success() {
+    if ffmpeg_output.status.success() {
         Ok(())
     } else {
-        Err(io::Error::other(String::from_utf8_lossy(&output.stderr)))
+        Err(io::Error::other(String::from_utf8_lossy(
+            &ffmpeg_output.stderr,
+        )))
     }
-}
-
-/// Generate material color theme from a color.
-pub fn get_color_theme(
-    color: &str,
-    variant: Variant,
-    contrast_level: f64,
-) -> color_eyre::Result<MaterializedTheme> {
-    let theme = theme_from_color(Argb::from_hex(color)?)
-        .variant(variant)
-        .contrast_level(contrast_level)
-        .call();
-    Ok(theme)
 }

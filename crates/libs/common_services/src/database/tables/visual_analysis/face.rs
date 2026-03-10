@@ -38,7 +38,7 @@ pub struct CreateFace {
 
 impl From<FaceAnalysis> for CreateFace {
     fn from(face_box: FaceAnalysis) -> Self {
-        let emb = face_box.embedding.unwrap();
+        let emb = face_box.embedding;
         Self {
             embedding: emb.into(),
             position_x: face_box.detection.bbox.x1,
@@ -46,8 +46,8 @@ impl From<FaceAnalysis> for CreateFace {
             width: face_box.detection.bbox.width(),
             height: face_box.detection.bbox.height(),
             confidence: face_box.detection.score,
-            age: face_box.gender_age.clone().unwrap().age as i32,
-            sex: if face_box.gender_age.unwrap().gender == Gender::Male {
+            age: i32::from(face_box.age),
+            sex: if face_box.gender == Gender::Male {
                 "Male".to_owned()
             } else {
                 "Female".to_owned()

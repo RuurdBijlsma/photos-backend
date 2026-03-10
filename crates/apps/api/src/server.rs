@@ -7,7 +7,7 @@
     clippy::missing_panics_doc,
     clippy::cast_possible_truncation
 )]
-use crate::api_state::{ApiContext};
+use crate::api_state::ApiContext;
 use crate::create_router;
 use crate::timeline::websocket::create_media_item_transmitter;
 use app_state::AppSettings;
@@ -34,6 +34,13 @@ use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 
 pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
+    dbg!(1);
+    let y = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
+        .build()
+        .await?;
+    dbg!(1);
+    let x = Arc::new(y);
+    dbg!(1);
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let api_state = ApiContext {
@@ -41,14 +48,12 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         s2s_client: S2SClient::new(Client::new()),
         settings: settings.clone(),
         timeline_broadcaster: create_media_item_transmitter(&pool)?,
-        embedder: Arc::new(
-            TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
-                .build()
-                .await?,
-        ),
+        embedder: x,
     };
+    dbg!(1);
 
     fs::create_dir_all(&settings.ingest.thumbnail_root.join(".jpg-cache")).await?;
+    dbg!(1);
 
     // --- CORS Configuration ---
     let allowed_origins: Vec<HeaderValue> = settings
@@ -63,6 +68,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
             }
         })
         .collect();
+    dbg!(1);
 
     let cors = CorsLayer::new()
         .allow_methods(cors::Any)
@@ -76,15 +82,18 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
             header::CACHE_CONTROL,
             header::PRAGMA,
         ]);
+    dbg!(1);
 
     // Static file serving
     let serve_dir = ServeDir::new("thumbnails");
+    dbg!(1);
 
     // Create a middleware layer to add the Cache-Control header.
     let cache_layer = SetResponseHeaderLayer::if_not_present(
         header::CACHE_CONTROL,
         HeaderValue::from_static("public, max-age=31536000, immutable"),
     );
+    dbg!(1);
 
     // --- Create Router ---
     let app = create_router(api_state)
@@ -95,22 +104,27 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
             header::AUTHORIZATION,
         )))
         .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
+    dbg!(1);
 
     // Serve with https local cert
     rustls::crypto::ring::default_provider()
         .install_default()
         .expect("Failed to install rustls crypto provider");
+    dbg!(1);
     let config = RustlsConfig::from_pem_file(
         "C:/Users/Ruurd/Desktop/localhost.pem",
         "C:/Users/Ruurd/Desktop/localhost-key.pem",
     )
     .await?;
+    dbg!(1);
 
     let addr: SocketAddr = format!("{}:{}", settings.api.host, settings.api.port)
         .parse()
         .map_err(|e| eyre!("Invalid address: {}", e))?;
+    dbg!(1);
 
     info!("🐸 Server listening on https://{}", addr);
+    dbg!(1);
 
     axum_server::bind_rustls(addr, config)
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())

@@ -1,6 +1,7 @@
 use api::serve;
 use app_state::load_app_settings;
 use color_eyre::Result;
+use tracing_subscriber::EnvFilter;
 use common_services::database::get_db_pool;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -9,7 +10,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 async fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
+            EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "api=debug,tower_http=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())
