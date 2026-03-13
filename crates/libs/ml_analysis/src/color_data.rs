@@ -15,10 +15,6 @@ fn average_hue_from_sums(x_sum: f32, y_sum: f32) -> f32 {
 }
 
 /// Analyzes an image file to calculate its color properties, including prominent colors, color themes, average color values, and a histogram.
-///
-/// # Errors
-///
-/// This function will return an error if the image cannot be opened/decoded or if the Python interoperability calls fail.
 pub fn get_color_data(
     file: &Path,
     theme_variant: &Variant,

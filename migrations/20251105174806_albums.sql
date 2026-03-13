@@ -38,7 +38,7 @@ CREATE TABLE album_media_item
     media_item_id VARCHAR(10)      NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
     added_by_user INT              REFERENCES app_user (id) ON DELETE SET NULL,
     added_at      TIMESTAMPTZ      NOT NULL DEFAULT now(),
-    -- The user can manually sort items. We use float rank for easier reordering (insert between).
+    -- The user can manually sort items, so sort by rank
     rank          DOUBLE PRECISION NOT NULL,
     PRIMARY KEY (album_id, media_item_id),
     CONSTRAINT uq_album_media_rank UNIQUE (album_id, rank) DEFERRABLE INITIALLY DEFERRED

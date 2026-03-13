@@ -172,14 +172,14 @@
 * better error if exiftool or numpy isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
-* er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
 * improve speed of album/{id} endpoint
-* play with weights for full text search
 * make search result item protobuf
-* vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
+* ✅ er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
+* ✅ play with weights for full text search
+* ✅ vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
   search zit meer in de 0-0.3 range, FTS kan wel tot 4.0 gaan ofzo, dus weight voor FTS moet lager dan vector. nu 0.8 en
   0.2 dat lijkt wel goeie resultaten te geven. Toch meer experimenteren.
-* probeer reciprocal rank fusion ofzo
+* ✅ probeer reciprocal rank fusion ofzo
 * ✅ on demand video thumbnails
 * ✅ on demand videos?
 * maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
@@ -187,6 +187,7 @@
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
 * zwarte pics komen te hoog in zoek resultaten
 * llm instelbaar maken in settings
+* Voeg toe aan album tabel: earliest_media_item_timestamp -> zodat ik 2019-2020 kan laten zien in UI.
 
 # Features
 

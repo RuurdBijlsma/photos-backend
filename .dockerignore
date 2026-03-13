@@ -1,11 +1,6 @@
 # Rust build artifacts and caches
 target/
 
-# Python virtual environments and caches
-**/.venv
-**/__pycache__
-**/.ruff_cache
-
 # User-generated media, thumbnails, and analysis output
 media_dir/
 thumbnails/

@@ -20,11 +20,7 @@ pub struct VisualAnalyzer {
 }
 
 impl VisualAnalyzer {
-    /// Creates a new instance of the `VisualAnalyzer`, initializing the Python interoperability layer.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the Python environment cannot be initialized or the required Python modules are not found.
+    /// Creates a new instance of the `VisualAnalyzer`.
     pub async fn new(embedder_model_id: &str) -> color_eyre::Result<Self> {
         let embedder = VisionEmbedder::from_hf(embedder_model_id).build().await?;
         let llm = LlamaClient::with_base_url("http://localhost:8080").build();
