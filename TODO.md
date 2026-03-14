@@ -187,7 +187,11 @@
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
 * zwarte pics komen te hoog in zoek resultaten
 * llm instelbaar maken in settings
-* Voeg toe aan album tabel: earliest_media_item_timestamp -> zodat ik 2019-2020 kan laten zien in UI.
+* ✅ Voeg toe aan album tabel: earliest_media_item_timestamp -> zodat ik 2019-2020 kan laten zien in UI.
+* make get_representative_thumbnail or something, that returns the image that has an embedding closest to the centroid
+  of the list sent to the function. if no embeddings are available yet, return the middle item in the list
+  chronologically. If partial embeddings are available, use centroid logic for >50% available embeddings, otherwise
+  middle item chronologically. Use get_representative_thumbnail when creating an album, to set as the album thumbnail.
 
 # Features
 
