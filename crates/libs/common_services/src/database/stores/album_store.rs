@@ -40,7 +40,19 @@ impl AlbumStore {
             r#"
             INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public, manual_sort)
             VALUES ($1, $2, $3, $4, $5, $6, false)
-            RETURNING id, owner_id, name, description, thumbnail_id, is_public, manual_sort, media_count, latest_media_item_timestamp, created_at, updated_at
+            RETURNING
+                id,
+                owner_id,
+                name,
+                description,
+                thumbnail_id,
+                is_public,
+                media_count,
+                latest_media_item_timestamp,
+                earliest_media_item_timestamp,
+                updated_at,
+                created_at,
+                manual_sort
             "#,
             album_id,
             user_id,
@@ -73,7 +85,19 @@ impl AlbumStore {
                 is_public = COALESCE($4, is_public),
                 updated_at = now()
             WHERE id = $5
-            RETURNING id, owner_id, name, description, thumbnail_id, is_public, media_count, latest_media_item_timestamp, updated_at, created_at, manual_sort
+            RETURNING
+                id,
+                owner_id,
+                name,
+                description,
+                thumbnail_id,
+                is_public,
+                media_count,
+                latest_media_item_timestamp,
+                earliest_media_item_timestamp,
+                updated_at,
+                created_at,
+                manual_sort
             "#,
             name,
             description,
@@ -81,8 +105,8 @@ impl AlbumStore {
             is_public,
             album_id
         )
-            .fetch_one(executor)
-            .await?)
+        .fetch_one(executor)
+        .await?)
     }
 
     /// Updates the details of a specific album.
@@ -117,11 +141,12 @@ impl AlbumStore {
                 description,
                 thumbnail_id,
                 is_public,
-                manual_sort,
-                created_at,
-                updated_at,
+                media_count,
                 latest_media_item_timestamp,
-                media_count
+                earliest_media_item_timestamp,
+                updated_at,
+                created_at,
+                manual_sort
             FROM album
             WHERE id = $1
             "#,
@@ -169,7 +194,19 @@ impl AlbumStore {
         Ok(sqlx::query_as!(
             Album,
             r#"
-            SELECT a.id, owner_id, name, description, thumbnail_id, is_public, latest_media_item_timestamp, manual_sort, media_count, created_at, updated_at
+            SELECT
+                a.id,
+                owner_id,
+                name,
+                description,
+                thumbnail_id,
+                is_public,
+                media_count,
+                latest_media_item_timestamp,
+                earliest_media_item_timestamp,
+                updated_at,
+                created_at,
+                manual_sort
             FROM album a
             JOIN album_collaborator ac ON a.id = ac.album_id
             WHERE ac.user_id = $1
@@ -177,8 +214,8 @@ impl AlbumStore {
             "#,
             user_id
         )
-            .fetch_all(executor)
-            .await?)
+        .fetch_all(executor)
+        .await?)
     }
 
     /// Retrieves all albums a user is a collaborator on with sorting.
@@ -202,7 +239,8 @@ impl AlbumStore {
                 a.created_at,
                 a.updated_at,
                 a.media_count,
-                a.latest_media_item_timestamp
+                a.latest_media_item_timestamp,
+                a.earliest_media_item_timestamp
             FROM album a
             LEFT JOIN album_collaborator ac ON a.id = ac.album_id AND ac.user_id = $1
             WHERE a.owner_id = $1 OR ac.user_id = $1

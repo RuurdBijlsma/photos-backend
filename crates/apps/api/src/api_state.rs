@@ -7,7 +7,6 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
-
 #[derive(Clone, Debug)]
 pub struct ApiContext {
     pub pool: PgPool,

@@ -22,7 +22,7 @@ pub async fn claim_next_job(context: &WorkerContext) -> Result<Option<Job>> {
             WHERE
                 ((status = 'queued' AND scheduled_at <= now())
                 OR (status = 'running' AND last_heartbeat < now() - interval '1 second' * $2))
-              AND ($3 OR job_type NOT IN ('ingest_analysis', 'ingest_llm'))
+              AND ($3 OR job_type NOT IN ('ingest_llm'))
             ORDER BY priority ASC, relative_path DESC, scheduled_at ASC, created_at ASC
             FOR UPDATE SKIP LOCKED
             LIMIT 1
@@ -38,7 +38,7 @@ pub async fn claim_next_job(context: &WorkerContext) -> Result<Option<Job>> {
         "#,
         context.worker_id,
         heartbeat_timeout_seconds,
-        context.handle_analysis
+        context.handle_llm
     )
         .fetch_optional(&mut *tx)
         .await?;

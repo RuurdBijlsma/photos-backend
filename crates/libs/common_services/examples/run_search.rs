@@ -4,13 +4,13 @@
     clippy::cast_sign_loss
 )]
 
-use std::sync::Arc;
 use app_state::load_app_settings;
 use common_services::api::search::service::{SearchMediaConfig, search_media};
 use common_services::database::get_db_pool;
 use common_services::database::user_store::UserStore;
 use common_types::dev_constants::EMAIL;
 use open_clip_inference::TextEmbedder;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -22,7 +22,7 @@ async fn main() -> color_eyre::Result<()> {
     let user = UserStore::find_by_email(&pool, EMAIL)
         .await?
         .expect("no such user");
-    let embedder =TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
+    let embedder = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
         .build()
         .await?;
 

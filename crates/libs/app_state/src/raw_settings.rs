@@ -1,6 +1,6 @@
+use material_color_utils::dynamic::variant::Variant;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use material_color_utils::dynamic::variant::Variant;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct RawSettings {

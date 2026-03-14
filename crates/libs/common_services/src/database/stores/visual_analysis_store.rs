@@ -1,8 +1,8 @@
 use crate::database::DbError;
-use crate::database::visual_analysis::visual_analysis::CreateVisualAnalysis;
-use sqlx::PgTransaction;
 use crate::database::visual_analysis::caption_data::ClassificationData;
 use crate::database::visual_analysis::quality::QualityScore;
+use crate::database::visual_analysis::visual_analysis::CreateVisualAnalysis;
+use sqlx::PgTransaction;
 
 pub struct VisualAnalysisStore;
 
@@ -12,8 +12,7 @@ impl VisualAnalysisStore {
         visual_analysis_id: i64,
         classification: &ClassificationData,
         quality: &QualityScore,
-    )->Result<i64, DbError>{
-
+    ) -> Result<i64, DbError> {
         // --- Quality Data ---
         sqlx::query!(
             r#"
@@ -56,8 +55,8 @@ impl VisualAnalysisStore {
             quality.measured_exposure,
             quality.measured_weighted_score,
         )
-            .execute(&mut **tx)
-            .await?;
+        .execute(&mut **tx)
+        .await?;
 
         // --- Classification Data ---
         sqlx::query!(
@@ -164,8 +163,8 @@ impl VisualAnalysisStore {
                 &face.sex,
                 face.embedding as _,
             )
-                .execute(&mut **tx)
-                .await?;
+            .execute(&mut **tx)
+            .await?;
         }
 
         // --- Color Data ---

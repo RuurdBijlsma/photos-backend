@@ -8,7 +8,7 @@ use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
 use common_types::ml_analysis::MLFastAnalysis;
-use std::path::{Path};
+use std::path::Path;
 use tracing::{debug, info};
 
 /// Handles the analysis of a given job.

@@ -47,7 +47,7 @@ async fn main() -> color_eyre::Result<()> {
     println!("Created user {user:?}");
     let user = start_processing(&pool, &settings, user.id, String::new()).await?;
     println!("Started processing, media folder: {:?}", user.media_folder);
-    create_worker(pool, settings, true, true).await?;
+    create_worker(pool, settings, false, true).await?;
 
     Ok(())
 }

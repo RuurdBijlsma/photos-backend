@@ -55,7 +55,7 @@ impl IntoResponse for PhotosError {
             Self::InvalidPath => (StatusCode::BAD_REQUEST, self.to_string()),
             Self::AccessDenied => (StatusCode::FORBIDDEN, self.to_string()),
             Self::UnsupportedMediaType => (StatusCode::UNSUPPORTED_MEDIA_TYPE, self.to_string()),
-            Self::Cancelled=>(StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
+            Self::Cancelled => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
             Self::InvalidRange => (StatusCode::RANGE_NOT_SATISFIABLE, self.to_string()),
             Self::ColorTheme(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
         };

@@ -1,8 +1,8 @@
 use api::serve;
 use app_state::load_app_settings;
 use color_eyre::Result;
-use tracing_subscriber::EnvFilter;
 use common_services::database::get_db_pool;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 

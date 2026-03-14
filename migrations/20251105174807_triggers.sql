@@ -18,35 +18,37 @@ EXECUTE FUNCTION notify_new_media_item();
 -- Album Timestamp Triggers (Statement Level)
 -- =========================================================================================
 
-CREATE OR REPLACE FUNCTION update_album_latest_timestamp_stmt()
+CREATE OR REPLACE FUNCTION update_album_timestamps_stmt()
     RETURNS TRIGGER AS
 $$
 BEGIN
     -- Handle INSERTS
     IF (TG_OP = 'INSERT') THEN
         UPDATE album a
-        SET latest_media_item_timestamp = (
-            -- This subquery runs EXACTLY ONCE per distinct album_id
-            SELECT MAX(mi.sort_timestamp)
-            FROM album_media_item ami
-                     JOIN media_item mi ON ami.media_item_id = mi.id
-            WHERE ami.album_id = a.id
-              AND mi.deleted = false)
-        -- ! Use DISTINCT to ensure we only update each album ONCE per batch !
-        FROM (SELECT DISTINCT album_id FROM new_table) nt
-        WHERE a.id = nt.album_id;
+        SET latest_media_item_timestamp = sub.max_ts,
+            earliest_media_item_timestamp = sub.min_ts
+        FROM (
+                 SELECT nt.album_id, MAX(mi.sort_timestamp) as max_ts, MIN(mi.sort_timestamp) as min_ts
+                 FROM (SELECT DISTINCT album_id FROM new_table) nt
+                          LEFT JOIN album_media_item ami ON ami.album_id = nt.album_id
+                          LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
+                 GROUP BY nt.album_id
+             ) sub
+        WHERE a.id = sub.album_id;
 
         -- Handle DELETES
     ELSIF (TG_OP = 'DELETE') THEN
         UPDATE album a
-        SET latest_media_item_timestamp = (SELECT MAX(mi.sort_timestamp)
-                                           FROM album_media_item ami
-                                                    JOIN media_item mi ON ami.media_item_id = mi.id
-                                           WHERE ami.album_id = a.id
-                                             AND mi.deleted = false)
-        -- ! Use DISTINCT here too !
-        FROM (SELECT DISTINCT album_id FROM old_table) ot
-        WHERE a.id = ot.album_id;
+        SET latest_media_item_timestamp = sub.max_ts,
+            earliest_media_item_timestamp = sub.min_ts
+        FROM (
+                 SELECT ot.album_id, MAX(mi.sort_timestamp) as max_ts, MIN(mi.sort_timestamp) as min_ts
+                 FROM (SELECT DISTINCT album_id FROM old_table) ot
+                          LEFT JOIN album_media_item ami ON ami.album_id = ot.album_id
+                          LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
+                 GROUP BY ot.album_id
+             ) sub
+        WHERE a.id = sub.album_id;
     END IF;
 
     RETURN NULL;
@@ -59,7 +61,7 @@ CREATE TRIGGER trigger_update_album_timestamp_insert
     ON album_media_item
     REFERENCING NEW TABLE AS new_table
     FOR EACH STATEMENT
-EXECUTE FUNCTION update_album_latest_timestamp_stmt();
+EXECUTE FUNCTION update_album_timestamps_stmt();
 
 -- Trigger for DELETES
 CREATE TRIGGER trigger_update_album_timestamp_delete
@@ -67,7 +69,7 @@ CREATE TRIGGER trigger_update_album_timestamp_delete
     ON album_media_item
     REFERENCING OLD TABLE AS old_table
     FOR EACH STATEMENT
-EXECUTE FUNCTION update_album_latest_timestamp_stmt();
+EXECUTE FUNCTION update_album_timestamps_stmt();
 
 
 -- Trigger for album.media_count

@@ -1,8 +1,6 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{
-    get_llm_cache, hash_file, write_llm_cache,
-};
+use crate::handlers::common::cache::{get_llm_cache, hash_file, write_llm_cache};
 use crate::handlers::common::utils::get_images_to_analyze;
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::eyre::{Result, bail, eyre};
@@ -10,7 +8,7 @@ use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
 use common_types::ml_analysis::MLChatAnalysis;
-use std::path::{Path};
+use std::path::Path;
 use tracing::{debug, info};
 
 /// Handles the llm analysis of a given job.
@@ -59,18 +57,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let llm_analyses =
         get_cached_llm_data(context, &file_path, &media_item_id, &percentages).await?;
 
-    let result: Vec<(i64, MLChatAnalysis)> = v_ids
-        .into_iter()
-        .zip(llm_analyses)
-        .collect();
+    let result: Vec<(i64, MLChatAnalysis)> = v_ids.into_iter().zip(llm_analyses).collect();
 
-    save_llm_results(
-        context,
-        job.id,
-        result,
-        &file_path,
-    )
-    .await
+    save_llm_results(context, job.id, result, &file_path).await
 }
 
 async fn get_cached_llm_data(

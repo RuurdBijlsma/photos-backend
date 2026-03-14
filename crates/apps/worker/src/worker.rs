@@ -5,19 +5,19 @@ use app_state::AppSettings;
 use color_eyre::Result;
 use common_services::utils::nice_id;
 use sqlx::PgPool;
-use std::time::{Duration};
+use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
 
 pub async fn create_worker(
     pool: PgPool,
     settings: AppSettings,
-    handle_analysis: bool,
+    handle_llm: bool,
     stop_on_sleep: bool,
 ) -> Result<()> {
     let worker_id = nice_id(8);
     info!("🛠️ [Worker ID: {}] Starting.", worker_id);
-    let context = WorkerContext::new(pool, settings, worker_id.clone(), handle_analysis).await?;
+    let context = WorkerContext::new(pool, settings, worker_id.clone(), handle_llm).await?;
 
     run_worker_loop(&context, stop_on_sleep).await
 }

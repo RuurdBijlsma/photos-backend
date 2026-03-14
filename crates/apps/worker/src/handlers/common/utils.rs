@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use crate::context::WorkerContext;
+use std::path::{Path, PathBuf};
 
 /// Determines which thumbnail files should be sent to the ML analyzer.
 pub fn get_images_to_analyze(

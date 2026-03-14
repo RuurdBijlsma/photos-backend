@@ -2,7 +2,7 @@ use image::imageops::FilterType;
 use std::io;
 use std::path::Path;
 use tokio::process::Command;
-use tracing::warn;
+use tracing::{error, warn};
 
 pub async fn convert_media_file(
     input_path: &Path,
@@ -44,6 +44,7 @@ pub async fn convert_media_file(
     if ffmpeg_output.status.success() {
         Ok(())
     } else {
+        error!("Failed to ffmpeg process file {}", input_path.display());
         Err(io::Error::other(String::from_utf8_lossy(
             &ffmpeg_output.stderr,
         )))

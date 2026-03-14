@@ -1,6 +1,6 @@
 use common_types::ml_analysis::MLColorData;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use utoipa::ToSchema;
 
 /// Corresponds to the '`color_data`' table.

@@ -3,7 +3,9 @@ use axum::extract::{Query, State};
 use axum::{Extension, Json};
 use common_services::api::search::error::SearchError;
 use common_services::api::search::interfaces::{SearchParams, SearchResultItem};
-use common_services::api::search::service::{SearchMediaConfig, search_media, get_search_suggestions};
+use common_services::api::search::service::{
+    SearchMediaConfig, get_search_suggestions, search_media,
+};
 use common_services::database::app_user::User;
 use tracing::instrument;
 
@@ -51,10 +53,6 @@ pub async fn get_search_suggestions_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
 ) -> Result<String, SearchError> {
-    let search_result = get_search_suggestions(
-        &user,
-        &context.pool,
-    )
-    .await?;
+    let search_result = get_search_suggestions(&user, &context.pool).await?;
     Ok(search_result)
 }

@@ -40,8 +40,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         WHERE id = $1;",
         &row.id
     )
-        .execute(&context.pool)
-        .await?;
+    .execute(&context.pool)
+    .await?;
     Ok(JobResult::Done)
 }
 

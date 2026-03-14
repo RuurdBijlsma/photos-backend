@@ -2,9 +2,9 @@ use common_types::ml_analysis::{MLColorData, MLColorHistogram, MLRGBChannels};
 use image::Rgb;
 use material_color_utils::dynamic::variant::Variant;
 use material_color_utils::theme_from_color;
+use material_color_utils::utils::color_utils::Argb;
 use palette::{FromColor, Hsv, Srgb};
 use std::path::Path;
-use material_color_utils::utils::color_utils::Argb;
 
 fn average_hue_from_sums(x_sum: f32, y_sum: f32) -> f32 {
     let mut avg = y_sum.atan2(x_sum).to_degrees();

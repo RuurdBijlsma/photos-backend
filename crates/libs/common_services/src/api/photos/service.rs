@@ -420,21 +420,22 @@ pub async fn stream_video_file(
     let mut is_partial = false;
 
     if let Some(range) = range_header
-        && let Some((start_bound, end_bound)) = range.satisfiable_ranges(file_size).next() {
-            is_partial = true;
+        && let Some((start_bound, end_bound)) = range.satisfiable_ranges(file_size).next()
+    {
+        is_partial = true;
 
-            start = match start_bound {
-                Bound::Included(n) => n,
-                Bound::Excluded(n) => n + 1,
-                Bound::Unbounded => 0,
-            };
+        start = match start_bound {
+            Bound::Included(n) => n,
+            Bound::Excluded(n) => n + 1,
+            Bound::Unbounded => 0,
+        };
 
-            end = match end_bound {
-                Bound::Included(n) => n,
-                Bound::Excluded(n) => n - 1,
-                Bound::Unbounded => file_size - 1,
-            };
-        }
+        end = match end_bound {
+            Bound::Included(n) => n,
+            Bound::Excluded(n) => n - 1,
+            Bound::Unbounded => file_size - 1,
+        };
+    }
 
     // Safety check for bounds
     if start > end || start >= file_size {

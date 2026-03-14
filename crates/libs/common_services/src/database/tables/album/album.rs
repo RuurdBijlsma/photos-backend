@@ -50,6 +50,7 @@ pub struct Album {
     pub manual_sort: bool,
     pub media_count: i32,
     pub latest_media_item_timestamp: Option<DateTime<Utc>>,
+    pub earliest_media_item_timestamp: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
