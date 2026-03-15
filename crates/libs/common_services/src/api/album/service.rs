@@ -15,7 +15,7 @@ use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
 use common_types::pb::api::{AlbumInfo, AlbumTimelineItem, FullAlbumMediaResponse};
 use jsonwebtoken::{EncodingKey, Header, encode};
-use sqlx::{Executor, PgPool, Postgres};
+use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;
 
 #[instrument(skip(executor))]
@@ -73,6 +73,69 @@ where
     check_user_role(executor, user_id, album_id, &[AlbumRole::Owner]).await
 }
 
+/// Finds a representative thumbnail for a list of media items.
+/// Returns the image that has an embedding closest to the centroid if >50% have embeddings.
+/// Otherwise, returns the middle item chronologically.
+#[instrument(skip(tx))]
+async fn get_representative_thumbnail(
+    tx: &mut PgTransaction<'_>,
+    media_item_ids: &[String],
+) -> Result<Option<String>, AlbumError> {
+    if media_item_ids.is_empty() {
+        return Ok(None);
+    }
+
+    // Try centroid logic if more than 50% have embeddings
+    let result = sqlx::query!(
+        r#"
+        WITH target_embeddings AS (
+            SELECT media_item_id, embedding
+            FROM visual_analysis
+            WHERE media_item_id = ANY($1)
+            AND deleted = false
+        ),
+        stats AS (
+            SELECT COUNT(*) as count FROM target_embeddings
+        ),
+        centroid AS (
+            SELECT avg(embedding)::vector as center FROM target_embeddings
+        ),
+        closest AS (
+            SELECT media_item_id
+            FROM target_embeddings, centroid
+            WHERE (SELECT count FROM stats) > (array_length($1, 1) / 2)
+            ORDER BY embedding <=> center
+            LIMIT 1
+        )
+        SELECT 
+            (SELECT count FROM stats)::bigint as "embedded_count!",
+            (SELECT media_item_id FROM closest)::text as "closest_id?"
+        "#,
+        media_item_ids
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+
+    if let Some(id) = result.closest_id {
+        return Ok(Some(id));
+    }
+
+    // Fallback: Middle item chronologically
+    let chronological_ids = sqlx::query_scalar!(
+        "SELECT id FROM media_item WHERE id = ANY($1) AND deleted = false ORDER BY sort_timestamp ASC",
+        media_item_ids
+    )
+    .fetch_all(&mut **tx)
+    .await?;
+
+    if chronological_ids.is_empty() {
+        return Ok(None);
+    }
+
+    let middle_idx = chronological_ids.len() / 2;
+    Ok(chronological_ids.get(middle_idx).cloned())
+}
+
 #[instrument(skip(pool))]
 pub async fn create_album(
     pool: &PgPool,
@@ -98,7 +161,7 @@ pub async fn create_album(
     AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
     if !media_item_ids.is_empty() {
         AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
-        if let Some(thumb) = AlbumStore::find_middle_media_item_id(&mut *tx, &album_id).await? {
+        if let Some(thumb) = get_representative_thumbnail(&mut tx, media_item_ids).await? {
             AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
         }
     }
@@ -137,8 +200,7 @@ pub async fn add_media_to_album(
     }
 
     if album.thumbnail_id.is_none() {
-        let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
-        if let Some(tid) = thumbnail_id {
+        if let Some(tid) = get_representative_thumbnail(&mut tx, media_item_ids).await? {
             AlbumStore::update(&mut *tx, album_id, None, None, Some(tid), None).await?;
         }
     }
@@ -177,8 +239,14 @@ pub async fn remove_media_from_album(
     if let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? {
         // Check if removed item was the thumbnail
         if Some(media_item_id.to_owned()) == album.thumbnail_id && album.media_count > 0 {
-            let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
-            if let Some(thumbnail_id) = thumbnail_id {
+            let ids: Vec<String> = sqlx::query_scalar!(
+                "SELECT media_item_id FROM album_media_item WHERE album_id = $1",
+                album_id
+            )
+            .fetch_all(&mut *tx)
+            .await?;
+
+            if let Some(thumbnail_id) = get_representative_thumbnail(&mut tx, &ids).await? {
                 AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
                     .await?;
             }
