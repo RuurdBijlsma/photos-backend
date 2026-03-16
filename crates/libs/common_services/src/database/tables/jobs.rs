@@ -28,6 +28,7 @@ pub enum JobType {
     ClusterFaces,
     ClusterPhotos,
     ImportAlbumItem,
+    UpdateGlobalCentroid,
 }
 
 impl JobType {
@@ -62,6 +63,7 @@ impl JobType {
             Self::ImportAlbumItem => 25,
             Self::ClusterFaces => 30,
             Self::ClusterPhotos => 35,
+            Self::UpdateGlobalCentroid => 40,
         }
     }
 }

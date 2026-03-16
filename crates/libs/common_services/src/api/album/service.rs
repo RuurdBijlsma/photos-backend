@@ -5,6 +5,7 @@ use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
+use crate::database::system_metrics_store::SystemMetricsStore;
 use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
 use crate::s2s_client::{S2SClient, extract_token_claims};
@@ -85,7 +86,10 @@ async fn get_representative_thumbnail(
         return Ok(None);
     }
 
-    // Try centroid logic if more than 50% have embeddings
+    // Try contrastive logic if more than 50% have embeddings
+    let cached_global_centroid =
+        SystemMetricsStore::get_vector(&mut **tx, "global_centroid").await?;
+
     let result = sqlx::query!(
         r#"
         WITH target_embeddings AS (
@@ -97,21 +101,39 @@ async fn get_representative_thumbnail(
         stats AS (
             SELECT COUNT(*) as count FROM target_embeddings
         ),
-        centroid AS (
+        album_centroid AS (
             SELECT avg(embedding)::vector as center FROM target_embeddings
         ),
-        closest AS (
-            SELECT media_item_id
-            FROM target_embeddings, centroid
+        global_centroid_val AS (
+            SELECT 
+                CASE 
+                    WHEN $2::vector IS NOT NULL THEN $2::vector
+                    ELSE (
+                        SELECT avg(embedding)::vector 
+                        FROM (
+                            SELECT embedding 
+                            FROM visual_analysis 
+                            WHERE deleted = false 
+                            ORDER BY random() 
+                            LIMIT 1000
+                        ) as sample
+                    )
+                END as center
+        ),
+        scored_items AS (
+            SELECT 
+                t.media_item_id,
+                -- Score = (Distance to Global) - (Distance to Album)
+                (t.embedding <=> gc.center) - (t.embedding <=> ac.center) as score
+            FROM target_embeddings t, album_centroid ac, global_centroid_val gc
             WHERE (SELECT count FROM stats) > (array_length($1, 1) / 2)
-            ORDER BY embedding <=> center
-            LIMIT 1
         )
         SELECT 
             (SELECT count FROM stats)::bigint as "embedded_count!",
-            (SELECT media_item_id FROM closest)::text as "closest_id?"
+            (SELECT media_item_id FROM scored_items ORDER BY score DESC LIMIT 1)::text as "closest_id?"
         "#,
-        media_item_ids
+        media_item_ids,
+        cached_global_centroid.as_deref() as Option<&[f32]>
     )
     .fetch_one(&mut **tx)
     .await?;

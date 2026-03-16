@@ -12,6 +12,7 @@ pub mod ingest_metadata;
 pub mod ingest_thumbnails;
 pub mod remove;
 pub mod scan;
+pub mod update_global_centroid;
 
 pub mod common;
 pub mod ingest_llm;
@@ -43,6 +44,7 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::ClusterFaces => cluster_faces::handle(context, job).await,
         JobType::ClusterPhotos => cluster_photos::handle(context, job).await,
         JobType::ImportAlbumItem => import_album_item::handle(context, job).await,
+        JobType::UpdateGlobalCentroid => update_global_centroid::handle(context, job).await,
     };
 
     heartbeat_handle.abort();
