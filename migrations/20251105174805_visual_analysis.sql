@@ -1,20 +1,23 @@
+ALTER ROLE CURRENT_USER SET random_page_cost = 1.1;
+
 -- A record for a single visual analysis run.
 CREATE TABLE visual_analysis
 (
     id            BIGSERIAL PRIMARY KEY,
-    user_id       INT          NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    deleted       BOOLEAN      NOT NULL DEFAULT false,
-    media_item_id VARCHAR(10)  NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    user_id       INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    deleted       BOOLEAN     NOT NULL DEFAULT false,
+    media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     embedding     VECTOR(768) NOT NULL,
-    percentage    INT          NOT NULL
+    percentage    INT         NOT NULL
 );
 ALTER TABLE visual_analysis
     ALTER COLUMN embedding SET STORAGE MAIN;
-
 CREATE INDEX idx_visual_analysis_media_item_id ON visual_analysis (media_item_id);
-CREATE INDEX ON visual_analysis USING hnsw (embedding vector_cosine_ops);
-
+CREATE INDEX idx_visual_analysis_embedding_hnsw
+    ON visual_analysis
+        USING hnsw (embedding vector_cosine_ops)
+    WHERE (deleted = false);
 
 CREATE TABLE face
 (

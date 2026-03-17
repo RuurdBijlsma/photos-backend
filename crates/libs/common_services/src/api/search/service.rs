@@ -30,102 +30,6 @@ pub async fn search_media(
     let candidate_limit = limit * 3 + 300;
     let k = 60.0f64;
 
-    let mut tx = pool.begin().await?;
-    sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
-
-    // --- TEMPORARY DEBUG EXPLAIN ANALYZE ---
-    let explain_query = r#"
-        EXPLAIN ANALYZE
-        WITH
-        fts AS (
-            SELECT
-                id,
-                ts_rank_cd(search_vector, websearch_to_tsquery('english', $1)) as score,
-                ROW_NUMBER() OVER (ORDER BY ts_rank_cd(search_vector, websearch_to_tsquery('english', $1)) DESC) as rank
-            FROM media_item
-            WHERE user_id = $2
-              AND search_vector @@ websearch_to_tsquery('english', $1)
-              AND deleted = false
-            LIMIT $4
-        ),
-        vec AS (
-            SELECT
-                id,
-                1 - distance as score,
-                ROW_NUMBER() OVER (ORDER BY distance) as rank
-            FROM (
-                SELECT DISTINCT ON (media_item_id)
-                    media_item_id as id,
-                    distance
-                FROM (
-                    SELECT media_item_id, embedding <=> $3::vector as distance
-                    FROM visual_analysis
-                    WHERE user_id = $2
-                      AND deleted = false
-                    ORDER BY embedding <=> $3::vector
-                    LIMIT $4 * 4
-                ) sub_ordered
-                ORDER BY media_item_id, distance
-            ) sub_unique
-            ORDER BY distance
-            LIMIT $4
-        ),
-        merged AS (
-            SELECT id, rank, 1 as is_fts, 0 as is_vec FROM fts
-            UNION ALL
-            SELECT id, rank, 0 as is_fts, 1 as is_vec FROM vec
-        ),
-        scored_candidates AS (
-            SELECT
-                id,
-                SUM(
-                    CASE
-                        WHEN is_fts = 1 THEN $7::float8 / ($6::float8 + rank::float8)
-                        WHEN is_vec = 1 THEN $8::float8 / ($6::float8 + rank::float8)
-                        ELSE 0
-                    END
-                )::real as combined_score
-            FROM merged
-            GROUP BY id
-        )
-        SELECT
-            mi.id::text,
-            mi.is_video,
-            mi.has_thumbnails,
-            mi.duration_ms,
-            (mi.width::real / mi.height::real) as ratio
-        FROM scored_candidates sc
-        JOIN media_item mi ON mi.id = sc.id
-        ORDER BY sc.combined_score DESC
-        LIMIT $5
-    "#;
-
-    match sqlx::query(explain_query)
-        .bind(query)
-        .bind(user.id)
-        .bind(&vector_param)
-        .bind(candidate_limit)
-        .bind(limit)
-        .bind(k)
-        .bind(config.text_weight)
-        .bind(config.semantic_weight)
-        .fetch_all(&mut *tx)
-        .await
-    {
-        Ok(rows) => {
-            println!("--- EXPLAIN ANALYZE (FORCED INDEX) START ---");
-            for row in rows {
-                let plan: String = sqlx::Row::get(&row, 0);
-                println!("{}", plan);
-            }
-            println!("--- EXPLAIN ANALYZE (FORCED INDEX) END ---");
-        }
-        Err(e) => {
-            eprintln!("Failed to get EXPLAIN ANALYZE: {}", e);
-        }
-    }
-    // --- END TEMPORARY DEBUG ---
-
     let items = sqlx::query_as!(
         SimpleTimelineItem,
         r#"
@@ -201,10 +105,8 @@ pub async fn search_media(
         config.text_weight,    // $7
         config.semantic_weight // $8
     )
-        .fetch_all(&mut *tx)
+        .fetch_all(pool)
         .await?;
-
-    tx.commit().await?;
 
     Ok(items)
 }
