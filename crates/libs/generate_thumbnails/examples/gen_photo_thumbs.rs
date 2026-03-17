@@ -1,3 +1,4 @@
+#![allow(clippy::cast_precision_loss)]
 use app_state::load_app_settings;
 use generate_thumbnails::generate_thumbnails;
 use std::fs;
@@ -5,7 +6,7 @@ use std::path::Path;
 use std::time::Instant;
 use walkdir::WalkDir;
 
-fn rolling_avg(times: &Vec<u128>) -> f64 {
+fn rolling_avg(times: &[u128]) -> f64 {
     if times.is_empty() {
         return 0.0;
     }
@@ -16,7 +17,7 @@ fn rolling_avg(times: &Vec<u128>) -> f64 {
     sum as f64 / window as f64
 }
 
-fn avg(times: &Vec<u128>) -> f64 {
+fn avg(times: &[u128]) -> f64 {
     if times.is_empty() {
         return 0.0;
     }
