@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE album_media_item ami\n            SET rank = sub.new_rank\n            FROM (\n                SELECT\n                    ami2.album_id,\n                    ami2.media_item_id,\n                    ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp ASC, mi.created_at ASC) * 1000.0 as new_rank\n                FROM album_media_item ami2\n                JOIN media_item mi ON ami2.media_item_id = mi.id\n                WHERE ami2.album_id = $1\n            ) sub\n            WHERE ami.album_id = sub.album_id\n              AND ami.media_item_id = sub.media_item_id;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3bd9ff6962bf30ff074b2e3b01af8058a696dd63ab3d87de14971426a9f461c4"
+}

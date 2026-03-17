@@ -11,14 +11,17 @@
             "name": "job_type",
             "kind": {
               "Enum": [
-                "ingest",
+                "ingest_metadata",
+                "ingest_thumbnails",
+                "ingest_analysis",
+                "ingest_llm",
                 "remove",
-                "analysis",
                 "scan",
                 "clean_db",
                 "cluster_faces",
                 "cluster_photos",
-                "import_album_item"
+                "import_album_item",
+                "update_global_centroid"
               ]
             }
           }

@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH target_embeddings AS (\n            SELECT media_item_id, embedding\n            FROM visual_analysis\n            WHERE media_item_id = ANY($1)\n            AND deleted = false\n        ),\n        stats AS (\n            SELECT COUNT(*) as count FROM target_embeddings\n        ),\n        album_centroid AS (\n            SELECT avg(embedding)::vector as center FROM target_embeddings\n        ),\n        global_centroid_val AS (\n            SELECT \n                CASE \n                    WHEN $2::vector IS NOT NULL THEN $2::vector\n                    ELSE (\n                        SELECT avg(embedding)::vector \n                        FROM (\n                            SELECT embedding \n                            FROM visual_analysis \n                            WHERE deleted = false \n                            ORDER BY random() \n                            LIMIT 1000\n                        ) as sample\n                    )\n                END as center\n        ),\n        scored_items AS (\n            SELECT \n                t.media_item_id,\n                -- Score = (Distance to Global) - (Distance to Album)\n                (t.embedding <=> gc.center) - (t.embedding <=> ac.center) as score\n            FROM target_embeddings t, album_centroid ac, global_centroid_val gc\n            WHERE (SELECT count FROM stats) > (array_length($1, 1) / 2)\n        )\n        SELECT \n            (SELECT count FROM stats)::bigint as \"embedded_count!\",\n            (SELECT media_item_id FROM scored_items ORDER BY score DESC LIMIT 1)::text as \"closest_id?\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "embedded_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "closest_id?",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "6ed4c8f55c1b7e61bf36ce25eec26874083e86ab1991e128146e7db51edfc2bb"
+}

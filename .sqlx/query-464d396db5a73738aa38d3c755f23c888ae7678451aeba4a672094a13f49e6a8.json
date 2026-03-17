@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH global_sample AS (\n            SELECT embedding\n            FROM visual_analysis\n            WHERE deleted = false\n            ORDER BY random()\n            LIMIT 10000\n        )\n        SELECT avg(embedding)::vector as \"center: Vector\" FROM global_sample\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "center: Vector",
+        "type_info": {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "464d396db5a73738aa38d3c755f23c888ae7678451aeba4a672094a13f49e6a8"
+}

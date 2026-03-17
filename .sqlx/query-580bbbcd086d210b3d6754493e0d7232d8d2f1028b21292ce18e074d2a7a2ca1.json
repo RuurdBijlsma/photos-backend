@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(id) FROM jobs WHERE status IN ('running', 'queued') AND job_type in ('ingest', 'remove')",
+  "query": "SELECT count(id) FROM jobs WHERE status IN ('running', 'queued') AND job_type in ('ingest_thumbnails', 'remove')",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       null
     ]
   },
-  "hash": "47b0ead661cdf99a624f8636cc93cdbdfb2fd07df162a58640a3605c27504818"
+  "hash": "580bbbcd086d210b3d6754493e0d7232d8d2f1028b21292ce18e074d2a7a2ca1"
 }
