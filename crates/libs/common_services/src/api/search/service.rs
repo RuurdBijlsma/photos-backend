@@ -47,13 +47,24 @@ pub async fn search_media(
         ),
         vec AS (
             SELECT
-                media_item_id as id,
-                1 - (embedding <=> $3::vector) as score,
-                ROW_NUMBER() OVER (ORDER BY embedding <=> $3::vector) as rank
-            FROM visual_analysis
-            WHERE user_id = $2
-              AND deleted = false
-            ORDER BY embedding <=> $3::vector
+                id,
+                1 - distance as score,
+                ROW_NUMBER() OVER (ORDER BY distance) as rank
+            FROM (
+                SELECT DISTINCT ON (media_item_id)
+                    media_item_id as id,
+                    embedding <=> $3::vector as distance
+                FROM (
+                    SELECT media_item_id, embedding
+                    FROM visual_analysis
+                    WHERE user_id = $2
+                      AND deleted = false
+                    ORDER BY embedding <=> $3::vector
+                    LIMIT $4 * 4
+                ) sub_ordered
+                ORDER BY media_item_id, distance
+            ) sub_unique
+            ORDER BY distance
             LIMIT $4
         ),
         merged AS (
