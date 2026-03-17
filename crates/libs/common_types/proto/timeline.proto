@@ -30,18 +30,19 @@ message TimelineItem {
   string timestamp = 5;
 }
 
-// --- Album Specific ---
-message FullAlbumMediaResponse {
-  AlbumInfo album = 1;
-  repeated AlbumTimelineItem items = 2;
-}
-
-message AlbumTimelineItem {
+// --- Simple timeline ---
+message SimpleTimelineItem {
   string id = 1;
   bool is_video = 2;
   bool has_thumbnails = 3;
   optional int32 duration_ms = 4;
   float ratio = 6;
+}
+
+// --- Album Specific ---
+message FullAlbumMediaResponse {
+  AlbumInfo album = 1;
+  repeated SimpleTimelineItem items = 2;
 }
 
 message CollaboratorSummary {
@@ -62,4 +63,9 @@ message AlbumInfo {
   optional string first_date = 9;
   optional string last_date = 10;
   repeated CollaboratorSummary collaborators = 11;
+}
+
+// --- Search
+message SearchResponse {
+  repeated SimpleTimelineItem items = 1;
 }

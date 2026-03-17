@@ -1,12 +1,14 @@
 use crate::api_state::ApiContext;
 use axum::extract::{Query, State};
-use axum::{Extension, Json};
+use axum::Extension;
+use axum_extra::protobuf::Protobuf;
 use common_services::api::search::error::SearchError;
-use common_services::api::search::interfaces::{SearchParams, SearchResultItem};
+use common_services::api::search::interfaces::SearchParams;
 use common_services::api::search::service::{
-    SearchMediaConfig, get_search_suggestions, search_media,
+    get_search_suggestions, search_media, SearchMediaConfig,
 };
 use common_services::database::app_user::User;
+use common_types::pb::api::SearchResponse;
 use tracing::instrument;
 
 /// Get a timeline of all media ratios, grouped by month.
@@ -22,7 +24,7 @@ use tracing::instrument;
         SearchParams
     ),
     responses(
-        (status = 200, description = "Search results", body = Vec<SearchResultItem>),
+        (status = 200, description = "Search results", body = Vec<SearchResponse>),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
@@ -32,8 +34,8 @@ pub async fn get_search_results(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<SearchParams>,
-) -> Result<Json<Vec<SearchResultItem>>, SearchError> {
-    let search_result = search_media(
+) -> Result<Protobuf<SearchResponse>, SearchError> {
+    let items = search_media(
         &user,
         &context.pool,
         context.embedder,
@@ -45,7 +47,7 @@ pub async fn get_search_results(
         },
     )
     .await?;
-    Ok(Json(search_result))
+    Ok(Protobuf(SearchResponse { items }))
 }
 
 #[instrument(skip(context, user), err(Debug))]

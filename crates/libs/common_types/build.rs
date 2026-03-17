@@ -64,7 +64,11 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
     config.type_attribute(
-        ".api.AlbumTimelineItem",
+        ".api.SimpleTimelineItem",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.SearchResponse",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 

@@ -1,10 +1,10 @@
 use crate::api::search::error::SearchError;
-use crate::api::search::interfaces::SearchResultItem;
 use crate::database::app_user::User;
 use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
+use common_types::pb::api::SimpleTimelineItem;
 
 pub struct SearchMediaConfig {
     pub limit: Option<i64>,
@@ -18,7 +18,7 @@ pub async fn search_media(
     embedder: Arc<TextEmbedder>,
     query: &str,
     config: SearchMediaConfig,
-) -> Result<Vec<SearchResultItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, SearchError> {
     let query_str = query.to_string();
     let embedder = embedder.clone();
     let query_embedding = tokio::task::spawn_blocking(move || embedder.embed_text(&query_str))
@@ -30,7 +30,8 @@ pub async fn search_media(
     let candidate_limit = limit * 3 + 300;
     let k = 60.0f64;
 
-    let items = sqlx::query_as!(SearchResultItem,
+    let items = sqlx::query_as!(
+        SimpleTimelineItem,
         r#"
         WITH
         fts AS (
@@ -56,17 +57,13 @@ pub async fn search_media(
             LIMIT $4
         ),
         merged AS (
-            SELECT id, score, rank, 1 as is_fts, 0 as is_vec FROM fts
+            SELECT id, rank, 1 as is_fts, 0 as is_vec FROM fts
             UNION ALL
-            SELECT id, score, rank, 0 as is_fts, 1 as is_vec FROM vec
+            SELECT id, rank, 0 as is_fts, 1 as is_vec FROM vec
         ),
         scored_candidates AS (
             SELECT
                 id,
-                MAX(score) FILTER (WHERE is_fts = 1) as fts_score,
-                MAX(score) FILTER (WHERE is_vec = 1) as vector_score,
-                MAX(rank) FILTER (WHERE is_fts = 1) as fts_rank,
-                MAX(rank) FILTER (WHERE is_vec = 1) as vector_rank,
                 SUM(
                     CASE
                         WHEN is_fts = 1 THEN $7::float8 / ($6::float8 + rank::float8)
@@ -78,17 +75,11 @@ pub async fn search_media(
             GROUP BY id
         )
         SELECT
-            mi.id,
-            mi.is_video,
-            mi.has_thumbnails,
-            mi.duration_ms,
-            mi.taken_at_local,
-            (mi.width::real / mi.height::real) as "ratio!",
-            coalesce(sc.fts_score, 0)::real as "fts_score!",
-            coalesce(sc.vector_score, 0)::real as "vector_score!",
-            sc.fts_rank::integer as "fts_rank",
-            sc.vector_rank::integer as "vector_rank",
-            sc.combined_score as "combined_score!"
+            mi.id::text as "id!",
+            mi.is_video as "is_video!",
+            mi.has_thumbnails as "has_thumbnails!",
+            mi.duration_ms as "duration_ms: i32",
+            (mi.width::real / mi.height::real) as "ratio!"
         FROM scored_candidates sc
         JOIN media_item mi ON mi.id = sc.id
         ORDER BY sc.combined_score DESC
