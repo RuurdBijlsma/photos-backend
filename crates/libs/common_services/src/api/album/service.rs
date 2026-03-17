@@ -14,7 +14,7 @@ use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use common_types::pb::api::{AlbumInfo, SimpleTimelineItem, FullAlbumMediaResponse};
+use common_types::pb::api::{AlbumInfo, FullAlbumMediaResponse, SimpleTimelineItem};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;

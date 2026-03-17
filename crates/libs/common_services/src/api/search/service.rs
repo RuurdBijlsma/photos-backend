@@ -1,10 +1,10 @@
 use crate::api::search::error::SearchError;
 use crate::database::app_user::User;
+use common_types::pb::api::SimpleTimelineItem;
 use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
-use common_types::pb::api::SimpleTimelineItem;
 
 pub struct SearchMediaConfig {
     pub limit: Option<i64>,

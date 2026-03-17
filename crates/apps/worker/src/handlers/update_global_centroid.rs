@@ -1,11 +1,11 @@
-use pgvector::Vector;
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use color_eyre::Result;
 use common_services::database::jobs::Job;
+use common_services::database::system_metrics_store::SystemMetricsStore;
+use pgvector::Vector;
 use sqlx::PgPool;
 use tracing::info;
-use common_services::database::system_metrics_store::SystemMetricsStore;
 
 pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
     info!("🔄 Updating global centroid...");
