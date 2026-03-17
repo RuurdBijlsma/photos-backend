@@ -111,6 +111,9 @@ pub async fn search_media(
     Ok(items)
 }
 
-pub async fn get_search_suggestions(_user: &User, _pool: &PgPool) -> Result<String, SearchError> {
-    Ok("asdf".to_owned())
+pub async fn get_search_suggestions(user: &User, pool: &PgPool) -> Result<String, SearchError> {
+    let x = sqlx::query!("SELECT id FROM media_item WHERE user_id = $1", user.id)
+        .fetch_one(pool)
+        .await?;
+    Ok(x.id)
 }

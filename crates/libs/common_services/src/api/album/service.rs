@@ -221,10 +221,10 @@ pub async fn add_media_to_album(
         AlbumStore::reorder_by_date(&mut tx, album_id).await?;
     }
 
-    if album.thumbnail_id.is_none() {
-        if let Some(tid) = get_representative_thumbnail(&mut tx, media_item_ids).await? {
-            AlbumStore::update(&mut *tx, album_id, None, None, Some(tid), None).await?;
-        }
+    if album.thumbnail_id.is_none()
+        && let Some(tid) = get_representative_thumbnail(&mut tx, media_item_ids).await?
+    {
+        AlbumStore::update(&mut *tx, album_id, None, None, Some(tid), None).await?;
     }
 
     tx.commit().await?;

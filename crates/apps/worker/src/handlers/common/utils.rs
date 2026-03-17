@@ -2,6 +2,7 @@ use crate::context::WorkerContext;
 use std::path::{Path, PathBuf};
 
 /// Determines which thumbnail files should be sent to the ML analyzer.
+#[must_use]
 pub fn get_images_to_analyze(
     context: &WorkerContext,
     file_path: &Path,
