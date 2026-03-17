@@ -30,6 +30,9 @@ pub async fn search_media(
     let candidate_limit = limit * 3 + 300;
     let k = 60.0f64;
 
+    let mut tx = pool.begin().await?;
+    sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+
     // --- TEMPORARY DEBUG EXPLAIN ANALYZE ---
     let explain_query = r#"
         EXPLAIN ANALYZE
@@ -106,16 +109,16 @@ pub async fn search_media(
         .bind(k)
         .bind(config.text_weight)
         .bind(config.semantic_weight)
-        .fetch_all(pool)
+        .fetch_all(&mut *tx)
         .await
     {
         Ok(rows) => {
-            println!("--- EXPLAIN ANALYZE START ---");
+            println!("--- EXPLAIN ANALYZE (FORCED INDEX) START ---");
             for row in rows {
                 let plan: String = sqlx::Row::get(&row, 0);
                 println!("{}", plan);
             }
-            println!("--- EXPLAIN ANALYZE END ---");
+            println!("--- EXPLAIN ANALYZE (FORCED INDEX) END ---");
         }
         Err(e) => {
             eprintln!("Failed to get EXPLAIN ANALYZE: {}", e);
@@ -198,8 +201,10 @@ pub async fn search_media(
         config.text_weight,    // $7
         config.semantic_weight // $8
     )
-        .fetch_all(pool)
+        .fetch_all(&mut *tx)
         .await?;
+
+    tx.commit().await?;
 
     Ok(items)
 }
