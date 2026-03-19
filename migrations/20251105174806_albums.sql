@@ -9,17 +9,20 @@ CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'rejected');
 -- The main 'album' table.
 CREATE TABLE album
 (
-    id                          VARCHAR(10) PRIMARY KEY,
-    owner_id                    INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    name                        TEXT        NOT NULL,
-    description                 TEXT,
-    thumbnail_id                VARCHAR(10) NULL REFERENCES media_item (id) ON DELETE SET NULL,
+    id                            VARCHAR(10) PRIMARY KEY,
+    owner_id                      INTEGER     NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    name                          TEXT        NOT NULL,
+    description                   TEXT,
+    thumbnail_id                  VARCHAR(10) NULL REFERENCES media_item (id) ON DELETE SET NULL,
     -- This flag enables public, view-only link sharing without requiring a login.
-    is_public                   BOOLEAN     NOT NULL DEFAULT false,
-    -- sort column: automatically updated via trigger
-    latest_media_item_timestamp TIMESTAMPTZ,
-    created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
+    is_public                     BOOLEAN     NOT NULL DEFAULT false,
+    -- sort columns: automatically updated via trigger
+    latest_media_item_timestamp   TIMESTAMPTZ,
+    earliest_media_item_timestamp TIMESTAMPTZ,
+    manual_sort                   BOOLEAN     NOT NULL DEFAULT false,
+    media_count                   INT         NOT NULL DEFAULT 0,
+    created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Index to quickly find all albums owned by a specific user.
@@ -36,10 +39,10 @@ CREATE TABLE album_media_item
     media_item_id VARCHAR(10)      NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
     added_by_user INT              REFERENCES app_user (id) ON DELETE SET NULL,
     added_at      TIMESTAMPTZ      NOT NULL DEFAULT now(),
-    -- The user can manually sort items. We use float rank for easier reordering (insert between).
+    -- The user can manually sort items, so sort by rank
     rank          DOUBLE PRECISION NOT NULL,
     PRIMARY KEY (album_id, media_item_id),
-    CONSTRAINT uq_album_media_rank UNIQUE (album_id, rank)
+    CONSTRAINT uq_album_media_rank UNIQUE (album_id, rank) DEFERRABLE INITIALLY DEFERRED
 );
 
 -- Indices for album_media_item
@@ -63,6 +66,7 @@ CREATE TABLE album_collaborator
     CONSTRAINT uq_album_local_collaborator UNIQUE (album_id, user_id)
 );
 
+CREATE INDEX idx_album_collaborator_user_album ON album_collaborator (user_id, album_id);
 
 -- A table to link imported media to a target album and remote owner before ingestion is complete.
 CREATE TABLE pending_album_media_items

@@ -18,40 +18,52 @@ pub struct Job {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[sqlx(type_name = "job_type", rename_all = "snake_case")]
 pub enum JobType {
-    Ingest,
+    IngestMetadata,
+    IngestThumbnails,
+    IngestAnalysis,
+    IngestLlm,
     Remove,
-    Analysis,
     Scan,
     CleanDB,
     ClusterFaces,
     ClusterPhotos,
     ImportAlbumItem,
+    UpdateGlobalCentroid,
 }
 
 impl JobType {
     #[must_use]
     pub const fn get_priority(&self, is_video: bool) -> i32 {
         match self {
-            Self::Ingest => {
+            Self::IngestMetadata => 50,
+            Self::IngestThumbnails => {
                 if is_video {
-                    55
+                    65
                 } else {
-                    50
+                    60
                 }
             }
-            Self::Analysis => {
+            Self::IngestAnalysis => {
                 if is_video {
                     95
                 } else {
                     90
                 }
             }
+            Self::IngestLlm => {
+                if is_video {
+                    155
+                } else {
+                    150
+                }
+            }
             Self::Remove => 0,
             Self::Scan => 10,
             Self::CleanDB => 20,
+            Self::ImportAlbumItem => 25,
             Self::ClusterFaces => 30,
             Self::ClusterPhotos => 35,
-            Self::ImportAlbumItem => 25,
+            Self::UpdateGlobalCentroid => 40,
         }
     }
 }

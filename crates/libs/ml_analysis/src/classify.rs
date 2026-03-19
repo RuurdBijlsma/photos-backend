@@ -1,5 +1,5 @@
 use color_eyre::eyre::{Context, Result};
-use common_types::ml_analysis::LlmClassification;
+use common_types::ml_analysis::MLLlmClassification;
 use language_model::LlamaClient;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
@@ -7,11 +7,12 @@ use serde_json::{Value, json};
 use std::path::Path;
 use tracing::warn;
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Debug)]
 struct BasicClassifyCaption {
     caption: String,
     main_subject: String,
     setting: String,
+    search_term: String,
 }
 
 #[allow(clippy::struct_excessive_bools)]
@@ -51,7 +52,7 @@ struct ClassifyDetails {
 pub async fn get_llm_classification(
     llm: &LlamaClient,
     img_path: &Path,
-) -> Result<LlmClassification> {
+) -> Result<MLLlmClassification> {
     let basic_info: BasicClassifyCaption =
         request_structured_data(llm, img_path, prompts::BASIC_INFO, schemas::basic_info()).await?;
     let flags: ClassifyFlags = request_structured_data(
@@ -201,6 +202,16 @@ setting:
     place or setting (e.g., kitchen, classroom, street, park, courtyard, office). Ignore
     people, animals, objects, and activities. Answer with a word or short phrase suitable for
     categorizing or grouping photos.
+
+search_term:
+    What would a user type when looking for this image? Answer this in less than 6 words,
+    preferrably less. Ideally the search_term is specific enough that this image would
+    be first or near first in the search results, as long as you keep the hypothethical
+    query short enough.
+    Examples:
+        * Hatchback in the mud
+        * Woman eating pancackes
+        * Towel on a sunny beach
 ";
 
     pub const CATEGORIZATION: &str = "You are an image categorization bot, analyze this image \
@@ -228,6 +239,7 @@ mod schemas {
                 "caption": { "type": "string" },
                 "main_subject": { "type": "string" },
                 "setting": { "type": "string" },
+                "search_term": { "type": "string" },
             },
             "required": ["setting", "main_subject", "caption"]
         })
@@ -454,13 +466,14 @@ fn map_to_final_result(
     categories: &ClassifyFlags,
     details: Option<ClassifyDetails>,
     ocr: Option<String>,
-) -> LlmClassification {
+) -> MLLlmClassification {
     let det = details.unwrap_or_default();
 
-    LlmClassification {
+    MLLlmClassification {
         caption: basic.caption,
         main_subject: basic.main_subject.to_lowercase(),
         setting: basic.setting.to_lowercase(),
+        search_term: basic.search_term.to_lowercase(),
 
         contains_pets: categories.contains_pets,
         contains_vehicle: categories.contains_vehicle,

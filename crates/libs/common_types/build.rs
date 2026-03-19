@@ -1,6 +1,10 @@
 fn main() -> std::io::Result<()> {
     println!("cargo:rerun-if-changed=proto/timeline.proto");
 
+    let file_descriptors = protox::compile(["proto/timeline.proto"], ["proto/"])
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+
+    // 3. Create the prost_build configuration
     let mut config = prost_build::Config::new();
     config.protoc_arg("--experimental_allow_proto3_optional");
 
@@ -60,11 +64,15 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
     config.type_attribute(
-        ".api.AlbumTimelineItem",
+        ".api.SimpleTimelineItem",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.SearchResponse",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 
-    config.compile_protos(&["proto/timeline.proto"], &["proto/"])?;
+    config.compile_fds(file_descriptors)?;
 
     Ok(())
 }

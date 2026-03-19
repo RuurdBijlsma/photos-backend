@@ -26,6 +26,9 @@ pub async fn run_tasks(pool: PgPool, settings: AppSettings) -> Result<()> {
     enqueue_job::<()>(&pool, &settings, JobType::ClusterFaces)
         .call()
         .await?;
+    enqueue_job::<()>(&pool, &settings, JobType::UpdateGlobalCentroid)
+        .call()
+        .await?;
     Ok(())
     //         }
     //         .await;

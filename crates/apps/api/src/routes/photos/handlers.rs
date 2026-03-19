@@ -1,25 +1,26 @@
-use crate::api_state::ApiContext;
 use app_state::IngestSettings;
-use axum::extract::{Query, State};
-use axum::response::IntoResponse;
-use axum::{Extension, Json};
-use common_services::api::photos::error::PhotosError;
+use axum::{Extension, Json, extract};
 use common_services::api::photos::interfaces::{
     ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse,
 };
-use common_services::api::photos::service::{download_media_file, random_photo};
+use common_services::api::photos::service::{
+    download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
+};
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
+
+use crate::api_state::ApiContext;
+use axum::http::header;
+use axum::response::IntoResponse;
+use axum_extra::TypedHeader;
+use axum_extra::headers::Range;
+use common_services::api::photos::error::PhotosError;
+use common_services::api::photos::interfaces::PhotoThumbnailParams;
 use common_services::database::media_item_store::MediaItemStore;
-use ml_analysis::get_color_theme;
-use serde_json::Value;
+use material_color_utils::utils::color_utils::Argb;
+use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
 
-/// Get a full media item
-///
-/// # Errors
-///
-/// Returns a `PhotosError` if the database query fails.
 #[utoipa::path(
     get,
     path = "/photos/item",
@@ -36,9 +37,9 @@ use tracing::instrument;
 )]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_full_item_handler(
-    State(context): State<ApiContext>,
+    extract::State(context): extract::State<ApiContext>,
     Extension(user): Extension<User>,
-    Query(params): Query<GetMediaItemParams>,
+    extract::Query(params): extract::Query<GetMediaItemParams>,
 ) -> Result<Json<FullMediaItem>, PhotosError> {
     let item = MediaItemStore::find_by_id(&context.pool, &params.id).await?;
     if let Some(item) = item
@@ -50,11 +51,6 @@ pub async fn get_full_item_handler(
     }
 }
 
-/// Get a random photo and its associated theme.
-///
-/// # Errors
-///
-/// Returns a `PhotosError` if the database query fails.
 #[utoipa::path(
     get,
     path = "/photos/random",
@@ -66,18 +62,13 @@ pub async fn get_full_item_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_random_photo(
-    State(context): State<ApiContext>,
+    extract::State(context): extract::State<ApiContext>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Option<RandomPhotoResponse>>, PhotosError> {
     let result = random_photo(&user, &context.pool).await?;
     Ok(Json(result))
 }
 
-/// Get a random photo and its associated theme.
-///
-/// # Errors
-///
-/// Returns a `PhotosError` if the database query fails.
 #[utoipa::path(
     get,
     path = "/photos/theme",
@@ -92,27 +83,18 @@ pub async fn get_random_photo(
     security(("bearer_auth" = []))
 )]
 pub async fn get_color_theme_handler(
-    State(ingestion): State<IngestSettings>,
-    Query(params): Query<ColorThemeParams>,
-) -> Result<Json<Value>, PhotosError> {
+    extract::State(ingestion): extract::State<IngestSettings>,
+    extract::Query(params): extract::Query<ColorThemeParams>,
+) -> Result<Json<MaterializedTheme>, PhotosError> {
     let variant = &ingestion.analyzer.theme_generation.variant;
     let contrast_level = ingestion.analyzer.theme_generation.contrast_level;
-    Ok(Json(get_color_theme(
-        &params.color,
-        variant,
-        contrast_level as f32,
-    )?))
+    let theme = theme_from_color(Argb::from_hex(&params.color)?)
+        .variant(*variant)
+        .contrast_level(contrast_level)
+        .call();
+    Ok(Json(theme))
 }
 
-/// Download a media file.
-///
-/// This endpoint streams a specific media file to the client. The path to the media
-/// file must be a valid and secure path within the configured media directory.
-///
-/// # Errors
-///
-/// This function returns a `PhotosError` if the path is invalid, the file
-/// isn't found, the user lacks permissions, or an internal server error occurs.
 #[utoipa::path(
     get,
     path = "/photos/download",
@@ -130,10 +112,59 @@ pub async fn get_color_theme_handler(
     )
 )]
 pub async fn download_full_file(
-    State(ingestion): State<IngestSettings>,
+    extract::State(ingestion): extract::State<IngestSettings>,
     Extension(user): Extension<User>,
-    Query(query): Query<DownloadMediaParams>,
+    extract::Query(query): extract::Query<DownloadMediaParams>,
 ) -> Result<impl IntoResponse, PhotosError> {
     let response = download_media_file(&ingestion, &user, &query.path).await?;
     Ok(response)
+}
+
+#[instrument(skip(context), err(Debug))]
+pub async fn get_photo_thumbnail(
+    extract::State(context): extract::State<ApiContext>,
+    extract::Query(query): extract::Query<PhotoThumbnailParams>,
+    extract::Path(media_item_id): extract::Path<String>,
+) -> Result<impl IntoResponse, PhotosError> {
+    let size = query.size.unwrap_or(360);
+    if size > 1440 {
+        return Err(PhotosError::AccessDenied);
+    }
+
+    let image_bytes = thumbnail_on_demand_cached(
+        &context.pool,
+        size,
+        &media_item_id,
+        &context.settings.ingest,
+    )
+    .await?;
+
+    Ok((
+        [
+            (header::CONTENT_TYPE, "image/jpeg"),
+            (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
+        ],
+        image_bytes,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/photos/video/{media_item_id}",
+    tag = "Photos",
+    responses((status = 206, description = "Partial video content"))
+)]
+pub async fn stream_video_handler(
+    extract::State(context): extract::State<ApiContext>,
+    extract::Path(media_item_id): extract::Path<String>,
+    range: Option<TypedHeader<Range>>,
+) -> Result<impl IntoResponse, PhotosError> {
+    let range_inner = range.map(|TypedHeader(r)| r);
+    stream_video_file(
+        &context.pool,
+        &context.settings.ingest,
+        &media_item_id,
+        range_inner,
+    )
+    .await
 }

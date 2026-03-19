@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM media_item WHERE id = ANY($1) AND deleted = false ORDER BY sort_timestamp ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ead43913a83b558ab1b5e45aa92cff85cbd5f8d95d6149705206f49069f4d88f"
+}

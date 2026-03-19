@@ -1,18 +1,18 @@
 ingest:
-  media_folder: C:\Users\Ruurd\Pictures\small_media_dir
+  media_folder: C:\Users\Ruurd\Pictures\media_dir
   thumbnail_folder: thumbnails
   enable_cache: true
 
   analyzer:
     llm_base_url: "http://localhost:8080"
-    embedder_model_id: RuteNL/DFN5B-CLIP-ViT-H-14-378-ONNX
+    search:
+      embedder_model_id: RuteNL/MobileCLIP2-S3-OpenCLIP-ONNX
+      semantic_weight: 0.5
+      text_weight: 0.5
     analyze_image_size: 720
     theme_generation:
       variant: Vibrant
       contrast_level: 0.5
-    ocr_languages:
-      - nld
-      - eng
 
   file_detection:
     video_extensions:
@@ -72,6 +72,7 @@ api:
   port: 9475
   allowed_origins:
     - "http://localhost:5173"
+    - "https://localhost:5173"
     - "http://localhost:3000"
     - "http://127.0.0.1:3000"
     - "https://ruurdbijlsma.github.io"

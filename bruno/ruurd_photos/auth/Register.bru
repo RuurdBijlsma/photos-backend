@@ -1,0 +1,24 @@
+meta {
+  name: Register
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:9475/auth/register
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "ruurd@bijlsma.dev",
+    "name": "Ruurd Bijlsma",
+    "password": "kibbeling"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,15 +1,12 @@
-use app_state::load_app_settings;
-use color_eyre::eyre::Result;
 use rand::prelude::IndexedRandom;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 
-fn main() -> Result<()> {
+fn main() {
     let source = Path::new("C:/Users/Ruurd/Pictures/Photos");
     let destination = Path::new("C:/Users/Ruurd/Pictures/media_dir");
-    let number = 20000;
-    let settings = load_app_settings()?;
+    let number = 5000;
 
     // 1. Validate Source
     if !source.exists() || !source.is_dir() {
@@ -32,8 +29,7 @@ fn main() -> Result<()> {
         Ok(entries) => {
             for entry in entries.flatten() {
                 let path = entry.path();
-                // Using your assumed function here
-                if path.is_file() && settings.ingest.is_photo_file(&path) {
+                if path.is_file() {
                     candidates.push(path);
                 }
             }
@@ -49,7 +45,7 @@ fn main() -> Result<()> {
 
     if total_found == 0 {
         println!("No photos found to sample.");
-        return Ok(());
+        return;
     }
 
     // 4. Sample N files
@@ -82,6 +78,4 @@ fn main() -> Result<()> {
         "Successfully copied {success_count} photos to {}",
         destination.display()
     );
-
-    Ok(())
 }

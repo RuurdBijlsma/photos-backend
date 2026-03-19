@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE album a\n        SET media_count = (\n            SELECT COUNT(*)\n            FROM album_media_item ami\n            JOIN media_item mi ON ami.media_item_id = mi.id\n            WHERE ami.album_id = a.id AND mi.deleted = false\n        )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "9252d9abd47795ff1eba7ce8c97bc8ce5e554b8537ff76fa26fde5303518e430"
+}

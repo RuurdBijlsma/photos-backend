@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 pub struct WorkerContext {
     pub worker_id: String,
-    pub handle_analysis: bool,
+    pub handle_llm: bool,
     pub pool: PgPool,
     pub settings: AppSettings,
     pub media_analyzer: Arc<MediaAnalyzer>,
@@ -27,17 +27,17 @@ impl WorkerContext {
         pool: PgPool,
         settings: AppSettings,
         worker_id: String,
-        handle_analysis: bool,
+        handle_llm: bool,
     ) -> Result<Self> {
-        let embedder_model_id = &settings.ingest.analyzer.embedder_model_id.clone();
-        let visual_analyzer = if handle_analysis {
+        let embedder_model_id = &settings.ingest.analyzer.search.embedder_model_id.clone();
+        let visual_analyzer = if handle_llm {
             Some(Arc::new(VisualAnalyzer::new(embedder_model_id).await?))
         } else {
             None
         };
         Ok(Self {
             worker_id,
-            handle_analysis,
+            handle_llm,
             pool,
             settings,
             media_analyzer: Arc::new(MediaAnalyzer::builder().build().await?),

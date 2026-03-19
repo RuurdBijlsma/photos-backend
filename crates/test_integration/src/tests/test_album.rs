@@ -1,5 +1,4 @@
 use crate::runner::context::test_context::TestContext;
-use crate::test_constants::{EMAIL, USERNAME};
 use crate::test_helpers::login;
 use color_eyre::eyre::{Result, bail};
 use common_services::api::album::interfaces::{
@@ -9,6 +8,7 @@ use common_services::api::album::interfaces::{
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album_store::AlbumStore;
 use common_services::database::user_store::UserStore;
+use common_types::dev_constants::{EMAIL, USERNAME};
 use reqwest::StatusCode;
 use std::time::{Duration, Instant};
 use tokio::fs;

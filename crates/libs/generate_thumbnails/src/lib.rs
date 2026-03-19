@@ -66,9 +66,8 @@ pub async fn generate_thumbnails(
     ingestion: &IngestSettings,
     file: &Path,
     thumb_sub_folder: &Path,
-    orientation: Option<u64>,
+    orientation: i32,
 ) -> Result<()> {
-    let orientation = orientation.unwrap_or(0);
     let Some(sub_folder_name) = thumb_sub_folder
         .file_name()
         .map(|s| s.to_string_lossy().to_string())

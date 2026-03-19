@@ -1,0 +1,28 @@
+meta {
+  name: Refresh token
+  type: http
+  seq: 3
+}
+
+post {
+  url: https://localhost:9475/auth/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "ruurd@example.com",
+    "password": "kibbeling"
+  }
+}
+
+script:post-response {
+  bru.setVar("token", res.body.accessToken);
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

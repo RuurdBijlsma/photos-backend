@@ -108,7 +108,8 @@ impl TestContext {
         let worker_pool = pool.clone();
         let worker_setting = settings.clone();
         let worker_handle = tokio::spawn(async move {
-            if let Err(e) = worker::worker::create_worker(worker_pool, worker_setting, false).await
+            if let Err(e) =
+                worker::worker::create_worker(worker_pool, worker_setting, false, false).await
             {
                 error!("Worker failed: {}", e);
             }
@@ -119,7 +120,7 @@ impl TestContext {
         let ml_worker_setting = settings.clone();
         let ml_worker_handle = tokio::spawn(async move {
             if let Err(e) =
-                worker::worker::create_worker(ml_worker_pool, ml_worker_setting, true).await
+                worker::worker::create_worker(ml_worker_pool, ml_worker_setting, true, false).await
             {
                 error!("Worker failed: {}", e);
             }

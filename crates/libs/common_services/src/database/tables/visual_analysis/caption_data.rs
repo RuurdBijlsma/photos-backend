@@ -1,12 +1,14 @@
-use common_types::ml_analysis::LlmClassification;
+use common_types::ml_analysis::MLLlmClassification;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Corresponds to the '`caption_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct ClassificationData {
-    pub caption: Option<String>,
-    pub main_subject: Option<String>,
+    pub caption: String,
+    pub main_subject: String,
+    pub setting: String,
+    pub search_term: String,
     pub contains_pets: bool,
     pub contains_vehicle: bool,
     pub contains_landmarks: bool,
@@ -21,7 +23,6 @@ pub struct ClassificationData {
     pub is_landscape: bool,
     pub is_cityscape: bool,
     pub is_activity: bool,
-    pub setting: String,
     pub ocr_text: Option<String>,
     pub animal_type: Option<String>,
     pub food_name: Option<String>,
@@ -36,11 +37,13 @@ pub struct ClassificationData {
     pub activity_description: Option<String>,
 }
 
-impl From<LlmClassification> for ClassificationData {
-    fn from(caption_data: LlmClassification) -> Self {
+impl From<MLLlmClassification> for ClassificationData {
+    fn from(caption_data: MLLlmClassification) -> Self {
         Self {
-            caption: Some(caption_data.caption),
-            main_subject: Some(caption_data.main_subject),
+            caption: caption_data.caption,
+            setting: caption_data.setting,
+            main_subject: caption_data.main_subject,
+            search_term: caption_data.search_term,
             contains_pets: caption_data.contains_pets,
             contains_vehicle: caption_data.contains_vehicle,
             contains_landmarks: caption_data.contains_landmarks,
@@ -55,7 +58,6 @@ impl From<LlmClassification> for ClassificationData {
             is_landscape: caption_data.is_landscape,
             is_cityscape: caption_data.is_cityscape,
             is_activity: caption_data.is_activity,
-            setting: caption_data.setting,
             ocr_text: caption_data.ocr_text,
             animal_type: caption_data.animal_type,
             food_name: caption_data.food_name,

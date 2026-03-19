@@ -10,7 +10,7 @@ use worker::worker::create_worker;
 #[command(version, about, long_about = None)]
 struct Args {
     #[clap(long, default_value_t = false, short, action)]
-    analysis: bool,
+    llm: bool,
 }
 
 #[tokio::main]
@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
 
     let settings = load_app_settings()?;
     let pool = get_db_pool(&settings.secrets.database_url, true).await?;
-    create_worker(pool, settings, Args::parse().analysis).await?;
+    create_worker(pool, settings, Args::parse().llm, false).await?;
 
     Ok(())
 }

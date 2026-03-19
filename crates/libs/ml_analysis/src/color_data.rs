@@ -1,7 +1,8 @@
-use crate::PyInterop;
-use common_types::ml_analysis::{PyColorData, PyColorHistogram, PyRGBChannels};
-use common_types::variant::Variant;
+use common_types::ml_analysis::{MLColorData, MLColorHistogram, MLRGBChannels};
 use image::Rgb;
+use material_color_utils::dynamic::variant::Variant;
+use material_color_utils::theme_from_color;
+use material_color_utils::utils::color_utils::Argb;
 use palette::{FromColor, Hsv, Srgb};
 use std::path::Path;
 
@@ -14,16 +15,11 @@ fn average_hue_from_sums(x_sum: f32, y_sum: f32) -> f32 {
 }
 
 /// Analyzes an image file to calculate its color properties, including prominent colors, color themes, average color values, and a histogram.
-///
-/// # Errors
-///
-/// This function will return an error if the image cannot be opened/decoded or if the Python interoperability calls fail.
 pub fn get_color_data(
-    py_interop: &PyInterop,
     file: &Path,
     theme_variant: &Variant,
-    theme_contrast_level: f32,
-) -> color_eyre::Result<PyColorData> {
+    theme_contrast_level: f64,
+) -> color_eyre::Result<MLColorData> {
     let rgb_image = image::open(file)?.to_rgb8();
     let (width, height) = rgb_image.dimensions();
     let pixel_count = (width * height) as f32;
@@ -61,24 +57,30 @@ pub fn get_color_data(
     let average_saturation = sat_sum / pixel_count * 100.0;
     let average_lightness = val_sum / pixel_count * 100.0;
 
-    let prominent_colors = py_interop.get_image_prominent_colors(file)?;
+    let img = image::open(file)?;
+    let prominent_colors = material_color_utils::extract_image_colors(&img).call();
     let themes = prominent_colors
         .iter()
-        .map(|c| py_interop.get_theme_from_color(c, theme_variant, theme_contrast_level))
-        .collect::<Result<Vec<_>, _>>()?;
+        .map(|c| {
+            theme_from_color(*c)
+                .variant(*theme_variant)
+                .contrast_level(theme_contrast_level)
+                .call()
+        })
+        .collect();
 
-    let histogram = PyColorHistogram {
+    let histogram = MLColorHistogram {
         bins: 256,
-        channels: PyRGBChannels {
+        channels: MLRGBChannels {
             red: hist_r.to_vec(),
             green: hist_g.to_vec(),
             blue: hist_b.to_vec(),
         },
     };
 
-    Ok(PyColorData {
+    Ok(MLColorData {
         themes,
-        prominent_colors,
+        prominent_colors: prominent_colors.iter().map(Argb::to_hex).collect(),
         average_hue,
         average_saturation,
         average_lightness,

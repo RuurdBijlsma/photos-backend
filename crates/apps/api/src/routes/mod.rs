@@ -5,6 +5,7 @@ pub mod onboarding;
 pub mod photos;
 pub mod root;
 pub mod s2s;
+pub mod search;
 pub mod timeline;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
@@ -15,11 +16,12 @@ use crate::auth::middlewares::user::ApiUser;
 use crate::auth::middlewares::websocket::WsUser;
 use crate::auth::router::{auth_protected_router, auth_public_router};
 use crate::onboarding::router::onboarding_admin_routes;
-use crate::photos::router::photos_protected_router;
+use crate::photos::router::{photos_protected_router, photos_public_router};
 use crate::root::handlers::root;
 use crate::root::router::root_public_router;
 use crate::routes::api_doc::ApiDoc;
 use crate::s2s::router::s2s_public_router;
+use crate::search::router::search_protected_router;
 use crate::timeline::router::{timeline_protected_router, timeline_websocket_router};
 use app_state::RateLimitingSettings;
 use axum::Router;
@@ -45,6 +47,7 @@ fn public_routes(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
         .merge(auth_public_router(rate_limiting))
         .merge(root_public_router())
         .merge(s2s_public_router())
+        .merge(photos_public_router())
 }
 
 // New WebSocket Route Group
@@ -67,6 +70,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
         .merge(auth_protected_router())
         .merge(photos_protected_router())
         .merge(timeline_protected_router())
+        .merge(search_protected_router())
         .merge(album_protected_router())
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }

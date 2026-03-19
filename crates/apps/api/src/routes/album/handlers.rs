@@ -11,14 +11,15 @@ use common_services::api::album::interfaces::{
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
-    get_album_media, remove_collaborator, remove_media_from_album, update_album,
+    get_album_media, remove_album_description, remove_collaborator, remove_media_from_album,
+    sort_album_by_date, update_album,
 };
-use common_services::database::album::album::{Album, AlbumSummary, AlbumWithCount};
+use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
 use common_types::pb::api::FullAlbumMediaResponse;
-use tracing::{info, instrument};
+use tracing::instrument;
 
 /// Create a new album.
 ///
@@ -34,13 +35,12 @@ use tracing::{info, instrument};
     ),
     security(("bearer_auth" = []))
 )]
-#[instrument(skip(context, user), err(Debug))]
+#[instrument(skip(context, user, payload), err(Debug))]
 pub async fn create_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Json(payload): Json<CreateAlbumRequest>,
 ) -> Result<(StatusCode, Json<Album>), AlbumError> {
-    info!("Create album handler {:?}", payload);
     let album = create_album(
         &context.pool,
         user.id,
@@ -61,7 +61,7 @@ pub async fn create_album_handler(
     path = "/album",
     tag = "Album",
     responses(
-        (status = 200, description = "A list of the user's albums.", body = Vec<AlbumWithCount>),
+        (status = 200, description = "A list of the user's albums.", body = Vec<Album>),
         (status = 500, description = "A database or internal error occurred."),
     ),
     security(("bearer_auth" = []))
@@ -71,7 +71,7 @@ pub async fn get_user_albums_handler(
     State(context): State<ApiContext>,
     Query(query): Query<ListAlbumsParam>,
     Extension(user): Extension<User>,
-) -> Result<Json<Vec<AlbumWithCount>>, AlbumError> {
+) -> Result<Json<Vec<Album>>, AlbumError> {
     let albums = AlbumStore::list_with_count_by_user_id(
         &context.pool,
         user.id,
@@ -117,6 +117,15 @@ pub async fn update_album_handler(
     )
     .await?;
     Ok(Json(album))
+}
+
+pub async fn remove_album_description_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(album_id): Path<String>,
+) -> Result<(), AlbumError> {
+    remove_album_description(&context.pool, &album_id, user.id).await?;
+    Ok(())
 }
 
 /// Add media items to an album.
@@ -235,6 +244,16 @@ pub async fn remove_collaborator_handler(
 ) -> Result<StatusCode, AlbumError> {
     remove_collaborator(&context.pool, &album_id, collaborator_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[instrument(skip(context), err(Debug))]
+pub async fn sort_album_by_date_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(album_id): Path<String>,
+) -> Result<(), AlbumError> {
+    sort_album_by_date(&context.pool, &album_id, user.id).await?;
+    Ok(())
 }
 
 /// Generate a cross-server invitation link for an album.

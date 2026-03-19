@@ -1,42 +1,34 @@
 use crate::color_data::get_color_data;
+use crate::get_llm_classification;
 use crate::quality_judge::get_quality_judgement;
 use crate::quality_measure::get_quality_measurement;
 use crate::utils::convert_media_file;
-use crate::{PyInterop, get_llm_classification};
 use app_state::AnalyzerSettings;
 use color_eyre::eyre::eyre;
-use common_types::ml_analysis::{CombinedQuality, RawVisualAnalysis};
-use common_types::variant::Variant;
+use common_types::ml_analysis::{MLChatAnalysis, MLCombinedQuality, MLFastAnalysis};
+use face_id::analyzer::FaceAnalyzer;
 use language_model::{ChatSession, LlamaClient};
 use open_clip_inference::VisionEmbedder;
-use pyo3::Python;
-use serde_json::Value;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tempfile::Builder;
 
 pub struct VisualAnalyzer {
-    py_interop: PyInterop,
     pub embedder: VisionEmbedder,
     pub llm_client: LlamaClient,
+    pub face_analyzer: FaceAnalyzer,
 }
 
 impl VisualAnalyzer {
-    /// Creates a new instance of the `VisualAnalyzer`, initializing the Python interoperability layer.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the Python environment cannot be initialized or the required Python modules are not found.
+    /// Creates a new instance of the `VisualAnalyzer`.
     pub async fn new(embedder_model_id: &str) -> color_eyre::Result<Self> {
         let embedder = VisionEmbedder::from_hf(embedder_model_id).build().await?;
         let llm = LlamaClient::with_base_url("http://localhost:8080").build();
-        Python::attach(|py| {
-            let py_interop = PyInterop::new(py)?;
-            Ok(Self {
-                py_interop,
-                llm_client: llm,
-                embedder,
-            })
+        let face_analyzer = FaceAnalyzer::from_hf().build().await?;
+        Ok(Self {
+            llm_client: llm,
+            embedder,
+            face_analyzer,
         })
     }
 
@@ -46,39 +38,14 @@ impl VisualAnalyzer {
         ChatSession::new(self.llm_client.clone())
     }
 
-    /// Get theme JSON from a given color.
-    ///
-    /// # Errors
-    ///
-    /// Error if we can't get theme from color, or Python interop don't work.
-    pub fn theme_from_color(
-        &self,
-        color: &str,
-        variant: &Variant,
-        contrast_level: f32,
-    ) -> color_eyre::Result<Value> {
-        let result = self
-            .py_interop
-            .get_theme_from_color(color, variant, contrast_level)?;
-        Ok(result)
-    }
-
-    /// Performs a visual analysis of the given image file, extracting various data points like color, quality, and content.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
-    pub async fn analyze_image(
-        &self,
-        config: &AnalyzerSettings,
+    async fn get_analysis_file(
         file: &Path,
-        percentage: i32,
-    ) -> color_eyre::Result<RawVisualAnalysis> {
-        let start = Instant::now();
-        let now = Instant::now();
+        analyze_image_size: u64,
+    ) -> color_eyre::Result<PathBuf> {
         let Some(extension) = file.extension().map(|e| e.to_string_lossy().to_string()) else {
             return Err(eyre!("Can't get extension from file"));
         };
+
         let mut analysis_file = file.to_path_buf();
         if !["jpg", "jpeg"].contains(&&*extension.to_lowercase()) {
             let temp_file = Builder::new()
@@ -86,18 +53,72 @@ impl VisualAnalyzer {
                 .disable_cleanup(true)
                 .tempfile()?;
             analysis_file = temp_file.path().to_path_buf();
-            convert_media_file(file, &analysis_file).await?;
+            convert_media_file(file, &analysis_file, analyze_image_size).await?;
         }
+        Ok(analysis_file)
+    }
+
+    /// Performs a visual analysis of the given image file, extracting various data points like color, quality, and content.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
+    pub async fn fast_image_analysis(
+        &self,
+        config: &AnalyzerSettings,
+        file: &Path,
+        percentage: i32,
+    ) -> color_eyre::Result<MLFastAnalysis> {
+        let start = Instant::now();
+        let now = Instant::now();
+        let analysis_file = Self::get_analysis_file(file, config.analyze_image_size).await?;
         println!("Convert to jpg {:?}", now.elapsed());
 
         let now = Instant::now();
         let color_data = get_color_data(
-            &self.py_interop,
             &analysis_file,
             &config.theme_generation.variant,
-            config.theme_generation.contrast_level as f32,
+            config.theme_generation.contrast_level,
         )?;
         println!("get_color_data {:?}", now.elapsed());
+
+        let img = image::open(&analysis_file)?;
+
+        let now = Instant::now();
+        let embedding = self.embedder.embed_image(&img)?.to_vec();
+        println!("embed_image {:?}", now.elapsed());
+
+        let now = Instant::now();
+        let faces = self.face_analyzer.analyze(&img)?;
+        println!("facial_recognition {:?}", now.elapsed());
+
+        tokio::fs::remove_file(&analysis_file).await?;
+
+        println!("total ml analysis {:?}", start.elapsed());
+
+        Ok(MLFastAnalysis {
+            percentage,
+            color_data,
+            embedding,
+            faces,
+        })
+    }
+
+    /// Performs a visual analysis of the given image file, extracting various data points like color, quality, and content.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file extension cannot be determined, if file conversion to JPEG fails, or if any of the underlying analysis steps encounter an error.
+    pub async fn llm_analysis(
+        &self,
+        config: &AnalyzerSettings,
+        file: &Path,
+        percentage: i32,
+    ) -> color_eyre::Result<MLChatAnalysis> {
+        let start = Instant::now();
+        let now = Instant::now();
+        let analysis_file = Self::get_analysis_file(file, config.analyze_image_size).await?;
+        println!("Convert to jpg {:?}", now.elapsed());
 
         let now = Instant::now();
         let llm_classification = get_llm_classification(&self.llm_client, &analysis_file).await?;
@@ -111,36 +132,19 @@ impl VisualAnalyzer {
         let quality_judgement = get_quality_judgement(&self.llm_client, &analysis_file).await?;
         println!("get_quality_judgement {:?}", now.elapsed());
 
-        let quality = CombinedQuality {
+        let quality = MLCombinedQuality {
             measured: quality_measurement,
             judged: quality_judgement,
         };
-
-        let now = Instant::now();
-        let img = image::open(&analysis_file)?;
-        let embedding = self.embedder.embed_image(&img)?.to_vec();
-        println!("embed_image {:?}", now.elapsed());
-
-        let now = Instant::now();
-        let faces = self.py_interop.facial_recognition(&analysis_file)?;
-        println!("facial_recognition {:?}", now.elapsed());
-
-        let now = Instant::now();
-        let objects = self.py_interop.object_detection(&analysis_file)?;
-        println!("object_detection {:?}", now.elapsed());
 
         tokio::fs::remove_file(&analysis_file).await?;
 
         println!("total ml analysis {:?}", start.elapsed());
 
-        Ok(RawVisualAnalysis {
+        Ok(MLChatAnalysis {
             percentage,
-            color_data,
             quality,
             llm_classification,
-            embedding,
-            faces,
-            objects,
         })
     }
 }

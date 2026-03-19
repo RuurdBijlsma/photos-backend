@@ -58,17 +58,13 @@ impl FfmpegCommand {
     ///
     /// Automatically ensures dimensions are even numbers.
     pub fn add_scale(&mut self, input_stream: &str, width: i32, height: i32) -> String {
-        // Helper to ensure dimensions are even (required for YUV420)
         let sanitize = |val: i32| {
-            if val == -1 {
+            if val <= 0 {
+                // -2 tells FFmpeg: "keep aspect ratio and ensure divisible by 2"
                 -2
-            }
-            // FFmpeg calc width/height AND ensure div by 2
-            else if val > 0 && val % 2 != 0 {
-                val + 1
-            }
-            // Round odd up to even
-            else {
+            } else if val % 2 != 0 {
+                val + 1 // Round up to even
+            } else {
                 val
             }
         };
@@ -97,27 +93,36 @@ impl FfmpegCommand {
     pub fn map_video_output(
         &mut self,
         video_stream: &str,
-        audio_stream: &str,
+        audio_stream: Option<&str>,
         crf_quality: u64,
         out_path: &Path,
     ) {
-        self.maps.extend([
-            "-map".into(),
-            video_stream.into(),
-            "-map".into(),
-            audio_stream.into(),
+        let mut map_args: Vec<OsString> = vec!["-map".into(), video_stream.into()];
+
+        if let Some(a_stream) = audio_stream {
+            map_args.extend([
+                "-map".into(),
+                a_stream.into(),
+                "-c:a".into(),
+                "libopus".into(),
+                "-b:a".into(),
+                "64k".into(),
+            ]);
+        } else {
+            map_args.push("-an".into());
+        }
+
+        map_args.extend([
             "-c:v".into(),
             "libvpx-vp9".into(),
             "-crf".into(),
             crf_quality.to_string().into(),
             "-b:v".into(),
             "0".into(),
-            "-c:a".into(),
-            "libopus".into(),
-            "-b:a".into(),
-            "64k".into(),
             utils::path_to_os_string(out_path),
         ]);
+
+        self.maps.extend(map_args);
     }
 
     /// Builds and runs the `FFmpeg` command.
@@ -162,15 +167,29 @@ async fn run_ffmpeg<S: AsRef<OsStr> + Send + Sync>(args: &[S]) -> Result<()> {
 
 #[derive(Deserialize)]
 struct FfprobeOutput {
+    streams: Vec<StreamInfo>,
     format: FormatInfo,
 }
+
 #[derive(Deserialize)]
-struct FormatInfo {
-    duration: String,
+struct StreamInfo {
+    codec_type: String,
+    duration: Option<String>,
 }
 
-/// Gets the duration of a video file in seconds using ffprobe.
-pub async fn get_video_duration(video_path: &Path) -> Result<f64> {
+#[derive(Deserialize)]
+struct FormatInfo {
+    duration: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct VideoMetadata {
+    pub duration: f64,
+    pub has_audio: bool,
+}
+
+/// Gets metadata (duration and presence of audio) using ffprobe.
+pub async fn get_video_metadata(video_path: &Path) -> Result<VideoMetadata> {
     let video_path_str = utils::path_to_os_string(video_path)
         .into_string()
         .map_err(|_| eyre::eyre!("ffprobe video path is not valid UTF-8"))?;
@@ -181,6 +200,7 @@ pub async fn get_video_duration(video_path: &Path) -> Result<f64> {
         "-print_format",
         "json",
         "-show_format",
+        "-show_streams",
         &video_path_str,
     ];
 
@@ -195,12 +215,23 @@ pub async fn get_video_duration(video_path: &Path) -> Result<f64> {
         bail!("ffprobe failed: {}", stderr.trim());
     }
 
-    let ffprobe_data: FfprobeOutput =
-        serde_json::from_slice(&output.stdout).context("Failed to parse ffprobe JSON output")?;
+    let data: FfprobeOutput = serde_json::from_slice(&output.stdout)?;
 
-    ffprobe_data
+    // Fallback logic for duration:
+    // 1. Try the format container duration.
+    // 2. If missing, try the duration of the first stream that has one.
+    // 3. If still missing, default to 0.0.
+    let duration = data
         .format
         .duration
-        .parse()
-        .context("Failed to parse duration string")
+        .or_else(|| data.streams.iter().find_map(|s| s.duration.clone()))
+        .and_then(|d| d.parse::<f64>().ok())
+        .unwrap_or(0.0);
+
+    let has_audio = data.streams.iter().any(|s| s.codec_type == "audio");
+
+    Ok(VideoMetadata {
+        duration,
+        has_audio,
+    })
 }

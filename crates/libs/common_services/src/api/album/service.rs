@@ -5,6 +5,7 @@ use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
+use crate::database::system_metrics_store::SystemMetricsStore;
 use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
 use crate::s2s_client::{S2SClient, extract_token_claims};
@@ -13,9 +14,9 @@ use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
-use common_types::pb::api::{AlbumInfo, AlbumTimelineItem, FullAlbumMediaResponse};
+use common_types::pb::api::{AlbumInfo, FullAlbumMediaResponse, SimpleTimelineItem};
 use jsonwebtoken::{EncodingKey, Header, encode};
-use sqlx::{Executor, PgPool, Postgres};
+use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;
 
 #[instrument(skip(executor))]
@@ -73,6 +74,90 @@ where
     check_user_role(executor, user_id, album_id, &[AlbumRole::Owner]).await
 }
 
+/// Finds a representative thumbnail for a list of media items.
+/// Returns the image that has an embedding closest to the centroid if >50% have embeddings.
+/// Otherwise, returns the middle item chronologically.
+#[instrument(skip(tx))]
+async fn get_representative_thumbnail(
+    tx: &mut PgTransaction<'_>,
+    media_item_ids: &[String],
+) -> Result<Option<String>, AlbumError> {
+    if media_item_ids.is_empty() {
+        return Ok(None);
+    }
+
+    // Try contrastive logic if more than 50% have embeddings
+    let cached_global_centroid =
+        SystemMetricsStore::get_vector(&mut **tx, "global_centroid").await?;
+
+    let result = sqlx::query!(
+        r#"
+        WITH target_embeddings AS (
+            SELECT media_item_id, embedding
+            FROM visual_analysis
+            WHERE media_item_id = ANY($1)
+            AND deleted = false
+        ),
+        stats AS (
+            SELECT COUNT(*) as count FROM target_embeddings
+        ),
+        album_centroid AS (
+            SELECT avg(embedding)::vector as center FROM target_embeddings
+        ),
+        global_centroid_val AS (
+            SELECT 
+                CASE 
+                    WHEN $2::vector IS NOT NULL THEN $2::vector
+                    ELSE (
+                        SELECT avg(embedding)::vector 
+                        FROM (
+                            SELECT embedding 
+                            FROM visual_analysis 
+                            WHERE deleted = false 
+                            ORDER BY random() 
+                            LIMIT 1000
+                        ) as sample
+                    )
+                END as center
+        ),
+        scored_items AS (
+            SELECT 
+                t.media_item_id,
+                -- Score = (Distance to Global) - (Distance to Album)
+                (t.embedding <=> gc.center) - (t.embedding <=> ac.center) as score
+            FROM target_embeddings t, album_centroid ac, global_centroid_val gc
+            WHERE (SELECT count FROM stats) > (array_length($1, 1) / 2)
+        )
+        SELECT 
+            (SELECT count FROM stats)::bigint as "embedded_count!",
+            (SELECT media_item_id FROM scored_items ORDER BY score DESC LIMIT 1)::text as "closest_id?"
+        "#,
+        media_item_ids,
+        cached_global_centroid.as_deref() as Option<&[f32]>
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+
+    if let Some(id) = result.closest_id {
+        return Ok(Some(id));
+    }
+
+    // Fallback: Middle item chronologically
+    let chronological_ids = sqlx::query_scalar!(
+        "SELECT id FROM media_item WHERE id = ANY($1) AND deleted = false ORDER BY sort_timestamp ASC",
+        media_item_ids
+    )
+    .fetch_all(&mut **tx)
+    .await?;
+
+    if chronological_ids.is_empty() {
+        return Ok(None);
+    }
+
+    let middle_idx = chronological_ids.len() / 2;
+    Ok(chronological_ids.get(middle_idx).cloned())
+}
+
 #[instrument(skip(pool))]
 pub async fn create_album(
     pool: &PgPool,
@@ -98,7 +183,7 @@ pub async fn create_album(
     AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
     if !media_item_ids.is_empty() {
         AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
-        if let Some(thumb) = AlbumStore::find_middle_media_item_id(&mut *tx, &album_id).await? {
+        if let Some(thumb) = get_representative_thumbnail(&mut tx, media_item_ids).await? {
             AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
         }
     }
@@ -123,15 +208,23 @@ pub async fn add_media_to_album(
 
     let mut tx = pool.begin().await?;
 
-    let Some(album_before) = AlbumStore::find_by_id(&mut *tx, album_id).await? else {
+    // Get current album state
+    let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? else {
         return Err(AlbumError::NotFound("Album not found.".to_string()));
     };
+
+    // Add the items
     AlbumStore::add_media_items(&mut *tx, album_id, media_item_ids, user_id).await?;
-    if album_before.thumbnail_id.is_none() {
-        let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
-        if let Some(thumbnail_id) = thumbnail_id {
-            AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None).await?;
-        }
+
+    // If NOT manually sorted, run the reorder logic immediately to interleave them
+    if !album.manual_sort {
+        AlbumStore::reorder_by_date(&mut tx, album_id).await?;
+    }
+
+    if album.thumbnail_id.is_none()
+        && let Some(tid) = get_representative_thumbnail(&mut tx, media_item_ids).await?
+    {
+        AlbumStore::update(&mut *tx, album_id, None, None, Some(tid), None).await?;
     }
 
     tx.commit().await?;
@@ -168,8 +261,14 @@ pub async fn remove_media_from_album(
     if let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? {
         // Check if removed item was the thumbnail
         if Some(media_item_id.to_owned()) == album.thumbnail_id && album.media_count > 0 {
-            let thumbnail_id = AlbumStore::find_middle_media_item_id(&mut *tx, album_id).await?;
-            if let Some(thumbnail_id) = thumbnail_id {
+            let ids: Vec<String> = sqlx::query_scalar!(
+                "SELECT media_item_id FROM album_media_item WHERE album_id = $1",
+                album_id
+            )
+            .fetch_all(&mut *tx)
+            .await?;
+
+            if let Some(thumbnail_id) = get_representative_thumbnail(&mut tx, &ids).await? {
                 AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
                     .await?;
             }
@@ -275,7 +374,7 @@ pub async fn update_album(
         let album = AlbumStore::find_by_id(pool, album_id)
             .await?
             .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()))?;
-        return Ok(album.into());
+        return Ok(album);
     }
 
     if let Some(thumbnail_id) = &thumbnail_id {
@@ -290,6 +389,20 @@ pub async fn update_album(
     let updated_album =
         AlbumStore::update(pool, album_id, name, description, thumbnail_id, is_public).await?;
     Ok(updated_album)
+}
+
+pub async fn remove_album_description(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+) -> Result<(), AlbumError> {
+    if !is_album_owner(pool, user_id, album_id).await? {
+        return Err(AlbumError::NotFound(
+            "Album not found or permission denied.".to_string(),
+        ));
+    }
+    AlbumStore::remove_description(pool, album_id).await?;
+    Ok(())
 }
 
 #[instrument(skip(pool))]
@@ -406,12 +519,12 @@ pub async fn get_album_media(
     }
     let items_future = async {
         sqlx::query_as!(
-            AlbumTimelineItem,
+            SimpleTimelineItem,
             r#"
             SELECT
                 mi.id,
                 is_video,
-                use_panorama_viewer as is_panorama,
+                has_thumbnails,
                 duration_ms::INT as duration_ms,
                 (width::real / height::real) as "ratio!"
             FROM album_media_item as ami
@@ -443,4 +556,58 @@ pub async fn get_album_media(
             collaborators,
         }),
     })
+}
+
+// Re-ordering album logic
+
+#[instrument(skip(pool))]
+pub async fn sort_album_by_date(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+) -> Result<(), AlbumError> {
+    if !can_edit_album(pool, user_id, album_id).await? {
+        return Err(AlbumError::Forbidden("Permission denied".into()));
+    }
+
+    let mut tx = pool.begin().await?;
+    AlbumStore::reorder_by_date(&mut tx, album_id).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+#[instrument(skip(pool))]
+pub async fn move_album_item(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+    media_item_id: &str,
+    new_rank: f64,
+) -> Result<(), AlbumError> {
+    if !can_edit_album(pool, user_id, album_id).await? {
+        return Err(AlbumError::Forbidden("Permission denied".into()));
+    }
+
+    let mut tx = pool.begin().await?;
+
+    // Update the rank
+    sqlx::query!(
+        "UPDATE album_media_item SET rank = $1 WHERE album_id = $2 AND media_item_id = $3",
+        new_rank,
+        album_id,
+        media_item_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // Mark album as manually sorted
+    sqlx::query!(
+        "UPDATE album SET manual_sort = true WHERE id = $1",
+        album_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+    Ok(())
 }

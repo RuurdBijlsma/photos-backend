@@ -134,6 +134,9 @@
     * ✅ hele timeline (ratios+item jsons (zonder timestamp)) = 117ms / 185kb voor 10k items
     * ✅ frontend erop aanpassen, geowon nieuwe timeline fresh maken (virtual scroll met grid row erin, nieuwe make grid
       functie maken)
+* ✅ non-analysis-worker spawns embedder
+* ✅ i think ocr_text should have higher prio
+* ✅ ocr_languages in settings doet niks meer
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -169,16 +172,34 @@
 * better error if exiftool or numpy isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
-* er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
 * improve speed of album/{id} endpoint
-* ✅ non-analysis-worker spawns embedder
+* make search result item protobuf
+* ✅ er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
+* ✅ play with weights for full text search
+* ✅ vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
+  search zit meer in de 0-0.3 range, FTS kan wel tot 4.0 gaan ofzo, dus weight voor FTS moet lager dan vector. nu 0.8 en
+  0.2 dat lijkt wel goeie resultaten te geven. Toch meer experimenteren.
+* ✅ probeer reciprocal rank fusion ofzo
+* ✅ on demand video thumbnails
+* ✅ on demand videos?
+* maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
+* als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
+  embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
+* llm instelbaar maken in settings
+* ✅ Voeg toe aan album tabel: earliest_media_item_timestamp -> zodat ik 2019-2020 kan laten zien in UI.
+* ✅ make get_representative_thumbnail or something, that returns the image that has an embedding closest to the centroid
+  of the list sent to the function. if no embeddings are available yet, return the middle item in the list
+  chronologically. If partial embeddings are available, use centroid logic for >50% available embeddings, otherwise
+  middle item chronologically. Use get_representative_thumbnail when creating an album, to set as the album thumbnail.
+* ✅ Fix performance of get_representative_thumbnail
+* videos hebben te hoge prio in the simple timeline
 
 # Features
 
 * storage indicator bottom left, like googly photos
 * albums
 * front page -> 1 year ago, 4 years ago today, etc. in top balk
-* photo trash bin?
+* photo rubbish bin?
 * facial recognition
 * upload photos
     * robust! stable!
@@ -194,7 +215,7 @@
       model, main_subject, setting, animal type, pet type, food type, landmark, document type, photo_type, activity}
     * sunset/sunrise photos
 * fun "albums" notifications & in UI frontpage
-    * refresh daily (changes daily): "10 years ago today" -> as long as there's enough photos on that day.
+    * refresh daily (changes daily): "10 years ago today" → as long as there's enough photos on that day.
     * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at
       the lake", "Cat pics")
     * group by  (only changes with significantly more photos)

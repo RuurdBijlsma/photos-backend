@@ -1,4 +1,4 @@
-use common_types::ml_analysis::PyColorData;
+use common_types::ml_analysis::MLColorData;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use utoipa::ToSchema;
@@ -14,10 +14,10 @@ pub struct ColorData {
     pub histogram: Value,
 }
 
-impl From<PyColorData> for ColorData {
-    fn from(color_data: PyColorData) -> Self {
+impl From<MLColorData> for ColorData {
+    fn from(color_data: MLColorData) -> Self {
         Self {
-            themes: color_data.themes,
+            themes: color_data.themes.iter().map(|t| json!(t)).collect(),
             prominent_colors: color_data.prominent_colors,
             average_hue: color_data.average_hue,
             average_saturation: color_data.average_saturation,

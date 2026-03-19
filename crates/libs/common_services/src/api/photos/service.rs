@@ -1,15 +1,26 @@
 use crate::api::photos::error::PhotosError;
-
 use crate::api::photos::interfaces::RandomPhotoResponse;
 use crate::database::app_user::{User, UserRole};
+use crate::database::media_item_store::MediaItemStore;
 use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
+use axum_extra::headers::Range;
 use color_eyre::Report;
+use color_eyre::eyre::eyre;
+use exif::{In, Tag, Value};
+use fast_image_resize as fr;
 use http::{Response, StatusCode, header};
+use image::ImageDecoder;
+use image::ImageReader;
 use rand::RngExt;
 use sqlx::PgPool;
+use std::io::Cursor;
+use std::ops::Bound;
 use std::path::Path;
+use std::process::{Command, Stdio};
 use tokio::fs::File;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
 
@@ -22,7 +33,7 @@ pub async fn random_photo(
     user: &User,
     pool: &PgPool,
 ) -> Result<Option<RandomPhotoResponse>, PhotosError> {
-    // Count the total number of photos with associated color data for the given user.
+    // Count the total number of photos with associated colour data for the given user.
     let count: i64 = sqlx::query_scalar!(
         r#"
         SELECT COUNT(cd.visual_analysis_id)
@@ -168,4 +179,294 @@ pub async fn download_media_file(
         .header(header::CONTENT_DISPOSITION, disposition_header)
         .body(body)
         .map_err(|e| Report::new(e).wrap_err("Failed to build response"))?)
+}
+
+pub async fn thumbnail_on_demand_cached(
+    pool: &PgPool,
+    size: i32,
+    media_item_id: &str,
+    ingest_settings: &IngestSettings,
+) -> Result<Vec<u8>, PhotosError> {
+    let cache_dir = ingest_settings.thumbnail_root.join(".jpg-cache");
+    let cache_filename = format!("{media_item_id}_{size}.jpg");
+    let cache_path = cache_dir.join(&cache_filename);
+
+    if let Ok(cached_data) = fs::read(&cache_path).await {
+        return Ok(cached_data);
+    }
+
+    let Some(rel_path) = MediaItemStore::find_relative_path_by_id(pool, media_item_id).await?
+    else {
+        return Err(PhotosError::MediaNotFound(media_item_id.to_owned()));
+    };
+    let media_path = ingest_settings.media_root.join(&rel_path);
+    let is_video = ingest_settings.is_video_file(&media_path);
+
+    let image_bytes = task::spawn_blocking(move || {
+        if is_video {
+            video_thumb_on_demand(&media_path, size)
+        } else {
+            image_thumb_on_demand(&media_path, size)
+        }
+    })
+    .await
+    .map_err(|e| PhotosError::Internal(eyre!("Task join error: {e}")))??;
+
+    if let Err(e) = fs::write(&cache_path, &image_bytes).await {
+        tracing::log::warn!("Failed to write thumbnail to cache: {e}");
+    }
+
+    Ok(image_bytes)
+}
+
+fn video_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
+    let seek_time = "0.5";
+
+    let output = Command::new("ffmpeg")
+        .args([
+            "-ss",
+            seek_time, // Fast seek (before -i)
+            "-i",
+            path.to_str().ok_or(PhotosError::InvalidPath)?,
+            "-vf",
+            &format!("scale={target_size}:-2"), // Resize during decode
+            "-frames:v",
+            "1", // Extract exactly one frame
+            "-f",
+            "image2", // Force image output format
+            "-c:v",
+            "mjpeg", // Use JPEG encoder
+            "-q:v",
+            "4", // Quality scale (1-31, lower is better)
+            "-update",
+            "1",
+            "pipe:1", // Output to stdout
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .map_err(|e| {
+            PhotosError::Internal(eyre!(e).wrap_err("Failed to execute ffmpeg for video thumbnail"))
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // If 0.5s failed (video might be very short), try again at 0s
+        if stderr.contains("Output file is empty") && seek_time != "0" {
+            return video_thumb_on_demand_at_zero(path, target_size);
+        }
+        return Err(PhotosError::Internal(eyre!("ffmpeg failed: {}", stderr)));
+    }
+
+    Ok(output.stdout)
+}
+
+fn video_thumb_on_demand_at_zero(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
+    let output = Command::new("ffmpeg")
+        .args([
+            "-i",
+            path.to_str().ok_or(PhotosError::InvalidPath)?,
+            "-vf",
+            &format!("scale={target_size}:-2"),
+            "-frames:v",
+            "1",
+            "-f",
+            "image2",
+            "-c:v",
+            "mjpeg",
+            "-q:v",
+            "4",
+            "pipe:1",
+        ])
+        .output()
+        .map_err(|e| PhotosError::Internal(eyre!(e)))?;
+
+    Ok(output.stdout)
+}
+
+fn image_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
+    let file_bytes = std::fs::read(path)
+        .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to read image source")))?;
+
+    let is_jpeg = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|s| s.eq_ignore_ascii_case("jpg") || s.eq_ignore_ascii_case("jpeg"));
+    if is_jpeg && let Some(thumb_bytes) = try_extract_exif_thumbnail(&file_bytes, target_size) {
+        return Ok(thumb_bytes);
+    }
+
+    let thumb_bytes = quick_image_resize(path, &file_bytes, target_size)?;
+    Ok(thumb_bytes)
+}
+
+fn try_extract_exif_thumbnail(file_bytes: &[u8], target_size: i32) -> Option<Vec<u8>> {
+    let mut cursor = Cursor::new(file_bytes);
+    let exif_reader = exif::Reader::new();
+    let Ok(exif_data) = exif_reader.read_from_container(&mut cursor) else {
+        return None;
+    };
+
+    let offset_field = exif_data.get_field(Tag::JPEGInterchangeFormat, In(1));
+    let length_field = exif_data.get_field(Tag::JPEGInterchangeFormatLength, In(1));
+    let (Some(off_f), Some(len_f)) = (offset_field, length_field) else {
+        return None;
+    };
+
+    let off_val = match off_f.value {
+        Value::Long(ref v) if !v.is_empty() => Some(v[0]),
+        Value::Short(ref v) if !v.is_empty() => Some(u32::from(v[0])),
+        _ => None,
+    }?;
+
+    let len_val = match len_f.value {
+        Value::Long(ref v) if !v.is_empty() => Some(v[0]),
+        Value::Short(ref v) if !v.is_empty() => Some(u32::from(v[0])),
+        _ => None,
+    }?;
+    let start = off_val as usize;
+    let end = start + len_val as usize;
+    if end > file_bytes.len() {
+        return None;
+    }
+
+    let thumb_bytes = &exif_data.buf()[start..end];
+    let min_height = (target_size as f32 * 0.9) as usize;
+    if let Ok(dim) = imagesize::blob_size(thumb_bytes)
+        && (dim.height >= min_height)
+    {
+        return Some(thumb_bytes.to_vec());
+    }
+
+    None
+}
+
+fn quick_image_resize(path: &Path, file_bytes: &[u8], size: i32) -> Result<Vec<u8>, PhotosError> {
+    let mut img = image::load_from_memory(file_bytes).map_err(|e| {
+        PhotosError::Internal(eyre!(e).wrap_err("Failed to decode image for resize"))
+    })?;
+
+    let mut decoder = ImageReader::open(path)
+        .map_err(|e| PhotosError::Internal(eyre!("Failed to open image for orientation: {}", e)))?
+        .into_decoder()
+        .map_err(|e| PhotosError::Internal(eyre!("Failed to init decoder: {}", e)))?;
+
+    if let Ok(orientation) = decoder.orientation() {
+        img.apply_orientation(orientation);
+    }
+
+    let (width, height) = (img.width(), img.height());
+    let aspect_ratio = width as f32 / height as f32;
+    let (dst_width, dst_height) = if width > height {
+        (size as u32, (size as f32 / aspect_ratio) as u32)
+    } else {
+        ((size as f32 * aspect_ratio) as u32, size as u32)
+    };
+
+    let src_image = fr::images::Image::from_vec_u8(
+        width,
+        height,
+        img.to_rgb8().into_raw(),
+        fr::PixelType::U8x3,
+    )
+    .map_err(|e| PhotosError::Internal(eyre!("Resize source creation error: {e}")))?;
+
+    let mut dst_image = fr::images::Image::new(dst_width, dst_height, fr::PixelType::U8x3);
+    let mut resizer = fr::Resizer::new();
+    resizer
+        .resize(&src_image, &mut dst_image, None)
+        .map_err(|e| PhotosError::Internal(eyre!("Resizing failed: {e}")))?;
+
+    let mut buffer = Vec::new();
+    let mut cursor = Cursor::new(&mut buffer);
+    let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut cursor, 80);
+
+    encoder
+        .encode(
+            dst_image.buffer(),
+            dst_width,
+            dst_height,
+            image::ExtendedColorType::Rgb8,
+        )
+        .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to encode JPEG")))?;
+
+    Ok(buffer)
+}
+
+pub async fn stream_video_file(
+    pool: &PgPool,
+    ingest_settings: &IngestSettings,
+    media_item_id: &str,
+    range_header: Option<Range>,
+) -> Result<Response<Body>, PhotosError> {
+    let Some(rel_path) = MediaItemStore::find_relative_path_by_id(pool, media_item_id).await?
+    else {
+        return Err(PhotosError::MediaNotFound(media_item_id.to_owned()));
+    };
+    let media_path = ingest_settings.media_root.join(&rel_path);
+
+    let mut file = File::open(&media_path)
+        .await
+        .map_err(|_| PhotosError::AccessDenied)?;
+    let metadata = file
+        .metadata()
+        .await
+        .map_err(|e| eyre!("Can't get file metadata {e}"))?;
+    let file_size = metadata.len();
+
+    let mut start = 0;
+    let mut end = file_size - 1;
+    let mut is_partial = false;
+
+    if let Some(range) = range_header
+        && let Some((start_bound, end_bound)) = range.satisfiable_ranges(file_size).next()
+    {
+        is_partial = true;
+
+        start = match start_bound {
+            Bound::Included(n) => n,
+            Bound::Excluded(n) => n + 1,
+            Bound::Unbounded => 0,
+        };
+
+        end = match end_bound {
+            Bound::Included(n) => n,
+            Bound::Excluded(n) => n - 1,
+            Bound::Unbounded => file_size - 1,
+        };
+    }
+
+    // Safety check for bounds
+    if start > end || start >= file_size {
+        return Err(PhotosError::InvalidRange);
+    }
+
+    let content_length = end - start + 1;
+
+    file.seek(std::io::SeekFrom::Start(start))
+        .await
+        .map_err(|e| eyre!("Can't seek in video file {e}"))?;
+
+    let reader = file.take(content_length);
+    let stream = FramedRead::new(reader, BytesCodec::new());
+    let body = Body::from_stream(stream);
+
+    let mut response = Response::builder()
+        .header(header::CONTENT_TYPE, "video/mp4")
+        .header(header::ACCEPT_RANGES, "bytes");
+
+    if is_partial {
+        response = response.status(StatusCode::PARTIAL_CONTENT).header(
+            header::CONTENT_RANGE,
+            format!("bytes {start}-{end}/{file_size}"),
+        );
+    } else {
+        response = response.status(StatusCode::OK);
+    }
+
+    Ok(response
+        .header(header::CONTENT_LENGTH, content_length)
+        .body(body)
+        .map_err(|e| eyre!("Can't create video stream response {e}"))?)
 }

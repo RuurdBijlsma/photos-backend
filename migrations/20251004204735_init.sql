@@ -31,7 +31,7 @@ CREATE TABLE remote_user
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     identity   TEXT        NOT NULL UNIQUE,
-    name       TEXT, -- Friendly name, can be set by user.
+    name       TEXT,
     user_id    INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE
 );
 CREATE INDEX idx_remote_user_user_id ON remote_user (user_id);
@@ -52,8 +52,9 @@ CREATE TABLE refresh_token
 CREATE TABLE media_item
 (
     id                  VARCHAR(10) PRIMARY KEY,
-    hash                TEXT        NOT NULL,
     relative_path       TEXT        NOT NULL UNIQUE,
+    hash                TEXT        NOT NULL,
+    filename            TEXT        NOT NULL,
     user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     remote_user_id      INT         REFERENCES remote_user (id) ON DELETE SET NULL,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -66,8 +67,11 @@ CREATE TABLE media_item
     taken_at_utc        TIMESTAMPTZ,
     sort_timestamp      TIMESTAMPTZ NOT NULL,
     use_panorama_viewer BOOLEAN     NOT NULL,
+    orientation         INT         NOT NULL DEFAULT 1,
+    has_thumbnails      BOOLEAN     NOT NULL DEFAULT false,
     deleted             BOOLEAN     NOT NULL DEFAULT false,
     month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
+    search_vector       TSVECTOR,
     CONSTRAINT width_positive CHECK (width > 0),
     CONSTRAINT height_positive CHECK (height > 0)
 );
@@ -158,6 +162,9 @@ CREATE TABLE panorama
 
 -- Create indices for foreign keys and frequently queried columns for performance.
 
+-- Full text search index:
+CREATE INDEX idx_media_item_search ON media_item USING GIN (search_vector);
+
 -- Index for the foreign key in the gps table.
 CREATE INDEX idx_gps_location_id ON gps (location_id);
 
@@ -166,6 +173,8 @@ CREATE INDEX idx_media_item_created_at ON media_item (created_at);
 CREATE INDEX idx_media_item_taken_at_local ON media_item (taken_at_local);
 CREATE INDEX idx_media_item_user_id ON media_item (user_id);
 CREATE INDEX idx_media_item_user_hash ON media_item (user_id, hash);
+CREATE INDEX idx_media_item_not_deleted ON media_item (id) WHERE deleted = false;
+CREATE INDEX idx_media_item_search_lookup ON media_item (user_id, deleted, id);
 
 -- For /timeline/ids
 CREATE INDEX idx_media_item_ids_timeline

@@ -28,6 +28,7 @@ pub struct CreateFullMediaItem {
     pub media_features: MediaFeatures,
     pub camera_settings: CameraSettings,
     pub panorama: Panorama,
+    pub orientation: i32,
 }
 
 impl From<MediaMetadata> for CreateFullMediaItem {
@@ -64,6 +65,7 @@ impl From<MediaMetadata> for CreateFullMediaItem {
             media_features,
             camera_settings: result.camera.into(),
             panorama: result.panorama.into(),
+            orientation: result.basic.orientation.unwrap_or(1) as i32,
         }
     }
 }
@@ -84,6 +86,7 @@ pub struct FullMediaItem {
     pub taken_at_local: NaiveDateTime,
     pub taken_at_utc: Option<DateTime<Utc>>,
     pub use_panorama_viewer: bool,
+    pub has_thumbnails: bool,
     pub visual_analyses: Vec<ReadVisualAnalysis>,
     pub gps: Option<Gps>,
     pub time: TimeDetails,
@@ -98,6 +101,7 @@ pub struct FullMediaItemRow {
     pub id: String,
     pub user_id: i32,
     pub hash: String,
+    pub filename: String,
     pub relative_path: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -108,6 +112,7 @@ pub struct FullMediaItemRow {
     pub taken_at_local: NaiveDateTime,
     pub taken_at_utc: Option<DateTime<Utc>>,
     pub use_panorama_viewer: bool,
+    pub has_thumbnails: bool,
     pub visual_analyses: Json<Vec<ReadVisualAnalysis>>,
     pub gps: Option<Json<Gps>>,
     pub time: Json<TimeDetails>,
@@ -133,6 +138,7 @@ impl From<FullMediaItemRow> for FullMediaItem {
             taken_at_local: r.taken_at_local,
             taken_at_utc: r.taken_at_utc,
             use_panorama_viewer: r.use_panorama_viewer,
+            has_thumbnails: r.has_thumbnails,
             visual_analyses: r.visual_analyses.0,
             gps: r.gps.map(|g| g.0),
             time: r.time.0,

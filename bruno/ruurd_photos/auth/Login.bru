@@ -1,0 +1,28 @@
+meta {
+  name: Login
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://localhost:9475/auth/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "ruurd@bijlsma.dev",
+    "password": "suikereekhoorn"
+  }
+}
+
+script:post-response {
+  bru.setVar("token", res.body.accessToken);
+  
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

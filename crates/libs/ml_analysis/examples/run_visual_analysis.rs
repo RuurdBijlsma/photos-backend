@@ -37,7 +37,7 @@ async fn main() -> color_eyre::Result<()> {
 
     let settings = load_app_settings()?;
     let now = Instant::now();
-    let analyzer = VisualAnalyzer::new(&settings.ingest.analyzer.embedder_model_id).await?;
+    let analyzer = VisualAnalyzer::new(&settings.ingest.analyzer.search.embedder_model_id).await?;
     println!("VisualAnalyzer::new {:?}\n", now.elapsed());
 
     let now = Instant::now();
@@ -71,7 +71,7 @@ async fn main() -> color_eyre::Result<()> {
         println!("analyze image {image_filename}");
         let now = Instant::now();
         let analysis = analyzer
-            .analyze_image(&settings.ingest.analyzer, &resized_img_file, 0)
+            .fast_image_analysis(&settings.ingest.analyzer, &resized_img_file, 0)
             .await?;
         let filename = format!("{image_filename}-analysis.json");
         let file = File::create(Path::new(&filename))?;

@@ -12,13 +12,18 @@ use crate::create_router;
 use crate::timeline::websocket::create_media_item_transmitter;
 use app_state::AppSettings;
 use axum::routing::get_service;
+use axum_server::tls_rustls::RustlsConfig;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use common_services::s2s_client::S2SClient;
 use http::{HeaderValue, header};
+use open_clip_inference::TextEmbedder;
 use reqwest::Client;
 use sqlx::PgPool;
 use std::iter::once;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::fs;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
 use tower_http::cors::CorsLayer;
@@ -29,6 +34,10 @@ use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 
 pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
+    let y = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
+        .build()
+        .await?;
+    let x = Arc::new(y);
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let api_state = ApiContext {
@@ -36,7 +45,10 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         s2s_client: S2SClient::new(Client::new()),
         settings: settings.clone(),
         timeline_broadcaster: create_media_item_transmitter(&pool)?,
+        embedder: x,
     };
+
+    fs::create_dir_all(&settings.ingest.thumbnail_root.join(".jpg-cache")).await?;
 
     // --- CORS Configuration ---
     let allowed_origins: Vec<HeaderValue> = settings
@@ -84,17 +96,24 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         )))
         .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
 
-    // --- Start Server ---
-    let listen_address = format!("{}:{}", settings.api.host, settings.api.port);
-    let listener = tokio::net::TcpListener::bind(&listen_address).await?;
-
-    info!("📚 Docs available at http://{listen_address}/docs");
-    info!("✅ Server listening on http://{listen_address}");
-
-    axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
+    // Serve with https local cert
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+    let config = RustlsConfig::from_pem_file(
+        "C:/Users/Ruurd/Desktop/localhost.pem",
+        "C:/Users/Ruurd/Desktop/localhost-key.pem",
     )
     .await?;
+
+    let addr: SocketAddr = format!("{}:{}", settings.api.host, settings.api.port)
+        .parse()
+        .map_err(|e| eyre!("Invalid address: {}", e))?;
+
+    info!("🐸 Server listening on https://{}", addr);
+
+    axum_server::bind_rustls(addr, config)
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+        .await?;
     Ok(())
 }

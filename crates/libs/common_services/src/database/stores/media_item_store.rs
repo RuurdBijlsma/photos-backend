@@ -15,10 +15,27 @@ use chrono::{TimeZone, Utc};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
+use std::path::Path;
 
 pub struct MediaItemStore;
 
 impl MediaItemStore {
+    pub async fn find_relative_path_by_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        media_item_id: &str,
+    ) -> Result<Option<String>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            SELECT relative_path
+            FROM media_item
+            WHERE id = $1
+            "#,
+            media_item_id
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
     pub async fn find_id_by_relative_path(
         executor: impl Executor<'_, Database = Postgres>,
         relative_path: &str,
@@ -30,6 +47,22 @@ impl MediaItemStore {
             WHERE relative_path = $1
             "#,
             relative_path
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
+    pub async fn find_user_by_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        media_item_id: &str,
+    ) -> Result<Option<i32>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            SELECT user_id
+            FROM media_item
+            WHERE id = $1
+            "#,
+            media_item_id
         )
         .fetch_optional(executor)
         .await?)
@@ -66,21 +99,15 @@ impl MediaItemStore {
                             SELECT to_jsonb(cld)
                             FROM color cld WHERE cld.visual_analysis_id = va.id
                         ),
-                        'caption', (
+                        'classification', (
                             SELECT to_jsonb(cpd)
-                            FROM caption cpd WHERE cpd.visual_analysis_id = va.id
+                            FROM classification cpd WHERE cpd.visual_analysis_id = va.id
                         ),
                         'faces', (
                             SELECT COALESCE(
                                 jsonb_agg(to_jsonb(f)),
                                 '[]'::jsonb
                             ) FROM face f WHERE f.visual_analysis_id = va.id
-                        ),
-                        'detected_objects', (
-                            SELECT COALESCE(
-                                jsonb_agg(to_jsonb(obj)),
-                                '[]'::jsonb
-                            ) FROM detected_object obj WHERE obj.visual_analysis_id = va.id
                         )
                     )
                     ORDER BY va.created_at DESC
@@ -93,6 +120,7 @@ impl MediaItemStore {
             mi.id,
             mi.user_id,
             mi.hash,
+            mi.filename,
             mi.relative_path,
             mi.created_at,
             mi.updated_at,
@@ -103,6 +131,7 @@ impl MediaItemStore {
             mi.taken_at_local,
             mi.taken_at_utc,
             mi.use_panorama_viewer,
+            mi.has_thumbnails,
 
             COALESCE(va.data, '[]'::jsonb) AS "visual_analyses!: Json<Vec<ReadVisualAnalysis>>",
 
@@ -166,19 +195,24 @@ impl MediaItemStore {
                 },
             )
         });
+        let filename = Path::new(relative_path).file_name().map_or_else(
+            || relative_path.to_string(),
+            |f| f.to_string_lossy().to_string(),
+        );
 
         // Insert into the main media_item table
         sqlx::query!(
             r#"
             INSERT INTO media_item (
-                id, relative_path, user_id, remote_user_id, hash, width, height,
-                is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp,
+                id, relative_path, filename, user_id, remote_user_id, hash, width, height,
+                is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp, orientation,
                 use_panorama_viewer
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             "#,
             id,
             relative_path,
+            filename,
             user_id,
             remote_user_id,
             &media_item.hash,
@@ -189,6 +223,7 @@ impl MediaItemStore {
             media_item.taken_at_local,
             media_item.taken_at_utc,
             sort_timestamp,
+            media_item.orientation,
             media_item.use_panorama_viewer
         )
         .execute(&mut **tx)
