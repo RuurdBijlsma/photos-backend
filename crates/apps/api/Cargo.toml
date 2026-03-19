@@ -11,7 +11,6 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter"] }
 color-eyre = "0.6.5"
 axum = { version = "0.8.8", features = ["macros", "ws", "http2"] }
-axum-server = { version = "0.8.0", features = ["tls-rustls"] }
 rustls = { version = "0.23", features = ["ring"] }
 tokio = { version = "1.47.1", features = ["full"] }
 jsonwebtoken = { version = "10.0.0", features = ["rust_crypto"] }

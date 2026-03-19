@@ -12,7 +12,6 @@ use crate::create_router;
 use crate::timeline::websocket::create_media_item_transmitter;
 use app_state::AppSettings;
 use axum::routing::get_service;
-use axum_server::tls_rustls::RustlsConfig;
 use color_eyre::Result;
 use color_eyre::eyre::eyre;
 use common_services::s2s_client::S2SClient;
@@ -96,24 +95,14 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         )))
         .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
 
-    // Serve with https local cert
-    rustls::crypto::ring::default_provider()
-        .install_default()
-        .expect("Failed to install rustls crypto provider");
-    let config = RustlsConfig::from_pem_file(
-        "C:/Users/Ruurd/Desktop/localhost.pem",
-        "C:/Users/Ruurd/Desktop/localhost-key.pem",
-    )
-    .await?;
-
     let addr: SocketAddr = format!("{}:{}", settings.api.host, settings.api.port)
         .parse()
         .map_err(|e| eyre!("Invalid address: {}", e))?;
+    let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    info!("🐸 Server listening on https://{}", addr);
+    info!("🐸 Server listening on {}", addr);
+    axum::serve(listener, app).await?;
 
-    axum_server::bind_rustls(addr, config)
-        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-        .await?;
+
     Ok(())
 }
