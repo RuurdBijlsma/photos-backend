@@ -13,7 +13,6 @@ use crate::timeline::websocket::create_media_item_transmitter;
 use app_state::AppSettings;
 use axum::routing::get_service;
 use color_eyre::Result;
-use color_eyre::eyre::eyre;
 use common_services::s2s_client::S2SClient;
 use http::{HeaderValue, header};
 use open_clip_inference::TextEmbedder;
@@ -95,13 +94,18 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         )))
         .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
 
-    let addr: SocketAddr = format!("{}:{}", settings.api.host, settings.api.port)
-        .parse()
-        .map_err(|e| eyre!("Invalid address: {}", e))?;
-    let listener = tokio::net::TcpListener::bind(addr).await?;
+    // --- Start Server ---
+    let listen_address = format!("{}:{}", settings.api.host, settings.api.port);
+    let listener = tokio::net::TcpListener::bind(&listen_address).await?;
 
-    info!("🐸 Server listening on {}", addr);
-    axum::serve(listener, app).await?;
+    info!("📚 Docs available at http://{listen_address}/docs");
+    info!("✅ Server listening on http://{listen_address}");
+
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+        .await?;
 
 
     Ok(())
