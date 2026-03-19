@@ -105,8 +105,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-        .await?;
-
+    .await?;
 
     Ok(())
 }
