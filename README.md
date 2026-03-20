@@ -15,6 +15,7 @@ and search.
 
 * **nasm**: `winget install -e --id NASM.NASM`
 * **sqlx**: `cargo install sqlx-cli`
+* **Exiftool**: https://exiftool.org/install.html [ubuntu: `sudo apt install libimage-exiftool-perl`]
 * **llama.cpp**: Required for LLM-based image categorization, OCR, and quality
   judging. [Installation Guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/install.md). Exact command for llama-server found in `./scripts/setup_env.ps1`.
 * **Rust** to compile the backend
