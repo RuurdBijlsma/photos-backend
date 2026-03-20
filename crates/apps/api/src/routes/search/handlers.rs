@@ -8,7 +8,7 @@ use common_services::api::search::service::{
     SearchMediaConfig, get_search_suggestions, search_media,
 };
 use common_services::database::app_user::User;
-use common_types::pb::api::SearchResponse;
+use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
 use tracing::instrument;
 
 /// Get a timeline of all media ratios, grouped by month.
@@ -54,7 +54,19 @@ pub async fn get_search_results(
 pub async fn get_search_suggestions_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-) -> Result<String, SearchError> {
-    let search_result = get_search_suggestions(&user, &context.pool).await?;
-    Ok(search_result)
+    Query(params): Query<SearchParams>,
+) -> Result<Protobuf<SearchSuggestionsResponse>, SearchError> {
+    let result = get_search_suggestions(
+        &user,
+        &context.pool,
+        context.embedder,
+        &params.query,
+        SearchMediaConfig {
+            text_weight: context.settings.ingest.analyzer.search.text_weight,
+            semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
+            limit: params.limit,
+        },
+    )
+    .await?;
+    Ok(Protobuf(result))
 }

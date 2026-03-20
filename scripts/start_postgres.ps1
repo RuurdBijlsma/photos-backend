@@ -10,7 +10,7 @@ $dbUser = "photos_user"
 $dbPassword = "dev-password"
 $dbPort = 5432
 $volumeName = "photos_pgdata_dev"
-$postgresImage = "pgvector/pgvector:pg18"
+$postgresImage = "docker.io/pgvector/pgvector:pg18"
 
 # =============================================================================
 
