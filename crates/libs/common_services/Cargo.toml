@@ -33,7 +33,7 @@ url = { version = "2.5.7", features = ["serde"] }
 bon = "3.8.1"
 pgvector = { version = "0.4", features = ["sqlx", "serde"] }
 futures-util = "0.3.31"
-open_clip_inference = { version = "0.3.0", features = ["load-dynamic"] }
+open_clip_inference = { version = "0.3.0" }
 kamadak-exif = "0.6.1"
 imagesize = "0.14.0"
 fast_image_resize = { version = "6.0.0", features = ["image"] }
@@ -48,3 +48,6 @@ criterion = { version = "0.8.0", features = ["async_tokio", "html_reports"] }
 [[bench]]
 name = "timeline_benchmark"
 harness = false
+
+[features]
+load-dynamic = ["open_clip_inference/load-dynamic"] # -> Load ONNXRuntime dynamically instead of statically

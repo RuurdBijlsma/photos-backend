@@ -33,3 +33,6 @@ tempfile = "3.10.1"
 directories = "6.0.0"
 blake3 = "1.8.2"
 serde = { version = "1.0.228", features = ["derive"] }
+
+[features]
+load-dynamic = ["common_services/load-dynamic", "ml_analysis/load-dynamic"] # -> Load ONNXRuntime dynamically instead of statically
