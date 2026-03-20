@@ -32,10 +32,10 @@ use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 
 pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
-    let y = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
-        .build()
-        .await?;
-    let x = Arc::new(y);
+    info!("Loading CLIP text embedder...");
+    let text_embedder = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
+                         .build()
+                         .await?;
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let api_state = ApiContext {
@@ -43,7 +43,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         s2s_client: S2SClient::new(Client::new()),
         settings: settings.clone(),
         timeline_broadcaster: create_media_item_transmitter(&pool)?,
-        embedder: x,
+        embedder: Arc::new(text_embedder),
     };
 
     fs::create_dir_all(&settings.ingest.thumbnail_root.join(".jpg-cache")).await?;

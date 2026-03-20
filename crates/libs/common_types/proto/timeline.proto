@@ -69,3 +69,8 @@ message AlbumInfo {
 message SearchResponse {
   repeated SimpleTimelineItem items = 1;
 }
+
+message SearchSuggestionsResponse {
+  repeated string suggestions = 1;
+  repeated SimpleTimelineItem items = 2;
+}
