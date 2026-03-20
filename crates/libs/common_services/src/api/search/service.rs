@@ -119,7 +119,7 @@ pub async fn get_search_suggestions(
     config: SearchMediaConfig,
 ) -> Result<SearchSuggestionsResponse, SearchError> {
     let suggestions_limit = config.limit.unwrap_or(10).min(50);
-    let ilike_query = format!("%{}%", query);
+    let ilike_query = format!("%{query}%");
 
     let suggestions = sqlx::query_scalar!(
         r#"

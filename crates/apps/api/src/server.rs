@@ -34,8 +34,8 @@ use tracing::{error, info};
 pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
     info!("Loading CLIP text embedder...");
     let text_embedder = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
-                         .build()
-                         .await?;
+        .build()
+        .await?;
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let api_state = ApiContext {
