@@ -16,3 +16,6 @@ face_id = "0.4.0"
 [build-dependencies]
 prost-build = "0.14.3"
 protox = { version = "0.9.1" }
+
+[features]
+load-dynamic = ["face_id/load-dynamic"] # -> Load ONNXRuntime dynamically instead of statically

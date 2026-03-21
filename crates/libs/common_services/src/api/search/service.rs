@@ -123,46 +123,49 @@ pub async fn get_search_suggestions(
 
     let suggestions = sqlx::query_scalar!(
         r#"
-        WITH user_suggestions AS (
-            -- LLM terms
-            SELECT DISTINCT search_term as suggestion
+        WITH matched_terms AS (
+            -- Filter Classifications first, THEN join to count
+            SELECT c.search_term as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count
             FROM classification c
             JOIN visual_analysis va ON c.visual_analysis_id = va.id
-            WHERE va.user_id = $1 AND search_term ILIKE $2
-            UNION
-            -- People
-            SELECT name as suggestion
-            FROM person
-            WHERE user_id = $1 AND name ILIKE $2
-            UNION
-            -- Locations
-            SELECT DISTINCT l.name as suggestion
-            FROM location l
-            JOIN gps g ON l.id = g.location_id
+            WHERE va.user_id = $1
+              AND c.search_term ILIKE $2
+              AND c.search_term != ''
+            GROUP BY c.search_term
+
+            UNION ALL
+
+            -- People are usually a small table, but join path is: Person -> Face -> VA
+            SELECT p.name as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count
+            FROM person p
+            JOIN face f ON f.person_id = p.id
+            JOIN visual_analysis va ON f.visual_analysis_id = va.id
+            WHERE p.user_id = $1
+              AND p.name ILIKE $2
+              AND p.name != ''
+            GROUP BY p.name
+
+            UNION ALL
+
+            -- Filter Locations first, then join to GPS/Media
+            SELECT loc.val as suggestion, COUNT(DISTINCT g.media_item_id) as photo_count
+            FROM (
+                -- This subquery limits the number of location IDs we care about
+                SELECT id, name as val FROM location WHERE name ILIKE $2
+                UNION
+                SELECT id, admin1 as val FROM location WHERE admin1 ILIKE $2
+                UNION
+                SELECT id, country_name as val FROM location WHERE country_name ILIKE $2
+            ) loc
+            JOIN gps g ON g.location_id = loc.id
             JOIN media_item mi ON g.media_item_id = mi.id
-            WHERE mi.user_id = $1 AND l.name ILIKE $2
-            UNION
-            SELECT DISTINCT l.admin1 as suggestion
-            FROM location l
-            JOIN gps g ON l.id = g.location_id
-            JOIN media_item mi ON g.media_item_id = mi.id
-            WHERE mi.user_id = $1 AND l.admin1 ILIKE $2
-            UNION
-            SELECT DISTINCT l.admin2 as suggestion
-            FROM location l
-            JOIN gps g ON l.id = g.location_id
-            JOIN media_item mi ON g.media_item_id = mi.id
-            WHERE mi.user_id = $1 AND l.admin2 ILIKE $2
-            UNION
-            SELECT DISTINCT l.country_name as suggestion
-            FROM location l
-            JOIN gps g ON l.id = g.location_id
-            JOIN media_item mi ON g.media_item_id = mi.id
-            WHERE mi.user_id = $1 AND l.country_name ILIKE $2
+            WHERE mi.user_id = $1 AND mi.deleted = false
+            GROUP BY loc.val
         )
-        SELECT suggestion FROM user_suggestions
-        WHERE suggestion IS NOT NULL AND suggestion != ''
-        ORDER BY suggestion
+        SELECT suggestion
+        FROM matched_terms
+        GROUP BY suggestion
+        ORDER BY SUM(photo_count) DESC, suggestion ASC
         LIMIT $3
         "#,
         user.id,

@@ -50,4 +50,4 @@ name = "timeline_benchmark"
 harness = false
 
 [features]
-load-dynamic = ["open_clip_inference/load-dynamic"] # -> Load ONNXRuntime dynamically instead of statically
+load-dynamic = ["open_clip_inference/load-dynamic", "face_id/load-dynamic", "common_types/load-dynamic"] # -> Load ONNXRuntime dynamically instead of statically

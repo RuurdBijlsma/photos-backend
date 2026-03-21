@@ -116,3 +116,12 @@ CREATE INDEX idx_classification_contains_landmarks ON classification (contains_l
 
 CREATE INDEX idx_classification_landmark_name ON classification (landmark_name);
 CREATE INDEX idx_classification_setting ON classification (setting);
+
+-- Search suggestions indices:
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX trgm_idx_classification_term ON classification USING gin (search_term gin_trgm_ops);
+CREATE INDEX trgm_idx_person_name ON person USING gin (name gin_trgm_ops);
+CREATE INDEX trgm_idx_location_name ON location USING gin (name gin_trgm_ops);
+CREATE INDEX trgm_idx_location_admin1 ON location USING gin (admin1 gin_trgm_ops);
+CREATE INDEX trgm_idx_location_admin2 ON location USING gin (admin2 gin_trgm_ops);
+CREATE INDEX trgm_idx_location_country_name ON location USING gin (country_name gin_trgm_ops);
