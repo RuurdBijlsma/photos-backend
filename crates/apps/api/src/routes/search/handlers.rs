@@ -59,13 +59,8 @@ pub async fn get_search_suggestions_handler(
     let result = get_search_suggestions(
         &user,
         &context.pool,
-        context.embedder,
         &params.query,
-        SearchMediaConfig {
-            text_weight: context.settings.ingest.analyzer.search.text_weight,
-            semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
-            limit: params.limit,
-        },
+        params.limit
     )
     .await?;
     Ok(Protobuf(result))

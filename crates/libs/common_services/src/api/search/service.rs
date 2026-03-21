@@ -6,6 +6,7 @@ use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
 
+#[derive(Clone, Copy)]
 pub struct SearchMediaConfig {
     pub limit: Option<i64>,
     pub semantic_weight: f64,
@@ -114,29 +115,30 @@ pub async fn search_media(
 pub async fn get_search_suggestions(
     user: &User,
     pool: &PgPool,
-    embedder: Arc<TextEmbedder>,
     query: &str,
-    config: SearchMediaConfig,
+    limit: Option<i64>,
 ) -> Result<SearchSuggestionsResponse, SearchError> {
-    let suggestions_limit = config.limit.unwrap_or(10).min(50);
-    let ilike_query = format!("%{query}%");
+    if query.trim().is_empty() {
+        return Ok(SearchSuggestionsResponse::default());
+    }
 
+    let limit = limit.unwrap_or(10).min(50);
+    let ilike_query = format!("%{query}%");
     let suggestions = sqlx::query_scalar!(
         r#"
         WITH matched_terms AS (
-            -- Filter Classifications first, THEN join to count
-            SELECT c.search_term as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count
+            (SELECT c.search_term as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count
             FROM classification c
             JOIN visual_analysis va ON c.visual_analysis_id = va.id
             WHERE va.user_id = $1
               AND c.search_term ILIKE $2
               AND c.search_term != ''
             GROUP BY c.search_term
+            LIMIT $3 * 2)
 
             UNION ALL
 
-            -- People are usually a small table, but join path is: Person -> Face -> VA
-            SELECT p.name as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count
+            (SELECT p.name as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count
             FROM person p
             JOIN face f ON f.person_id = p.id
             JOIN visual_analysis va ON f.visual_analysis_id = va.id
@@ -144,13 +146,12 @@ pub async fn get_search_suggestions(
               AND p.name ILIKE $2
               AND p.name != ''
             GROUP BY p.name
+            LIMIT $3 * 2)
 
             UNION ALL
 
-            -- Filter Locations first, then join to GPS/Media
-            SELECT loc.val as suggestion, COUNT(DISTINCT g.media_item_id) as photo_count
+            (SELECT loc.val as suggestion, COUNT(DISTINCT g.media_item_id) as photo_count
             FROM (
-                -- This subquery limits the number of location IDs we care about
                 SELECT id, name as val FROM location WHERE name ILIKE $2
                 UNION
                 SELECT id, admin1 as val FROM location WHERE admin1 ILIKE $2
@@ -161,6 +162,7 @@ pub async fn get_search_suggestions(
             JOIN media_item mi ON g.media_item_id = mi.id
             WHERE mi.user_id = $1 AND mi.deleted = false
             GROUP BY loc.val
+            LIMIT $3 * 2)
         )
         SELECT suggestion
         FROM matched_terms
@@ -170,15 +172,12 @@ pub async fn get_search_suggestions(
         "#,
         user.id,
         ilike_query,
-        suggestions_limit
+        limit as i32
     )
-    .fetch_all(pool)
-    .await?;
-
-    let items = search_media(user, pool, embedder, query, config).await?;
+        .fetch_all(pool)
+        .await?;
 
     Ok(SearchSuggestionsResponse {
         suggestions: suggestions.into_iter().flatten().collect(),
-        items,
     })
 }

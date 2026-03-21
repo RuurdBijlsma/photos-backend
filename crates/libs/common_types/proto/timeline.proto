@@ -72,5 +72,4 @@ message SearchResponse {
 
 message SearchSuggestionsResponse {
   repeated string suggestions = 1;
-  repeated SimpleTimelineItem items = 2;
-}
+}
