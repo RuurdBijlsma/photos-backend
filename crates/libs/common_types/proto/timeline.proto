@@ -70,6 +70,17 @@ message SearchResponse {
   repeated SimpleTimelineItem items = 1;
 }
 
+enum SuggestionType {
+  SEARCH = 0;
+  ALBUM = 1;
+}
+
+message SearchSuggestion {
+  string text = 1;
+  SuggestionType suggestion_type = 2;
+  optional string id = 3;
+}
+
 message SearchSuggestionsResponse {
-  repeated string suggestions = 1;
+  repeated SearchSuggestion suggestions = 1;
 }

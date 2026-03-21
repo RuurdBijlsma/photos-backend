@@ -75,6 +75,14 @@ fn main() -> std::io::Result<()> {
         ".api.SearchSuggestionsResponse",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
+    config.type_attribute(
+        ".api.SearchSuggestion",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.SuggestionType",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
 
     config.compile_fds(file_descriptors)?;
 
