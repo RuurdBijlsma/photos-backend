@@ -100,7 +100,8 @@ async fn get_llm_data(
     let mut analyses = Vec::new();
 
     for (percentage, image_path) in images_to_analyze {
-        let analysis_result = context.visual_analyzer
+        let analysis_result = context
+            .visual_analyzer
             .llm_analysis(&context.settings.ingest.analyzer, &image_path, percentage)
             .await?;
         analyses.push(analysis_result);
