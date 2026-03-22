@@ -38,16 +38,16 @@ pub async fn search_media(
             .await??
             .to_vec();
 
-    if let Some(negative_query) = &config.negative_query {
-        let neg_str = negative_query.to_string();
+    let fts_query = if let Some(negative_query) = &config.negative_query {
+        let neg_str = negative_query.clone();
         let neg_embedder = embedder.clone();
         let neg_embedding = tokio::task::spawn_blocking(move || neg_embedder.embed_text(&neg_str))
             .await??
             .to_vec();
 
-        // Perform semantic vector subtraction: V_final = V_pos - V_neg
+        // Perform semantic vector subtraction with weight: V_final = V_pos - 0.5 * V_neg
         for (pos, neg) in query_embedding.iter_mut().zip(neg_embedding.iter()) {
-            *pos -= *neg;
+            *pos -= 0.5 * *neg;
         }
 
         // Re-normalize the vector
@@ -57,7 +57,16 @@ pub async fn search_media(
                 *val /= norm;
             }
         }
-    }
+
+        // Prepare FTS query with negative terms (e.g., "cat -orange")
+        let neg_terms: Vec<String> = negative_query
+            .split_whitespace()
+            .map(|s| format!("-{s}"))
+            .collect();
+        format!("{} {}", query, neg_terms.join(" "))
+    } else {
+        query.to_string()
+    };
 
     let vector_param = Vector::from(query_embedding);
 
@@ -168,7 +177,7 @@ pub async fn search_media(
             mi.sort_timestamp DESC
         LIMIT $5
          "#,
-        query,                  // $1
+        fts_query,              // $1
         user.id,                // $2
         vector_param as _,      // $3
         candidate_limit,        // $4
