@@ -7,9 +7,9 @@ use common_services::database::media_item::media_item::FullMediaItem;
 use material_color_utils::dynamic::variant::Variant;
 use reqwest::StatusCode;
 use serde_json::Value;
-use sqlx::__rt::sleep;
 use std::time::{Duration, Instant};
 use tokio::fs;
+use tokio::time::sleep;
 use tracing::info;
 
 pub async fn test_photo_download(context: &TestContext) -> Result<()> {
@@ -196,13 +196,14 @@ pub async fn test_get_color_theme(context: &TestContext) -> Result<()> {
     // Verify it looks like a theme object
     assert!(body.is_object());
     if let Some(obj) = body.as_object() {
-        assert!(obj.contains_key("source"));
+        assert!(obj.contains_key("source_color"));
         assert!(obj.contains_key("schemes"));
         let variant = obj
             .get("variant")
             .and_then(|v| v.as_str())
             .expect("key: variant not found");
-        let variant_from_json: Variant = serde_json::from_str(variant)?;
+        dbg!(variant);
+        let variant_from_json: Variant = serde_json::from_str(&format!("\"{variant}\""))?;
         assert_eq!(
             variant_from_json,
             context.settings.ingest.analyzer.theme_generation.variant

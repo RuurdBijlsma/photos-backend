@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::task::JoinHandle;
+use tokio::time::sleep;
 use tracing::{error, info, warn};
 
 pub fn init_test_constants(constants: AppConstants) {
@@ -158,7 +159,7 @@ impl TestContext {
                     warn!("API health check failed: {:?}. Retrying...", e);
                 }
             }
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            sleep(Duration::from_millis(500)).await;
         }
         Err(eyre!(
             "API did not become healthy within the timeout period."

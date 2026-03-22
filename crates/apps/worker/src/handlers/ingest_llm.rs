@@ -3,7 +3,7 @@ use crate::handlers::JobResult;
 use crate::handlers::common::cache::{get_llm_cache, hash_file, write_llm_cache};
 use crate::handlers::common::utils::get_images_to_analyze;
 use crate::jobs::management::is_job_cancelled;
-use color_eyre::eyre::{Result, bail, eyre};
+use color_eyre::eyre::{Result, eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;
@@ -100,10 +100,7 @@ async fn get_llm_data(
     let mut analyses = Vec::new();
 
     for (percentage, image_path) in images_to_analyze {
-        let Some(vis_analyzer) = context.visual_analyzer.clone() else {
-            bail!("No `VisualAnalyzer` in `WorkerContext`, but analyze job handler was called.")
-        };
-        let analysis_result = vis_analyzer
+        let analysis_result = context.visual_analyzer
             .llm_analysis(&context.settings.ingest.analyzer, &image_path, percentage)
             .await?;
         analyses.push(analysis_result);
