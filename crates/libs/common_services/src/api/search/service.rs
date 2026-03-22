@@ -205,3 +205,73 @@ pub async fn get_search_suggestions(
             .collect(),
     })
 }
+
+pub async fn get_random_search_suggestion(
+    user: &User,
+    pool: &PgPool,
+) -> Result<Option<String>, SearchError> {
+    let row = sqlx::query!(
+        r#"
+        WITH matched_terms AS (
+            (SELECT c.search_term as suggestion
+            FROM classification c
+            JOIN visual_analysis va ON c.visual_analysis_id = va.id
+            WHERE va.user_id = $1
+              AND c.search_term != ''
+            GROUP BY c.search_term
+            ORDER BY COUNT(DISTINCT va.media_item_id) DESC
+            LIMIT 100)
+
+            UNION ALL
+
+            (SELECT p.name as suggestion
+            FROM person p
+            JOIN face f ON f.person_id = p.id
+            JOIN visual_analysis va ON f.visual_analysis_id = va.id
+            WHERE p.user_id = $1
+              AND p.name != ''
+            GROUP BY p.name
+            ORDER BY COUNT(DISTINCT va.media_item_id) DESC
+            LIMIT 100)
+
+            UNION ALL
+
+            (SELECT loc.val as suggestion
+            FROM (
+                SELECT id, name as val FROM location
+                UNION
+                SELECT id, admin1 as val FROM location
+                UNION
+                SELECT id, country_name as val FROM location
+            ) loc
+            JOIN gps g ON g.location_id = loc.id
+            JOIN media_item mi ON g.media_item_id = mi.id
+            WHERE mi.user_id = $1 AND mi.deleted = false
+            GROUP BY loc.val
+            ORDER BY COUNT(DISTINCT g.media_item_id) DESC
+            LIMIT 100)
+
+            UNION ALL
+
+            (SELECT a.name as suggestion
+            FROM album a
+            LEFT JOIN album_collaborator ac ON a.id = ac.album_id AND ac.user_id = $1
+            JOIN album_media_item am ON a.id = am.album_id
+            WHERE (a.owner_id = $1 OR ac.user_id IS NOT NULL)
+              AND a.name != ''
+            GROUP BY a.name, a.id
+            ORDER BY COUNT(DISTINCT am.media_item_id) DESC
+            LIMIT 100)
+        )
+        SELECT suggestion as "suggestion!"
+        FROM matched_terms
+        ORDER BY RANDOM()
+        LIMIT 1
+        "#,
+        user.id
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(row.map(|r| r.suggestion))
+}

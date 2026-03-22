@@ -193,6 +193,7 @@
   middle item chronologically. Use get_representative_thumbnail when creating an album, to set as the album thumbnail.
 * ✅ Fix performance of get_representative_thumbnail
 * videos hebben te hoge prio in the simple timeline
+* ontwikkel snelle object detection oid zodat search suggestions kan zonder llm
 
 # Features
 

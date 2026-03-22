@@ -5,7 +5,7 @@ use axum_extra::protobuf::Protobuf;
 use common_services::api::search::error::SearchError;
 use common_services::api::search::interfaces::SearchParams;
 use common_services::api::search::service::{
-    SearchMediaConfig, get_search_suggestions, search_media,
+    SearchMediaConfig, get_random_search_suggestion, get_search_suggestions, search_media,
 };
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
@@ -64,4 +64,13 @@ pub async fn get_search_suggestions_handler(
     )
     .await?;
     Ok(Protobuf(result))
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_random_search_suggestion_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+) -> Result<String, SearchError> {
+    let result = get_random_search_suggestion(&user, &context.pool).await?;
+    Ok(result.unwrap_or_default())
 }
