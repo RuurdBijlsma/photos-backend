@@ -195,6 +195,8 @@
 * videos hebben te hoge prio in the simple timeline
 * ontwikkel snelle object detection oid zodat search suggestions kan zonder llm
 * negative query in search does not work
+* sort by date in search is beetje dom
+* basic search is langzamer nu dan eerst
 
 # Features
 

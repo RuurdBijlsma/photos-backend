@@ -6,7 +6,7 @@
 
 use app_state::load_app_settings;
 use common_services::api::search::interfaces::SearchSortBy;
-use common_services::api::search::service::{SearchMediaConfig, search_media};
+use common_services::api::search::service::{SearchMediaConfig, advanced_search_media};
 use common_services::database::get_db_pool;
 use common_services::database::user_store::UserStore;
 use common_types::dev_constants::EMAIL;
@@ -29,7 +29,7 @@ async fn main() -> color_eyre::Result<()> {
         .await?;
 
     let now = Instant::now();
-    let search_result = search_media(
+    let search_result = advanced_search_media(
         &user,
         &pool,
         Arc::new(embedder).clone(),

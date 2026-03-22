@@ -125,8 +125,9 @@ CREATE INDEX trgm_idx_location_name ON location USING gin (name gin_trgm_ops);
 CREATE INDEX trgm_idx_location_admin1 ON location USING gin (admin1 gin_trgm_ops);
 CREATE INDEX trgm_idx_location_admin2 ON location USING gin (admin2 gin_trgm_ops);
 CREATE INDEX trgm_idx_location_country_name ON location USING gin (country_name gin_trgm_ops);
-
--- Added for search suggestion performance:
 CREATE INDEX idx_visual_analysis_user_id ON visual_analysis (user_id);
 CREATE INDEX idx_classification_search_term ON classification (search_term);
 CREATE INDEX idx_person_user_id_name ON person (user_id, name);
+
+-- For search performance
+CREATE INDEX idx_visual_analysis_search_filters ON visual_analysis (user_id, deleted, media_item_id);

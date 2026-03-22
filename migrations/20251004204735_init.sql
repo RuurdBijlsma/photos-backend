@@ -191,3 +191,8 @@ CREATE INDEX idx_media_item_user_month_order_partial
         )
     INCLUDE (width, height)
     WHERE deleted = false;
+
+-- Composite index for search filtering
+CREATE INDEX idx_media_item_search_filters
+    ON media_item (user_id, deleted, is_video)
+    INCLUDE (id, taken_at_utc, sort_timestamp);

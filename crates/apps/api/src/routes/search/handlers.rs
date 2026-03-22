@@ -5,7 +5,7 @@ use axum_extra::protobuf::Protobuf;
 use common_services::api::search::error::SearchError;
 use common_services::api::search::interfaces::SearchParams;
 use common_services::api::search::service::{
-    SearchMediaConfig, get_random_search_suggestion, get_search_suggestions, search_media,
+    SearchMediaConfig, get_random_search_suggestion, get_search_suggestions, advanced_search_media,
 };
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
@@ -35,7 +35,7 @@ pub async fn get_search_results(
     Extension(user): Extension<User>,
     Query(params): Query<SearchParams>,
 ) -> Result<Protobuf<SearchResponse>, SearchError> {
-    let items = search_media(
+    let items = advanced_search_media(
         &user,
         &context.pool,
         context.embedder,
