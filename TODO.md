@@ -194,6 +194,7 @@
 * ✅ Fix performance of get_representative_thumbnail
 * videos hebben te hoge prio in the simple timeline
 * ontwikkel snelle object detection oid zodat search suggestions kan zonder llm
+* negative query in search does not work
 
 # Features
 

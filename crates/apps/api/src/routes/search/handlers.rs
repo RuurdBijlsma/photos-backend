@@ -44,6 +44,13 @@ pub async fn get_search_results(
             text_weight: context.settings.ingest.analyzer.search.text_weight,
             semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
             limit: params.limit,
+            start_date: params.start_date,
+            end_date: params.end_date,
+            media_type: params.media_type,
+            sort_by: params.sort_by,
+            negative_query: params.negative_query,
+            country_code: params.country_code,
+            face_name: params.face_name,
         },
     )
     .await?;
@@ -56,13 +63,7 @@ pub async fn get_search_suggestions_handler(
     Extension(user): Extension<User>,
     Query(params): Query<SearchParams>,
 ) -> Result<Protobuf<SearchSuggestionsResponse>, SearchError> {
-    let result = get_search_suggestions(
-        &user,
-        &context.pool,
-        &params.query,
-        params.limit
-    )
-    .await?;
+    let result = get_search_suggestions(&user, &context.pool, &params.query, params.limit).await?;
     Ok(Protobuf(result))
 }
 

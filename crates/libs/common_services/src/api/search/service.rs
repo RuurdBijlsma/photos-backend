@@ -1,5 +1,7 @@
 use crate::api::search::error::SearchError;
+use crate::api::search::interfaces::{SearchMediaType, SearchSortBy};
 use crate::database::app_user::User;
+use chrono::{DateTime, Utc};
 use common_types::pb::api::{
     SearchSuggestion, SearchSuggestionsResponse, SimpleTimelineItem, SuggestionType,
 };
@@ -8,11 +10,18 @@ use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Debug)]
 pub struct SearchMediaConfig {
     pub limit: Option<i64>,
     pub semantic_weight: f64,
     pub text_weight: f64,
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
+    pub media_type: Option<SearchMediaType>,
+    pub sort_by: Option<SearchSortBy>,
+    pub negative_query: Option<String>,
+    pub country_code: Option<String>,
+    pub face_name: Option<String>,
 }
 
 pub async fn search_media(
@@ -23,15 +32,50 @@ pub async fn search_media(
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
     let query_str = query.to_string();
-    let embedder = embedder.clone();
-    let query_embedding = tokio::task::spawn_blocking(move || embedder.embed_text(&query_str))
-        .await??
-        .to_vec();
+    let embedder_clone = embedder.clone();
+    let mut query_embedding =
+        tokio::task::spawn_blocking(move || embedder_clone.embed_text(&query_str))
+            .await??
+            .to_vec();
+
+    if let Some(negative_query) = &config.negative_query {
+        let neg_str = negative_query.to_string();
+        let neg_embedder = embedder.clone();
+        let neg_embedding = tokio::task::spawn_blocking(move || neg_embedder.embed_text(&neg_str))
+            .await??
+            .to_vec();
+
+        // Perform semantic vector subtraction: V_final = V_pos - V_neg
+        for (pos, neg) in query_embedding.iter_mut().zip(neg_embedding.iter()) {
+            *pos -= *neg;
+        }
+
+        // Re-normalize the vector
+        let norm = query_embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+        if norm > 1e-6 {
+            for val in &mut query_embedding {
+                *val /= norm;
+            }
+        }
+    }
+
     let vector_param = Vector::from(query_embedding);
 
     let limit = config.limit.unwrap_or(100).min(500);
     let candidate_limit = limit * 3 + 300;
     let k = 60.0f64;
+
+    let is_video_filter = match config.media_type.unwrap_or_default() {
+        SearchMediaType::Video => Some(true),
+        SearchMediaType::Photo => Some(false),
+        SearchMediaType::All => None,
+    };
+
+    let sort_by = config.sort_by.unwrap_or_default();
+    let sort_by_str = match sort_by {
+        SearchSortBy::Relevancy => "relevancy",
+        SearchSortBy::Date => "date",
+    };
 
     let items = sqlx::query_as!(
         SimpleTimelineItem,
@@ -39,13 +83,24 @@ pub async fn search_media(
         WITH
         fts AS (
             SELECT
-                id,
-                ts_rank_cd(search_vector, websearch_to_tsquery('english', $1)) as score,
-                ROW_NUMBER() OVER (ORDER BY ts_rank_cd(search_vector, websearch_to_tsquery('english', $1)) DESC) as rank
-            FROM media_item
-            WHERE user_id = $2
-              AND search_vector @@ websearch_to_tsquery('english', $1)
-              AND deleted = false
+                mi.id,
+                ts_rank_cd(mi.search_vector, websearch_to_tsquery('english', $1)) as score,
+                ROW_NUMBER() OVER (ORDER BY ts_rank_cd(mi.search_vector, websearch_to_tsquery('english', $1)) DESC) as rank
+            FROM media_item mi
+            WHERE mi.user_id = $2
+              AND mi.search_vector @@ websearch_to_tsquery('english', $1)
+              AND mi.deleted = false
+              AND ($9::timestamptz IS NULL OR mi.taken_at_utc >= $9)
+              AND ($10::timestamptz IS NULL OR mi.taken_at_utc <= $10)
+              AND ($11::bool IS NULL OR mi.is_video = $11)
+              AND ($12::text IS NULL OR EXISTS (
+                  SELECT 1 FROM gps g JOIN location l ON g.location_id = l.id
+                  WHERE g.media_item_id = mi.id AND l.country_code = $12
+              ))
+              AND ($13::text IS NULL OR EXISTS (
+                  SELECT 1 FROM visual_analysis va JOIN face f ON f.visual_analysis_id = va.id JOIN person p ON f.person_id = p.id
+                  WHERE va.media_item_id = mi.id AND p.name = $13
+              ))
             LIMIT $4
         ),
         vec AS (
@@ -58,11 +113,23 @@ pub async fn search_media(
                     media_item_id as id,
                     distance
                 FROM (
-                    SELECT media_item_id, embedding <=> $3::vector as distance
-                    FROM visual_analysis
-                    WHERE user_id = $2
-                      AND deleted = false
-                    ORDER BY embedding <=> $3::vector
+                    SELECT va.media_item_id, va.embedding <=> $3::vector as distance
+                    FROM visual_analysis va
+                    JOIN media_item mi ON mi.id = va.media_item_id
+                    WHERE va.user_id = $2
+                      AND va.deleted = false
+                      AND ($9::timestamptz IS NULL OR mi.taken_at_utc >= $9)
+                      AND ($10::timestamptz IS NULL OR mi.taken_at_utc <= $10)
+                      AND ($11::bool IS NULL OR mi.is_video = $11)
+                      AND ($12::text IS NULL OR EXISTS (
+                          SELECT 1 FROM gps g JOIN location l ON g.location_id = l.id
+                          WHERE g.media_item_id = mi.id AND l.country_code = $12
+                      ))
+                      AND ($13::text IS NULL OR EXISTS (
+                          SELECT 1 FROM visual_analysis va2 JOIN face f ON f.visual_analysis_id = va2.id JOIN person p ON f.person_id = p.id
+                          WHERE va2.media_item_id = mi.id AND p.name = $13
+                      ))
+                    ORDER BY va.embedding <=> $3::vector
                     LIMIT $4 * 4
                 ) sub_ordered
                 ORDER BY media_item_id, distance
@@ -96,20 +163,28 @@ pub async fn search_media(
             (mi.width::real / mi.height::real) as "ratio!"
         FROM scored_candidates sc
         JOIN media_item mi ON mi.id = sc.id
-        ORDER BY sc.combined_score DESC
+        ORDER BY
+            (CASE WHEN $14 = 'date' THEN NULL ELSE sc.combined_score END) DESC NULLS LAST,
+            mi.sort_timestamp DESC
         LIMIT $5
          "#,
-        query,                 // $1
-        user.id,               // $2
-        vector_param as _,     // $3
-        candidate_limit,       // $4
-        limit,                 // $5
-        k,                     // $6
-        config.text_weight,    // $7
-        config.semantic_weight // $8
+        query,                  // $1
+        user.id,                // $2
+        vector_param as _,      // $3
+        candidate_limit,        // $4
+        limit,                  // $5
+        k,                      // $6
+        config.text_weight,     // $7
+        config.semantic_weight, // $8
+        config.start_date,      // $9
+        config.end_date,        // $10
+        is_video_filter,        // $11
+        config.country_code,    // $12
+        config.face_name,       // $13
+        sort_by_str             // $14
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     Ok(items)
 }
