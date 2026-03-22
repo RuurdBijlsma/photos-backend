@@ -1,5 +1,7 @@
 use crate::api::search::error::SearchError;
-use crate::api::search::interfaces::{SearchMediaConfig, SearchMediaType, SearchSortBy};
+use crate::api::search::interfaces::{
+    SearchFilterRanges, SearchMediaConfig, SearchMediaType, SearchSortBy,
+};
 use crate::database::app_user::User;
 use common_types::pb::api::{
     SearchSuggestion, SearchSuggestionsResponse, SimpleTimelineItem, SuggestionType,
@@ -8,6 +10,58 @@ use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
+
+pub async fn search_filter_ranges(
+    user: &User,
+    pool: &PgPool,
+) -> Result<SearchFilterRanges, SearchError> {
+    let date_task = sqlx::query!(
+        r#"
+        SELECT MIN(sort_timestamp) as date_start, MAX(sort_timestamp) as date_end
+        FROM media_item
+        WHERE user_id = $1 AND deleted = false
+        "#,
+        user.id
+    )
+    .fetch_one(pool);
+    let countries_task = sqlx::query!(
+        r#"
+        SELECT DISTINCT l.country_code, l.country_name
+        FROM location l
+        JOIN gps g ON l.id = g.location_id
+        JOIN media_item mi ON g.media_item_id = mi.id
+        WHERE mi.user_id = $1 AND mi.deleted = false
+        ORDER BY l.country_name
+        "#,
+        user.id
+    )
+    .fetch_all(pool);
+    let people_task = sqlx::query_scalar!(
+        r#"
+        SELECT DISTINCT name
+        FROM person
+        WHERE user_id = $1 AND name IS NOT NULL AND name != ''
+        ORDER BY name
+        "#,
+        user.id
+    )
+    .fetch_all(pool);
+
+    let (date_ranges, countries_records, people_records) =
+        tokio::try_join!(date_task, countries_task, people_task)?;
+    let countries = countries_records
+        .into_iter()
+        .map(|c| (c.country_code, c.country_name))
+        .collect();
+    let people = people_records.into_iter().flatten().collect();
+
+    Ok(SearchFilterRanges {
+        date_start: date_ranges.date_start,
+        date_end: date_ranges.date_end,
+        people,
+        countries,
+    })
+}
 
 pub async fn search_media(
     user: &User,

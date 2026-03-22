@@ -1,6 +1,15 @@
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
+
+#[derive(Serialize, ToSchema, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchFilterRanges {
+    pub date_start: Option<DateTime<Utc>>,
+    pub date_end: Option<DateTime<Utc>>,
+    pub people: Vec<String>,
+    pub countries: Vec<(String, String)>,
+}
 
 #[derive(Clone, Debug)]
 pub struct SearchMediaConfig {

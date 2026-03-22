@@ -1,11 +1,13 @@
 use crate::api_state::ApiContext;
-use axum::Extension;
 use axum::extract::{Query, State};
+use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::search::error::SearchError;
-use common_services::api::search::interfaces::{SearchMediaConfig, SearchParams};
+use common_services::api::search::interfaces::{
+    SearchFilterRanges, SearchMediaConfig, SearchParams,
+};
 use common_services::api::search::service::{
-    get_random_search_suggestion, get_search_suggestions, search_media,
+    get_random_search_suggestion, get_search_suggestions, search_filter_ranges, search_media,
 };
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
@@ -74,4 +76,13 @@ pub async fn get_random_search_suggestion_handler(
 ) -> Result<String, SearchError> {
     let result = get_random_search_suggestion(&user, &context.pool).await?;
     Ok(result.unwrap_or_default())
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_search_filter_ranges(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+) -> Result<Json<SearchFilterRanges>, SearchError> {
+    let result = search_filter_ranges(&user, &context.pool).await?;
+    Ok(Json(result))
 }
