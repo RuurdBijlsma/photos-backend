@@ -153,26 +153,25 @@ async fn advanced_search_media(
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
     let query_str = query.to_string();
     let embedder_clone = embedder.clone();
-    // todo: if negative query exists, use embed_texts to batch embed 2 texts.
-    let mut query_embedding =
-        tokio::task::spawn_blocking(move || embedder_clone.embed_text(&query_str))
-            .await??
-            .to_vec();
 
-    let fts_query = if let Some(negative_query) = &config.negative_query {
+    let (query_embedding, fts_query) = if let Some(negative_query) = &config.negative_query {
         let neg_str = negative_query.clone();
-        let neg_embedder = embedder.clone();
-        let neg_embedding = tokio::task::spawn_blocking(move || neg_embedder.embed_text(&neg_str))
-            .await??
-            .to_vec();
 
-        for (pos, neg) in query_embedding.iter_mut().zip(neg_embedding.iter()) {
+        let embeddings = tokio::task::spawn_blocking(move || {
+            embedder_clone.embed_texts(&[&query_str, &neg_str])
+        })
+        .await??;
+
+        let mut q_emb = embeddings.row(0).to_vec();
+        let neg_emb = embeddings.row(1).to_vec();
+
+        for (pos, neg) in q_emb.iter_mut().zip(neg_emb.iter()) {
             *pos -= 0.5 * *neg;
         }
 
-        let norm = query_embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm = q_emb.iter().map(|x| x * x).sum::<f32>().sqrt();
         if norm > 1e-6 {
-            for val in &mut query_embedding {
+            for val in &mut q_emb {
                 *val /= norm;
             }
         }
@@ -181,9 +180,12 @@ async fn advanced_search_media(
             .split_whitespace()
             .map(|s| format!("-{s}"))
             .collect();
-        format!("{} {}", query, neg_terms.join(" "))
+        (q_emb, format!("{} {}", query, neg_terms.join(" ")))
     } else {
-        query.to_string()
+        let q_emb = tokio::task::spawn_blocking(move || embedder_clone.embed_text(&query_str))
+            .await??
+            .to_vec();
+        (q_emb, query.to_string())
     };
 
     let vector_param = Vector::from(query_embedding);
