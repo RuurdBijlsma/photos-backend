@@ -4,9 +4,7 @@ use axum::extract::{Query, State};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::search::error::SearchError;
 use common_services::api::search::interfaces::SearchParams;
-use common_services::api::search::service::{
-    SearchMediaConfig, get_random_search_suggestion, get_search_suggestions, advanced_search_media,
-};
+use common_services::api::search::service::{SearchMediaConfig, get_random_search_suggestion, get_search_suggestions, search_media};
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
 use tracing::instrument;
@@ -35,7 +33,7 @@ pub async fn get_search_results(
     Extension(user): Extension<User>,
     Query(params): Query<SearchParams>,
 ) -> Result<Protobuf<SearchResponse>, SearchError> {
-    let items = advanced_search_media(
+    let items = search_media(
         &user,
         &context.pool,
         context.embedder,
@@ -46,8 +44,8 @@ pub async fn get_search_results(
             limit: params.limit,
             start_date: params.start_date,
             end_date: params.end_date,
-            media_type: params.media_type,
-            sort_by: params.sort_by,
+            media_type: params.media_type.unwrap_or_default(),
+            sort_by: params.sort_by.unwrap_or_default(),
             negative_query: params.negative_query,
             country_code: params.country_code,
             face_name: params.face_name,

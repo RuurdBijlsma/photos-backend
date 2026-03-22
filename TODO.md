@@ -197,6 +197,7 @@
 * negative query in search does not work
 * sort by date in search is beetje dom
 * basic search is langzamer nu dan eerst
+* todo: if negative query exists, use embed_texts to batch embed 2 texts
 
 # Features
 
