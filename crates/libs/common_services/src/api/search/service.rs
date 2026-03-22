@@ -1,7 +1,6 @@
 use crate::api::search::error::SearchError;
-use crate::api::search::interfaces::{SearchMediaType, SearchSortBy};
+use crate::api::search::interfaces::{SearchMediaConfig, SearchMediaType, SearchSortBy};
 use crate::database::app_user::User;
-use chrono::{DateTime, Utc};
 use common_types::pb::api::{
     SearchSuggestion, SearchSuggestionsResponse, SimpleTimelineItem, SuggestionType,
 };
@@ -9,20 +8,6 @@ use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
-
-#[derive(Clone, Debug)]
-pub struct SearchMediaConfig {
-    pub limit: Option<i64>,
-    pub semantic_weight: f64,
-    pub text_weight: f64,
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
-    pub media_type: SearchMediaType,
-    pub sort_by: SearchSortBy,
-    pub negative_query: Option<String>,
-    pub country_code: Option<String>,
-    pub face_name: Option<String>,
-}
 
 pub async fn search_media(
     user: &User,
@@ -144,6 +129,7 @@ async fn basic_search_media(
     Ok(items)
 }
 
+#[allow(clippy::too_many_lines)]
 async fn advanced_search_media(
     user: &User,
     pool: &PgPool,

@@ -3,8 +3,10 @@ use axum::Extension;
 use axum::extract::{Query, State};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::search::error::SearchError;
-use common_services::api::search::interfaces::SearchParams;
-use common_services::api::search::service::{SearchMediaConfig, get_random_search_suggestion, get_search_suggestions, search_media};
+use common_services::api::search::interfaces::{SearchMediaConfig, SearchParams};
+use common_services::api::search::service::{
+    get_random_search_suggestion, get_search_suggestions, search_media,
+};
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
 use tracing::instrument;

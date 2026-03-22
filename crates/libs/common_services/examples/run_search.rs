@@ -5,10 +5,8 @@
 )]
 
 use app_state::load_app_settings;
-use common_services::api::search::interfaces::{SearchMediaType, SearchSortBy};
-use common_services::api::search::service::{
-    SearchMediaConfig, search_media,
-};
+use common_services::api::search::interfaces::{SearchMediaConfig, SearchMediaType, SearchSortBy};
+use common_services::api::search::service::search_media;
 use common_services::database::get_db_pool;
 use common_services::database::user_store::UserStore;
 use common_types::dev_constants::EMAIL;
