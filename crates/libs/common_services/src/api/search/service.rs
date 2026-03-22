@@ -236,19 +236,33 @@ pub async fn get_random_search_suggestion(
 
             UNION ALL
 
-            (SELECT loc.val as suggestion
+            (SELECT val as suggestion
             FROM (
-                SELECT id, name as val FROM location
-                UNION
-                SELECT id, admin1 as val FROM location
-                UNION
-                SELECT id, country_name as val FROM location
-            ) loc
-            JOIN gps g ON g.location_id = loc.id
-            JOIN media_item mi ON g.media_item_id = mi.id
-            WHERE mi.user_id = $1 AND mi.deleted = false
-            GROUP BY loc.val
-            ORDER BY COUNT(DISTINCT g.media_item_id) DESC
+                (SELECT l.name as val, COUNT(mi.id) as cnt
+                FROM location l
+                JOIN gps g ON g.location_id = l.id
+                JOIN media_item mi ON g.media_item_id = mi.id
+                WHERE mi.user_id = $1 AND mi.deleted = false AND l.name != ''
+                GROUP BY l.name
+                LIMIT 100)
+                UNION ALL
+                (SELECT l.admin1 as val, COUNT(mi.id) as cnt
+                FROM location l
+                JOIN gps g ON g.location_id = l.id
+                JOIN media_item mi ON g.media_item_id = mi.id
+                WHERE mi.user_id = $1 AND mi.deleted = false AND l.admin1 != ''
+                GROUP BY l.admin1
+                LIMIT 100)
+                UNION ALL
+                (SELECT l.country_name as val, COUNT(mi.id) as cnt
+                FROM location l
+                JOIN gps g ON g.location_id = l.id
+                JOIN media_item mi ON g.media_item_id = mi.id
+                WHERE mi.user_id = $1 AND mi.deleted = false AND l.country_name != ''
+                GROUP BY l.country_name
+                LIMIT 100)
+            ) locs
+            ORDER BY cnt DESC
             LIMIT 100)
 
             UNION ALL

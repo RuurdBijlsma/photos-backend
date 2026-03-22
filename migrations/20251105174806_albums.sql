@@ -79,3 +79,6 @@ CREATE TABLE pending_album_media_items
 
 -- Index for finding all pending items for a specific album import.
 CREATE INDEX idx_pending_album_media_items_target_album_id ON pending_album_media_items (album_id);
+
+-- For search suggestion performance:
+CREATE INDEX idx_album_name ON album (name);
