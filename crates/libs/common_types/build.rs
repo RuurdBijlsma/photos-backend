@@ -84,6 +84,7 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 
+    config.type_attribute(".api", "#[serde(rename_all = \"camelCase\")]");
     config.compile_fds(file_descriptors)?;
 
     Ok(())

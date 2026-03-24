@@ -137,6 +137,27 @@
 * ✅ non-analysis-worker spawns embedder
 * ✅ i think ocr_text should have higher prio
 * ✅ ocr_languages in settings doet niks meer
+* ✅ er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
+* ✅ play with weights for full text search
+* ✅ vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
+* ✅ probeer reciprocal rank fusion ofzo
+* ✅ on demand video thumbnails
+* ✅ on demand videos?
+* ✅ Voeg toe aan album tabel: earliest_media_item_timestamp -> zodat ik 2019-2020 kan laten zien in UI.
+* ✅ make get_representative_thumbnail or something, that returns the image that has an embedding closest to the centroid
+  of the list sent to the function. if no embeddings are available yet, return the middle item in the list
+  chronologically. If partial embeddings are available, use centroid logic for >50% available embeddings, otherwise
+  middle item chronologically. Use get_representative_thumbnail when creating an album, to set as the album thumbnail.
+* ✅ Fix performance of get_representative_thumbnail
+* ✅ videos hebben te hoge prio in the simple timeline
+* ontwikkel snelle object detection oid zodat search suggestions kan zonder llm
+* ✅ negative query in search does not work
+* ✅ sort by date in search is beetje dom
+* ✅ basic search is langzamer nu dan eerst
+* ✅ todo: if negative query exists, use embed_texts to batch embed 2 texts
+* ✅ kan camelcase op de proto generated structs?
+* ✅ make search result item protobuf
+* ✅ benchmark albums endpoints
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -158,46 +179,25 @@
     * grafana
     * alertmanager
     * loki? denk t niet
-* at some point copy paste all sql queries into gemini en ask for proper indices
+* at some point: delete all indices in migration files -> copy paste all sql queries into gemini en ask for proper indices
+  * Ik denk dat ik veel overbodige indices heb
 * automatic onboarding
 * [weird bug] crates dont start when migration isnt in sync for some reason?
 * also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
   items (2e sort toevoegen? idk)
-* benchmark albums endpoints
 * review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
     * is auth wel goed implemented? met is_public enzo
     * minder repeated code maken voor de auth check daar
-* kan camelcase op de proto generated structs?
 * current albums pb interface misses collaborators
-* better error if exiftool or numpy isnt there (worker wont work then)
+* better error if exiftool isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * improve speed of album/{id} endpoint
-* make search result item protobuf
-* ✅ er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
-* ✅ play with weights for full text search
-* ✅ vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
-  search zit meer in de 0-0.3 range, FTS kan wel tot 4.0 gaan ofzo, dus weight voor FTS moet lager dan vector. nu 0.8 en
-  0.2 dat lijkt wel goeie resultaten te geven. Toch meer experimenteren.
-* ✅ probeer reciprocal rank fusion ofzo
-* ✅ on demand video thumbnails
-* ✅ on demand videos?
 * maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
-* llm instelbaar maken in settings
-* ✅ Voeg toe aan album tabel: earliest_media_item_timestamp -> zodat ik 2019-2020 kan laten zien in UI.
-* ✅ make get_representative_thumbnail or something, that returns the image that has an embedding closest to the centroid
-  of the list sent to the function. if no embeddings are available yet, return the middle item in the list
-  chronologically. If partial embeddings are available, use centroid logic for >50% available embeddings, otherwise
-  middle item chronologically. Use get_representative_thumbnail when creating an album, to set as the album thumbnail.
-* ✅ Fix performance of get_representative_thumbnail
-* videos hebben te hoge prio in the simple timeline
-* ontwikkel snelle object detection oid zodat search suggestions kan zonder llm
-* negative query in search does not work
-* sort by date in search is beetje dom
-* basic search is langzamer nu dan eerst
-* todo: if negative query exists, use embed_texts to batch embed 2 texts
+* llm instelbaar maken in settings?
+* cache embeddings for search? could be big speedup
 
 # Features
 

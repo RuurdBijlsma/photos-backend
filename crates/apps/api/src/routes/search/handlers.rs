@@ -43,6 +43,12 @@ pub async fn get_search_results(
         context.embedder,
         &params.query,
         SearchMediaConfig {
+            semantic_score_threshold: context
+                .settings
+                .ingest
+                .analyzer
+                .search
+                .semantic_score_threshold,
             text_weight: context.settings.ingest.analyzer.search.text_weight,
             semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
             limit: params.limit,

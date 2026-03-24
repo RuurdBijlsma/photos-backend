@@ -13,6 +13,7 @@ pub struct SearchFilterRanges {
 #[derive(Clone, Debug)]
 pub struct SearchMediaConfig {
     pub limit: Option<i64>,
+    pub semantic_score_threshold: f64,
     pub semantic_weight: f64,
     pub text_weight: f64,
     pub start_date: Option<DateTime<Utc>>,

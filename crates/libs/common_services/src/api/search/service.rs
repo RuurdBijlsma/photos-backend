@@ -133,6 +133,7 @@ async fn basic_search_media(
                     FROM visual_analysis
                     WHERE user_id = $2
                       AND deleted = false
+                      AND (embedding <=> $3::vector) < $9
                     ORDER BY embedding <=> $3::vector
                     LIMIT $4 * 4
                 ) sub_ordered
@@ -177,7 +178,8 @@ async fn basic_search_media(
         limit,                 // $5
         k,                     // $6
         config.text_weight,    // $7
-        config.semantic_weight // $8
+        config.semantic_weight, // $8
+        config.semantic_score_threshold // $9
     )
         .fetch_all(pool)
         .await?;
@@ -198,26 +200,21 @@ async fn advanced_search_media(
 
     let (query_embedding, fts_query) = if let Some(negative_query) = &config.negative_query {
         let neg_str = negative_query.clone();
-
         let embeddings = tokio::task::spawn_blocking(move || {
             embedder_clone.embed_texts(&[&query_str, &neg_str])
         })
         .await??;
-
         let mut q_emb = embeddings.row(0).to_vec();
         let neg_emb = embeddings.row(1).to_vec();
-
         for (pos, neg) in q_emb.iter_mut().zip(neg_emb.iter()) {
             *pos -= 0.5 * *neg;
         }
-
         let norm = q_emb.iter().map(|x| x * x).sum::<f32>().sqrt();
         if norm > 1e-6 {
             for val in &mut q_emb {
                 *val /= norm;
             }
         }
-
         let neg_terms: Vec<String> = negative_query
             .split_whitespace()
             .map(|s| format!("-{s}"))
@@ -241,8 +238,14 @@ async fn advanced_search_media(
         SearchMediaType::All => None,
     };
 
-    let sort_by = config.sort_by;
-    let sort_by_str = match sort_by {
+    let semantic_score_threshold = if config.sort_by == SearchSortBy::Relevancy {
+        // With relevancy, it doesn't matter much if we have a higher threshold
+        config.semantic_score_threshold + 0.2
+    } else {
+        config.semantic_score_threshold
+    };
+
+    let sort_by_str = match config.sort_by {
         SearchSortBy::Relevancy => "relevancy",
         SearchSortBy::Date => "date",
     };
@@ -291,6 +294,7 @@ async fn advanced_search_media(
                     FROM visual_analysis va
                     WHERE va.user_id = $2
                       AND va.deleted = false
+                      AND (va.embedding <=> $3::vector) < $15
                       AND EXISTS (
                           SELECT 1 FROM filtered_media fm
                           WHERE fm.id = va.media_item_id
@@ -347,7 +351,8 @@ async fn advanced_search_media(
         is_video_filter,        // $11
         &config.country_codes,  // $12
         config.face_name,       // $13
-        sort_by_str             // $14
+        sort_by_str,            // $14
+        semantic_score_threshold // $15
     )
         .fetch_all(pool)
         .await?;
