@@ -15,15 +15,17 @@ pub async fn search_filter_ranges(
     user: &User,
     pool: &PgPool,
 ) -> Result<SearchFilterRanges, SearchError> {
-    let date_task = sqlx::query!(
+    let months_task = sqlx::query!(
         r#"
-        SELECT MIN(sort_timestamp) as date_start, MAX(sort_timestamp) as date_end
+        SELECT DISTINCT month_id AS "months!"
         FROM media_item
-        WHERE user_id = $1 AND deleted = false
+        WHERE user_id = $1
+          AND deleted = false
+        ORDER BY month_id
         "#,
         user.id
     )
-    .fetch_one(pool);
+    .fetch_all(pool);
     let countries_task = sqlx::query!(
         r#"
         SELECT DISTINCT l.country_code, l.country_name
@@ -47,17 +49,17 @@ pub async fn search_filter_ranges(
     )
     .fetch_all(pool);
 
-    let (date_ranges, countries_records, people_records) =
-        tokio::try_join!(date_task, countries_task, people_task)?;
+    let (available_month_records, countries_records, people_records) =
+        tokio::try_join!(months_task, countries_task, people_task)?;
     let countries = countries_records
         .into_iter()
         .map(|c| (c.country_code, c.country_name))
         .collect();
     let people = people_records.into_iter().flatten().collect();
+    let available_months = available_month_records.iter().map(|r| r.months).collect();
 
     Ok(SearchFilterRanges {
-        date_start: date_ranges.date_start,
-        date_end: date_ranges.date_end,
+        available_months,
         people,
         countries,
     })
@@ -76,7 +78,7 @@ pub async fn search_media(
         && config.end_date.is_none()
         && config.negative_query.is_none()
         && config.face_name.is_none()
-        && config.country_code.is_none()
+        && config.country_codes.is_empty()
     {
         basic_search_media(user, pool, embedder, query, config).await
     } else {
@@ -257,9 +259,9 @@ async fn advanced_search_media(
               AND ($9::timestamptz IS NULL OR mi.taken_at_utc >= $9)
               AND ($10::timestamptz IS NULL OR mi.taken_at_utc <= $10)
               AND ($11::bool IS NULL OR mi.is_video = $11)
-              AND ($12::text IS NULL OR EXISTS (
+              AND (cardinality($12::text[]) = 0 OR EXISTS (
                   SELECT 1 FROM gps g JOIN location l ON g.location_id = l.id
-                  WHERE g.media_item_id = mi.id AND l.country_code = $12
+                  WHERE g.media_item_id = mi.id AND l.country_code = ANY($12)
               ))
               AND ($13::text IS NULL OR EXISTS (
                   SELECT 1 FROM visual_analysis va JOIN face f ON f.visual_analysis_id = va.id JOIN person p ON f.person_id = p.id
@@ -343,7 +345,7 @@ async fn advanced_search_media(
         config.start_date,      // $9
         config.end_date,        // $10
         is_video_filter,        // $11
-        config.country_code,    // $12
+        &config.country_codes,  // $12
         config.face_name,       // $13
         sort_by_str             // $14
     )

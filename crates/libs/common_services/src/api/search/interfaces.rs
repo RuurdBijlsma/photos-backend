@@ -1,12 +1,11 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Serialize, ToSchema, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchFilterRanges {
-    pub date_start: Option<DateTime<Utc>>,
-    pub date_end: Option<DateTime<Utc>>,
+    pub available_months: Vec<NaiveDate>,
     pub people: Vec<String>,
     pub countries: Vec<(String, String)>,
 }
@@ -21,7 +20,7 @@ pub struct SearchMediaConfig {
     pub media_type: SearchMediaType,
     pub sort_by: SearchSortBy,
     pub negative_query: Option<String>,
-    pub country_code: Option<String>,
+    pub country_codes: Vec<String>,
     pub face_name: Option<String>,
 }
 
@@ -32,10 +31,12 @@ pub struct SearchParams {
     pub limit: Option<i64>,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
-    pub media_type: Option<SearchMediaType>,
-    pub sort_by: Option<SearchSortBy>,
+    #[serde(default)]
+    pub media_type: SearchMediaType,
+    #[serde(default)]
+    pub sort_by: SearchSortBy,
     pub negative_query: Option<String>,
-    pub country_code: Option<String>,
+    pub country_codes: Option<String>, // comma separated because `serde` is stupid
     pub face_name: Option<String>,
 }
 

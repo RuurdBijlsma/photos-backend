@@ -48,10 +48,16 @@ pub async fn get_search_results(
             limit: params.limit,
             start_date: params.start_date,
             end_date: params.end_date,
-            media_type: params.media_type.unwrap_or_default(),
-            sort_by: params.sort_by.unwrap_or_default(),
+            media_type: params.media_type,
+            sort_by: params.sort_by,
             negative_query: params.negative_query,
-            country_code: params.country_code,
+            country_codes: params
+                .country_codes
+                .unwrap_or_default()
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
             face_name: params.face_name,
         },
     )
