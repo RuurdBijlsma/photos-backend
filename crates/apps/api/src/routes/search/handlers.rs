@@ -43,6 +43,7 @@ pub async fn get_search_results(
         context.embedder,
         &params.query,
         SearchMediaConfig {
+            embedder_model_id: context.settings.ingest.analyzer.search.embedder_model_id.clone(),
             semantic_score_threshold: context
                 .settings
                 .ingest

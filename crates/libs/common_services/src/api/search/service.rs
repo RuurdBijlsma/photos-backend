@@ -10,6 +10,7 @@ use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
+use crate::api::search::cache::get_cached_text_embedding;
 
 pub async fn search_filter_ranges(
     user: &User,
@@ -94,10 +95,13 @@ async fn basic_search_media(
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
     let query_str = query.to_string();
-    let embedder = embedder.clone();
-    let query_embedding = tokio::task::spawn_blocking(move || embedder.embed_text(&query_str))
-        .await??
-        .to_vec();
+    let query_embedding = get_cached_text_embedding(
+        &query_str,
+        &config.embedder_model_id,
+        pool,
+        embedder,
+    )
+    .await?;
     let vector_param = Vector::from(query_embedding);
 
     let limit = config.limit.unwrap_or(100).min(500);
@@ -198,14 +202,24 @@ async fn advanced_search_media(
     let query_str = query.to_string();
     let embedder_clone = embedder.clone();
 
+    let q_emb_task = get_cached_text_embedding(
+        &query_str,
+        &config.embedder_model_id,
+        pool,
+        embedder_clone.clone(),
+    );
+
     let (query_embedding, fts_query) = if let Some(negative_query) = &config.negative_query {
         let neg_str = negative_query.clone();
-        let embeddings = tokio::task::spawn_blocking(move || {
-            embedder_clone.embed_texts(&[&query_str, &neg_str])
-        })
-        .await??;
-        let mut q_emb = embeddings.row(0).to_vec();
-        let neg_emb = embeddings.row(1).to_vec();
+
+        let neg_emb_task = get_cached_text_embedding(
+            &neg_str,
+            &config.embedder_model_id,
+            pool,
+            embedder_clone,
+        );
+        let (mut q_emb, neg_emb) = tokio::try_join!(q_emb_task, neg_emb_task)?;
+
         for (pos, neg) in q_emb.iter_mut().zip(neg_emb.iter()) {
             *pos -= 0.5 * *neg;
         }
@@ -221,9 +235,7 @@ async fn advanced_search_media(
             .collect();
         (q_emb, format!("{} {}", query, neg_terms.join(" ")))
     } else {
-        let q_emb = tokio::task::spawn_blocking(move || embedder_clone.embed_text(&query_str))
-            .await??
-            .to_vec();
+        let q_emb = q_emb_task.await?;
         (q_emb, query.to_string())
     };
 

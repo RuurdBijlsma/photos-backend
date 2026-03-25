@@ -12,6 +12,7 @@ pub struct SearchFilterRanges {
 
 #[derive(Clone, Debug)]
 pub struct SearchMediaConfig {
+    pub embedder_model_id: String,
     pub limit: Option<i64>,
     pub semantic_score_threshold: f64,
     pub semantic_weight: f64,

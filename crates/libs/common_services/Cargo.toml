@@ -41,6 +41,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg"] }
 axum-extra = { version = "0.12.5", features = ["typed-header"] }
 face_id = "0.4.0"
 material-color-utils = "0.1.3"
+moka = { version = "0.12.15", features = ["future"] }
 
 [dev-dependencies]
 criterion = { version = "0.8.0", features = ["async_tokio", "html_reports"] }
