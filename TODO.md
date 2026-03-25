@@ -158,6 +158,7 @@
 * ✅ kan camelcase op de proto generated structs?
 * ✅ make search result item protobuf
 * ✅ benchmark albums endpoints
+* ✅ cache embeddings for search? could be big speedup
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -197,7 +198,6 @@
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
 * llm instelbaar maken in settings?
-* cache embeddings for search? could be big speedup
 
 # Features
 
