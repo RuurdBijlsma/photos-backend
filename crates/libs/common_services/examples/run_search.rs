@@ -35,6 +35,7 @@ async fn main() -> color_eyre::Result<()> {
         Arc::new(embedder).clone(),
         "kayak",
         SearchMediaConfig {
+            embedder_model_id: settings.ingest.analyzer.search.embedder_model_id,
             text_weight: 0.3,
             semantic_weight: 1.0,
             semantic_score_threshold: 0.85,

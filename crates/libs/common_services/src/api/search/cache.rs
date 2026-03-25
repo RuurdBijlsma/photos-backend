@@ -53,18 +53,24 @@ pub async fn get_cached_text_embedding(
         .to_vec();
 
     let vector_param = Vector::from(compute_emb.clone());
-    sqlx::query!(
-        r#"
-        INSERT INTO text_embedding_cache (model_id, text, embedding)
-        VALUES ($1, $2, $3::vector)
-        ON CONFLICT (model_id, text) DO NOTHING
-        "#,
-        model_id,
-        query,
-        vector_param as _
-    )
-    .execute(pool)
-    .await?;
+    let pool_clone = pool.clone();
+    let model_id_clone = model_id.to_string();
+    let query_clone = query.to_string();
+
+    tokio::spawn(async move {
+        let _ = sqlx::query!(
+            r#"
+            INSERT INTO text_embedding_cache (model_id, text, embedding)
+            VALUES ($1, $2, $3::vector)
+            ON CONFLICT (model_id, text) DO NOTHING
+            "#,
+            model_id_clone,
+            query_clone,
+            vector_param as _
+        )
+        .execute(&pool_clone)
+        .await;
+    });
 
     cache.insert(key, compute_emb.clone()).await;
 

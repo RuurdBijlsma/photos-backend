@@ -251,7 +251,7 @@ async fn advanced_search_media(
     };
 
     let semantic_score_threshold = if config.sort_by == SearchSortBy::Relevancy {
-        // With relevancy, it doesn't matter much if we have a higher threshold
+        // With relevancy sort, it doesn't matter much if we have a higher threshold
         config.semantic_score_threshold + 0.2
     } else {
         config.semantic_score_threshold
