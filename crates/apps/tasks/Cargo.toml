@@ -11,3 +11,6 @@ color-eyre = "0.6.5"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json", "uuid"] }
+
+[features]
+load-dynamic = ["common_services/load-dynamic"]

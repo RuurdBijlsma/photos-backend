@@ -198,6 +198,10 @@
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
 * llm instelbaar maken in settings?
+* sommige jobs moeten altijd runnen nadat ingest klaar is, bijvoorbeeld:
+  * cluster faces
+  * UpdateGlobalCentroid
+  * ClusterPhotos
 
 # Features
 
