@@ -180,8 +180,9 @@
     * grafana
     * alertmanager
     * loki? denk t niet
-* at some point: delete all indices in migration files -> copy paste all sql queries into gemini en ask for proper indices
-  * Ik denk dat ik veel overbodige indices heb
+* at some point: delete all indices in migration files -> copy paste all sql queries into gemini en ask for proper
+  indices
+    * Ik denk dat ik veel overbodige indices heb
 * automatic onboarding
 * [weird bug] crates dont start when migration isnt in sync for some reason?
 * also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
@@ -199,9 +200,14 @@
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
 * llm instelbaar maken in settings?
 * sommige jobs moeten altijd runnen nadat ingest klaar is, bijvoorbeeld:
-  * cluster faces
-  * UpdateGlobalCentroid
-  * ClusterPhotos
+    * cluster faces
+    * UpdateGlobalCentroid
+    * ClusterPhotos
+* gebruik get_representative-thumbnail voor face thumb selection
+* search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
+* search filter params moet person thumbnails geven
+* als je zoekt naar heit in de supermarkt, moet hij dat automatisch restricten naar de filtered zoekopdracht waar heit in de foto moet zitten
+* in de person face clustering task, zorg dat die ook face thumbnails genereert, en die op te halen zijn via de person table
 
 # Features
 

@@ -1,3 +1,4 @@
+use crate::api::search::cache::get_cached_text_embedding;
 use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::{
     SearchFilterRanges, SearchMediaConfig, SearchMediaType, SearchSortBy,
@@ -10,7 +11,6 @@ use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
-use crate::api::search::cache::get_cached_text_embedding;
 
 pub async fn search_filter_ranges(
     user: &User,
@@ -39,9 +39,9 @@ pub async fn search_filter_ranges(
         user.id
     )
     .fetch_all(pool);
-    let people_task = sqlx::query_scalar!(
+    let people_task = sqlx::query!(
         r#"
-        SELECT DISTINCT name
+        SELECT DISTINCT name, thumbnail_media_item_id
         FROM person
         WHERE user_id = $1 AND name IS NOT NULL AND name != ''
         ORDER BY name
@@ -56,7 +56,10 @@ pub async fn search_filter_ranges(
         .into_iter()
         .map(|c| (c.country_code, c.country_name))
         .collect();
-    let people = people_records.into_iter().flatten().collect();
+    let people = people_records
+        .into_iter()
+        .filter_map(|c| c.name.zip(c.thumbnail_media_item_id))
+        .collect();
     let available_months = available_month_records.iter().map(|r| r.months).collect();
 
     Ok(SearchFilterRanges {
@@ -73,12 +76,14 @@ pub async fn search_media(
     query: &str,
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+    dbg!(&config.face_names);
+
     if config.media_type == SearchMediaType::All
         && config.sort_by == SearchSortBy::Relevancy
         && config.start_date.is_none()
         && config.end_date.is_none()
         && config.negative_query.is_none()
-        && config.face_name.is_none()
+        && config.face_names.is_empty()
         && config.country_codes.is_empty()
     {
         basic_search_media(user, pool, embedder, query, config).await
@@ -95,13 +100,8 @@ async fn basic_search_media(
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
     let query_str = query.to_string();
-    let query_embedding = get_cached_text_embedding(
-        &query_str,
-        &config.embedder_model_id,
-        pool,
-        embedder,
-    )
-    .await?;
+    let query_embedding =
+        get_cached_text_embedding(&query_str, &config.embedder_model_id, pool, embedder).await?;
     let vector_param = Vector::from(query_embedding);
 
     let limit = config.limit.unwrap_or(100).min(500);
@@ -212,12 +212,8 @@ async fn advanced_search_media(
     let (query_embedding, fts_query) = if let Some(negative_query) = &config.negative_query {
         let neg_str = negative_query.clone();
 
-        let neg_emb_task = get_cached_text_embedding(
-            &neg_str,
-            &config.embedder_model_id,
-            pool,
-            embedder_clone,
-        );
+        let neg_emb_task =
+            get_cached_text_embedding(&neg_str, &config.embedder_model_id, pool, embedder_clone);
         let (mut q_emb, neg_emb) = tokio::try_join!(q_emb_task, neg_emb_task)?;
 
         for (pos, neg) in q_emb.iter_mut().zip(neg_emb.iter()) {
@@ -278,10 +274,13 @@ async fn advanced_search_media(
                   SELECT 1 FROM gps g JOIN location l ON g.location_id = l.id
                   WHERE g.media_item_id = mi.id AND l.country_code = ANY($12)
               ))
-              AND ($13::text IS NULL OR EXISTS (
-                  SELECT 1 FROM visual_analysis va JOIN face f ON f.visual_analysis_id = va.id JOIN person p ON f.person_id = p.id
-                  WHERE va.media_item_id = mi.id AND p.name = $13
-              ))
+              AND (cardinality($13::text[]) = 0 OR (
+                  SELECT COUNT(DISTINCT p.name)
+                  FROM visual_analysis va
+                  JOIN face f ON f.visual_analysis_id = va.id
+                  JOIN person p ON f.person_id = p.id
+                  WHERE va.media_item_id = mi.id AND p.name = ANY($13)
+              ) >= (CASE WHEN $16 THEN cardinality($13) ELSE 1 END))
         ),
         fts AS (
             SELECT
@@ -350,21 +349,22 @@ async fn advanced_search_media(
             mi.sort_timestamp DESC
         LIMIT $5
          "#,
-        fts_query,              // $1
-        user.id,                // $2
-        vector_param as _,      // $3
-        candidate_limit,        // $4
-        limit,                  // $5
-        k,                      // $6
-        config.text_weight,     // $7
-        config.semantic_weight, // $8
-        config.start_date,      // $9
-        config.end_date,        // $10
-        is_video_filter,        // $11
-        &config.country_codes,  // $12
-        config.face_name,       // $13
-        sort_by_str,            // $14
-        semantic_score_threshold // $15
+        fts_query,                // $1
+        user.id,                  // $2
+        vector_param as _,        // $3
+        candidate_limit,          // $4
+        limit,                    // $5
+        k,                        // $6
+        config.text_weight,       // $7
+        config.semantic_weight,   // $8
+        config.start_date,        // $9
+        config.end_date,          // $10
+        is_video_filter,          // $11
+        &config.country_codes,    // $12
+        &config.face_names,       // $13
+        sort_by_str,              // $14
+        semantic_score_threshold, // $15
+        config.all_faces_required // $16
     )
         .fetch_all(pool)
         .await?;

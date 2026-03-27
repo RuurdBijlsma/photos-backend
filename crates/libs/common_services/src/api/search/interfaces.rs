@@ -6,7 +6,7 @@ use utoipa::{IntoParams, ToSchema};
 #[serde(rename_all = "camelCase")]
 pub struct SearchFilterRanges {
     pub available_months: Vec<NaiveDate>,
-    pub people: Vec<String>,
+    pub people: Vec<(String, String)>,
     pub countries: Vec<(String, String)>,
 }
 
@@ -23,7 +23,8 @@ pub struct SearchMediaConfig {
     pub sort_by: SearchSortBy,
     pub negative_query: Option<String>,
     pub country_codes: Vec<String>,
-    pub face_name: Option<String>,
+    pub face_names: Vec<String>,
+    pub all_faces_required: bool,
 }
 
 #[derive(Deserialize, IntoParams, ToSchema, Debug)]
@@ -38,8 +39,9 @@ pub struct SearchParams {
     #[serde(default)]
     pub sort_by: SearchSortBy,
     pub negative_query: Option<String>,
-    pub country_codes: Option<String>, // comma separated because `serde` is stupid
-    pub face_name: Option<String>,
+    pub country_codes: Option<String>,    // comma separated
+    pub face_names: Option<String>,       // comma separated
+    pub all_faces_required: Option<bool>, // all persons must be in the photo/video if true, otherwise just one of them
 }
 
 #[derive(Deserialize, ToSchema, Debug, Clone, Copy, PartialEq, Eq, Default)]
