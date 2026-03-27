@@ -22,14 +22,12 @@ clap = { version = "4.5.48", features = ["derive"] }
 walkdir = "2.5.0"
 rand = "0.10.0-rc.0"
 hdbscan = "0.12.0"
-image = "0.25.8"
+image = { version = "0.25.8", features = ["jpeg", "png", "avif"] }
+face_id = "0.4.0"
 imageproc = "0.26.0"
 ab_glyph = "0.2.32"
-async-trait = "0.1.89"
 reqwest = "0.13.2"
-futures-util = "0.3.31"
 sanitize-filename = "0.6.0"
-tempfile = "3.10.1"
 directories = "6.0.0"
 blake3 = "1.8.2"
 serde = { version = "1.0.228", features = ["derive"] }

@@ -68,11 +68,12 @@ pub async fn sync_user_files_to_db(
 
     bulk_enqueue_full_ingest(pool, &settings.ingest, &to_ingest, user_id).await?;
 
-    // for rel_path in to_ingest {
-    //     if let Err(e) = enqueue_full_ingest(pool, settings, &rel_path, user_id).await {
-    //         error!("Error enqueueing file ingest: {:?}", e.to_string());
-    //     }
-    // }
+    tokio::try_join!(
+        enqueue_job::<()>(pool, settings, JobType::UpdateGlobalCentroid).call(),
+        enqueue_job::<()>(pool, settings, JobType::ClusterFaces).call(),
+        enqueue_job::<()>(pool, settings, JobType::ClusterPhotos).call()
+    )?;
+
     for rel_path in to_remove {
         if let Err(e) = enqueue_job::<()>(pool, settings, JobType::Remove)
             .relative_path(rel_path)

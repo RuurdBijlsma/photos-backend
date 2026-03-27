@@ -61,9 +61,10 @@ impl JobType {
             Self::Scan => 10,
             Self::CleanDB => 20,
             Self::ImportAlbumItem => 25,
-            Self::ClusterFaces => 30,
-            Self::ClusterPhotos => 35,
-            Self::UpdateGlobalCentroid => 40,
+            // These can be done after ingest analysis is done
+            Self::UpdateGlobalCentroid => 99,
+            Self::ClusterFaces => 100,
+            Self::ClusterPhotos => 101,
         }
     }
 }
