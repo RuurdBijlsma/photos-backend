@@ -78,7 +78,7 @@ where
 /// Returns the image that has an embedding closest to the centroid if >50% have embeddings.
 /// Otherwise, returns the middle item chronologically.
 #[instrument(skip(tx))]
-async fn get_representative_thumbnail(
+pub async fn get_representative_thumbnail(
     tx: &mut PgTransaction<'_>,
     media_item_ids: &[String],
 ) -> Result<Option<String>, AlbumError> {

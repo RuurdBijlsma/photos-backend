@@ -8944,6 +8944,7 @@ dependencies = [
  "hdbscan",
  "image",
  "imageproc",
+ "itertools 0.14.0",
  "media_analyzer",
  "ml_analysis",
  "pgvector",

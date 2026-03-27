@@ -3,12 +3,14 @@ use crate::handlers::JobResult;
 use crate::handlers::common::clustering::{self, ClusterEntity};
 use crate::handlers::common::utils::get_images_to_analyze;
 use color_eyre::{Result, eyre::eyre};
+use common_services::api::album::service::get_representative_thumbnail;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::person::ExistingPerson;
 use face_id::detector::BoundingBox;
 use face_id::helpers::extract_face_thumbnail;
 use generate_thumbnails::ffmpeg::FfmpegCommand;
+use itertools::Itertools;
 use pgvector::Vector;
 use sqlx::{PgPool, Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
@@ -133,11 +135,7 @@ async fn extract_and_save_face_thumbnail(
 
     let thumb = extract_face_thumbnail(&img, &bbox, PADDING_FACTOR, THUMBNAIL_SIZE);
 
-    let out_dir = context
-        .settings
-        .ingest
-        .thumbnail_root
-        .join("people");
+    let out_dir = context.settings.ingest.thumbnail_root.join("people");
     tokio::fs::create_dir_all(&out_dir).await?;
 
     // todo: try webp at least
@@ -145,6 +143,24 @@ async fn extract_and_save_face_thumbnail(
     thumb.save(out_path)?;
 
     Ok(())
+}
+
+async fn get_represenative_face(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    faces_in_cluster: &[&FaceToCluster],
+) -> Result<FaceToCluster> {
+    let media_items_in_cluster = faces_in_cluster
+        .iter()
+        .map(|f| f.media_item_id.clone())
+        .unique()
+        .collect::<Vec<_>>();
+    let representative_media_item_id =
+        get_representative_thumbnail(tx, &media_items_in_cluster).await?;
+    todo!("return first face that has representative_media_item_id as media_item_id")
+}
+
+async fn get_biggest_face(faces_in_cluster: &[&FaceToCluster]) -> Result<FaceToCluster> {
+    todo!("Return largest face by bounding box area");
 }
 
 async fn upsert_and_link(
@@ -160,7 +176,8 @@ async fn upsert_and_link(
         let new_centroid = new_centroids
             .get(cluster_idx)
             .map(|v| Vector::from(v.clone()));
-        let representative_face = faces_in_cluster[0];
+
+        let representative_face = get_represenative_face(tx, &faces_in_cluster).await?;
         let thumbnail_media_item_id = &representative_face.media_item_id;
 
         let person_id = if let Some(existing_id) = cluster_map.get(&cluster_idx) {
@@ -183,7 +200,7 @@ async fn upsert_and_link(
         .await?;
 
         // Extract and save face thumbnail for this person.
-        extract_and_save_face_thumbnail(context, representative_face, person_id).await?;
+        extract_and_save_face_thumbnail(context, &representative_face, person_id).await?;
     }
     Ok(())
 }
