@@ -41,7 +41,7 @@ pub async fn search_filter_ranges(
     .fetch_all(pool);
     let people_task = sqlx::query!(
         r#"
-        SELECT DISTINCT name, thumbnail_media_item_id
+        SELECT DISTINCT name, id
         FROM person
         WHERE user_id = $1 AND name IS NOT NULL AND name != ''
         ORDER BY name
@@ -58,7 +58,7 @@ pub async fn search_filter_ranges(
         .collect();
     let people = people_records
         .into_iter()
-        .filter_map(|c| c.name.zip(c.thumbnail_media_item_id))
+        .filter_map(|c| c.name.map(|name| (name, c.id.to_string())))
         .collect();
     let available_months = available_month_records.iter().map(|r| r.months).collect();
 
