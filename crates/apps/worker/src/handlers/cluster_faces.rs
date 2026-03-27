@@ -8,12 +8,12 @@ use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::person::ExistingPerson;
 use face_id::detector::BoundingBox;
 use face_id::helpers::extract_face_thumbnail;
+use generate_thumbnails::ffmpeg::FfmpegCommand;
 use pgvector::Vector;
 use sqlx::{PgPool, Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
+use tempfile::Builder;
 use tracing::info;
-
-// todo: Is exif orientation een probleem hier?
 
 const ENTITY_NAME: &str = "face";
 const MIN_ITEMS_TO_CLUSTER: usize = 4;
@@ -95,6 +95,14 @@ async fn extract_and_save_face_thumbnail(
         &file_path,
         &face.media_item_id,
         &[face.percentage as u64],
+        context
+            .settings
+            .ingest
+            .thumbnails
+            .heights
+            .iter()
+            .max()
+            .copied(),
     );
 
     let (_, image_path) = images.into_iter().next().ok_or_else(|| {
@@ -104,8 +112,15 @@ async fn extract_and_save_face_thumbnail(
         )
     })?;
 
+    let temp_file = Builder::new().suffix(".png").tempfile()?;
+    let temp_path = temp_file.path().to_path_buf();
+
+    let mut ffmpeg = FfmpegCommand::new(&image_path);
+    ffmpeg.map_still_output("0:v", &temp_path);
+    ffmpeg.run().await?;
+
     // Load and decode the analysis image (which is already oriented correctly)
-    let img = image::ImageReader::open(&image_path)?
+    let img = image::ImageReader::open(&temp_path)?
         .with_guessed_format()?
         .decode()?;
 
@@ -168,14 +183,7 @@ async fn upsert_and_link(
         .await?;
 
         // Extract and save face thumbnail for this person.
-        if let Err(e) =
-            extract_and_save_face_thumbnail(context, representative_face, person_id).await
-        {
-            info!(
-                "Failed to extract face thumbnail for person {}: {}",
-                person_id, e
-            );
-        }
+        extract_and_save_face_thumbnail(context, representative_face, person_id).await?;
     }
     Ok(())
 }

@@ -91,6 +91,7 @@ async fn compute_analysis(
         file_path,
         media_item_id,
         &context.settings.ingest.thumbnails.video_options.percentages,
+        None,
     );
     let mut analyses = Vec::new();
 

@@ -96,7 +96,8 @@ async fn get_llm_data(
     media_item_id: &str,
     percentages: &[u64],
 ) -> Result<Vec<MLChatAnalysis>> {
-    let images_to_analyze = get_images_to_analyze(context, file_path, media_item_id, percentages);
+    let images_to_analyze =
+        get_images_to_analyze(context, file_path, media_item_id, percentages, None);
     let mut analyses = Vec::new();
 
     for (percentage, image_path) in images_to_analyze {

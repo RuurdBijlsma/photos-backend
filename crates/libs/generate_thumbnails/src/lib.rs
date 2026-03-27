@@ -35,7 +35,7 @@
 //! - `generate_thumbnails`: The primary function to generate all configured thumbnails for a given file.
 //! - `thumbs_exist`: A utility function to check if all expected thumbnails for a file already exist.
 
-mod ffmpeg;
+pub mod ffmpeg;
 mod photo;
 mod utils;
 mod video;
