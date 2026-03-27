@@ -22,7 +22,7 @@ const MIN_ITEMS_TO_CLUSTER: usize = 4;
 const MIN_SAMPLES: usize = 5;
 const CENTROID_MATCH_THRESHOLD: f32 = 0.6;
 const THUMBNAIL_SIZE: u32 = 256;
-const PADDING_FACTOR: f32 = 1.3;
+const PADDING_FACTOR: f32 = 1.8;
 
 impl ClusterEntity for ExistingPerson {
     fn id(&self) -> i64 {
@@ -33,6 +33,7 @@ impl ClusterEntity for ExistingPerson {
     }
 }
 
+#[derive(Clone)]
 struct FaceToCluster {
     id: i64,
     media_item_id: String,
@@ -145,7 +146,7 @@ async fn extract_and_save_face_thumbnail(
     Ok(())
 }
 
-async fn get_represenative_face(
+async fn get_representative_face(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     faces_in_cluster: &[&FaceToCluster],
 ) -> Result<FaceToCluster> {
@@ -154,13 +155,29 @@ async fn get_represenative_face(
         .map(|f| f.media_item_id.clone())
         .unique()
         .collect::<Vec<_>>();
-    let representative_media_item_id =
-        get_representative_thumbnail(tx, &media_items_in_cluster).await?;
-    todo!("return first face that has representative_media_item_id as media_item_id")
+    if let Some(representative_media_item_id) =
+        get_representative_thumbnail(tx, &media_items_in_cluster).await?
+        && let Some(face) = faces_in_cluster
+            .iter()
+            .find(|f| f.media_item_id == representative_media_item_id)
+        {
+            return Ok((*face).clone());
+        }
+    get_biggest_face(faces_in_cluster)
 }
 
-async fn get_biggest_face(faces_in_cluster: &[&FaceToCluster]) -> Result<FaceToCluster> {
-    todo!("Return largest face by bounding box area");
+fn get_biggest_face(faces_in_cluster: &[&FaceToCluster]) -> Result<FaceToCluster> {
+    faces_in_cluster
+        .iter()
+        .max_by(|a, b| {
+            let area_a = a.width * a.height;
+            let area_b = b.width * b.height;
+            area_a
+                .partial_cmp(&area_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|f| (*f).clone())
+        .ok_or_else(|| eyre!("No faces in cluster"))
 }
 
 async fn upsert_and_link(
@@ -177,7 +194,7 @@ async fn upsert_and_link(
             .get(cluster_idx)
             .map(|v| Vector::from(v.clone()));
 
-        let representative_face = get_represenative_face(tx, &faces_in_cluster).await?;
+        let representative_face = get_representative_face(tx, &faces_in_cluster).await?;
         let thumbnail_media_item_id = &representative_face.media_item_id;
 
         let person_id = if let Some(existing_id) = cluster_map.get(&cluster_idx) {
