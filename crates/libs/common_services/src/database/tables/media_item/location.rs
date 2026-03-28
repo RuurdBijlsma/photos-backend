@@ -4,7 +4,6 @@ use utoipa::ToSchema;
 
 /// Corresponds to the 'location' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Location {
     pub name: String,
     pub admin1: String,

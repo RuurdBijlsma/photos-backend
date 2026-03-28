@@ -3,7 +3,6 @@ use utoipa::ToSchema;
 
 /// Corresponds to the '`capture_details`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct CameraSettings {
     pub iso: Option<i32>,
     pub exposure_time: Option<f32>,

@@ -4,7 +4,6 @@ use utoipa::ToSchema;
 
 /// Corresponds to the '`judged_quality`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct QualityScore {
     pub exposure: u8,
     pub contrast: u8,

@@ -4,7 +4,6 @@ use utoipa::ToSchema;
 
 /// Corresponds to the 'panorama' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Panorama {
     pub is_photosphere: bool,
     pub projection_type: Option<String>,

@@ -13,7 +13,6 @@ pub struct FaceEmbedding {
 
 /// Corresponds to the 'face' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct Face {
     pub position_x: f32,
     pub position_y: f32,

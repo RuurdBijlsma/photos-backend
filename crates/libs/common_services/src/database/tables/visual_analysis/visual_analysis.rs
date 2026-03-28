@@ -37,7 +37,6 @@ impl From<MLFastAnalysis> for CreateVisualAnalysis {
 
 /// A composite struct representing a '`visual_analysis`' run and all its associated nested data.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct ReadVisualAnalysis {
     pub created_at: DateTime<Utc>,
     pub percentage: i32,

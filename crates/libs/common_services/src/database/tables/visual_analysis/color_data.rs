@@ -5,7 +5,6 @@ use utoipa::ToSchema;
 
 /// Corresponds to the '`color_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-#[serde(rename_all = "camelCase")]
 pub struct ColorData {
     pub themes: Vec<Value>,
     pub prominent_colors: Vec<String>,
