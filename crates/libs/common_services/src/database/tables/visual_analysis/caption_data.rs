@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 
 /// Corresponds to the '`caption_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct ClassificationData {
     pub caption: String,
     pub main_subject: String,

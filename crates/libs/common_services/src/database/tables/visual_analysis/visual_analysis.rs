@@ -5,6 +5,8 @@ use common_types::ml_analysis::MLFastAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::database::visual_analysis::caption_data::ClassificationData;
+use crate::database::visual_analysis::quality::QualityScore;
 
 /// Represents a single photo's embedding data fetched for clustering.
 #[derive(Debug, Clone)]
@@ -41,4 +43,6 @@ pub struct ReadVisualAnalysis {
     pub percentage: i32,
     pub faces: Vec<Face>,
     pub colors: ColorData,
+    pub quality: QualityScore,
+    pub classification: ClassificationData
 }
