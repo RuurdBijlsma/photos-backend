@@ -155,6 +155,16 @@
 * ✅ sort by date in search is beetje dom
 * ✅ basic search is langzamer nu dan eerst
 * ✅ todo: if negative query exists, use embed_texts to batch embed 2 texts
+* ✅ api:
+  * ✅ add random image + theme endpoint
+  * ✅ cors met tower-http::cors
+  * ✅ change the json output of vec<photo> to have small field names (is like 50% smaller)
+  * ✅ Show photos in ui
+  * ✅ only allow register if no user exists
+  * ✅ frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
+  * ✅ add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
+  * 👎 axum-gate? crate voor axum auth
+  * ✅ rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
 * ✅ kan camelcase op de proto generated structs?
 * ✅ make search result item protobuf
 * ✅ benchmark albums endpoints
@@ -166,20 +176,11 @@
   * ✅ UpdateGlobalCentroid
   * ✅ ClusterPhotos
 * ✅ gebruik get_representative-thumbnail voor face thumb selection
-* api:
-    * ✅ add random image + theme endpoint
-    * ✅ cors met tower-http::cors
-    * ✅ change the json output of vec<photo> to have small field names (is like 50% smaller)
-    * ✅ Show photos in ui
-    * ✅ only allow register if no user exists
-    * ✅ frontend tip: maybe put each row in a lazyload? or skeleton loader, or stop loading='lazy' op img tags
-    * ✅ add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
-    * 👎 axum-gate? crate voor axum auth
-    * ✅ rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
-    * password reset flow (email) (make mail optional)
-    * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
-      db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
-      user account)
+* ✅ current albums pb interface misses collaborators
+* password reset flow (email) (make mail optional)
+* Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
+  db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
+  user account)
 * check of readme uitleg klopt met verse windows installatie & linux
 * make sure cache control on thumbnails are immutable/max age.
 * monitoring/alerting
@@ -197,7 +198,6 @@
 * review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
     * is auth wel goed implemented? met is_public enzo
     * minder repeated code maken voor de auth check daar
-* current albums pb interface misses collaborators
 * better error if exiftool isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
@@ -208,6 +208,7 @@
 * llm instelbaar maken in settings?
 * search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
   * hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
+* thumbnail hosting is niet veilig
 
 # Features
 

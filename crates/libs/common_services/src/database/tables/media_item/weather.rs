@@ -5,6 +5,7 @@ use utoipa::ToSchema;
 
 /// Corresponds to the 'weather' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Weather {
     pub temperature: Option<f32>,
     pub dew_point: Option<f32>,

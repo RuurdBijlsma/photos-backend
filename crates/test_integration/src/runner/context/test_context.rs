@@ -100,7 +100,7 @@ impl TestContext {
         let api_pool = pool.clone();
         let api_settings = settings.clone();
         let api_handle = tokio::spawn(async move {
-            if let Err(e) = api::serve(api_pool, api_settings).await {
+            if let Err(e) = api::serve(api_pool, api_settings, false).await {
                 error!("API server failed: {}", e);
             }
         });

@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 
 /// Corresponds to the '`media_features`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct MediaFeatures {
     pub mime_type: String,
     pub size_bytes: i64,

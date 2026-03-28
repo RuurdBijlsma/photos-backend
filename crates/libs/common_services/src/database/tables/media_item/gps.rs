@@ -5,6 +5,7 @@ use utoipa::ToSchema;
 
 /// A composite struct representing data from the 'gps' table, with its associated 'location' data nested inside.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Gps {
     pub latitude: f64,
     pub longitude: f64,
