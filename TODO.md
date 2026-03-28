@@ -159,6 +159,13 @@
 * ✅ make search result item protobuf
 * ✅ benchmark albums endpoints
 * ✅ cache embeddings for search? could be big speedup
+* ✅ search filter params moet person thumbnails geven
+* ✅ in de person face clustering task, zorg dat die ook face thumbnails genereert, en die op te halen zijn via de person table
+* ✅ sommige jobs moeten altijd runnen nadat ingest klaar is, bijvoorbeeld:
+  * ✅ cluster faces
+  * ✅ UpdateGlobalCentroid
+  * ✅ ClusterPhotos
+* ✅ gebruik get_representative-thumbnail voor face thumb selection
 * api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
@@ -199,15 +206,8 @@
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
 * llm instelbaar maken in settings?
-* sommige jobs moeten altijd runnen nadat ingest klaar is, bijvoorbeeld:
-    * cluster faces
-    * UpdateGlobalCentroid
-    * ClusterPhotos
-* gebruik get_representative-thumbnail voor face thumb selection
 * search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
-* search filter params moet person thumbnails geven
-* als je zoekt naar heit in de supermarkt, moet hij dat automatisch restricten naar de filtered zoekopdracht waar heit in de foto moet zitten
-* in de person face clustering task, zorg dat die ook face thumbnails genereert, en die op te halen zijn via de person table
+  * hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
 
 # Features
 

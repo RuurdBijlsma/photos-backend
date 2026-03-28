@@ -18,7 +18,7 @@ use worker::worker::create_worker;
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     let filter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| "worker=info,ort=warn".into());
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,ort=warn".into());
     let subscriber = fmt::Subscriber::builder()
         .with_max_level(Level::INFO)
         .with_env_filter(filter)

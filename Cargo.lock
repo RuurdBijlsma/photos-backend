@@ -183,6 +183,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "chrono",
+ "clap",
  "color-eyre",
  "common_services",
  "common_types",
@@ -195,6 +196,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "tasks",
  "tokio",
  "tokio-util",
  "tower-http",
@@ -7143,7 +7145,6 @@ dependencies = [
  "sqlx",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
