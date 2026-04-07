@@ -8,6 +8,7 @@ use color_eyre::eyre::eyre;
 use common_types::ml_analysis::{MLChatAnalysis, MLCombinedQuality, MLFastAnalysis};
 use face_id::analyzer::FaceAnalyzer;
 use language_model::{ChatSession, LlamaClient};
+use object_detector::{DetectorType, ModelScale, ObjectDetector};
 use open_clip_inference::VisionEmbedder;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -17,18 +18,25 @@ pub struct VisualAnalyzer {
     pub embedder: VisionEmbedder,
     pub llm_client: LlamaClient,
     pub face_analyzer: FaceAnalyzer,
+    pub object_detector: ObjectDetector,
 }
 
 impl VisualAnalyzer {
     /// Creates a new instance of the `VisualAnalyzer`.
     pub async fn new(embedder_model_id: &str) -> color_eyre::Result<Self> {
-        let embedder = VisionEmbedder::from_hf(embedder_model_id).build().await?;
         let llm = LlamaClient::with_base_url("http://localhost:8080").build();
+        let embedder = VisionEmbedder::from_hf(embedder_model_id).build().await?;
         let face_analyzer = FaceAnalyzer::from_hf().build().await?;
+        let object_detector = ObjectDetector::from_hf(DetectorType::PromptFree)
+            .scale(ModelScale::Large)
+            .include_mask(false)
+            .build()
+            .await?;
         Ok(Self {
             llm_client: llm,
             embedder,
             face_analyzer,
+            object_detector,
         })
     }
 
@@ -92,6 +100,14 @@ impl VisualAnalyzer {
         let faces = self.face_analyzer.analyze(&img)?;
         println!("facial_recognition {:?}", now.elapsed());
 
+        let now = Instant::now();
+        let objects = self
+            .object_detector
+            .predict(&img)
+            .confidence_threshold(0.4)
+            .call()?;
+        println!("object_detector {:?}", now.elapsed());
+
         tokio::fs::remove_file(&analysis_file).await?;
 
         println!("total ml analysis {:?}", start.elapsed());
@@ -101,6 +117,7 @@ impl VisualAnalyzer {
             color_data,
             embedding,
             faces,
+            objects,
         })
     }
 

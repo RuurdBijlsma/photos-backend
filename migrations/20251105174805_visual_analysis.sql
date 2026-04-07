@@ -1,4 +1,5 @@
-ALTER ROLE CURRENT_USER SET random_page_cost = 1.1;
+ALTER
+    ROLE CURRENT_USER SET random_page_cost = 1.1;
 
 -- A record for a single visual analysis run.
 CREATE TABLE visual_analysis
@@ -12,7 +13,8 @@ CREATE TABLE visual_analysis
     percentage    INT         NOT NULL
 );
 ALTER TABLE visual_analysis
-    ALTER COLUMN embedding SET STORAGE MAIN;
+    ALTER
+        COLUMN embedding SET STORAGE MAIN;
 CREATE INDEX idx_visual_analysis_media_item_id ON visual_analysis (media_item_id);
 CREATE INDEX idx_visual_analysis_embedding_hnsw
     ON visual_analysis
@@ -29,7 +31,7 @@ CREATE TABLE face
     height             REAL        NOT NULL,
     confidence         REAL        NOT NULL,
     age                INT         NOT NULL,
-    sex                TEXT        NOT NULL,
+    sex                VARCHAR(10) NOT NULL,
     embedding          VECTOR(512) NOT NULL,
     person_id          BIGINT      REFERENCES person (id) ON DELETE SET NULL
 );
@@ -37,6 +39,18 @@ CREATE INDEX idx_face_visual_analysis_id ON face (visual_analysis_id);
 CREATE INDEX ON face USING hnsw (embedding vector_cosine_ops);
 CREATE INDEX idx_face_person_id ON face (person_id);
 
+
+CREATE TABLE object
+(
+    id                 BIGSERIAL PRIMARY KEY,
+    visual_analysis_id BIGINT NOT NULL REFERENCES visual_analysis (id) ON DELETE CASCADE,
+    position_x         REAL   NOT NULL,
+    position_y         REAL   NOT NULL,
+    width              REAL   NOT NULL,
+    height             REAL   NOT NULL,
+    confidence         REAL   NOT NULL,
+    tag                TEXT   NOT NULL
+);
 
 -- Stores image quality metrics.
 CREATE TABLE quality
@@ -118,7 +132,8 @@ CREATE INDEX idx_classification_landmark_name ON classification (landmark_name);
 CREATE INDEX idx_classification_setting ON classification (setting);
 
 -- Search suggestions indices:
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE
+    EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX trgm_idx_classification_term ON classification USING gin (search_term gin_trgm_ops);
 CREATE INDEX trgm_idx_person_name ON person USING gin (name gin_trgm_ops);
 CREATE INDEX trgm_idx_location_name ON location USING gin (name gin_trgm_ops);
