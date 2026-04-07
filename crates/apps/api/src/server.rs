@@ -33,7 +33,7 @@ use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 
 pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool) -> Result<()> {
-    if run_task_scheduler{
+    if run_task_scheduler {
         schedule_tasks(&pool, &settings)?;
     }
     info!("Loading CLIP text embedder...");

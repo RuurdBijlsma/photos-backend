@@ -1,7 +1,7 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::clustering::{self, ClusterEntity};
-use color_eyre::{Result};
+use color_eyre::Result;
 use common_services::database::jobs::Job;
 use common_services::database::photo_cluster::ExistingPhotoCluster;
 use common_services::database::visual_analysis::visual_analysis::MediaEmbedding;
@@ -130,7 +130,11 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         let (labels, new_centroids) =
             clustering::run_hdbscan(&embeddings, MIN_ITEMS_TO_CLUSTER, MIN_SAMPLES)?;
 
-        let cluster_map = clustering::match_centroids(&new_centroids, &existing_clusters, CENTROID_MATCH_THRESHOLD)?;
+        let cluster_map = clustering::match_centroids(
+            &new_centroids,
+            &existing_clusters,
+            CENTROID_MATCH_THRESHOLD,
+        )?;
         let matched_old_ids: HashSet<i64> = cluster_map.values().copied().collect();
         let new_clusters = clustering::group_by_cluster(&labels, &items_to_cluster);
 
@@ -140,10 +144,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         cleanup_obsolete(&mut tx, &existing_clusters, &matched_old_ids).await?;
 
         tx.commit().await?;
-        info!(
-            "Reconciled {} clusters for user {}",
-            ENTITY_NAME, user_id
-        );
+        info!("Reconciled {} clusters for user {}", ENTITY_NAME, user_id);
     }
 
     Ok(JobResult::Done)

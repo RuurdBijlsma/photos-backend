@@ -52,9 +52,7 @@ pub fn run_tasks(
                 );
 
                 for job_type in &schedule.jobs {
-                    let res = enqueue_job::<()>(&pool, &settings, *job_type)
-                        .call()
-                        .await;
+                    let res = enqueue_job::<()>(&pool, &settings, *job_type).call().await;
 
                     if let Err(e) = res {
                         error!("Failed to enqueue scheduled job {:?}: {}", job_type, e);

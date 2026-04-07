@@ -160,9 +160,9 @@ async fn get_representative_face(
         && let Some(face) = faces_in_cluster
             .iter()
             .find(|f| f.media_item_id == representative_media_item_id)
-        {
-            return Ok((*face).clone());
-        }
+    {
+        return Ok((*face).clone());
+    }
     get_biggest_face(faces_in_cluster)
 }
 

@@ -3,7 +3,7 @@ use clap::Parser;
 use color_eyre::Result;
 use common_services::database::get_db_pool;
 use tracing::Level;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use worker::worker::create_worker;
 
 #[derive(Parser, Debug)]
@@ -15,8 +15,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let filter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,ort=warn".into());
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,ort=warn".into());
     let subscriber = fmt::Subscriber::builder()
         .with_max_level(Level::INFO)
         .with_env_filter(filter)
