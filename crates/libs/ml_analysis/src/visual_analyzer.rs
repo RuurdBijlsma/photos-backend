@@ -11,14 +11,15 @@ use language_model::{ChatSession, LlamaClient};
 use object_detector::{DetectorType, ModelScale, ObjectDetector};
 use open_clip_inference::VisionEmbedder;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Instant;
 use tempfile::Builder;
 
 pub struct VisualAnalyzer {
-    pub embedder: VisionEmbedder,
     pub llm_client: LlamaClient,
-    pub face_analyzer: FaceAnalyzer,
-    pub object_detector: ObjectDetector,
+    pub embedder: Arc<VisionEmbedder>,
+    pub face_analyzer: Arc<FaceAnalyzer>,
+    pub object_detector: Arc<ObjectDetector>,
 }
 
 impl VisualAnalyzer {
@@ -34,9 +35,9 @@ impl VisualAnalyzer {
             .await?;
         Ok(Self {
             llm_client: llm,
-            embedder,
-            face_analyzer,
-            object_detector,
+            embedder: Arc::new(embedder),
+            face_analyzer: Arc::new(face_analyzer),
+            object_detector: Arc::new(object_detector),
         })
     }
 
@@ -78,39 +79,53 @@ impl VisualAnalyzer {
         percentage: i32,
     ) -> color_eyre::Result<MLFastAnalysis> {
         let start = Instant::now();
-        let now = Instant::now();
         let analysis_file = Self::get_analysis_file(file, config.analyze_image_size).await?;
-        println!("Convert to jpg {:?}", now.elapsed());
+        let img = Arc::new(image::open(&analysis_file)?);
 
-        let now = Instant::now();
-        let color_data = get_color_data(
-            &analysis_file,
-            &config.theme_generation.variant,
-            config.theme_generation.contrast_level,
-        )?;
-        println!("get_color_data {:?}", now.elapsed());
+        // Parallel Execution
+        let img_for_color = Arc::clone(&img);
+        let img_for_embed = Arc::clone(&img);
+        let img_for_faces = Arc::clone(&img);
+        let img_for_objs = Arc::clone(&img);
 
-        let img = image::open(&analysis_file)?;
+        let color_variant = config.theme_generation.variant;
+        let contrast = config.theme_generation.contrast_level;
 
-        let now = Instant::now();
-        let embedding = self.embedder.embed_image(&img)?.to_vec();
-        println!("embed_image {:?}", now.elapsed());
+        let handle_color = tokio::task::spawn_blocking(move || {
+            get_color_data(&img_for_color, &color_variant, contrast)
+        });
 
-        let now = Instant::now();
-        let faces = self.face_analyzer.analyze(&img)?;
-        println!("facial_recognition {:?}", now.elapsed());
+        let embedder = self.embedder.clone();
+        let handle_embed = tokio::task::spawn_blocking(move || {
+            embedder.embed_image(&img_for_embed).map(|e| e.to_vec())
+        });
 
-        let now = Instant::now();
-        let objects = self
-            .object_detector
-            .predict(&img)
-            .confidence_threshold(0.4)
-            .call()?;
-        println!("object_detector {:?}", now.elapsed());
+        let face_analyzer = self.face_analyzer.clone();
+        let handle_faces =
+            tokio::task::spawn_blocking(move || face_analyzer.analyze(&img_for_faces));
 
-        tokio::fs::remove_file(&analysis_file).await?;
+        let object_detector = self.object_detector.clone();
+        let handle_objs = tokio::task::spawn_blocking(move || {
+            object_detector
+                .predict(&img_for_objs)
+                .confidence_threshold(0.4)
+                .call()
+        });
 
-        println!("total ml analysis {:?}", start.elapsed());
+        // let (color_data, embedding, faces, objects) = tokio::try_join!(
+        //     async { handle_color.await? },
+        //     async { handle_embed.await?.map_err(|e| eyre!(e)) },
+        //     async { handle_faces.await?.map_err(|e| eyre!(e)) },
+        //     async { handle_objs.await?.map_err(|e| eyre!(e)) }
+        // )?;
+        let color_data = handle_color.await??;
+        let embedding = handle_embed.await??;
+        let faces = handle_faces.await??;
+        let objects = handle_objs.await??;
+
+        let _ = tokio::fs::remove_file(&analysis_file).await;
+
+        println!("Fast ml analysis {:?}", start.elapsed());
 
         Ok(MLFastAnalysis {
             percentage,

@@ -14,7 +14,8 @@ fn main() -> color_eyre::Result<()> {
 
     for image in images {
         let now = Instant::now();
-        let color_data = get_color_data(image, &Variant::Vibrant, 3.)?;
+        let img = image::open(image)?;
+        let color_data = get_color_data(&img, &Variant::Vibrant, 3.)?;
         println!(
             "{} color: {:?} {:?} {:?} {:?}",
             image.file_name().unwrap().to_string_lossy(),

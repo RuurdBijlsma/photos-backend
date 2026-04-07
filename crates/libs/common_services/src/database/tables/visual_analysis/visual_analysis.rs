@@ -1,6 +1,7 @@
 use crate::database::visual_analysis::caption_data::ClassificationData;
 use crate::database::visual_analysis::color_data::ColorData;
 use crate::database::visual_analysis::face::{CreateFace, Face};
+use crate::database::visual_analysis::object::Object;
 use crate::database::visual_analysis::quality::QualityScore;
 use chrono::{DateTime, Utc};
 use common_types::ml_analysis::MLFastAnalysis;
@@ -22,6 +23,7 @@ pub struct CreateVisualAnalysis {
     pub percentage: i32,
     pub faces: Vec<CreateFace>,
     pub colors: ColorData,
+    pub objects: Vec<Object>,
 }
 
 impl From<MLFastAnalysis> for CreateVisualAnalysis {
@@ -31,6 +33,7 @@ impl From<MLFastAnalysis> for CreateVisualAnalysis {
             percentage: data.percentage,
             faces: data.faces.into_iter().map(Into::into).collect(),
             colors: data.color_data.into(),
+            objects: data.objects.into_iter().map(Into::into).collect(),
         }
     }
 }
@@ -41,6 +44,7 @@ pub struct ReadVisualAnalysis {
     pub created_at: DateTime<Utc>,
     pub percentage: i32,
     pub faces: Vec<Face>,
+    pub objects: Vec<Object>,
     pub colors: ColorData,
     pub quality: Option<QualityScore>,
     pub classification: Option<ClassificationData>,

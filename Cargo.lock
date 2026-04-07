@@ -1088,6 +1088,7 @@ dependencies = [
  "media_analyzer",
  "mime_guess",
  "moka",
+ "object_detector",
  "open_clip_inference",
  "pgvector",
  "rand 0.10.0-rc.9",

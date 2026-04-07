@@ -167,6 +167,27 @@ impl VisualAnalysisStore {
             .await?;
         }
 
+        // --- Object Data ---
+        for object in &analysis.objects {
+            sqlx::query!(
+                r#"
+                INSERT INTO object (
+                    visual_analysis_id, position_x, position_y, width, height, confidence, tag
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                "#,
+                visual_analysis_id,
+                object.position_x,
+                object.position_y,
+                object.width,
+                object.height,
+                object.confidence,
+                object.tag,
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
+
         // --- Color Data ---
         let color = &analysis.colors;
         let themes_values: Vec<serde_json::Value> = color.themes.clone();
