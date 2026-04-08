@@ -2,7 +2,7 @@ use image::imageops::FilterType;
 use std::io;
 use std::path::Path;
 use tokio::process::Command;
-use tracing::{error, warn};
+use tracing::{error};
 
 pub async fn convert_media_file(
     input_path: &Path,
@@ -25,11 +25,7 @@ pub async fn convert_media_file(
         return Ok(());
     }
 
-    // 2. Fallback to ffmpeg
-    warn!(
-        "Failed to convert {} using `image` crate. Falling back to ffmpeg.",
-        input_path.display()
-    );
+    // Fallback to ffmpeg
     let scale_filter = format!("scale=-2:{image_out_size}");
     let ffmpeg_output = Command::new("ffmpeg")
         .arg("-i")

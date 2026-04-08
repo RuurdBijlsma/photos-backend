@@ -67,7 +67,7 @@ impl VisualAnalyzer {
         Ok(analysis_file)
     }
 
-    /// Performs a visual analysis of the given image file, extracting various data points like color, quality, and content.
+    /// Performs a visual analysis of the given image file, extracting various data points like color, embedding, faces, and objects.
     ///
     /// # Errors
     ///
@@ -80,52 +80,34 @@ impl VisualAnalyzer {
     ) -> color_eyre::Result<MLFastAnalysis> {
         let start = Instant::now();
         let analysis_file = Self::get_analysis_file(file, config.analyze_image_size).await?;
-        let img = Arc::new(image::open(&analysis_file)?);
+        println!("get_analysis_file {:?}", start.elapsed());
+        let img = image::open(&analysis_file)?;
 
-        // Parallel Execution
-        let img_for_color = Arc::clone(&img);
-        let img_for_embed = Arc::clone(&img);
-        let img_for_faces = Arc::clone(&img);
-        let img_for_objs = Arc::clone(&img);
-
+        let now = Instant::now();
         let color_variant = config.theme_generation.variant;
         let contrast = config.theme_generation.contrast_level;
+        let color_data = get_color_data(&img, &color_variant, contrast)?;
+        println!("color_data {:?}", now.elapsed());
 
-        let handle_color = tokio::task::spawn_blocking(move || {
-            get_color_data(&img_for_color, &color_variant, contrast)
-        });
+        let now = Instant::now();
+        let embedding = self.embedder.embed_image(&img).map(|e| e.to_vec())?;
+        println!("embedding {:?}", now.elapsed());
 
-        let embedder = self.embedder.clone();
-        let handle_embed = tokio::task::spawn_blocking(move || {
-            embedder.embed_image(&img_for_embed).map(|e| e.to_vec())
-        });
+        let now = Instant::now();
+        let faces = self.face_analyzer.analyze(&img)?;
+        println!("faces {:?}", now.elapsed());
 
-        let face_analyzer = self.face_analyzer.clone();
-        let handle_faces =
-            tokio::task::spawn_blocking(move || face_analyzer.analyze(&img_for_faces));
-
-        let object_detector = self.object_detector.clone();
-        let handle_objs = tokio::task::spawn_blocking(move || {
-            object_detector
-                .predict(&img_for_objs)
-                .confidence_threshold(0.4)
-                .call()
-        });
-
-        // let (color_data, embedding, faces, objects) = tokio::try_join!(
-        //     async { handle_color.await? },
-        //     async { handle_embed.await?.map_err(|e| eyre!(e)) },
-        //     async { handle_faces.await?.map_err(|e| eyre!(e)) },
-        //     async { handle_objs.await?.map_err(|e| eyre!(e)) }
-        // )?;
-        let color_data = handle_color.await??;
-        let embedding = handle_embed.await??;
-        let faces = handle_faces.await??;
-        let objects = handle_objs.await??;
+        let now = Instant::now();
+        let objects = self
+            .object_detector
+            .predict(&img)
+            .confidence_threshold(0.4)
+            .call()?;
+        println!("objects {:?}", now.elapsed());
 
         let _ = tokio::fs::remove_file(&analysis_file).await;
 
-        println!("Fast ml analysis {:?}", start.elapsed());
+        println!("-- Fast ml analysis {:?}", start.elapsed());
 
         Ok(MLFastAnalysis {
             percentage,
