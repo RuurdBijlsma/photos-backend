@@ -84,3 +84,19 @@ message SearchSuggestion {
 message SearchSuggestionsResponse {
   repeated SearchSuggestion suggestions = 1;
 }
+
+// --- Person
+message PersonInfo {
+  int64 id = 1;
+  optional string name = 2;
+  int32 photo_count = 4;
+}
+
+message ListPeopleResponse {
+  repeated PersonInfo people = 1;
+}
+
+message FullPersonMediaResponse {
+  PersonInfo person = 1;
+  repeated SimpleTimelineItem items = 2;
+}

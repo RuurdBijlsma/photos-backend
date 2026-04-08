@@ -2,13 +2,17 @@ pub mod album;
 mod api_doc;
 pub mod auth;
 pub mod onboarding;
+pub mod people;
 pub mod photos;
 pub mod root;
 pub mod s2s;
 pub mod search;
+
 pub mod timeline;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
+use crate::people::router::people_protected_router;
+
 use crate::api_state::ApiContext;
 use crate::auth::middlewares::optional_user::OptionalUser;
 use crate::auth::middlewares::require_role::require_role;
@@ -72,6 +76,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
         .merge(timeline_protected_router())
         .merge(search_protected_router())
         .merge(album_protected_router())
+        .merge(people_protected_router())
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }
 

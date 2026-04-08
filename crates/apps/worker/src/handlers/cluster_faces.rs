@@ -139,7 +139,6 @@ async fn extract_and_save_face_thumbnail(
     let out_dir = context.settings.ingest.thumbnail_root.join("people");
     tokio::fs::create_dir_all(&out_dir).await?;
 
-    // todo: try webp at least
     let out_path = out_dir.join(format!("{person_id}.webp"));
     thumb.save(out_path)?;
 

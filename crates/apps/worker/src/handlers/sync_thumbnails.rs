@@ -14,6 +14,8 @@ use tokio::fs;
 use tracing::info;
 use tracing::warn;
 
+const EXCLUDED_THUMBNAIL_FOLDERS: [&str; 1] = ["people"];
+
 /// Reads the thumbnails directory and returns a set of all subdirectory names (media item IDs).
 async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String>> {
     let mut set = HashSet::new();
@@ -21,6 +23,7 @@ async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String
     while let Some(entry) = entries.next_entry().await? {
         if entry.file_type().await?.is_dir()
             && let Some(name) = entry.file_name().to_str()
+            && !EXCLUDED_THUMBNAIL_FOLDERS.contains(&name)
         {
             set.insert(name.to_owned());
         }
