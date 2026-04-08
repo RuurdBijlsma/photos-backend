@@ -435,6 +435,17 @@ pub async fn get_search_suggestions(
               AND a.name != ''
             GROUP BY a.name, a.id
             LIMIT $3 * 2)
+
+            UNION ALL
+
+            (SELECT o.tag as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count, 'SEARCH' as "type!", NULL as "id"
+            FROM object o
+            JOIN visual_analysis va ON o.visual_analysis_id = va.id
+            WHERE va.user_id = $1
+              AND o.tag ILIKE $2
+              AND o.tag != ''
+            GROUP BY o.tag
+            LIMIT $3 * 2)
         )
         SELECT suggestion as "suggestion!", "type!" as "type!", "id" as "id?", SUM(photo_count)::int8 as "photo_count!"
         FROM matched_terms
@@ -534,6 +545,17 @@ pub async fn get_random_search_suggestion(
             GROUP BY a.name, a.id
             ORDER BY COUNT(DISTINCT am.media_item_id) DESC
             LIMIT 100)
+
+            UNION ALL
+
+            (SELECT o.tag as suggestion
+            FROM object o
+            JOIN visual_analysis va ON o.visual_analysis_id = va.id
+            WHERE va.user_id = $1
+              AND o.tag != ''
+            GROUP BY o.tag
+            ORDER BY COUNT(DISTINCT va.media_item_id) DESC
+            LIMIT 50)
         )
         SELECT suggestion as "suggestion!"
         FROM matched_terms

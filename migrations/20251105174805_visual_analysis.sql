@@ -51,6 +51,7 @@ CREATE TABLE object
     confidence         REAL   NOT NULL,
     tag                TEXT   NOT NULL
 );
+CREATE INDEX idx_object_visual_analysis_id ON object (visual_analysis_id);
 
 -- Stores image quality metrics.
 CREATE TABLE quality
@@ -140,6 +141,8 @@ CREATE INDEX trgm_idx_location_name ON location USING gin (name gin_trgm_ops);
 CREATE INDEX trgm_idx_location_admin1 ON location USING gin (admin1 gin_trgm_ops);
 CREATE INDEX trgm_idx_location_admin2 ON location USING gin (admin2 gin_trgm_ops);
 CREATE INDEX trgm_idx_location_country_name ON location USING gin (country_name gin_trgm_ops);
+CREATE INDEX trgm_idx_object_tag ON object USING gin (tag gin_trgm_ops);
+CREATE INDEX idx_object_tag ON object (tag);
 CREATE INDEX idx_visual_analysis_user_id ON visual_analysis (user_id);
 CREATE INDEX idx_classification_search_term ON classification (search_term);
 CREATE INDEX idx_person_user_id_name ON person (user_id, name);

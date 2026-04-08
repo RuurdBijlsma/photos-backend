@@ -209,6 +209,7 @@
 * search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
   * hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
 * thumbnail hosting is niet veilig
+* clean thumbnails folder task in task runner
 
 # Features
 
