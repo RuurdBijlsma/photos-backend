@@ -2,7 +2,7 @@ use image::imageops::FilterType;
 use std::io;
 use std::path::Path;
 use tokio::process::Command;
-use tracing::{error};
+use tracing::error;
 
 pub async fn convert_media_file(
     input_path: &Path,

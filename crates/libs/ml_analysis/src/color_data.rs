@@ -44,7 +44,7 @@ pub fn get_color_data(
                 f32::from(*g) / 255.0,
                 f32::from(*b) / 255.0,
             )
-                .into_linear(),
+            .into_linear(),
         );
 
         let rad = hsv.hue.into_radians();

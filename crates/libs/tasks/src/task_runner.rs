@@ -11,7 +11,7 @@ pub fn schedule_tasks(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     let schedules = vec![
         TaskSchedule {
             interval: Duration::from_hours(24),
-            jobs: vec![JobType::Scan, JobType::CleanDB],
+            jobs: vec![JobType::Scan, JobType::CleanDB, JobType::SyncThumbnails],
         },
         TaskSchedule {
             interval: Duration::from_hours(12),

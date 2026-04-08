@@ -27,6 +27,7 @@ pub enum JobType {
     CleanDB,
     ClusterFaces,
     ClusterPhotos,
+    SyncThumbnails,
     ImportAlbumItem,
     UpdateGlobalCentroid,
 }
@@ -65,6 +66,7 @@ impl JobType {
             Self::UpdateGlobalCentroid => 99,
             Self::ClusterFaces => 100,
             Self::ClusterPhotos => 101,
+            Self::SyncThumbnails => 102,
         }
     }
 }
