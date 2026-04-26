@@ -1,8 +1,8 @@
+use crate::api::people::interfaces::PersonSummary;
 use crate::database::DbError;
 use common_types::pb::api::SimpleTimelineItem;
 use sqlx::{PgExecutor, PgPool};
 use tracing::instrument;
-use crate::api::people::interfaces::PersonSummary;
 
 pub struct PersonStore;
 
