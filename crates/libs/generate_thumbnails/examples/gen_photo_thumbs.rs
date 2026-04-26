@@ -29,7 +29,7 @@ fn avg(times: &[u128]) -> f64 {
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
-    let root_folder = Path::new("C:/Users/Ruurd/Pictures/media_dir");
+    let root_folder = Path::new("media_dir");
     let mut times = vec![];
     let settings = load_app_settings()?;
 
