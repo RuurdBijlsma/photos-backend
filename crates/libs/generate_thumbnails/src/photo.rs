@@ -10,7 +10,6 @@ use ravif::Encoder;
 use rayon::prelude::*;
 use rgb::FromSlice;
 use std::fs;
-use std::num::NonZeroU32;
 use std::path::Path;
 
 /// Generates photo thumbnails using a native Rust image processing library.
@@ -47,12 +46,8 @@ pub fn generate_native_photo_thumbnails(
     let (orig_w, orig_h) = src_img.dimensions();
 
     let src_image = Image::from_vec_u8(
-        NonZeroU32::new(orig_w)
-            .ok_or_else(|| eyre!("source image width is zero"))?
-            .into(),
-        NonZeroU32::new(orig_h)
-            .ok_or_else(|| eyre!("source image height is zero"))?
-            .into(),
+        orig_w,
+        orig_h,
         src_img.into_raw(),
         PixelType::U8x4,
     )?;

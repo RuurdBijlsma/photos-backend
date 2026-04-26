@@ -479,7 +479,7 @@ pub async fn get_random_search_suggestion(
     user: &User,
     pool: &PgPool,
 ) -> Result<Option<String>, SearchError> {
-    let row = sqlx::query!(
+    let rows = sqlx::query!(
         r#"
         WITH matched_terms AS (
             (SELECT c.search_term as suggestion
@@ -555,17 +555,20 @@ pub async fn get_random_search_suggestion(
               AND o.tag != ''
             GROUP BY o.tag
             ORDER BY COUNT(DISTINCT va.media_item_id) DESC
-            LIMIT 50)
+            LIMIT 100)
         )
         SELECT suggestion as "suggestion!"
         FROM matched_terms
         ORDER BY RANDOM()
-        LIMIT 1
+        -- `LIMIT 500` because I get like 95%/5% ratio of locations/objects otherwise
+        -- I think Postgres is optimizing something away if I `LIMIT 1`
+        -- This endpoint doesn't have to be fast anyway
+        LIMIT 500
         "#,
         user.id
     )
-    .fetch_optional(pool)
+    .fetch_all(pool)
     .await?;
 
-    Ok(row.map(|r| r.suggestion))
+    Ok(rows.first().map(|r| r.suggestion.clone()))
 }
