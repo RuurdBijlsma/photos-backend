@@ -1,6 +1,6 @@
 use crate::ffmpeg::FfmpegCommand;
 use app_state::ThumbnailSettings;
-use color_eyre::eyre::{Result, eyre};
+use color_eyre::eyre::Result;
 use fast_image_resize::images::Image;
 use fast_image_resize::{PixelType, Resizer};
 use image::ImageReader;
@@ -45,12 +45,7 @@ pub fn generate_native_photo_thumbnails(
     let src_img = img.into_rgba8();
     let (orig_w, orig_h) = src_img.dimensions();
 
-    let src_image = Image::from_vec_u8(
-        orig_w,
-        orig_h,
-        src_img.into_raw(),
-        PixelType::U8x4,
-    )?;
+    let src_image = Image::from_vec_u8(orig_w, orig_h, src_img.into_raw(), PixelType::U8x4)?;
 
     config
         .heights

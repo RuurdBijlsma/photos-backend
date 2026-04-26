@@ -211,7 +211,7 @@
 * search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
     * hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
 * thumbnail hosting is niet veilig
-* retrieve person face thumb not save (something like /thumbnails/people/1.webp)
+* retrieve person face thumb not safe (something like /thumbnails/people/1.webp)
 * ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
     * misschien moet dit met een andere methode
 * Fix search zo dat je alle resultaten boven een bepaalde relevancy vind

@@ -554,7 +554,7 @@ pub async fn get_random_search_suggestion(
             WHERE va.user_id = $1
               AND o.tag != ''
             GROUP BY o.tag
-            ORDER BY COUNT(DISTINCT va.media_item_id) DESC
+            ORDER BY RANDOM()
             LIMIT 100)
         )
         SELECT suggestion as "suggestion!"
