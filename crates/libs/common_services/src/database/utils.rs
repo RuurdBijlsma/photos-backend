@@ -51,6 +51,14 @@ pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Poo
         .idle_timeout(Duration::from_secs(db_config.idle_timeout))
         .acquire_timeout(Duration::from_secs(db_config.acquire_timeout))
         .test_before_acquire(true)
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                sqlx::query("SET plan_cache_mode = force_custom_plan")
+                    .execute(conn)
+                    .await?;
+                Ok(())
+            })
+        })
         .connect(database_url)
         .await?;
     if run_migrations {
