@@ -76,8 +76,6 @@ pub async fn search_media(
     query: &str,
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
-    dbg!(&config.face_names);
-
     if config.media_type == SearchMediaType::All
         && config.sort_by == SearchSortBy::Relevancy
         && config.start_date.is_none()
@@ -102,6 +100,7 @@ async fn basic_search_media(
     let query_str = query.to_string();
     let query_embedding =
         get_cached_text_embedding(&query_str, &config.embedder_model_id, pool, embedder).await?;
+    // dbg!(&query_embedding[0..5]);
     let vector_param = Vector::from(query_embedding);
 
     let limit = config.limit.unwrap_or(100).min(1000);

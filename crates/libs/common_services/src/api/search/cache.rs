@@ -19,6 +19,13 @@ pub async fn get_cached_text_embedding(
     pool: &PgPool,
     embedder: Arc<TextEmbedder>,
 ) -> Result<Vec<f32>, SearchError> {
+    let query_str = query.to_string();
+    let compute_emb = tokio::task::spawn_blocking(move || embedder.embed_text(&query_str))
+        .await??
+        .to_vec();
+    // remove cache use to exclude it as bug source possibility
+    return Ok(compute_emb);
+
     let cache = get_cache();
     let key = (model_id.to_string(), query.to_string());
 
