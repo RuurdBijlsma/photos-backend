@@ -14,6 +14,7 @@ pub struct SearchFilterRanges {
 pub struct SearchMediaConfig {
     pub embedder_model_id: String,
     pub limit: Option<i64>,
+    pub offset: Option<i64>,
     pub semantic_score_threshold: f64,
     pub semantic_weight: f64,
     pub text_weight: f64,
@@ -32,6 +33,7 @@ pub struct SearchMediaConfig {
 pub struct SearchParams {
     pub query: String,
     pub limit: Option<i64>,
+    pub offset: Option<i64>, 
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     #[serde(default)]

@@ -104,9 +104,16 @@ async fn basic_search_media(
         get_cached_text_embedding(&query_str, &config.embedder_model_id, pool, embedder).await?;
     let vector_param = Vector::from(query_embedding);
 
-    let limit = config.limit.unwrap_or(100).min(500);
+    let limit = config.limit.unwrap_or(100).min(1000);
+    let offset = config.offset.unwrap_or(0);
     let candidate_limit = limit * 3 + 300;
     let k = 60.0f64;
+    // Only use semantic score limit when sorting by relevancy
+    let semantic_score_threshold = if config.sort_by == SearchSortBy::Relevancy {
+        2.0
+    } else {
+        config.semantic_score_threshold
+    };
 
     let items = sqlx::query_as!(
         SimpleTimelineItem,
@@ -173,7 +180,7 @@ async fn basic_search_media(
         FROM scored_candidates sc
         JOIN media_item mi ON mi.id = sc.id
         ORDER BY sc.combined_score DESC
-        LIMIT $5
+        LIMIT $5 OFFSET $10
          "#,
         query,                 // $1
         user.id,               // $2
@@ -183,7 +190,8 @@ async fn basic_search_media(
         k,                     // $6
         config.text_weight,    // $7
         config.semantic_weight, // $8
-        config.semantic_score_threshold // $9
+        semantic_score_threshold, // $9
+        offset,                   // $10
     )
         .fetch_all(pool)
         .await?;
@@ -237,6 +245,7 @@ async fn advanced_search_media(
 
     let vector_param = Vector::from(query_embedding);
     let limit = config.limit.unwrap_or(100).min(500);
+    let offset = config.offset.unwrap_or(0);
     let candidate_limit = limit * 3 + 300;
     let k = 60.0f64;
 
@@ -247,8 +256,8 @@ async fn advanced_search_media(
     };
 
     let semantic_score_threshold = if config.sort_by == SearchSortBy::Relevancy {
-        // With relevancy sort, it doesn't matter much if we have a higher threshold
-        config.semantic_score_threshold + 0.2
+        // With relevancy sort, threshold doesn't matter much. Limit + relevancy sort handles it
+        2.0
     } else {
         config.semantic_score_threshold
     };
@@ -347,7 +356,7 @@ async fn advanced_search_media(
         ORDER BY
             (CASE WHEN $14 = 'date' THEN NULL ELSE sc.combined_score END) DESC NULLS LAST,
             mi.sort_timestamp DESC
-        LIMIT $5
+        LIMIT $5 OFFSET $17
          "#,
         fts_query,                // $1
         user.id,                  // $2
@@ -364,7 +373,8 @@ async fn advanced_search_media(
         &config.face_names,       // $13
         sort_by_str,              // $14
         semantic_score_threshold, // $15
-        config.all_faces_required // $16
+        config.all_faces_required, // $16
+        offset                     // $17
     )
         .fetch_all(pool)
         .await?;

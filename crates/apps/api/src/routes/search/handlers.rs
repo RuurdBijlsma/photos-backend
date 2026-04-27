@@ -59,6 +59,7 @@ pub async fn get_search_results(
             text_weight: context.settings.ingest.analyzer.search.text_weight,
             semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
             limit: params.limit,
+            offset: params.offset,
             start_date: params.start_date,
             end_date: params.end_date,
             media_type: params.media_type,
