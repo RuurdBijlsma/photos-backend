@@ -13,7 +13,7 @@ ingest:
     analyze_image_size: 720
     theme_generation:
       variant: Vibrant
-      contrast_level: 0.5
+      contrast_level: 0.2
 
   file_detection:
     video_extensions:

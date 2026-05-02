@@ -237,7 +237,7 @@ pub async fn add_media_to_album(
 pub async fn remove_media_from_album(
     pool: &PgPool,
     album_id: &str,
-    media_item_id: &str,
+    media_item_ids: &[String],
     user_id: i32,
 ) -> Result<(), AlbumError> {
     if !can_edit_album(pool, user_id, album_id).await? {
@@ -247,31 +247,26 @@ pub async fn remove_media_from_album(
     }
 
     let mut tx = pool.begin().await?;
-    let result =
-        AlbumStore::remove_media_items_by_id(&mut *tx, album_id, &[media_item_id.to_owned()])
-            .await?;
-
-    if result.rows_affected() == 0 {
-        return Err(AlbumError::NotFound(format!(
-            "Media item {media_item_id} not found in album {album_id}"
-        )));
-    }
+    AlbumStore::remove_media_items_by_id(&mut *tx, album_id, media_item_ids).await?;
 
     // Fix thumbnail id if it was removed
     if let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? {
         // Check if removed item was the thumbnail
-        if Some(media_item_id.to_owned()) == album.thumbnail_id && album.media_count > 0 {
-            let ids: Vec<String> = sqlx::query_scalar!(
-                "SELECT media_item_id FROM album_media_item WHERE album_id = $1",
-                album_id
-            )
-            .fetch_all(&mut *tx)
-            .await?;
+        for media_item_id in media_item_ids {
+            if Some(media_item_id) == album.thumbnail_id.as_ref() && album.media_count > 0 {
+                let ids: Vec<String> = sqlx::query_scalar!(
+                    "SELECT media_item_id FROM album_media_item WHERE album_id = $1",
+                    album_id
+                )
+                .fetch_all(&mut *tx)
+                .await?;
 
-            if let Some(thumbnail_id) = get_representative_thumbnail(&mut tx, &ids).await? {
-                AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
-                    .await?;
+                if let Some(thumbnail_id) = get_representative_thumbnail(&mut tx, &ids).await? {
+                    AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
+                        .await?;
+                }
             }
+            break;
         }
     }
     tx.commit().await?;
@@ -347,6 +342,17 @@ pub async fn remove_collaborator(
 
     AlbumStore::remove_collaborator_by_id(pool, collaborator_id_to_remove).await?;
 
+    Ok(())
+}
+
+pub async fn delete_album(pool: &PgPool, album_id: &str, user_id: i32) -> Result<(), AlbumError> {
+    // Permission Check: Only the owner can update album details.
+    if !is_album_owner(pool, user_id, album_id).await? {
+        return Err(AlbumError::NotFound(
+            "Album not found or permission denied.".to_string(),
+        ));
+    }
+    AlbumStore::delete(pool, album_id, user_id).await?;
     Ok(())
 }
 
@@ -599,6 +605,33 @@ pub async fn move_album_item(
     )
     .execute(&mut *tx)
     .await?;
+
+    // Mark album as manually sorted
+    sqlx::query!(
+        "UPDATE album SET manual_sort = true WHERE id = $1",
+        album_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+    Ok(())
+}
+
+#[instrument(skip(pool))]
+pub async fn reorder_media_items(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+    media_item_ids: &[String],
+) -> Result<(), AlbumError> {
+    if !can_edit_album(pool, user_id, album_id).await? {
+        return Err(AlbumError::Forbidden("Permission denied".into()));
+    }
+
+    let mut tx = pool.begin().await?;
+
+    AlbumStore::reorder_media_items(&mut tx, album_id, media_item_ids).await?;
 
     // Mark album as manually sorted
     sqlx::query!(

@@ -65,6 +65,20 @@ impl AlbumStore {
             .await?)
     }
 
+    pub async fn delete(
+        executor: impl PgExecutor<'_>,
+        album_id: &str,
+        user_id: i32,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            "DELETE FROM album WHERE id = $1 AND owner_id = $2",
+            album_id,
+            user_id
+        )
+        .execute(executor)
+        .await?)
+    }
+
     /// Updates the details of a specific album.
     pub async fn update(
         executor: impl PgExecutor<'_>,
@@ -333,6 +347,36 @@ impl AlbumStore {
         Ok(())
     }
 
+    pub async fn reorder_media_items(
+        tx: &mut PgTransaction<'_>,
+        album_id: &str,
+        media_item_ids: &[String],
+    ) -> Result<(), DbError> {
+        let ranks: Vec<f64> = (0..media_item_ids.len())
+            .map(|i| ((i + 1) * 1000) as f64)
+            .collect();
+
+        sqlx::query!(
+            r#"
+            UPDATE album_media_item
+            SET rank = updates.new_rank
+            FROM (
+                SELECT unnest($1::text[]) AS media_item_id,
+                       unnest($2::float8[]) AS new_rank
+            ) AS updates
+            WHERE album_media_item.album_id = $3
+              AND album_media_item.media_item_id = updates.media_item_id
+            "#,
+            media_item_ids as &[String],
+            &ranks,
+            album_id
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
     pub async fn remove_media_items_by_id(
         executor: impl PgExecutor<'_>,
         album_id: &str,
@@ -368,7 +412,7 @@ impl AlbumStore {
             JOIN media_item mi ON ami.media_item_id = mi.id
             WHERE ami.album_id = $1
             AND mi.deleted = false
-            ORDER BY ami.added_at DESC
+            ORDER BY ami.rank ASC
             "#,
             album_id
         )

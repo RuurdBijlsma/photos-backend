@@ -17,6 +17,12 @@ pub struct CreateAlbumRequest {
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct ReorderMediaRequest {
+    pub media_item_ids: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct AddMediaToAlbumRequest {
     pub media_item_ids: Vec<String>,
 }

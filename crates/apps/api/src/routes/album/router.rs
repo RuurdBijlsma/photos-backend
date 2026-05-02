@@ -1,11 +1,12 @@
 use crate::album::handlers::{
-    get_album_media_handler, remove_album_description_handler, sort_album_by_date_handler,
+    delete_album_handler, get_album_media_handler, remove_album_description_handler,
+    sort_album_by_date_handler,
 };
 use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
     accept_invite_handler, add_collaborator_handler, add_media_to_album_handler,
     check_invite_handler, create_album_handler, generate_invite_handler, get_user_albums_handler,
-    remove_collaborator_handler, remove_media_from_album_handler, update_album_handler,
+    remove_collaborator_handler, remove_media_from_album_handler, reorder_media_handler, update_album_handler,
 };
 use axum::routing::put;
 use axum::{
@@ -23,7 +24,10 @@ pub fn album_protected_router() -> Router<ApiContext> {
             "/album",
             post(create_album_handler).get(get_user_albums_handler),
         )
-        .route("/album/{album_id}", put(update_album_handler))
+        .route(
+            "/album/{album_id}",
+            put(update_album_handler).delete(delete_album_handler),
+        )
         .route(
             "/album/{album_id}/sort-by-date",
             post(sort_album_by_date_handler),
@@ -34,7 +38,11 @@ pub fn album_protected_router() -> Router<ApiContext> {
         )
         .route("/album/{album_id}/media", post(add_media_to_album_handler))
         .route(
-            "/album/{album_id}/media/{media_item_id}",
+            "/album/{album_id}/media/reorder",
+            put(reorder_media_handler),
+        )
+        .route(
+            "/album/{album_id}/media/{media_item_ids}",
             delete(remove_media_from_album_handler),
         )
         .route(

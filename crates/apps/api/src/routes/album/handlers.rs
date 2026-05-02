@@ -7,13 +7,9 @@ use axum_extra::protobuf::Protobuf;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
-    CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest,
+    CreateAlbumRequest, ListAlbumsParam, ReorderMediaRequest, UpdateAlbumRequest,
 };
-use common_services::api::album::service::{
-    accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
-    get_album_media, remove_album_description, remove_collaborator, remove_media_from_album,
-    sort_album_by_date, update_album,
-};
+use common_services::api::album::service::{accept_invite, add_collaborator, add_media_to_album, create_album, delete_album, generate_invite, get_album_media, remove_album_description, remove_collaborator, remove_media_from_album, sort_album_by_date, update_album};
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
@@ -119,6 +115,35 @@ pub async fn update_album_handler(
     Ok(Json(album))
 }
 
+#[utoipa::path(
+    put,
+    path = "/album/{album_id}",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album to delete.")
+    ),
+    request_body = UpdateAlbumRequest,
+    responses(
+        (status = 200, description = "Album deleted successfully.", body = Album),
+        (status = 404, description = "Album not found or permission denied."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn delete_album_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(album_id): Path<String>,
+) -> Result<(), AlbumError> {
+     delete_album(
+        &context.pool,
+        &album_id,
+        user.id,
+    )
+    .await?;
+    Ok(())
+}
+
 pub async fn remove_album_description_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -178,9 +203,14 @@ pub async fn add_media_to_album_handler(
 pub async fn remove_media_from_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    Path((album_id, media_item_id)): Path<(String, String)>,
+    Path((album_id, media_item_ids)): Path<(String, String)>,
 ) -> Result<StatusCode, AlbumError> {
-    remove_media_from_album(&context.pool, &album_id, &media_item_id, user.id).await?;
+    let media_item_ids = media_item_ids
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<String>>();
+    remove_media_from_album(&context.pool, &album_id, &media_item_ids, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -253,6 +283,38 @@ pub async fn sort_album_by_date_handler(
     Path(album_id): Path<String>,
 ) -> Result<(), AlbumError> {
     sort_album_by_date(&context.pool, &album_id, user.id).await?;
+    Ok(())
+}
+
+#[utoipa::path(
+    put,
+    path = "/album/{album_id}/media/reorder",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album.")
+    ),
+    request_body = ReorderMediaRequest,
+    responses(
+        (status = 200, description = "Media items reordered successfully."),
+        (status = 403, description = "Permission denied."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+#[instrument(skip(context, user), err(Debug))]
+pub async fn reorder_media_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(album_id): Path<String>,
+    Json(payload): Json<ReorderMediaRequest>,
+) -> Result<(), AlbumError> {
+    common_services::api::album::service::reorder_media_items(
+        &context.pool,
+        &album_id,
+        user.id,
+        &payload.media_item_ids,
+    )
+    .await?;
     Ok(())
 }
 

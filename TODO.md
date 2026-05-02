@@ -179,6 +179,8 @@
 * ✅ gebruik get_representative-thumbnail voor face thumb selection
 * ✅ current albums pb interface misses collaborators
 * ✅ clean thumbnails folder task in task runner
+* ✅ Fix search zo dat je alle resultaten boven een bepaalde relevancy vind
+  * ✅ Als ik zoek "food" moet ik iets van duizend plaatjes krijgen
 * password reset flow (email) (make mail optional)
 * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
   db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
@@ -214,8 +216,6 @@
 * retrieve person face thumb not safe (something like /thumbnails/people/1.webp)
 * ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
     * misschien moet dit met een andere methode
-* Fix search zo dat je alle resultaten boven een bepaalde relevancy vind
-  * Als ik zoek "food" moet ik iets van duizend plaatjes krijgen
 
 # Features
 
