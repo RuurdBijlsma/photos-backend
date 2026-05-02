@@ -277,7 +277,7 @@ pub async fn remove_collaborator_handler(
 }
 
 #[instrument(skip(context), err(Debug))]
-pub async fn sort_album_by_date_handler(
+pub async fn order_album_by_date_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
