@@ -6,15 +6,20 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
-    CreateAlbumRequest, ListAlbumsParam, ReorderMediaRequest, UpdateAlbumRequest,
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumSort,
+    CheckInviteRequest, CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam,
+    ReorderMediaRequest, UpdateAlbumRequest,
 };
-use common_services::api::album::service::{accept_invite, add_collaborator, add_media_to_album, create_album, delete_album, generate_invite, get_album_media, remove_album_description, remove_collaborator, remove_media_from_album, sort_album_by_date, update_album};
+use common_services::api::album::service::{
+    accept_invite, add_collaborator, add_media_to_album, create_album, delete_album,
+    generate_invite, get_album_media, get_sorted_album_media, remove_album_description,
+    remove_collaborator, remove_media_from_album, reorder_media_items, update_album,
+};
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use common_types::pb::api::FullAlbumMediaResponse;
+use common_types::pb::api::{FullAlbumMediaResponse, OrderedMediaResponse};
 use tracing::instrument;
 
 /// Create a new album.
@@ -135,12 +140,7 @@ pub async fn delete_album_handler(
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
 ) -> Result<(), AlbumError> {
-     delete_album(
-        &context.pool,
-        &album_id,
-        user.id,
-    )
-    .await?;
+    delete_album(&context.pool, &album_id, user.id).await?;
     Ok(())
 }
 
@@ -276,14 +276,31 @@ pub async fn remove_collaborator_handler(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip(context), err(Debug))]
-pub async fn order_album_by_date_handler(
+#[utoipa::path(
+    post,
+    path = "/album/{album_id}/media/order-by-date",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album.")
+    ),
+    request_body = AlbumSort,
+    responses(
+        (status = 200, description = "Media items ordered successfully.", body = OrderedMediaResponse),
+        (status = 403, description = "Permission denied."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_sorted_album_items_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
-) -> Result<(), AlbumError> {
-    sort_album_by_date(&context.pool, &album_id, user.id).await?;
-    Ok(())
+    Query(request): Query<GetSortedAlbumItemsRequest>,
+) -> Result<Protobuf<OrderedMediaResponse>, AlbumError> {
+    let items =
+        get_sorted_album_media(&context.pool, &album_id, user.id, request.sort_mode).await?;
+    Ok(Protobuf(OrderedMediaResponse { items }))
 }
 
 #[utoipa::path(
@@ -308,11 +325,12 @@ pub async fn reorder_media_handler(
     Path(album_id): Path<String>,
     Json(payload): Json<ReorderMediaRequest>,
 ) -> Result<(), AlbumError> {
-    common_services::api::album::service::reorder_media_items(
+    reorder_media_items(
         &context.pool,
         &album_id,
         user.id,
         &payload.media_item_ids,
+        payload.sort_mode,
     )
     .await?;
     Ok(())

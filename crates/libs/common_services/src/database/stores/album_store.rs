@@ -1,4 +1,4 @@
-use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSortField};
+use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSort, AlbumSortField};
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole, AlbumTimelineInfo};
@@ -33,13 +33,14 @@ impl AlbumStore {
         name: &str,
         description: Option<String>,
         thumbnail_id: Option<String>,
+        sort_mode: AlbumSort,
         is_public: bool,
     ) -> Result<Album, DbError> {
         Ok(sqlx::query_as!(
             Album,
             r#"
-            INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public, manual_sort)
-            VALUES ($1, $2, $3, $4, $5, $6, false)
+            INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public, sort_mode)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING
                 id,
                 owner_id,
@@ -52,7 +53,7 @@ impl AlbumStore {
                 earliest_media_item_timestamp,
                 updated_at,
                 created_at,
-                manual_sort
+                sort_mode as "sort_mode: AlbumSort"
             "#,
             album_id,
             user_id,
@@ -60,9 +61,10 @@ impl AlbumStore {
             description,
             thumbnail_id,
             is_public,
+            sort_mode as AlbumSort,
         )
-            .fetch_one(executor)
-            .await?)
+        .fetch_one(executor)
+        .await?)
     }
 
     pub async fn delete(
@@ -111,7 +113,7 @@ impl AlbumStore {
                 earliest_media_item_timestamp,
                 updated_at,
                 created_at,
-                manual_sort
+                sort_mode as "sort_mode: AlbumSort"
             "#,
             name,
             description,
@@ -160,7 +162,7 @@ impl AlbumStore {
                 earliest_media_item_timestamp,
                 updated_at,
                 created_at,
-                manual_sort
+                sort_mode as "sort_mode: AlbumSort"
             FROM album
             WHERE id = $1
             "#,
@@ -220,7 +222,7 @@ impl AlbumStore {
                 earliest_media_item_timestamp,
                 updated_at,
                 created_at,
-                manual_sort
+                sort_mode as "sort_mode: AlbumSort"
             FROM album a
             JOIN album_collaborator ac ON a.id = ac.album_id
             WHERE ac.user_id = $1
@@ -249,7 +251,7 @@ impl AlbumStore {
                 a.description,
                 a.thumbnail_id,
                 a.is_public,
-                a.manual_sort,
+                a.sort_mode as "sort_mode: AlbumSort",
                 a.created_at,
                 a.updated_at,
                 a.media_count,
@@ -309,37 +311,93 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Resets the ranks of all items in an album based on their chronological `sort_timestamp`.
-    pub async fn reorder_by_date(
+    /// Resets the ranks of all items in an album based on specified criteria.
+    pub async fn order_album_media(
         tx: &mut PgTransaction<'_>,
         album_id: &str,
+        sort_mode: AlbumSort,
     ) -> Result<(), DbError> {
-        // Re-rank everything
-        sqlx::query!(
-            r#"
-            UPDATE album_media_item ami
-            SET rank = sub.new_rank
-            FROM (
-                SELECT
-                    ami2.album_id,
-                    ami2.media_item_id,
-                    ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp ASC, mi.created_at ASC) * 1000.0 as new_rank
-                FROM album_media_item ami2
-                JOIN media_item mi ON ami2.media_item_id = mi.id
-                WHERE ami2.album_id = $1
-            ) sub
-            WHERE ami.album_id = sub.album_id
-              AND ami.media_item_id = sub.media_item_id;
-            "#,
-            album_id
-        )
-            .execute(&mut **tx)
-            .await?;
+        if sort_mode == AlbumSort::None {
+            return Ok(());
+        }
+        // todo, remove duplicate code here and in service.rs `get_sorted_album_media`
+        let query = match sort_mode {
+            AlbumSort::DateAsc => {
+                r"
+                UPDATE album_media_item ami
+                SET rank = sub.new_rank
+                FROM (
+                    SELECT
+                        ami2.album_id,
+                        ami2.media_item_id,
+                        ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp ASC, mi.created_at ASC) * 1000.0 as new_rank
+                    FROM album_media_item ami2
+                    JOIN media_item mi ON ami2.media_item_id = mi.id
+                    WHERE ami2.album_id = $1
+                ) sub
+                WHERE ami.album_id = sub.album_id
+                  AND ami.media_item_id = sub.media_item_id;
+                "
+            }
+            AlbumSort::DateDesc => {
+                r"
+                UPDATE album_media_item ami
+                SET rank = sub.new_rank
+                FROM (
+                    SELECT
+                        ami2.album_id,
+                        ami2.media_item_id,
+                        ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp DESC, mi.created_at DESC) * 1000.0 as new_rank
+                    FROM album_media_item ami2
+                    JOIN media_item mi ON ami2.media_item_id = mi.id
+                    WHERE ami2.album_id = $1
+                ) sub
+                WHERE ami.album_id = sub.album_id
+                  AND ami.media_item_id = sub.media_item_id;
+                "
+            }
+            AlbumSort::AddedAsc => {
+                r"
+                UPDATE album_media_item ami
+                SET rank = sub.new_rank
+                FROM (
+                    SELECT
+                        ami2.album_id,
+                        ami2.media_item_id,
+                        ROW_NUMBER() OVER (ORDER BY ami2.added_at ASC) * 1000.0 as new_rank
+                    FROM album_media_item ami2
+                    WHERE ami2.album_id = $1
+                ) sub
+                WHERE ami.album_id = sub.album_id
+                  AND ami.media_item_id = sub.media_item_id;
+                "
+            }
+            AlbumSort::AddedDesc => {
+                r"
+                UPDATE album_media_item ami
+                SET rank = sub.new_rank
+                FROM (
+                    SELECT
+                        ami2.album_id,
+                        ami2.media_item_id,
+                        ROW_NUMBER() OVER (ORDER BY ami2.added_at DESC) * 1000.0 as new_rank
+                    FROM album_media_item ami2
+                    WHERE ami2.album_id = $1
+                ) sub
+                WHERE ami.album_id = sub.album_id
+                  AND ami.media_item_id = sub.media_item_id;
+                "
+            }
+            AlbumSort::None => unreachable!(),
+        };
 
-        // Reset the manual_sort flag
+        sqlx::query(query).bind(album_id).execute(&mut **tx).await?;
+
+        // Set the `sort_mode` flag
         sqlx::query!(
-            "UPDATE album SET manual_sort = false WHERE id = $1",
-            album_id
+            "UPDATE album SET sort_mode = $2 WHERE id = $1",
+            album_id,
+            sort_mode as AlbumSort,
         )
         .execute(&mut **tx)
         .await?;

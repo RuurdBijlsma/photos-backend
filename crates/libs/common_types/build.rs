@@ -72,6 +72,10 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
     config.type_attribute(
+        ".api.OrderedMediaResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
         ".api.SearchSuggestionsResponse",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
     );

@@ -1,6 +1,7 @@
 -- Step 1: Define custom ENUM types for roles and statuses to ensure data integrity.
 
 CREATE TYPE album_role AS ENUM ('owner', 'contributor', 'viewer');
+CREATE TYPE album_sort AS ENUM ('date_desc', 'date_asc', 'added_desc', 'added_asc', 'none');
 CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'rejected');
 
 
@@ -19,7 +20,7 @@ CREATE TABLE album
     -- sort columns: automatically updated via trigger
     latest_media_item_timestamp   TIMESTAMPTZ,
     earliest_media_item_timestamp TIMESTAMPTZ,
-    manual_sort                   BOOLEAN     NOT NULL DEFAULT false,
+    sort_mode                     album_sort  NOT NULL,
     media_count                   INT         NOT NULL DEFAULT 0,
     created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -45,6 +45,10 @@ message FullAlbumMediaResponse {
   repeated SimpleTimelineItem items = 2;
 }
 
+message OrderedMediaResponse {
+  repeated SimpleTimelineItem items = 1;
+}
+
 message CollaboratorSummary {
   int64 id = 1;
   int32 user_id = 2;

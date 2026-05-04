@@ -4,6 +4,7 @@ use sqlx::FromRow;
 use std::fmt;
 use std::fmt::Display;
 use utoipa::ToSchema;
+use crate::api::album::interfaces::AlbumSort;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "album_role", rename_all = "lowercase")]
@@ -47,7 +48,7 @@ pub struct Album {
     pub thumbnail_id: Option<String>,
     pub description: Option<String>,
     pub is_public: bool,
-    pub manual_sort: bool,
+    pub sort_mode: AlbumSort,
     pub media_count: i32,
     pub latest_media_item_timestamp: Option<DateTime<Utc>>,
     pub earliest_media_item_timestamp: Option<DateTime<Utc>>,

@@ -3,8 +3,25 @@ use crate::database::album::album::AlbumRole;
 use chrono::{DateTime, Utc};
 use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use serde::{Deserialize, Serialize};
+use sqlx::Type;
 use utoipa::{IntoParams, ToSchema};
 // --- Request Payloads ---
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, ToSchema)]
+#[sqlx(type_name = "album_sort", rename_all = "snake_case")]
+pub enum AlbumSort {
+    DateAsc,
+    DateDesc,
+    AddedAsc,
+    AddedDesc,
+    None,
+}
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetSortedAlbumItemsRequest {
+    pub sort_mode: AlbumSort
+}
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +36,7 @@ pub struct CreateAlbumRequest {
 #[serde(rename_all = "camelCase")]
 pub struct ReorderMediaRequest {
     pub media_item_ids: Vec<String>,
+    pub sort_mode: AlbumSort,
 }
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]

@@ -1,4 +1,4 @@
-use super::interfaces::{AcceptInviteRequest, AlbumShareClaims};
+use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort};
 use crate::api::album::error::AlbumError;
 use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
@@ -177,6 +177,7 @@ pub async fn create_album(
         name,
         description,
         None,
+        AlbumSort::None,
         is_public,
     )
     .await?;
@@ -217,8 +218,8 @@ pub async fn add_media_to_album(
     AlbumStore::add_media_items(&mut *tx, album_id, media_item_ids, user_id).await?;
 
     // If NOT manually sorted, run the reorder logic immediately to interleave them
-    if !album.manual_sort {
-        AlbumStore::reorder_by_date(&mut tx, album_id).await?;
+    if album.sort_mode != AlbumSort::None {
+        AlbumStore::order_album_media(&mut tx, album_id, album.sort_mode).await?;
     }
 
     if album.thumbnail_id.is_none()
@@ -265,8 +266,8 @@ pub async fn remove_media_from_album(
                     AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
                         .await?;
                 }
+                break;
             }
-            break;
         }
     }
     tx.commit().await?;
@@ -474,6 +475,7 @@ pub async fn accept_invite(
         &payload.name,
         payload.description,
         None,
+        AlbumSort::None,
         false,
     )
     .await?;
@@ -567,19 +569,114 @@ pub async fn get_album_media(
 // Re-ordering album logic
 
 #[instrument(skip(pool))]
-pub async fn sort_album_by_date(
+pub async fn get_sorted_album_media(
     pool: &PgPool,
     album_id: &str,
     user_id: i32,
-) -> Result<(), AlbumError> {
-    if !can_edit_album(pool, user_id, album_id).await? {
+    sort_mode: AlbumSort,
+) -> Result<Vec<SimpleTimelineItem>, AlbumError> {
+    if !can_view_album(pool, user_id, album_id).await? {
         return Err(AlbumError::Forbidden("Permission denied".into()));
     }
 
-    let mut tx = pool.begin().await?;
-    AlbumStore::reorder_by_date(&mut tx, album_id).await?;
-    tx.commit().await?;
-    Ok(())
+    let items = match sort_mode {
+        AlbumSort::DateAsc => sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+                SELECT
+                    mi.id,
+                    is_video,
+                    has_thumbnails,
+                    duration_ms::INT as duration_ms,
+                    (width::real / height::real) as "ratio!"
+                FROM album_media_item as ami
+                JOIN media_item mi ON mi.id = ami.media_item_id
+                WHERE ami.album_id = $1 AND mi.deleted = false
+                ORDER BY mi.sort_timestamp ASC, mi.created_at ASC
+                "#,
+            album_id
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::from)?,
+        AlbumSort::DateDesc => sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+                SELECT
+                    mi.id,
+                    is_video,
+                    has_thumbnails,
+                    duration_ms::INT as duration_ms,
+                    (width::real / height::real) as "ratio!"
+                FROM album_media_item as ami
+                JOIN media_item mi ON mi.id = ami.media_item_id
+                WHERE ami.album_id = $1 AND mi.deleted = false
+                ORDER BY mi.sort_timestamp DESC, mi.created_at DESC
+                "#,
+            album_id
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::from)?,
+        AlbumSort::AddedAsc => sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+                SELECT
+                    mi.id,
+                    is_video,
+                    has_thumbnails,
+                    duration_ms::INT as duration_ms,
+                    (width::real / height::real) as "ratio!"
+                FROM album_media_item as ami
+                JOIN media_item mi ON mi.id = ami.media_item_id
+                WHERE ami.album_id = $1 AND mi.deleted = false
+                ORDER BY ami.added_at ASC
+                "#,
+            album_id
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::from)?,
+        AlbumSort::AddedDesc => sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+                SELECT
+                    mi.id,
+                    is_video,
+                    has_thumbnails,
+                    duration_ms::INT as duration_ms,
+                    (width::real / height::real) as "ratio!"
+                FROM album_media_item as ami
+                JOIN media_item mi ON mi.id = ami.media_item_id
+                WHERE ami.album_id = $1 AND mi.deleted = false
+                ORDER BY ami.added_at DESC
+                "#,
+            album_id
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::from)?,
+        AlbumSort::None => sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+                SELECT
+                    mi.id,
+                    is_video,
+                    has_thumbnails,
+                    duration_ms::INT as duration_ms,
+                    (width::real / height::real) as "ratio!"
+                FROM album_media_item as ami
+                JOIN media_item mi ON mi.id = ami.media_item_id
+                WHERE ami.album_id = $1 AND mi.deleted = false
+                "#,
+            album_id
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::from)?,
+    };
+
+    Ok(items)
 }
 
 #[instrument(skip(pool))]
@@ -608,7 +705,7 @@ pub async fn move_album_item(
 
     // Mark album as manually sorted
     sqlx::query!(
-        "UPDATE album SET manual_sort = true WHERE id = $1",
+        "UPDATE album SET sort_mode = 'date_asc' WHERE id = $1",
         album_id
     )
     .execute(&mut *tx)
@@ -624,6 +721,7 @@ pub async fn reorder_media_items(
     album_id: &str,
     user_id: i32,
     media_item_ids: &[String],
+    sort_mode: AlbumSort,
 ) -> Result<(), AlbumError> {
     if !can_edit_album(pool, user_id, album_id).await? {
         return Err(AlbumError::Forbidden("Permission denied".into()));
@@ -635,8 +733,9 @@ pub async fn reorder_media_items(
 
     // Mark album as manually sorted
     sqlx::query!(
-        "UPDATE album SET manual_sort = true WHERE id = $1",
-        album_id
+        "UPDATE album SET sort_mode = $2 WHERE id = $1",
+        album_id,
+        sort_mode as AlbumSort
     )
     .execute(&mut *tx)
     .await?;

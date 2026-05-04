@@ -1,6 +1,6 @@
 use crate::album::handlers::{
     delete_album_handler, get_album_media_handler, remove_album_description_handler,
-    order_album_by_date_handler,
+    get_sorted_album_items_handler,
 };
 use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
@@ -29,8 +29,8 @@ pub fn album_protected_router() -> Router<ApiContext> {
             put(update_album_handler).delete(delete_album_handler),
         )
         .route(
-            "/album/{album_id}/media/order-by-date",
-            post(order_album_by_date_handler),
+            "/album/{album_id}/media/sorted",
+            get(get_sorted_album_items_handler),
         )
         .route(
             "/album/{album_id}/description",
