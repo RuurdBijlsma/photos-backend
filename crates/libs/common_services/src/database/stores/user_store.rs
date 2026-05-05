@@ -219,17 +219,19 @@ impl UserStore {
         executor: impl Executor<'_, Database = Postgres>,
         relative_path: &str,
     ) -> color_eyre::Result<Option<User>> {
+        dbg!(&relative_path);
         let users = Self::list_users_with_media_folders(executor).await?;
+        dbg!(&users);
 
         let mut best_match: Option<User> = None;
-        let mut max_len = 0;
+        let mut max_len = -1;
 
         for user in users {
             if let Some(media_folder) = &user.media_folder
                 && relative_path.starts_with(media_folder)
-                && media_folder.len() > max_len
+                && media_folder.len() as i32 > max_len
             {
-                max_len = media_folder.len();
+                max_len = media_folder.len() as i32;
                 best_match = Some(user);
             }
         }
