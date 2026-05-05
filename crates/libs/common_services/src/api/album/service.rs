@@ -514,7 +514,7 @@ pub async fn get_album_media(
     album_id: &str,
     user_id: Option<i32>,
 ) -> Result<FullAlbumMediaResponse, AlbumError> {
-    let Some(album) = AlbumStore::find_timeline_info(pool, album_id).await? else {
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
         return Err(AlbumError::NotFound(album_id.to_owned()));
     };
     if !album.is_public {
@@ -559,8 +559,9 @@ pub async fn get_album_media(
             owner_id: album.owner_id,
             thumbnail_id: album.thumbnail_id,
             created_at: album.created_at.to_rfc3339(),
-            first_date: album.first_date.map(|d| d.to_string()),
-            last_date: album.last_date.map(|d| d.to_string()),
+            first_date: album.earliest_media_item_timestamp.map(|d| d.to_string()),
+            last_date: album.latest_media_item_timestamp.map(|d| d.to_string()),
+            sort_mode: format!("{:?}", album.sort_mode),
             collaborators,
         }),
     })

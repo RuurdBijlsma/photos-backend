@@ -1,6 +1,5 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use std::fmt;
 use std::fmt::Display;
 use utoipa::ToSchema;
@@ -23,19 +22,6 @@ impl Display for AlbumRole {
         };
         f.write_str(s)
     }
-}
-
-#[derive(FromRow)]
-pub struct AlbumTimelineInfo {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub thumbnail_id: Option<String>,
-    pub is_public: bool,
-    pub owner_id: i32,
-    pub created_at: DateTime<Utc>,
-    pub first_date: Option<NaiveDateTime>,
-    pub last_date: Option<NaiveDateTime>,
 }
 
 /// Represents a single album in the database.

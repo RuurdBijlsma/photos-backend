@@ -1,7 +1,7 @@
 use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSort, AlbumSortField};
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::DbError;
-use crate::database::album::album::{Album, AlbumRole, AlbumTimelineInfo};
+use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use sqlx::postgres::PgQueryResult;
@@ -165,36 +165,6 @@ impl AlbumStore {
                 sort_mode as "sort_mode: AlbumSort"
             FROM album
             WHERE id = $1
-            "#,
-            album_id
-        )
-        .fetch_optional(executor)
-        .await?)
-    }
-
-    /// Retrieves a single album by its ID, including the first and last date taken.
-    pub async fn find_timeline_info(
-        executor: impl PgExecutor<'_>,
-        album_id: &str,
-    ) -> Result<Option<AlbumTimelineInfo>, DbError> {
-        Ok(sqlx::query_as!(
-            AlbumTimelineInfo,
-            r#"
-            SELECT
-                a.id,
-                a.owner_id,
-                a.name,
-                a.description,
-                a.thumbnail_id,
-                a.is_public,
-                a.created_at,
-                MIN(mi.taken_at_local) as "first_date?",
-                MAX(mi.taken_at_local) as "last_date?"
-            FROM album a
-            LEFT JOIN album_media_item ami ON a.id = ami.album_id
-            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
-            WHERE a.id = $1
-            GROUP BY a.id
             "#,
             album_id
         )

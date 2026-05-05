@@ -63,7 +63,8 @@ message AlbumInfo {
   bool is_public = 4;
   int32 owner_id = 5;
   string created_at = 6;
-  optional string thumbnail_id = 7;
+  string sort_mode = 7;
+  optional string thumbnail_id = 8;
   optional string first_date = 9;
   optional string last_date = 10;
   repeated CollaboratorSummary collaborators = 11;
