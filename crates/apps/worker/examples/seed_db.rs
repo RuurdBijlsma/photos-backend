@@ -7,10 +7,12 @@
 use app_state::{constants, load_app_settings};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use color_eyre::eyre::Result;
+use common_services::api::auth::hashing::hash_password;
 use common_services::database::app_user::UserRole;
 use common_services::database::get_db_pool;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::utils::nice_id;
+use common_types::dev_constants::{EMAIL, PASSWORD, USERNAME};
 use media_analyzer::{
     BasicMetadata, CameraSettings, MediaFeatures, MediaMetadata, PanoInfo, SourceDetails, TimeInfo,
 };
@@ -18,8 +20,6 @@ use rand::RngExt;
 use sqlx::{PgPool, PgTransaction};
 use std::time::Instant;
 use tracing::info;
-use common_services::api::auth::hashing::hash_password;
-use common_types::dev_constants::{EMAIL, PASSWORD, USERNAME};
 
 /// The main entry point for seeding the database.
 pub async fn seed_database_for_dev(pool: &PgPool, num_items: u32) -> Result<()> {

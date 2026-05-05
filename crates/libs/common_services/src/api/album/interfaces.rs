@@ -20,7 +20,7 @@ pub enum AlbumSort {
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetSortedAlbumItemsRequest {
-    pub sort_mode: AlbumSort
+    pub sort_mode: AlbumSort,
 }
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]

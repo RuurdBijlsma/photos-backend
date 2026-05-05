@@ -33,7 +33,7 @@ pub struct SearchMediaConfig {
 pub struct SearchParams {
     pub query: String,
     pub limit: Option<i64>,
-    pub offset: Option<i64>, 
+    pub offset: Option<i64>,
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
     #[serde(default)]

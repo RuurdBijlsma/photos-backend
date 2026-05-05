@@ -1,6 +1,5 @@
 use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort};
 use crate::api::album::error::AlbumError;
-use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
@@ -525,27 +524,7 @@ pub async fn get_album_media(
             return Err(AlbumError::NotFound(album_id.to_string()));
         }
     }
-    let items_future = async {
-        sqlx::query_as!(
-            SimpleTimelineItem,
-            r#"
-            SELECT
-                mi.id,
-                is_video,
-                has_thumbnails,
-                duration_ms::INT as duration_ms,
-                (width::real / height::real) as "ratio!"
-            FROM album_media_item as ami
-            JOIN media_item mi ON mi.id = ami.media_item_id
-            WHERE ami.album_id = $1 AND mi.deleted = false
-            ORDER BY ami.rank
-            "#,
-            album_id
-        )
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::from)
-    };
+    let items_future = AlbumStore::list_sorted_media_items(pool, album_id, AlbumSort::None);
     let collaborators_future = AlbumStore::list_collaborators(pool, album_id);
     let (items, collaborators) = tokio::try_join!(items_future, collaborators_future)?;
 
@@ -580,104 +559,7 @@ pub async fn get_sorted_album_media(
         return Err(AlbumError::Forbidden("Permission denied".into()));
     }
 
-    let items = match sort_mode {
-        AlbumSort::DateAsc => sqlx::query_as!(
-            SimpleTimelineItem,
-            r#"
-                SELECT
-                    mi.id,
-                    is_video,
-                    has_thumbnails,
-                    duration_ms::INT as duration_ms,
-                    (width::real / height::real) as "ratio!"
-                FROM album_media_item as ami
-                JOIN media_item mi ON mi.id = ami.media_item_id
-                WHERE ami.album_id = $1 AND mi.deleted = false
-                ORDER BY mi.sort_timestamp ASC, mi.created_at ASC
-                "#,
-            album_id
-        )
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::from)?,
-        AlbumSort::DateDesc => sqlx::query_as!(
-            SimpleTimelineItem,
-            r#"
-                SELECT
-                    mi.id,
-                    is_video,
-                    has_thumbnails,
-                    duration_ms::INT as duration_ms,
-                    (width::real / height::real) as "ratio!"
-                FROM album_media_item as ami
-                JOIN media_item mi ON mi.id = ami.media_item_id
-                WHERE ami.album_id = $1 AND mi.deleted = false
-                ORDER BY mi.sort_timestamp DESC, mi.created_at DESC
-                "#,
-            album_id
-        )
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::from)?,
-        AlbumSort::AddedAsc => sqlx::query_as!(
-            SimpleTimelineItem,
-            r#"
-                SELECT
-                    mi.id,
-                    is_video,
-                    has_thumbnails,
-                    duration_ms::INT as duration_ms,
-                    (width::real / height::real) as "ratio!"
-                FROM album_media_item as ami
-                JOIN media_item mi ON mi.id = ami.media_item_id
-                WHERE ami.album_id = $1 AND mi.deleted = false
-                ORDER BY ami.added_at ASC
-                "#,
-            album_id
-        )
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::from)?,
-        AlbumSort::AddedDesc => sqlx::query_as!(
-            SimpleTimelineItem,
-            r#"
-                SELECT
-                    mi.id,
-                    is_video,
-                    has_thumbnails,
-                    duration_ms::INT as duration_ms,
-                    (width::real / height::real) as "ratio!"
-                FROM album_media_item as ami
-                JOIN media_item mi ON mi.id = ami.media_item_id
-                WHERE ami.album_id = $1 AND mi.deleted = false
-                ORDER BY ami.added_at DESC
-                "#,
-            album_id
-        )
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::from)?,
-        AlbumSort::None => sqlx::query_as!(
-            SimpleTimelineItem,
-            r#"
-                SELECT
-                    mi.id,
-                    is_video,
-                    has_thumbnails,
-                    duration_ms::INT as duration_ms,
-                    (width::real / height::real) as "ratio!"
-                FROM album_media_item as ami
-                JOIN media_item mi ON mi.id = ami.media_item_id
-                WHERE ami.album_id = $1 AND mi.deleted = false
-                "#,
-            album_id
-        )
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::from)?,
-    };
-
-    Ok(items)
+    Ok(AlbumStore::list_sorted_media_items(pool, album_id, sort_mode).await?)
 }
 
 #[instrument(skip(pool))]

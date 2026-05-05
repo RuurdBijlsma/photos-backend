@@ -1,9 +1,9 @@
+use crate::api::album::interfaces::AlbumSort;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::Display;
 use utoipa::ToSchema;
-use crate::api::album::interfaces::AlbumSort;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[sqlx(type_name = "album_role", rename_all = "lowercase")]

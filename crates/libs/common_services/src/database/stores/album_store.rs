@@ -3,7 +3,7 @@ use crate::api::timeline::interfaces::SortDirection;
 use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
-use common_types::pb::api::{CollaboratorSummary, TimelineItem};
+use common_types::pb::api::{CollaboratorSummary, SimpleTimelineItem, TimelineItem};
 use sqlx::postgres::PgQueryResult;
 use sqlx::{PgExecutor, PgTransaction};
 
@@ -290,78 +290,11 @@ impl AlbumStore {
         if sort_mode == AlbumSort::None {
             return Ok(());
         }
-        // todo, remove duplicate code here and in service.rs `get_sorted_album_media`
-        let query = match sort_mode {
-            AlbumSort::DateAsc => {
-                r"
-                UPDATE album_media_item ami
-                SET rank = sub.new_rank
-                FROM (
-                    SELECT
-                        ami2.album_id,
-                        ami2.media_item_id,
-                        ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp ASC, mi.created_at ASC) * 1000.0 as new_rank
-                    FROM album_media_item ami2
-                    JOIN media_item mi ON ami2.media_item_id = mi.id
-                    WHERE ami2.album_id = $1
-                ) sub
-                WHERE ami.album_id = sub.album_id
-                  AND ami.media_item_id = sub.media_item_id;
-                "
-            }
-            AlbumSort::DateDesc => {
-                r"
-                UPDATE album_media_item ami
-                SET rank = sub.new_rank
-                FROM (
-                    SELECT
-                        ami2.album_id,
-                        ami2.media_item_id,
-                        ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp DESC, mi.created_at DESC) * 1000.0 as new_rank
-                    FROM album_media_item ami2
-                    JOIN media_item mi ON ami2.media_item_id = mi.id
-                    WHERE ami2.album_id = $1
-                ) sub
-                WHERE ami.album_id = sub.album_id
-                  AND ami.media_item_id = sub.media_item_id;
-                "
-            }
-            AlbumSort::AddedAsc => {
-                r"
-                UPDATE album_media_item ami
-                SET rank = sub.new_rank
-                FROM (
-                    SELECT
-                        ami2.album_id,
-                        ami2.media_item_id,
-                        ROW_NUMBER() OVER (ORDER BY ami2.added_at ASC) * 1000.0 as new_rank
-                    FROM album_media_item ami2
-                    WHERE ami2.album_id = $1
-                ) sub
-                WHERE ami.album_id = sub.album_id
-                  AND ami.media_item_id = sub.media_item_id;
-                "
-            }
-            AlbumSort::AddedDesc => {
-                r"
-                UPDATE album_media_item ami
-                SET rank = sub.new_rank
-                FROM (
-                    SELECT
-                        ami2.album_id,
-                        ami2.media_item_id,
-                        ROW_NUMBER() OVER (ORDER BY ami2.added_at DESC) * 1000.0 as new_rank
-                    FROM album_media_item ami2
-                    WHERE ami2.album_id = $1
-                ) sub
-                WHERE ami.album_id = sub.album_id
-                  AND ami.media_item_id = sub.media_item_id;
-                "
-            }
-            AlbumSort::None => unreachable!(),
-        };
 
-        sqlx::query(query).bind(album_id).execute(&mut **tx).await?;
+        let items = Self::list_sorted_media_items(&mut **tx, album_id, sort_mode).await?;
+        let ids: Vec<String> = items.into_iter().map(|i| i.id).collect();
+
+        Self::reorder_media_items(tx, album_id, &ids).await?;
 
         // Set the `sort_mode` flag
         sqlx::query!(
@@ -373,6 +306,39 @@ impl AlbumStore {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn list_sorted_media_items(
+        executor: impl PgExecutor<'_>,
+        album_id: &str,
+        sort_mode: AlbumSort,
+    ) -> Result<Vec<SimpleTimelineItem>, DbError> {
+        Ok(sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+            SELECT
+                mi.id,
+                is_video,
+                has_thumbnails,
+                duration_ms::INT as duration_ms,
+                (width::real / height::real) as "ratio!"
+            FROM album_media_item as ami
+            JOIN media_item mi ON mi.id = ami.media_item_id
+            WHERE ami.album_id = $1 AND mi.deleted = false
+            ORDER BY
+                CASE WHEN $2 = 'date_asc' THEN mi.sort_timestamp END ASC,
+                CASE WHEN $2 = 'date_asc' THEN mi.created_at END ASC,
+                CASE WHEN $2 = 'date_desc' THEN mi.sort_timestamp END DESC,
+                CASE WHEN $2 = 'date_desc' THEN mi.created_at END DESC,
+                CASE WHEN $2 = 'added_asc' THEN ami.added_at END ASC,
+                CASE WHEN $2 = 'added_desc' THEN ami.added_at END DESC,
+                ami.rank ASC
+            "#,
+            album_id,
+            sort_mode as AlbumSort
+        )
+        .fetch_all(executor)
+        .await?)
     }
 
     pub async fn reorder_media_items(

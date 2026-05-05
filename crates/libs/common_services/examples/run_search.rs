@@ -55,7 +55,7 @@ async fn main() -> color_eyre::Result<()> {
                 end_date: None,
             },
         )
-            .await?;
+        .await?;
         println!(
             "{i} | results count: {:?} | {}",
             search_results.len(),

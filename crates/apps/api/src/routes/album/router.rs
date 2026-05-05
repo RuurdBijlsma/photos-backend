@@ -1,12 +1,13 @@
 use crate::album::handlers::{
-    delete_album_handler, get_album_media_handler, remove_album_description_handler,
-    get_sorted_album_items_handler,
+    delete_album_handler, get_album_media_handler, get_sorted_album_items_handler,
+    remove_album_description_handler,
 };
 use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
     accept_invite_handler, add_collaborator_handler, add_media_to_album_handler,
     check_invite_handler, create_album_handler, generate_invite_handler, get_user_albums_handler,
-    remove_collaborator_handler, remove_media_from_album_handler, reorder_media_handler, update_album_handler,
+    remove_collaborator_handler, remove_media_from_album_handler, reorder_media_handler,
+    update_album_handler,
 };
 use axum::routing::put;
 use axum::{
