@@ -12,7 +12,6 @@ CREATE TABLE location
 );
 CREATE INDEX idx_location_lookup ON location (name, admin1, country_code);
 
--- Create the User table.
 CREATE TABLE app_user
 (
     id           SERIAL PRIMARY KEY,
@@ -23,6 +22,14 @@ CREATE TABLE app_user
     name         TEXT        NOT NULL,
     media_folder TEXT,
     role         user_role   NOT NULL DEFAULT 'user'
+);
+
+CREATE TABLE user_invite
+(
+    token        TEXT PRIMARY KEY,
+    media_folder TEXT        NOT NULL,
+    expires_at   TIMESTAMPTZ NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE remote_user

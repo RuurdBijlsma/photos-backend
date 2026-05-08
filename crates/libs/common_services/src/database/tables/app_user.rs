@@ -46,3 +46,13 @@ impl fmt::Display for UserRole {
         }
     }
 }
+
+/// Represents a user invite in the application.
+#[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserInvite {
+    pub token: String,
+    pub media_folder: String,
+    pub expires_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}

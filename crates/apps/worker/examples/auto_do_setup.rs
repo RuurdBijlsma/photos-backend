@@ -32,6 +32,7 @@ async fn main() -> color_eyre::Result<()> {
         name: USERNAME.to_owned(),
         email: EMAIL.to_owned(),
         password: PASSWORD.to_owned(),
+        token: None,
     };
     let user_result = create_user(&pool, &create_user_payload).await;
     let user = if let Ok(u) = user_result {

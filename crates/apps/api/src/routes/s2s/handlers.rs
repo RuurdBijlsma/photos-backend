@@ -31,7 +31,7 @@ use tracing::instrument;
 pub async fn invite_summary_handler(
     State(context): State<ApiContext>,
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
-) -> Result<impl IntoResponse, S2SError> {
+) -> Result<Json<AlbumSummary>, S2SError> {
     let token = authorization.token();
     let summary = get_invite_summary(&context.pool, token, &context.settings.secrets.jwt).await?;
     Ok(Json(summary))
@@ -58,7 +58,6 @@ pub async fn download_file_handler(
     Query(query): Query<DownloadParams>,
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
 ) -> Result<impl IntoResponse, S2SError> {
-    // The full token is passed in the bearer token
     let token = authorization.token();
     let Some(media_item_id) =
         MediaItemStore::find_id_by_relative_path(&context.pool, &query.relative_path).await?

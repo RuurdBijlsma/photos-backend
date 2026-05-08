@@ -1,5 +1,6 @@
+use chrono::{DateTime, Utc};
 use crate::database::DbError;
-use crate::database::tables::app_user::{User, UserRole, UserWithPassword};
+use crate::database::tables::app_user::{User, UserInvite, UserRole, UserWithPassword};
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
 
@@ -293,6 +294,57 @@ impl UserStore {
     ) -> Result<Vec<i32>, DbError> {
         Ok(sqlx::query_scalar!(r#"SELECT id FROM app_user"#)
             .fetch_all(executor)
+            .await?)
+    }
+
+    //================================================================================
+    // User Invites
+    //================================================================================
+
+    pub async fn create_invite(
+        executor: impl Executor<'_, Database = Postgres>,
+        token: &str,
+        media_folder: &str,
+        expires_at: DateTime<Utc>,
+    ) -> Result<UserInvite, DbError> {
+        Ok(sqlx::query_as!(
+            UserInvite,
+            r#"
+            INSERT INTO user_invite (token, media_folder, expires_at)
+            VALUES ($1, $2, $3)
+            RETURNING token, media_folder, expires_at, created_at
+            "#,
+            token,
+            media_folder,
+            expires_at
+        )
+        .fetch_one(executor)
+        .await?)
+    }
+
+    pub async fn find_invite_by_token(
+        executor: impl Executor<'_, Database = Postgres>,
+        token: &str,
+    ) -> Result<Option<UserInvite>, DbError> {
+        Ok(sqlx::query_as!(
+            UserInvite,
+            r#"
+            SELECT token, media_folder, expires_at, created_at
+            FROM user_invite
+            WHERE token = $1 AND expires_at > NOW()
+            "#,
+            token
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
+    pub async fn delete_invite(
+        executor: impl Executor<'_, Database = Postgres>,
+        token: &str,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!("DELETE FROM user_invite WHERE token = $1", token)
+            .execute(executor)
             .await?)
     }
 }

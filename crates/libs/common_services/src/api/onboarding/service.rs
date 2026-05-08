@@ -256,12 +256,12 @@ pub async fn start_processing(
     user_folder: String,
 ) -> Result<User, OnboardingError> {
     let media_root = &settings.ingest.media_root;
-    let user_folder = validate_user_folder(media_root, &user_folder).await?;
-    let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
     let existing_folder = UserStore::get_user_media_folder(pool, user_id).await?;
     if existing_folder.is_some() {
         return Err(OnboardingError::MediaFolderAlreadySet);
     }
+    let user_folder = validate_user_folder(media_root, &user_folder).await?;
+    let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
     let updated_user =
         UserStore::update(pool, user_id, None, None, None, None, Some(relative)).await?;
 

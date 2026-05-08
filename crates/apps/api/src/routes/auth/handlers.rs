@@ -3,13 +3,15 @@
 use crate::api_state::ApiContext;
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use common_services::api::auth::error::AuthError;
-use common_services::api::auth::interfaces::{CreateUser, LoginUser, RefreshTokenPayload, Tokens};
+use common_services::api::auth::interfaces::{
+    CreateUser, GenerateInvitePayload, LoginUser, RefreshTokenPayload, Tokens,
+};
 use common_services::api::auth::service::{
-    authenticate_user, create_access_token, create_user, logout_user, refresh_tokens,
-    store_refresh_token,
+    authenticate_user, create_access_token, create_user, generate_invite, logout_user,
+    refresh_tokens, store_refresh_token,
 };
 use common_services::api::auth::token::generate_refresh_token_parts;
-use common_services::database::app_user::User;
+use common_services::database::app_user::{User, UserInvite};
 use tracing::instrument;
 
 /// Handles user login and returns a new set of tokens.
@@ -140,4 +142,31 @@ pub async fn logout(
 )]
 pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<User>, StatusCode> {
     Ok(Json(user))
+}
+
+/// Generates a new user invite token.
+#[utoipa::path(
+    post,
+    path = "/auth/generate-invite",
+    tag = "Auth",
+    responses(
+        (status = 200, description = "Invite token generated successfully", body = UserInvite),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Permission denied"),
+    ),
+    security(
+        ("bearer_auth" = [])
+    )
+)]
+pub async fn generate_invite_handler(
+    State(context): State<ApiContext>,
+    Json(payload): Json<GenerateInvitePayload>,
+) -> Result<Json<UserInvite>, AuthError> {
+    let invite = generate_invite(
+        &context.pool,
+        &context.settings.ingest,
+        &payload.user_folder,
+    )
+    .await?;
+    Ok(Json(invite))
 }

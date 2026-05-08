@@ -18,7 +18,7 @@ use crate::auth::middlewares::optional_user::OptionalUser;
 use crate::auth::middlewares::require_role::require_role;
 use crate::auth::middlewares::user::ApiUser;
 use crate::auth::middlewares::websocket::WsUser;
-use crate::auth::router::{auth_protected_router, auth_public_router};
+use crate::auth::router::{auth_admin_routes, auth_protected_router, auth_public_router};
 use crate::onboarding::router::onboarding_admin_routes;
 use crate::photos::router::{photos_protected_router, photos_public_router};
 use crate::root::handlers::root;
@@ -83,6 +83,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
 fn admin_routes(api_state: ApiContext) -> Router<ApiContext> {
     Router::new()
         .merge(onboarding_admin_routes())
+        .merge(auth_admin_routes())
         .route_layer(from_fn_with_state(UserRole::Admin, require_role))
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }
