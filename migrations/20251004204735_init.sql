@@ -72,6 +72,7 @@ CREATE TABLE media_item
     deleted             BOOLEAN     NOT NULL DEFAULT false,
     month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
     search_vector       TSVECTOR,
+    user_caption        TEXT,
     CONSTRAINT width_positive CHECK (width > 0),
     CONSTRAINT height_positive CHECK (height > 0)
 );
@@ -178,8 +179,7 @@ CREATE INDEX idx_media_item_search_lookup ON media_item (user_id, deleted, id);
 
 -- For /timeline/ids
 CREATE INDEX idx_media_item_ids_timeline
-    ON media_item (user_id, sort_timestamp DESC)
-    INCLUDE (id)
+    ON media_item (user_id, sort_timestamp DESC) INCLUDE (id)
     WHERE deleted = false;
 
 -- For /timeline/ratios
@@ -188,11 +188,9 @@ CREATE INDEX idx_media_item_user_month_order_partial
                    user_id,
                    month_id,
                    sort_timestamp DESC
-        )
-    INCLUDE (width, height)
+        ) INCLUDE (width, height)
     WHERE deleted = false;
 
 -- Composite index for search filtering
 CREATE INDEX idx_media_item_search_filters
-    ON media_item (user_id, deleted, is_video)
-    INCLUDE (id, taken_at_utc, sort_timestamp);
+    ON media_item (user_id, deleted, is_video) INCLUDE (id, taken_at_utc, sort_timestamp);

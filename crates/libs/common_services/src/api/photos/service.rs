@@ -101,7 +101,7 @@ pub async fn download_media_file(
     user: &User,
     path: &str,
 ) -> Result<Response<Body>, PhotosError> {
-    // --- 1. Security & Path Validation ---
+    // Path Validation
     let media_dir_canon = ingestion
         .media_root
         .canonicalize()
@@ -126,7 +126,7 @@ pub async fn download_media_file(
         return Err(PhotosError::InvalidPath);
     }
 
-    // --- 2. Authorization ---
+    // Authorization
     let relative_path = file_canon.make_relative_canon(&ingestion.media_root_canon)?;
     if user.role != UserRole::Admin {
         let Some(user_media_folder) = &user.media_folder else {
@@ -145,13 +145,11 @@ pub async fn download_media_file(
         }
     }
 
-    // --- 3. Media Type Validation ---
+    // Get file
     if !ingestion.is_media_file(&file_canon) {
         warn!("Unsupported media type requested: {}", file_canon.display());
         return Err(PhotosError::UnsupportedMediaType);
     }
-
-    // --- 4. File Access ---
     let file = match File::open(&file_canon).await {
         Ok(file) => file,
         Err(e) => match e.kind() {
@@ -161,7 +159,7 @@ pub async fn download_media_file(
         }?,
     };
 
-    // --- 5. Build the Streaming Response ---
+    // Streaming Response
     let stream = FramedRead::new(file, BytesCodec::new());
     let body = Body::from_stream(stream);
     let mime_type = mime_guess::from_path(&file_canon).first_or_octet_stream();

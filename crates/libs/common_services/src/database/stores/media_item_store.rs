@@ -138,6 +138,7 @@ impl MediaItemStore {
             mi.taken_at_utc,
             mi.use_panorama_viewer,
             mi.has_thumbnails,
+            mi.user_caption,
 
             COALESCE(va.data, '[]'::jsonb) AS "visual_analyses!: Json<Vec<ReadVisualAnalysis>>",
 
