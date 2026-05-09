@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                owner_id,\n                name,\n                description,\n                thumbnail_id,\n                is_public,\n                media_count,\n                latest_media_item_timestamp,\n                earliest_media_item_timestamp,\n                updated_at,\n                created_at,\n                manual_sort\n            FROM album\n            WHERE id = $1\n            ",
+  "query": "\n            INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public, sort_mode)\n            VALUES ($1, $2, $3, $4, $5, $6, $7)\n            RETURNING\n                id,\n                owner_id,\n                name,\n                description,\n                thumbnail_id,\n                is_public,\n                media_count,\n                latest_media_item_timestamp,\n                earliest_media_item_timestamp,\n                updated_at,\n                created_at,\n                sort_mode as \"sort_mode: AlbumSort\"\n            ",
   "describe": {
     "columns": [
       {
@@ -60,13 +60,45 @@
       },
       {
         "ordinal": 11,
-        "name": "manual_sort",
-        "type_info": "Bool"
+        "name": "sort_mode: AlbumSort",
+        "type_info": {
+          "Custom": {
+            "name": "album_sort",
+            "kind": {
+              "Enum": [
+                "date_desc",
+                "date_asc",
+                "added_desc",
+                "added_asc",
+                "none"
+              ]
+            }
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Varchar",
+        "Int4",
+        "Text",
+        "Text",
+        "Varchar",
+        "Bool",
+        {
+          "Custom": {
+            "name": "album_sort",
+            "kind": {
+              "Enum": [
+                "date_desc",
+                "date_asc",
+                "added_desc",
+                "added_asc",
+                "none"
+              ]
+            }
+          }
+        }
       ]
     },
     "nullable": [
@@ -84,5 +116,5 @@
       false
     ]
   },
-  "hash": "6e4901d086b719d1398a2c778d184cb155da3374a7687bdddb41c440eede9405"
+  "hash": "c0a8267c2c58e6efd59bd7715d0748bee78f98bc173ae593a60b88f512e04b94"
 }

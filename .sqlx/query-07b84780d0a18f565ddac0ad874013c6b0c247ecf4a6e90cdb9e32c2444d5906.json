@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT DISTINCT month_id AS \"months!\"\n        FROM media_item\n        WHERE user_id = $1\n          AND deleted = false\n        ORDER BY month_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "months!",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "07b84780d0a18f565ddac0ad874013c6b0c247ecf4a6e90cdb9e32c2444d5906"
+}

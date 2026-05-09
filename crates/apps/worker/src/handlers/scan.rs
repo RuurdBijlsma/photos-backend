@@ -45,9 +45,33 @@ pub async fn sync_user_files_to_db(
         .collect();
 
     let all_files = get_media_files(user_folder, &allowed);
+    let other_media_folders = sqlx::query_scalar!(
+        r#"
+            SELECT media_folder as "media_folder!"
+            FROM app_user
+            WHERE id != $1 AND media_folder IS NOT NULL
+            "#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await?;
+    let user_rel_path = user_folder.make_relative(&settings.ingest.media_root)?;
+    let sub_folders = other_media_folders
+        .iter()
+        .filter(|f| f.starts_with(&user_rel_path))
+        .collect::<Vec<&String>>();
+    // todo: exclude from fs_paths where another user has a more specific media_folder.
+    // 1. get all user media_folders, filter so that only media_folders that are subfolders of current user's media_folder remain
+    // 2. filter all fs_paths that start with the subfolders from ^
     let fs_paths: HashSet<String> = all_files
         .into_iter()
         .flat_map(|p| p.make_relative(&settings.ingest.media_root))
+        // Filter out all fs_paths that start with another user's media_folder
+        .filter(|fs_path| {
+            sub_folders
+                .iter()
+                .all(|sub_folder| !fs_path.starts_with(*sub_folder))
+        })
         .collect();
 
     let db_paths: HashSet<String> = sqlx::query_scalar!(

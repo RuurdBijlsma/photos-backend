@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE album SET manual_sort = false WHERE id = $1",
+  "query": "UPDATE album SET sort_mode = 'date_asc' WHERE id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "200b26fcd998fa8a58426eeaff99610f7c217a14962025b21abec2b77ca7c40e"
+  "hash": "c8c948654311950a4fa8dce39e7a5c8eecd699432139c0b8fc4238c359720192"
 }

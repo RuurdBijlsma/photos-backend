@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                a.id,\n                owner_id,\n                name,\n                description,\n                thumbnail_id,\n                is_public,\n                media_count,\n                latest_media_item_timestamp,\n                earliest_media_item_timestamp,\n                updated_at,\n                created_at,\n                manual_sort\n            FROM album a\n            JOIN album_collaborator ac ON a.id = ac.album_id\n            WHERE ac.user_id = $1\n            ORDER BY a.updated_at DESC\n            ",
+  "query": "\n            SELECT\n                a.id,\n                owner_id,\n                name,\n                description,\n                thumbnail_id,\n                is_public,\n                media_count,\n                latest_media_item_timestamp,\n                earliest_media_item_timestamp,\n                updated_at,\n                created_at,\n                sort_mode as \"sort_mode: AlbumSort\"\n            FROM album a\n            JOIN album_collaborator ac ON a.id = ac.album_id\n            WHERE ac.user_id = $1\n            ORDER BY a.updated_at DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -60,8 +60,21 @@
       },
       {
         "ordinal": 11,
-        "name": "manual_sort",
-        "type_info": "Bool"
+        "name": "sort_mode: AlbumSort",
+        "type_info": {
+          "Custom": {
+            "name": "album_sort",
+            "kind": {
+              "Enum": [
+                "date_desc",
+                "date_asc",
+                "added_desc",
+                "added_asc",
+                "none"
+              ]
+            }
+          }
+        }
       }
     ],
     "parameters": {
@@ -84,5 +97,5 @@
       false
     ]
   },
-  "hash": "d8a0a5b0ae5beb0ed2e249e51686562fefafb595f71a9140e1b2866712166f06"
+  "hash": "891bb032b88d50ab06e441d933853fdeb92bc3b403308c0fd7f0368050933aca"
 }

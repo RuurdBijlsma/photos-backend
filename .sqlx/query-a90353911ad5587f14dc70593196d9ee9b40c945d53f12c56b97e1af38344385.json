@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE album_media_item\n            SET rank = updates.new_rank\n            FROM (\n                SELECT unnest($1::text[]) AS media_item_id,\n                       unnest($2::float8[]) AS new_rank\n            ) AS updates\n            WHERE album_media_item.album_id = $3\n              AND album_media_item.media_item_id = updates.media_item_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "Float8Array",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a90353911ad5587f14dc70593196d9ee9b40c945d53f12c56b97e1af38344385"
+}

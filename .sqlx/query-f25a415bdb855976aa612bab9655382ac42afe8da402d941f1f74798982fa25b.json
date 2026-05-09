@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE album SET sort_mode = $2 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "album_sort",
+            "kind": {
+              "Enum": [
+                "date_desc",
+                "date_asc",
+                "added_desc",
+                "added_asc",
+                "none"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f25a415bdb855976aa612bab9655382ac42afe8da402d941f1f74798982fa25b"
+}

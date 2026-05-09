@@ -35,6 +35,7 @@ pub async fn get_timeline_ratios_handler(
     Extension(user): Extension<User>,
     Query(params): Query<TimelineParams>,
 ) -> Result<Protobuf<TimelineRatiosResponse>, TimelineError> {
+    dbg!(&user);
     let timeline = get_timeline_ratios(&user, &context.pool, params.sort).await?;
     Ok(Protobuf(timeline))
 }

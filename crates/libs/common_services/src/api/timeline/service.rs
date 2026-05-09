@@ -30,6 +30,8 @@ pub async fn get_timeline_ratios(
         sort_direction.as_sql()
     );
 
+    dbg!(&sql);
+
     let months = sqlx::query_as::<_, TimelineMonthRatios>(&sql)
         .bind(user.id)
         .fetch_all(pool)

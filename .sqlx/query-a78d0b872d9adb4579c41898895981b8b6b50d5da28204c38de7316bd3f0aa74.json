@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT \n                p.id, \n                p.name, \n                p.thumbnail_media_item_id,\n                COUNT(DISTINCT va.media_item_id)::INT as \"photo_count!\"\n            FROM person p\n            LEFT JOIN face f ON f.person_id = p.id\n            LEFT JOIN visual_analysis va ON f.visual_analysis_id = va.id\n            WHERE p.id = $1 AND p.user_id = $2\n            GROUP BY p.id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "thumbnail_media_item_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "photo_count!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "a78d0b872d9adb4579c41898895981b8b6b50d5da28204c38de7316bd3f0aa74"
+}

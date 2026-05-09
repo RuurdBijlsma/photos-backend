@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE album SET manual_sort = true WHERE id = $1",
+  "query": "DELETE FROM user_invite WHERE token = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "5d81cbab55f841fd037daf2b834e2a84d457226bbc3941baaee4054d717d77ae"
+  "hash": "e9b10f50c829ae55d97a147925c0cd16c7a4d1d77ef44268e8ba1cb539ceb4de"
 }

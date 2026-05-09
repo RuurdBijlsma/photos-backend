@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO text_embedding_cache (model_id, text, embedding)\n            VALUES ($1, $2, $3::vector)\n            ON CONFLICT (model_id, text) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "161518faa3cf5df921c2dd11ef303006c053d408c66184363a315dd39d245625"
+}
