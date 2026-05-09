@@ -49,7 +49,9 @@ pub async fn authenticate_user(
 /// * `AuthError::InvalidUsername` when the username contains illegal characters.
 pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, AuthError> {
     let username = &payload.name;
-    if !username.chars().all(|c| c.is_alphanumeric() || c == ' ')
+    if !username
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == ' ' || c == '_' || c == '-')
         || username.starts_with(' ')
         || username.ends_with(' ')
     {
