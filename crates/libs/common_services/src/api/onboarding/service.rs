@@ -263,7 +263,7 @@ pub async fn start_processing(
     let user_folder = validate_user_folder(media_root, &user_folder).await?;
     let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
     let updated_user =
-        UserStore::update(pool, user_id, None, None, None, None, Some(relative)).await?;
+        UserStore::update(pool, user_id, None, None, None, None, Some(relative), None).await?;
 
     enqueue_job::<()>(pool, settings, JobType::Scan)
         .user_id(user_id)

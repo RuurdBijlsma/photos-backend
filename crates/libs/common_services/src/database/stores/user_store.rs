@@ -32,6 +32,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             "#,
             email,
@@ -55,6 +56,7 @@ impl UserStore {
         password: Option<String>,
         role: Option<UserRole>,
         media_folder: Option<String>,
+        avatar_id: Option<String>,
     ) -> Result<User, DbError> {
         Ok(sqlx::query_as!(
             User,
@@ -66,8 +68,9 @@ impl UserStore {
                 password = COALESCE($3, password),
                 role = COALESCE($4, role),
                 media_folder = COALESCE($5, media_folder),
+                avatar_id = COALESCE($6, avatar_id),
                 updated_at = now()
-            WHERE id = $6
+            WHERE id = $7
             RETURNING
                 id,
                 created_at,
@@ -75,6 +78,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             "#,
             name,
@@ -82,6 +86,7 @@ impl UserStore {
             password,
             role as Option<UserRole>,
             media_folder,
+            avatar_id,
             user_id
         )
         .fetch_one(executor)
@@ -116,6 +121,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             WHERE id = $1
@@ -140,6 +146,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             WHERE email = $1
@@ -165,6 +172,7 @@ impl UserStore {
                 name,
                 password,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             WHERE email = $1
@@ -259,6 +267,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             WHERE media_folder IS NOT NULL
@@ -281,6 +290,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             "#,

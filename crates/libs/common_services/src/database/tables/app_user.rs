@@ -13,6 +13,7 @@ pub struct User {
     pub email: String,
     pub name: String,
     pub media_folder: Option<String>,
+    pub avatar_id: Option<String>,
     pub role: UserRole,
 }
 
@@ -25,6 +26,7 @@ pub struct UserWithPassword {
     pub email: String,
     pub name: String,
     pub media_folder: Option<String>,
+    pub avatar_id: Option<String>,
     pub role: UserRole,
     pub password: String,
 }

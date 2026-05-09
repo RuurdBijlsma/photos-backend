@@ -84,6 +84,9 @@ CREATE TABLE media_item
     CONSTRAINT height_positive CHECK (height > 0)
 );
 
+ALTER TABLE app_user
+    ADD COLUMN avatar_id VARCHAR(10) REFERENCES media_item (id) ON DELETE SET NULL;
+
 -- The following tables store optional, detailed metadata for a MediaItem.
 -- They use a one-to-one relationship where the primary key is also a foreign key
 -- referencing media_item.id. This keeps the main media_item table clean.

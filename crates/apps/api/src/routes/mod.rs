@@ -9,9 +9,11 @@ pub mod s2s;
 pub mod search;
 
 pub mod timeline;
+pub mod user;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::people::router::people_protected_router;
+use crate::user::router::user_protected_router;
 
 use crate::api_state::ApiContext;
 use crate::auth::middlewares::optional_user::OptionalUser;
@@ -77,6 +79,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
         .merge(search_protected_router())
         .merge(album_protected_router())
         .merge(people_protected_router())
+        .merge(user_protected_router())
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }
 
