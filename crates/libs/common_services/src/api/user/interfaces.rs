@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -16,7 +16,7 @@ pub struct UserStats {
 pub struct UserProfile {
     pub id: i32,
     pub name: String,
-    pub email: String,
+    pub email: Option<String>,
     pub created_at: DateTime<Utc>,
     pub avatar_id: Option<String>,
     pub stats: UserStats,

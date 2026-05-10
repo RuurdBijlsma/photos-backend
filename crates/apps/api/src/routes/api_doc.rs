@@ -46,7 +46,7 @@ use utoipa::{Modify, OpenApi};
         s2s::handlers::invite_summary_handler,
         s2s::handlers::download_file_handler,
         // User handlers
-        user::handlers::get_user_profile,
+        user::handlers::get_user_profile_handler,
         user::handlers::update_my_profile,
     ),
     components(

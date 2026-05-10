@@ -1,10 +1,10 @@
 use crate::api_state::ApiContext;
-use crate::auth::middlewares::user::ApiUser;
 use axum::extract::{Path, State};
-use axum::Json;
+use axum::{Extension, Json};
 use common_services::api::user::error::UserError;
 use common_services::api::user::interfaces::{UpdateUserProfileRequest, UserProfile};
 use common_services::api::user::service::{get_user_profile, update_user_profile};
+use common_services::database::app_user::User;
 
 /// Fetch the profile data and library statistics for any user.
 #[utoipa::path(
@@ -22,9 +22,10 @@ use common_services::api::user::service::{get_user_profile, update_user_profile}
 )]
 pub async fn get_user_profile_handler(
     State(ctx): State<ApiContext>,
+    Extension(user): Extension<User>,
     Path(user_id): Path<i32>,
 ) -> Result<Json<UserProfile>, UserError> {
-    let profile = get_user_profile(&ctx.pool, user_id).await?;
+    let profile = get_user_profile(&ctx.pool, user.id, user_id).await?;
     Ok(Json(profile))
 }
 
@@ -42,14 +43,9 @@ pub async fn get_user_profile_handler(
 )]
 pub async fn update_my_profile(
     State(ctx): State<ApiContext>,
-    user: ApiUser,
+    Extension(user): Extension<User>,
     Json(payload): Json<UpdateUserProfileRequest>,
 ) -> Result<Json<UserProfile>, UserError> {
-    let profile = update_user_profile(
-        &ctx.pool,
-        user.0.id,
-        payload.name,
-        payload.avatar_id,
-    ).await?;
+    let profile = update_user_profile(&ctx.pool, user.id, payload.name, payload.avatar_id).await?;
     Ok(Json(profile))
 }

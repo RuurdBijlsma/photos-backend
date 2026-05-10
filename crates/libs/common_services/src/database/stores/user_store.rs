@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use crate::database::DbError;
 use crate::database::tables::app_user::{User, UserInvite, UserRole, UserWithPassword};
+use chrono::{DateTime, Utc};
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
 
@@ -353,8 +353,10 @@ impl UserStore {
         executor: impl Executor<'_, Database = Postgres>,
         token: &str,
     ) -> Result<PgQueryResult, DbError> {
-        Ok(sqlx::query!("DELETE FROM user_invite WHERE token = $1", token)
-            .execute(executor)
-            .await?)
+        Ok(
+            sqlx::query!("DELETE FROM user_invite WHERE token = $1", token)
+                .execute(executor)
+                .await?,
+        )
     }
 }

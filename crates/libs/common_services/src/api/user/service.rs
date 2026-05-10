@@ -1,10 +1,12 @@
 use crate::api::user::error::UserError;
+use crate::api::user::interfaces::{UserProfile, UserStats};
+use crate::database::app_user::UserRole;
 use crate::database::user_store::UserStore;
 use sqlx::PgPool;
-use crate::api::user::interfaces::{UserProfile, UserStats};
 
 pub async fn get_user_profile(
     pool: &PgPool,
+    logged_in_user_id: i32,
     user_id: i32,
 ) -> Result<UserProfile, UserError> {
     let user = UserStore::find_by_id(pool, user_id)
@@ -13,20 +15,23 @@ pub async fn get_user_profile(
 
     let stats = get_user_stats(pool, user_id).await?;
 
+    let email = if logged_in_user_id == user_id || user.role == UserRole::Admin {
+        Some(user.email)
+    } else {
+        None
+    };
+
     Ok(UserProfile {
         id: user.id,
         name: user.name,
-        email: user.email,
+        email,
         created_at: user.created_at,
         avatar_id: user.avatar_id,
         stats,
     })
 }
 
-pub async fn get_user_stats(
-    pool: &PgPool,
-    user_id: i32,
-) -> Result<UserStats, UserError> {
+pub async fn get_user_stats(pool: &PgPool, user_id: i32) -> Result<UserStats, UserError> {
     let counts = sqlx::query!(
         r#"
         SELECT
@@ -75,24 +80,14 @@ pub async fn update_user_profile(
         }
     }
 
-    let user = UserStore::update(
-        pool,
-        user_id,
-        name,
-        None,
-        None,
-        None,
-        None,
-        avatar_id,
-    )
-    .await?;
+    let user = UserStore::update(pool, user_id, name, None, None, None, None, avatar_id).await?;
 
     let stats = get_user_stats(pool, user_id).await?;
 
     Ok(UserProfile {
         id: user.id,
         name: user.name,
-        email: user.email,
+        email: Some(user.email),
         created_at: user.created_at,
         avatar_id: user.avatar_id,
         stats,

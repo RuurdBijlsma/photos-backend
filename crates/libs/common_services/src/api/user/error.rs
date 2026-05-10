@@ -22,7 +22,10 @@ impl IntoResponse for UserError {
         let (status, message) = match self {
             Self::UserNotFound => (StatusCode::NOT_FOUND, self.to_string()),
             Self::InvalidAvatar => (StatusCode::BAD_REQUEST, self.to_string()),
-            Self::Db(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()),
+            Self::Db(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Database error".to_string(),
+            ),
             Self::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
 
