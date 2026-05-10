@@ -558,6 +558,7 @@ impl AlbumStore {
             SELECT
                 ac.id,
                 ac.user_id,
+                u.avatar_id,
                 u.name,
                 ac.role as "role: String"
             FROM album_collaborator ac

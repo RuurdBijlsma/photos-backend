@@ -54,6 +54,7 @@ message CollaboratorSummary {
   int32 user_id = 2;
   string name = 3;
   string role = 4;
+  optional string avatar_id = 5;
 }
 
 message AlbumInfo {
