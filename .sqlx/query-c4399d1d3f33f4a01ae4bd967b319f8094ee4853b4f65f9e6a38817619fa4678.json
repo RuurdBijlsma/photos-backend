@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO app_user (email, name, password, role, media_folder)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                role as \"role: UserRole\"\n            ",
+  "query": "\n            UPDATE app_user\n            SET\n                name = COALESCE($1, name),\n                email = COALESCE($2, email),\n                password = COALESCE($3, password),\n                role = COALESCE($4, role),\n                media_folder = COALESCE($5, media_folder),\n                avatar_id = COALESCE($6, avatar_id),\n                updated_at = now()\n            WHERE id = $7\n            RETURNING\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                avatar_id,\n                role as \"role: UserRole\"\n            ",
   "describe": {
     "columns": [
       {
@@ -35,6 +35,11 @@
       },
       {
         "ordinal": 6,
+        "name": "avatar_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
         "name": "role: UserRole",
         "type_info": {
           "Custom": {
@@ -65,7 +70,9 @@
             }
           }
         },
-        "Text"
+        "Text",
+        "Varchar",
+        "Int4"
       ]
     },
     "nullable": [
@@ -75,8 +82,9 @@
       false,
       false,
       true,
+      true,
       false
     ]
   },
-  "hash": "2e8b0ceffe15bb975592207a205179f11d63d87c7ea5d734451cd8c2c49ed6d7"
+  "hash": "c4399d1d3f33f4a01ae4bd967b319f8094ee4853b4f65f9e6a38817619fa4678"
 }

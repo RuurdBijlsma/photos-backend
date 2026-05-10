@@ -216,6 +216,8 @@
 * retrieve person face thumb not safe (something like /thumbnails/people/1.webp)
 * ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
     * misschien moet dit met een andere methode
+* [optimize] cluster faces/photos is soms langzaam?
+* create album met 10000 fotos is langzaam
 
 # Features
 

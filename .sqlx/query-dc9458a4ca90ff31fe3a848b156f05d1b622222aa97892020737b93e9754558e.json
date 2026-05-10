@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE app_user\n            SET\n                name = COALESCE($1, name),\n                email = COALESCE($2, email),\n                password = COALESCE($3, password),\n                role = COALESCE($4, role),\n                media_folder = COALESCE($5, media_folder),\n                updated_at = now()\n            WHERE id = $6\n            RETURNING\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                role as \"role: UserRole\"\n            ",
+  "query": "\n            SELECT\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                password,\n                media_folder,\n                avatar_id,\n                role as \"role: UserRole\"\n            FROM app_user\n            WHERE email = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -30,11 +30,21 @@
       },
       {
         "ordinal": 5,
-        "name": "media_folder",
+        "name": "password",
         "type_info": "Text"
       },
       {
         "ordinal": 6,
+        "name": "media_folder",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "avatar_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
         "name": "role: UserRole",
         "type_info": {
           "Custom": {
@@ -51,22 +61,7 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text",
-        "Text",
-        {
-          "Custom": {
-            "name": "user_role",
-            "kind": {
-              "Enum": [
-                "admin",
-                "user"
-              ]
-            }
-          }
-        },
-        "Text",
-        "Int4"
+        "Text"
       ]
     },
     "nullable": [
@@ -75,9 +70,11 @@
       false,
       false,
       false,
+      false,
+      true,
       true,
       false
     ]
   },
-  "hash": "267abfc5fc4047420e4255c8df9bc052c56fb98ccd71febb65a2f7e53b05bccb"
+  "hash": "dc9458a4ca90ff31fe3a848b156f05d1b622222aa97892020737b93e9754558e"
 }

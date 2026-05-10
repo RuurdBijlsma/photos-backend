@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                role as \"role: UserRole\"\n            FROM app_user\n            WHERE email = $1\n            ",
+  "query": "\n            SELECT\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                avatar_id,\n                role as \"role: UserRole\"\n            FROM app_user\n            WHERE email = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -35,6 +35,11 @@
       },
       {
         "ordinal": 6,
+        "name": "avatar_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
         "name": "role: UserRole",
         "type_info": {
           "Custom": {
@@ -61,8 +66,9 @@
       false,
       false,
       true,
+      true,
       false
     ]
   },
-  "hash": "2db30f54b7ab416f13b56e0bdf7f7087cd4d73b9f18e401ee585ef86970f1541"
+  "hash": "47228e07dea7cb36ea717c8560bbc0290e290f5ce3e25583ba6293f725db4abb"
 }

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT EXISTS(\n                SELECT 1 FROM media_item mi\n                LEFT JOIN album_media_item ami ON mi.id = ami.media_item_id\n                LEFT JOIN album a ON ami.album_id = a.id\n                WHERE mi.id = $1 AND (a.is_public = true OR mi.user_id = $2) AND mi.deleted = false\n            ) as \"exists!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b616b100d63f6d84ff8fb1da687961226d24dd24daff6cb2a396376e9b260894"
+}

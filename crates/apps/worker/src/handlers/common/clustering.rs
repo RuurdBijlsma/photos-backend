@@ -5,6 +5,7 @@ use hdbscan::{Center, DistanceMetric, Hdbscan, HdbscanHyperParams};
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 pub trait ClusterEntity {
     fn id(&self) -> i64;
@@ -37,7 +38,9 @@ pub fn run_hdbscan(
         .build();
 
     let clusterer = Hdbscan::new(embeddings, params);
+    let now = Instant::now();
     let labels = clusterer.cluster()?;
+    println!("clusterer.cluster()?, {:?}", now.elapsed());
     let centroids = clusterer.calc_centers(Center::Centroid, &labels)?;
     Ok((labels, centroids))
 }
