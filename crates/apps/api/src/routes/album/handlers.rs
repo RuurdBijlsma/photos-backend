@@ -389,7 +389,7 @@ pub async fn check_invite_handler(
 ) -> Result<Json<AlbumSummary>, AlbumError> {
     let summary = context
         .s2s_client
-        .get_album_invite_summary(&payload.token, &context.settings.secrets.jwt)
+        .get_album_invite_summary(&payload.token)
         .await?;
     Ok(Json(summary))
 }

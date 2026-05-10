@@ -71,7 +71,6 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .s2s_client
         .download_remote_file(
             &payload.token,
-            &context.settings.secrets.jwt,
             &payload.remote_relative_path,
             &full_save_path,
         )

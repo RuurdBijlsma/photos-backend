@@ -7,7 +7,7 @@ use crate::database::jobs::JobType;
 use crate::database::system_metrics_store::SystemMetricsStore;
 use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::{S2SClient, extract_token_claims};
+use crate::s2s_client::{S2SClient, insecure_extract_token_claims};
 use crate::utils::nice_id;
 use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
@@ -454,12 +454,11 @@ pub async fn accept_invite(
     user_id: i32,
     payload: AcceptInviteRequest,
 ) -> Result<Album, AlbumError> {
-    let jwt_secret = &settings.secrets.jwt;
-    let claims = extract_token_claims(&payload.token, jwt_secret)
+    let claims = insecure_extract_token_claims(&payload.token)
         .map_err(|_| AlbumError::Forbidden("Invalid token.".to_string()))?;
 
     let summary: AlbumSummary = s2s_client
-        .get_album_invite_summary(&payload.token, jwt_secret)
+        .get_album_invite_summary(&payload.token)
         .await
         .wrap_err("Failed to get album invite summary from remote server")?;
 
