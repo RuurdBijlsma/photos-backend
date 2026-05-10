@@ -280,7 +280,7 @@ pub async fn remove_media_from_album(
 pub async fn add_collaborator(
     pool: &PgPool,
     album_id: &str,
-    new_user_email: &str,
+    new_user_id: i32,
     role: AlbumRole,
     inviting_user_id: i32,
 ) -> Result<AlbumCollaborator, AlbumError> {
@@ -292,11 +292,9 @@ pub async fn add_collaborator(
     }
 
     // Find the user to add by their email.
-    let user_to_add = UserStore::find_by_email(pool, new_user_email)
+    let user_to_add = UserStore::find_by_id(pool, new_user_id)
         .await?
-        .ok_or_else(|| {
-            AlbumError::NotFound(format!("User with email {new_user_email} not found."))
-        })?;
+        .ok_or_else(|| AlbumError::NotFound(format!("User with id {new_user_id} not found.")))?;
 
     // An owner cannot be added or demoted via this function.
     if role == AlbumRole::Owner {
@@ -313,7 +311,7 @@ pub async fn add_collaborator(
 }
 
 /// Removes a collaborator from an album.
-/// The user performing the action must be the album owner.
+/// The user performing the action must be (the album owner, or the collaborator to be removed).
 #[instrument(skip(pool))]
 pub async fn remove_collaborator(
     pool: &PgPool,
@@ -321,19 +319,20 @@ pub async fn remove_collaborator(
     collaborator_id_to_remove: i64,
     requesting_user_id: i32,
 ) -> Result<(), AlbumError> {
-    if !is_album_owner(pool, requesting_user_id, album_id).await? {
+    let Some(collaborator_to_remove) =
+        AlbumStore::find_collaborator_by_id(pool, collaborator_id_to_remove).await?
+    else {
+        return Err(AlbumError::NotFound("Collaborator not found.".to_string()));
+    };
+    let is_self_removal = collaborator_to_remove.user_id == requesting_user_id;
+    let is_owner = is_album_owner(pool, requesting_user_id, album_id).await?;
+    if !is_owner && !is_self_removal {
         return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
 
-    // Get the collaborator record to check if we're trying to remove the owner.
-    let collaborator_to_remove =
-        AlbumStore::find_collaborator_by_id(pool, collaborator_id_to_remove)
-            .await?
-            .ok_or_else(|| AlbumError::NotFound("Collaborator not found.".to_string()))?;
-
-    // Safety check: The owner cannot be removed.
+    // The owner cannot be removed.
     if matches!(collaborator_to_remove.role, AlbumRole::Owner) {
         return Err(AlbumError::Internal(color_eyre::eyre::eyre!(
             "The album owner cannot be removed."

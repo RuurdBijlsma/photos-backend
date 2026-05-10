@@ -48,7 +48,7 @@ pub struct AddMediaToAlbumRequest {
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AddCollaboratorRequest {
-    pub user_email: String,
+    pub user_id: i32,
     pub role: AlbumRole,
 }
 

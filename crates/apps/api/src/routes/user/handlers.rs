@@ -3,7 +3,7 @@ use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_services::api::user::error::UserError;
 use common_services::api::user::interfaces::{
-    ContributorUser, UpdateUserProfileRequest, UserProfile,
+    SmallUser, UpdateUserProfileRequest, UserProfile,
 };
 use common_services::api::user::service::{get_user_profile, update_user_profile};
 use common_services::database::app_user::User;
@@ -56,8 +56,7 @@ pub async fn update_my_profile(
 #[axum::debug_handler]
 pub async fn list_users_handler(
     State(ctx): State<ApiContext>,
-    Extension(user): Extension<User>,
-) -> Result<Json<Vec<ContributorUser>>, UserError> {
+) -> Result<Json<Vec<SmallUser>>, UserError> {
     let users = UserStore::list_users(&ctx.pool).await?;
     Ok(Json(users.iter().map(|u| u.into()).collect()))
 }

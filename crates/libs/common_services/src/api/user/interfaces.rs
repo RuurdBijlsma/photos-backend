@@ -30,15 +30,15 @@ pub struct UpdateUserProfileRequest {
     pub avatar_id: Option<String>,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct ContributorUser {
+pub struct SmallUser {
     pub id: i32,
     pub name: String,
     pub avatar_id: Option<String>,
 }
 
-impl From<&User> for ContributorUser {
+impl From<&User> for SmallUser {
     fn from(value: &User) -> Self {
         Self {
             name: value.name.clone(),
@@ -48,7 +48,7 @@ impl From<&User> for ContributorUser {
     }
 }
 
-impl From<User> for ContributorUser {
+impl From<User> for SmallUser {
     fn from(value: User) -> Self {
         (&value).into()
     }

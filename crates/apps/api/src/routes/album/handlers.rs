@@ -241,7 +241,7 @@ pub async fn add_collaborator_handler(
     let collaborator = add_collaborator(
         &context.pool,
         &album_id,
-        &payload.user_email,
+        payload.user_id,
         payload.role,
         user.id,
     )
@@ -270,9 +270,9 @@ pub async fn add_collaborator_handler(
 pub async fn remove_collaborator_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    Path((album_id, collaborator_id)): Path<(String, i64)>,
+    Path((album_id, user_id)): Path<(String, i64)>,
 ) -> Result<StatusCode, AlbumError> {
-    remove_collaborator(&context.pool, &album_id, collaborator_id, user.id).await?;
+    remove_collaborator(&context.pool, &album_id, user_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
