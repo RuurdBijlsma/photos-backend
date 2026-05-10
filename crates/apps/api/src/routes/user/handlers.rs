@@ -49,11 +49,11 @@ pub async fn update_my_profile(
     Extension(user): Extension<User>,
     Json(payload): Json<UpdateUserProfileRequest>,
 ) -> Result<Json<UserProfile>, UserError> {
+    dbg!(&payload);
     let profile = update_user_profile(&ctx.pool, user.id, payload.name, payload.avatar_id).await?;
     Ok(Json(profile))
 }
 
-#[axum::debug_handler]
 pub async fn list_users_handler(
     State(ctx): State<ApiContext>,
 ) -> Result<Json<Vec<SmallUser>>, UserError> {

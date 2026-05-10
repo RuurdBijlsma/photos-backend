@@ -16,6 +16,7 @@ pub async fn get_all_people(
             id: p.id,
             name: p.name,
             photo_count: p.photo_count,
+            thumbnail_id: p.thumbnail_media_item_id,
         })
         .collect();
 
@@ -53,6 +54,7 @@ pub async fn get_person_photos(
             id: person.id,
             name: person.name,
             photo_count: person.photo_count,
+            thumbnail_id: person.thumbnail_media_item_id,
         }),
         items,
     })

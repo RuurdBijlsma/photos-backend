@@ -4,13 +4,7 @@ use thiserror::Error;
 use crate::database::DbError;
 
 #[derive(Debug, Error)]
-pub enum UserError {
-    #[error("User not found")]
-    UserNotFound,
-
-    #[error("Media item not found or not accessible")]
-    InvalidAvatar,
-
+pub enum SystemError {
     #[error("Database error: {0}")]
     Db(#[from] DbError),
 
@@ -18,11 +12,9 @@ pub enum UserError {
     Internal(String),
 }
 
-impl IntoResponse for UserError {
+impl IntoResponse for SystemError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
-            Self::UserNotFound => (StatusCode::NOT_FOUND, self.to_string()),
-            Self::InvalidAvatar => (StatusCode::BAD_REQUEST, self.to_string()),
             Self::Db(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),
@@ -34,7 +26,7 @@ impl IntoResponse for UserError {
     }
 }
 
-impl From<sqlx::Error> for UserError {
+impl From<sqlx::Error> for SystemError {
     fn from(err: sqlx::Error) -> Self {
         Self::Db(err.into())
     }
