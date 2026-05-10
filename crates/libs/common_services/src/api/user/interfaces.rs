@@ -1,3 +1,4 @@
+use crate::database::app_user::User;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -27,4 +28,28 @@ pub struct UserProfile {
 pub struct UpdateUserProfileRequest {
     pub name: Option<String>,
     pub avatar_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ContributorUser {
+    pub id: i32,
+    pub name: String,
+    pub avatar_id: Option<String>,
+}
+
+impl From<&User> for ContributorUser {
+    fn from(value: &User) -> Self {
+        Self {
+            name: value.name.clone(),
+            id: value.id,
+            avatar_id: value.avatar_id.clone(),
+        }
+    }
+}
+
+impl From<User> for ContributorUser {
+    fn from(value: User) -> Self {
+        (&value).into()
+    }
 }
