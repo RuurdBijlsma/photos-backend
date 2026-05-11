@@ -2,10 +2,16 @@ use crate::database::jobs::{JobStatus, JobType};
 use app_state::{AppSettings, IngestSettings};
 use bon::builder;
 use color_eyre::eyre::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::to_value;
 use sqlx::{PgPool, PgTransaction};
 use tracing::{info, warn};
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct IngestMetadataPayload {
+    pub album_id: String,
+    pub remote_user_identity: String,
+}
 
 /// Enqueues a job for a specific file, such as ingestion or removal.
 ///
@@ -82,10 +88,12 @@ pub async fn enqueue_full_ingest(
     settings: &AppSettings,
     relative_path: &str,
     user_id: i32,
+    payload: Option<IngestMetadataPayload>,
 ) -> Result<()> {
-    enqueue_job::<()>(pool, settings, JobType::IngestMetadata)
+    enqueue_job(pool, settings, JobType::IngestMetadata)
         .relative_path(relative_path)
         .user_id(user_id)
+        .maybe_payload(payload.as_ref())
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::IngestThumbnails)

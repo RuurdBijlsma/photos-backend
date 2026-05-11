@@ -1,17 +1,16 @@
 use crate::context::WorkerContext;
-use crate::handlers::JobResult;
 use crate::handlers::common::remote_user::get_or_create_remote_user;
+use crate::handlers::JobResult;
 use app_state::MakeRelativePath;
-use color_eyre::Result;
 use color_eyre::eyre::eyre;
+use color_eyre::Result;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::user_store::UserStore;
-use common_services::job_queue::enqueue_full_ingest;
+use common_services::job_queue::{enqueue_full_ingest, IngestMetadataPayload};
 use common_types::ImportAlbumItemPayload;
 use serde_json::from_value;
-use sqlx::query;
 use std::path::Path;
 use std::slice;
 use tokio::fs;
@@ -76,19 +75,10 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         )
         .await?;
 
-    query!(
-        r#"
-        INSERT INTO pending_album_media_items (relative_path, album_id, remote_user_identity)
-        VALUES ($1, $2, $3)
-        "#,
-        relative_path,
-        payload.local_album_id,
-        remote_identity,
-    )
-    .execute(&context.pool)
-    .await?;
-
-    enqueue_full_ingest(&context.pool, &context.settings, &relative_path, user_id).await?;
+    enqueue_full_ingest(&context.pool, &context.settings, &relative_path, user_id, Some(IngestMetadataPayload{
+        album_id: payload.local_album_id,
+        remote_user_identity: remote_identity
+    })).await?;
 
     Ok(JobResult::Done)
 }

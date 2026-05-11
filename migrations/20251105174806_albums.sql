@@ -69,17 +69,5 @@ CREATE TABLE album_collaborator
 
 CREATE INDEX idx_album_collaborator_user_album ON album_collaborator (user_id, album_id);
 
--- A table to link imported media to a target album and remote owner before ingestion is complete.
-CREATE TABLE pending_album_media_items
-(
-    relative_path        TEXT PRIMARY KEY,
-    album_id             VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
-    -- The string identity of the original owner (e.g., 'alice@photos.alice.com').
-    remote_user_identity TEXT        NOT NULL
-);
-
--- Index for finding all pending items for a specific album import.
-CREATE INDEX idx_pending_album_media_items_target_album_id ON pending_album_media_items (album_id);
-
 -- For search suggestion performance:
 CREATE INDEX idx_album_name ON album (name);

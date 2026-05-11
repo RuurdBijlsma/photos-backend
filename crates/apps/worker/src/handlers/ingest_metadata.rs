@@ -6,12 +6,13 @@ use crate::jobs::management::is_job_cancelled;
 use app_state::constants;
 use color_eyre::eyre::Context;
 use color_eyre::{Result, eyre::eyre};
-use common_services::database::album::pending_album_media_item::PendingAlbumMediaItem;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
+use common_services::job_queue::IngestMetadataPayload;
 use common_services::utils::nice_id;
 use media_analyzer::MediaMetadata;
+use serde_json::from_value;
 use sqlx::PgPool;
 use std::path::Path;
 use tracing::debug;
@@ -32,6 +33,12 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let file_hash = hash_file(&file_path)?;
     let media_item_id = nice_id(constants().database.media_item_id_length);
     let media_info = get_media_info(context, &file_path, &file_hash).await?;
+    let payload = if let Some(payload_json) = &job.payload {
+        let payload: IngestMetadataPayload = from_value(payload_json.clone())?;
+        Some(payload)
+    } else {
+        None
+    };
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
         return Ok(JobResult::Cancelled);
     }
@@ -41,6 +48,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         relative_path,
         media_info,
         &media_item_id,
+        payload,
     )
     .await?;
     Ok(JobResult::Done)
@@ -75,20 +83,10 @@ async fn store_media_item(
     relative_path: &str,
     analyze_result: MediaMetadata,
     new_id: &str,
+    pending_payload: Option<IngestMetadataPayload>,
 ) -> Result<()> {
     let mut tx = pool.begin().await?;
-    let pending = sqlx::query_as!(
-        PendingAlbumMediaItem,
-        r#"
-        DELETE FROM pending_album_media_items
-        WHERE relative_path = $1
-        RETURNING album_id, remote_user_identity, relative_path
-        "#,
-        relative_path
-    )
-    .fetch_optional(&mut *tx)
-    .await?;
-    let remote_user_id = if let Some(info) = &pending {
+    let remote_user_id = if let Some(info) = &pending_payload {
         Some(get_or_create_remote_user(&mut tx, user_id, &info.remote_user_identity).await?)
     } else {
         None
@@ -103,9 +101,22 @@ async fn store_media_item(
         &analyze_result.into(),
     )
     .await?;
-    if let Some(info) = &pending {
+    if let Some(info) = &pending_payload {
         AlbumStore::add_media_items(&mut *tx, &info.album_id, &[new_id.to_string()], user_id)
             .await?;
+        if let Some(album) = AlbumStore::find_by_id(&mut *tx, &info.album_id).await?
+            && album.thumbnail_id.is_none()
+        {
+            AlbumStore::update(
+                &mut *tx,
+                &info.album_id,
+                None,
+                None,
+                Some(new_id.to_owned()),
+                None,
+            )
+            .await?;
+        }
     }
     tx.commit().await?;
     Ok(())

@@ -73,7 +73,7 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
             // Re-ingest files with missing thumbnails, as long as the fs file exists.
 
             if let Some(user) = UserStore::find_user_by_relative_path(pool, &relative_path).await? {
-                enqueue_full_ingest(pool, settings, &relative_path, user.id).await?;
+                enqueue_full_ingest(pool, settings, &relative_path, user.id, None).await?;
             } else {
                 alert!("[Sync - Thumbnail scan] Cannot find user from relative path.");
             }

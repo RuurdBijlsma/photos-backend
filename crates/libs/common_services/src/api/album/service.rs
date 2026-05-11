@@ -465,14 +465,16 @@ pub async fn accept_invite(
     // 2. Create the new album locally
     let album_id = nice_id(constants().database.album_id_length);
     let mut tx = pool.begin().await?;
+    let description = payload.description.filter(|d| !d.trim().is_empty());
+    
     let album = AlbumStore::create(
         &mut *tx,
         &album_id,
         user_id,
         &payload.name,
-        payload.description,
+        description,
         None,
-        AlbumSort::None,
+        AlbumSort::DateAsc,
         false,
     )
     .await?;
