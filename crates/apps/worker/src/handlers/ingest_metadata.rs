@@ -6,6 +6,7 @@ use crate::jobs::management::is_job_cancelled;
 use app_state::constants;
 use color_eyre::eyre::Context;
 use color_eyre::{Result, eyre::eyre};
+use common_services::api::album::interfaces::AlbumSort;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
@@ -104,6 +105,11 @@ async fn store_media_item(
     if let Some(info) = &pending_payload {
         AlbumStore::add_media_items(&mut *tx, &info.album_id, &[new_id.to_string()], user_id)
             .await?;
+        if let Some(album) = AlbumStore::find_by_id(&mut *tx, &info.album_id).await?
+            && album.sort_mode != AlbumSort::None
+        {
+            AlbumStore::order_album_media(&mut tx, &info.album_id, album.sort_mode).await?;
+        }
         if let Some(album) = AlbumStore::find_by_id(&mut *tx, &info.album_id).await?
             && album.thumbnail_id.is_none()
         {

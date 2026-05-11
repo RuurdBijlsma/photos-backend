@@ -474,7 +474,7 @@ pub async fn accept_invite(
         &payload.name,
         description,
         None,
-        AlbumSort::DateAsc,
+        AlbumSort::DateDesc,
         false,
     )
     .await?;
