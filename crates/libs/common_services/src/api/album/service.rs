@@ -18,6 +18,8 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;
 
+const DEFAULT_ALBUM_SORT: AlbumSort = AlbumSort::DateDesc;
+
 #[instrument(skip(executor))]
 async fn check_user_role(
     executor: impl Executor<'_, Database = Postgres>,
@@ -176,7 +178,7 @@ pub async fn create_album(
         name,
         description,
         None,
-        AlbumSort::None,
+        DEFAULT_ALBUM_SORT,
         is_public,
     )
     .await?;
@@ -187,6 +189,8 @@ pub async fn create_album(
             AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
         }
     }
+
+    AlbumStore::sort_media_items(&mut *tx, &album_id, DEFAULT_ALBUM_SORT).await?;
 
     tx.commit().await?;
 
@@ -218,7 +222,7 @@ pub async fn add_media_to_album(
 
     // If NOT manually sorted, run the reorder logic immediately to interleave them
     if album.sort_mode != AlbumSort::None {
-        AlbumStore::order_album_media(&mut tx, album_id, album.sort_mode).await?;
+        AlbumStore::sort_media_items(&mut *tx, album_id, album.sort_mode).await?;
     }
 
     if album.thumbnail_id.is_none()
@@ -466,7 +470,7 @@ pub async fn accept_invite(
     let album_id = nice_id(constants().database.album_id_length);
     let mut tx = pool.begin().await?;
     let description = payload.description.filter(|d| !d.trim().is_empty());
-    
+
     let album = AlbumStore::create(
         &mut *tx,
         &album_id,
@@ -474,7 +478,7 @@ pub async fn accept_invite(
         &payload.name,
         description,
         None,
-        AlbumSort::DateDesc,
+        DEFAULT_ALBUM_SORT,
         false,
     )
     .await?;
@@ -612,7 +616,7 @@ pub async fn reorder_media_items(
 
     let mut tx = pool.begin().await?;
 
-    AlbumStore::reorder_media_items(&mut tx, album_id, media_item_ids).await?;
+    AlbumStore::reorder_media_items(&mut *tx, album_id, media_item_ids).await?;
 
     // Mark album as manually sorted
     sqlx::query!(

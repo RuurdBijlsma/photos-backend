@@ -5,7 +5,7 @@ use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use common_types::pb::api::{CollaboratorSummary, SimpleTimelineItem, TimelineItem};
 use sqlx::postgres::PgQueryResult;
-use sqlx::{PgExecutor, PgTransaction};
+use sqlx::{PgConnection, PgExecutor};
 
 pub struct AlbumStore;
 
@@ -282,8 +282,8 @@ impl AlbumStore {
     }
 
     /// Resets the ranks of all items in an album based on specified criteria.
-    pub async fn order_album_media(
-        tx: &mut PgTransaction<'_>,
+    pub async fn sort_media_items(
+        executor: &mut PgConnection,
         album_id: &str,
         sort_mode: AlbumSort,
     ) -> Result<(), DbError> {
@@ -291,10 +291,10 @@ impl AlbumStore {
             return Ok(());
         }
 
-        let items = Self::list_sorted_media_items(&mut **tx, album_id, sort_mode).await?;
+        let items = Self::list_sorted_media_items(&mut *executor, album_id, sort_mode).await?;
         let ids: Vec<String> = items.into_iter().map(|i| i.id).collect();
 
-        Self::reorder_media_items(tx, album_id, &ids).await?;
+        Self::reorder_media_items(executor, album_id, &ids).await?;
 
         // Set the `sort_mode` flag
         sqlx::query!(
@@ -302,7 +302,7 @@ impl AlbumStore {
             album_id,
             sort_mode as AlbumSort,
         )
-        .execute(&mut **tx)
+        .execute(&mut *executor)
         .await?;
 
         Ok(())
@@ -342,7 +342,7 @@ impl AlbumStore {
     }
 
     pub async fn reorder_media_items(
-        tx: &mut PgTransaction<'_>,
+        executor: &mut PgConnection,
         album_id: &str,
         media_item_ids: &[String],
     ) -> Result<(), DbError> {
@@ -365,7 +365,7 @@ impl AlbumStore {
             &ranks,
             album_id
         )
-        .execute(&mut **tx)
+        .execute(executor)
         .await?;
 
         Ok(())
