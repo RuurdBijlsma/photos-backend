@@ -3,12 +3,13 @@ use crate::handlers::JobResult;
 use app_state::{AppSettings, MakeRelativePath};
 use color_eyre::eyre::Result;
 use common_services::database::jobs::{Job, JobType};
+use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::user_store::UserStore;
 use common_services::job_queue::{bulk_enqueue_full_ingest, enqueue_job};
 use sqlx::PgPool;
 use std::collections::HashSet;
 use std::path::Path;
-use tracing::{error, info};
+use tracing::info;
 use walkdir::WalkDir;
 
 /// Checks if a file path has an extension present in a given set of allowed extensions.
@@ -60,9 +61,6 @@ pub async fn sync_user_files_to_db(
         .iter()
         .filter(|f| f.starts_with(&user_rel_path))
         .collect::<Vec<&String>>();
-    // todo: exclude from fs_paths where another user has a more specific media_folder.
-    // 1. get all user media_folders, filter so that only media_folders that are subfolders of current user's media_folder remain
-    // 2. filter all fs_paths that start with the subfolders from ^
     let fs_paths: HashSet<String> = all_files
         .into_iter()
         .flat_map(|p| p.make_relative(&settings.ingest.media_root))
@@ -74,7 +72,7 @@ pub async fn sync_user_files_to_db(
         })
         .collect();
 
-    let db_paths: HashSet<String> = sqlx::query_scalar!(
+    let db_paths_all: HashSet<String> = sqlx::query_scalar!(
         "SELECT relative_path FROM media_item WHERE user_id = $1",
         user_id
     )
@@ -83,8 +81,8 @@ pub async fn sync_user_files_to_db(
     .into_iter()
     .collect();
 
-    let to_ingest: Vec<_> = fs_paths.difference(&db_paths).cloned().collect();
-    let to_remove: Vec<_> = db_paths.difference(&fs_paths).cloned().collect();
+    let to_ingest: Vec<_> = fs_paths.difference(&db_paths_all).cloned().collect();
+    let to_remove: Vec<_> = db_paths_all.difference(&fs_paths).cloned().collect();
 
     bulk_enqueue_full_ingest(pool, &settings.ingest, &to_ingest, user_id).await?;
 
@@ -94,15 +92,9 @@ pub async fn sync_user_files_to_db(
         enqueue_job::<()>(pool, settings, JobType::ClusterPhotos).call()
     )?;
 
-    for rel_path in to_remove {
-        if let Err(e) = enqueue_job::<()>(pool, settings, JobType::Remove)
-            .relative_path(rel_path)
-            .user_id(user_id)
-            .call()
-            .await
-        {
-            error!("Error enqueueing file remove: {:?}", e.to_string());
-        }
+    if !to_remove.is_empty() {
+        info!("Cleaning up {} missing files for user {}", to_remove.len(), user_id);
+        MediaItemStore::delete_by_relative_paths(pool, &to_remove).await?;
     }
     Ok(())
 }

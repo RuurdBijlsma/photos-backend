@@ -269,6 +269,10 @@ pub async fn start_processing(
         .user_id(user_id)
         .call()
         .await?;
+    enqueue_job::<()>(pool, settings, JobType::SyncThumbnails)
+        .user_id(user_id)
+        .call()
+        .await?;
 
     Ok(updated_user)
 }

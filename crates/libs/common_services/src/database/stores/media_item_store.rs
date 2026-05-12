@@ -392,6 +392,40 @@ impl MediaItemStore {
         .await?)
     }
 
+    /// Deletes multiple media items by their relative paths.
+    pub async fn delete_by_relative_paths(
+        executor: impl Executor<'_, Database = Postgres>,
+        relative_paths: &[String],
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            r#"
+            DELETE FROM media_item
+            WHERE relative_path = ANY($1)
+            "#,
+            relative_paths
+        )
+        .execute(executor)
+        .await?)
+    }
+
+    /// Marks a media item as deleted without removing it from the database.
+    pub async fn soft_delete_by_relative_path(
+        executor: impl Executor<'_, Database = Postgres>,
+        relative_path: &str,
+    ) -> Result<Option<String>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            UPDATE media_item
+            SET deleted = true
+            WHERE relative_path = $1
+            RETURNING id
+            "#,
+            relative_path
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
     pub async fn update_remote_user_id(
         executor: impl Executor<'_, Database = Postgres>,
         id: &str,
