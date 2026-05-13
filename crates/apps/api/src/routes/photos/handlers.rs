@@ -1,8 +1,6 @@
 use app_state::IngestSettings;
 use axum::{Extension, Json, extract};
-use common_services::api::photos::interfaces::{
-    ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse,
-};
+use common_services::api::photos::interfaces::{ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse, UpdateMediaItemRequest};
 use common_services::api::photos::service::{
     download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
 };
@@ -20,6 +18,7 @@ use common_services::database::media_item_store::MediaItemStore;
 use material_color_utils::utils::color_utils::Argb;
 use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
+use common_services::api::album::interfaces::UpdateAlbumRequest;
 
 #[utoipa::path(
     get,
@@ -49,6 +48,15 @@ pub async fn get_full_item_handler(
     } else {
         Err(PhotosError::MediaNotFound(params.id))
     }
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn update_media_item_handler(
+    extract::State(context): extract::State<ApiContext>,
+    Extension(user): Extension<User>,
+    Json(payload): Json<UpdateMediaItemRequest>,
+) -> Result<Json<FullMediaItem>, PhotosError> {
+  todo!()
 }
 
 #[utoipa::path(

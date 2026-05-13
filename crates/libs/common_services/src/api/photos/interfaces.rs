@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
@@ -13,6 +14,12 @@ pub struct RandomPhotoResponse {
 #[serde(rename_all = "camelCase")]
 pub struct GetMediaItemParams {
     pub id: String,
+}
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMediaItemRequest {
+    pub datetime_local: NaiveDateTime
 }
 
 #[derive(Serialize, Deserialize, IntoParams, ToSchema, Debug)]
