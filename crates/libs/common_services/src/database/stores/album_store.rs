@@ -96,8 +96,8 @@ impl AlbumStore {
             UPDATE album
             SET
                 name = COALESCE($2, name),
-                description = CASE WHEN $3::boolean THEN $4 ELSE description END,
-                thumbnail_id = CASE WHEN $5::boolean THEN $6 ELSE thumbnail_id END,
+                description = CASE WHEN $3::boolean THEN description ELSE $4 END,
+                thumbnail_id = CASE WHEN $5::boolean THEN thumbnail_id ELSE $6 END,
                 is_public = COALESCE($7, is_public),
                 updated_at = now()
             WHERE id = $1

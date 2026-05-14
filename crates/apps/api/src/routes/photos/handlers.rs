@@ -1,9 +1,12 @@
 use app_state::IngestSettings;
 use axum::extract::{Path, Query, State};
 use axum::{Extension, Json};
-use common_services::api::photos::interfaces::{ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest};
+use common_services::api::photos::interfaces::{
+    ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest,
+};
 use common_services::api::photos::service::{
     download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
+    update_media_item,
 };
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
@@ -19,7 +22,6 @@ use common_services::database::media_item_store::MediaItemStore;
 use material_color_utils::utils::color_utils::Argb;
 use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
-use common_services::database::UpdateField;
 
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_full_item_handler(
@@ -44,27 +46,7 @@ pub async fn update_media_item_handler(
     Path(media_item_id): Path<String>,
     Json(payload): Json<UpdateMediaItemRequest>,
 ) -> Result<(), PhotosError> {
-    let user_id = MediaItemStore::find_user_by_id(&context.pool, &media_item_id)
-        .await?
-        .ok_or_else(|| PhotosError::MediaNotFound(media_item_id.clone()))?;
-
-    if user_id != user.id {
-        return Err(PhotosError::AccessDenied);
-    }
-
-    // todo: recalculate taken_at_utc en sort_timestamp
-    dbg!(&payload);
-
-    MediaItemStore::update(
-        &context.pool,
-        &media_item_id,
-        payload.user_caption,
-        payload.taken_at_local,
-        UpdateField::Ignore, // taken_at_utc
-        None, // sort_timestamp
-        payload.use_panorama_viewer,
-    )
-    .await?;
+    update_media_item(&context.pool, &media_item_id, user.id, &payload).await?;
 
     Ok(())
 }

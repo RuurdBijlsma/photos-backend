@@ -72,6 +72,8 @@ CREATE TABLE media_item
     duration_ms         BIGINT,
     taken_at_local      TIMESTAMP   NOT NULL,
     taken_at_utc        TIMESTAMPTZ,
+    og_taken_at_local   TIMESTAMP   NOT NULL,
+    og_taken_at_utc     TIMESTAMPTZ,
     sort_timestamp      TIMESTAMPTZ NOT NULL,
     use_panorama_viewer BOOLEAN     NOT NULL,
     orientation         INT         NOT NULL DEFAULT 1,

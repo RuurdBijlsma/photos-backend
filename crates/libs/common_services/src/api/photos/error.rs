@@ -35,6 +35,9 @@ pub enum PhotosError {
 
     #[error("Error generating a material color theme.")]
     ColorTheme(#[from] ColorParseError),
+
+    #[error("Invalid datetime format")]
+    InvalidDateTime(#[from] chrono::ParseError),
 }
 
 impl IntoResponse for PhotosError {
@@ -58,6 +61,7 @@ impl IntoResponse for PhotosError {
             Self::Cancelled => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
             Self::InvalidRange => (StatusCode::RANGE_NOT_SATISFIABLE, self.to_string()),
             Self::ColorTheme(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
+            Self::InvalidDateTime(err) => (StatusCode::BAD_REQUEST, err.to_string()),
         };
 
         let body = Json(json!({ "error": error_message }));

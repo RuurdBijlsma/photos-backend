@@ -1,4 +1,3 @@
-use crate::database::{DbError, UpdateField};
 use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
@@ -10,8 +9,8 @@ use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
-use app_state::constants;
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use crate::database::{DbError, UpdateField, with_fallback_timezone};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
@@ -136,6 +135,8 @@ impl MediaItemStore {
             mi.duration_ms,
             mi.taken_at_local,
             mi.taken_at_utc,
+            mi.og_taken_at_local,
+            mi.og_taken_at_utc,
             mi.use_panorama_viewer,
             mi.has_thumbnails,
             mi.user_caption,
@@ -191,17 +192,8 @@ impl MediaItemStore {
         remote_user_id: Option<i32>,
         media_item: &CreateFullMediaItem,
     ) -> Result<(), DbError> {
-        let sort_timestamp = media_item.taken_at_utc.unwrap_or_else(|| {
-            constants().fallback_timezone.as_ref().map_or_else(
-                || media_item.taken_at_local.and_utc(),
-                |tz| {
-                    tz.from_local_datetime(&media_item.taken_at_local)
-                        .earliest()
-                        .expect("Can't get datetime at timezone.")
-                        .with_timezone(&Utc)
-                },
-            )
-        });
+        let sort_timestamp =
+            with_fallback_timezone(media_item.taken_at_utc, &media_item.taken_at_local);
         let filename = Path::new(relative_path).file_name().map_or_else(
             || relative_path.to_string(),
             |f| f.to_string_lossy().to_string(),
@@ -212,10 +204,11 @@ impl MediaItemStore {
             r#"
             INSERT INTO media_item (
                 id, relative_path, filename, user_id, remote_user_id, hash, width, height,
-                is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp, orientation,
+                is_video, duration_ms, taken_at_local, taken_at_utc,
+                og_taken_at_local, og_taken_at_utc, sort_timestamp, orientation,
                 use_panorama_viewer
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             "#,
             id,
             relative_path,
@@ -229,6 +222,8 @@ impl MediaItemStore {
             media_item.duration_ms,
             media_item.taken_at_local,
             media_item.taken_at_utc,
+            media_item.og_taken_at_local,
+            media_item.og_taken_at_utc,
             sort_timestamp,
             media_item.orientation,
             media_item.use_panorama_viewer
@@ -435,13 +430,15 @@ impl MediaItemStore {
         sort_timestamp: Option<DateTime<Utc>>,
         use_panorama_viewer: Option<bool>,
     ) -> Result<PgQueryResult, DbError> {
+
+        dbg!(&id, &taken_at_utc.clone(), taken_at_utc.clone().is_ignore(), &taken_at_utc.clone().value());
         Ok(sqlx::query!(
             r#"
         UPDATE media_item
         SET
-            user_caption = CASE WHEN $2::boolean THEN $3 ELSE user_caption END,
+            user_caption = CASE WHEN $2::boolean THEN user_caption ELSE $3 END,
             taken_at_local = COALESCE($4, taken_at_local),
-            taken_at_utc = CASE WHEN $5::boolean THEN $6 ELSE taken_at_utc END,
+            taken_at_utc = CASE WHEN $5::boolean THEN taken_at_utc ELSE $6 END,
             sort_timestamp = COALESCE($7, sort_timestamp),
             use_panorama_viewer = COALESCE($8, use_panorama_viewer),
             updated_at = now()

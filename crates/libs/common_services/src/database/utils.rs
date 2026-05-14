@@ -1,4 +1,5 @@
 use app_state::constants;
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use color_eyre::eyre::Result;
 use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
@@ -70,4 +71,21 @@ pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Poo
         }
     }
     Ok(pool)
+}
+
+pub fn with_fallback_timezone(
+    utc_dt: Option<DateTime<Utc>>,
+    local_dt: &NaiveDateTime,
+) -> DateTime<Utc> {
+    utc_dt.unwrap_or_else(|| {
+        constants().fallback_timezone.as_ref().map_or_else(
+            || local_dt.and_utc(),
+            |tz| {
+                tz.from_local_datetime(&local_dt)
+                    .earliest()
+                    .expect("Can't get datetime at timezone.")
+                    .with_timezone(&Utc)
+            },
+        )
+    })
 }

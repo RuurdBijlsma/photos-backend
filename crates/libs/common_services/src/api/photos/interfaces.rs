@@ -1,4 +1,3 @@
-use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
@@ -35,7 +34,7 @@ pub struct UpdateMediaItemRequest {
     #[serde(default)]
     pub user_caption: UpdateField<String>,
     #[serde(default)]
-    pub taken_at_local: Option<NaiveDateTime>,
+    pub taken_at_local: Option<String>,
     #[serde(default)]
     pub use_panorama_viewer: Option<bool>,
 }
