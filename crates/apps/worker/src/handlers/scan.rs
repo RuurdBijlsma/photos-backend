@@ -93,7 +93,11 @@ pub async fn sync_user_files_to_db(
     )?;
 
     if !to_remove.is_empty() {
-        info!("Cleaning up {} missing files for user {}", to_remove.len(), user_id);
+        info!(
+            "Cleaning up {} missing files for user {}",
+            to_remove.len(),
+            user_id
+        );
         MediaItemStore::delete_by_relative_paths(pool, &to_remove).await?;
     }
     Ok(())

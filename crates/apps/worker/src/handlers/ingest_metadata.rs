@@ -17,6 +17,7 @@ use serde_json::from_value;
 use sqlx::PgPool;
 use std::path::Path;
 use tracing::debug;
+use common_services::database::UpdateField;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let relative_path = job
@@ -117,8 +118,8 @@ async fn store_media_item(
                 &mut *tx,
                 &info.album_id,
                 None,
-                None,
-                Some(new_id.to_owned()),
+                UpdateField::Ignore,
+                UpdateField::Value(new_id.to_owned()),
                 None,
             )
             .await?;

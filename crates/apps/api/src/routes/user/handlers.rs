@@ -2,9 +2,7 @@ use crate::api_state::ApiContext;
 use axum::extract::{Path, State};
 use axum::{Extension, Json};
 use common_services::api::user::error::UserError;
-use common_services::api::user::interfaces::{
-    SmallUser, UpdateUserProfileRequest, UserProfile,
-};
+use common_services::api::user::interfaces::{SmallUser, UpdateUserProfileRequest, UserProfile};
 use common_services::api::user::service::{get_user_profile, update_user_profile};
 use common_services::database::app_user::User;
 use common_services::database::user_store::UserStore;

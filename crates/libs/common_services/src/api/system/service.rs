@@ -11,8 +11,8 @@ pub async fn get_system_stats(pool: &PgPool, user_id: i32) -> Result<SystemStats
         "#,
         user_id
     )
-        .fetch_one(pool)
-        .await?;
+    .fetch_one(pool)
+    .await?;
 
     Ok(SystemStats {
         has_clustered_people: stats.has_people,

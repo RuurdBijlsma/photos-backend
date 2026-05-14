@@ -1,4 +1,4 @@
-use crate::database::DbError;
+use crate::database::{DbError, UpdateField};
 use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
@@ -11,7 +11,7 @@ use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
 use app_state::constants;
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
@@ -423,6 +423,40 @@ impl MediaItemStore {
             relative_path
         )
         .fetch_optional(executor)
+        .await?)
+    }
+
+    pub async fn update(
+        executor: impl Executor<'_, Database = Postgres>,
+        id: &str,
+        user_caption: UpdateField<String>,
+        taken_at_local: Option<NaiveDateTime>,
+        taken_at_utc: UpdateField<DateTime<Utc>>,
+        sort_timestamp: Option<DateTime<Utc>>,
+        use_panorama_viewer: Option<bool>,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            r#"
+        UPDATE media_item
+        SET
+            user_caption = CASE WHEN $2::boolean THEN $3 ELSE user_caption END,
+            taken_at_local = COALESCE($4, taken_at_local),
+            taken_at_utc = CASE WHEN $5::boolean THEN $6 ELSE taken_at_utc END,
+            sort_timestamp = COALESCE($7, sort_timestamp),
+            use_panorama_viewer = COALESCE($8, use_panorama_viewer),
+            updated_at = now()
+        WHERE id = $1
+        "#,
+            id,
+            user_caption.is_ignore(),
+            user_caption.value(),
+            taken_at_local,
+            taken_at_utc.is_ignore(),
+            taken_at_utc.value(),
+            sort_timestamp,
+            use_panorama_viewer,
+        )
+        .execute(executor)
         .await?)
     }
 

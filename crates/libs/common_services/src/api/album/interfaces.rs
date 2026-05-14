@@ -5,6 +5,7 @@ use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use utoipa::{IntoParams, ToSchema};
+use crate::database::UpdateField;
 // --- Request Payloads ---
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, ToSchema)]
@@ -56,8 +57,8 @@ pub struct AddCollaboratorRequest {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAlbumRequest {
     pub name: Option<String>,
-    pub description: Option<String>,
-    pub thumbnail_id: Option<String>,
+    pub description: UpdateField<String>,
+    pub thumbnail_id: UpdateField<String>,
     pub is_public: Option<bool>,
 }
 

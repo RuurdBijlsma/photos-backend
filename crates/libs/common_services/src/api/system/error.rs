@@ -1,7 +1,7 @@
+use crate::database::DbError;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
-use crate::database::DbError;
 
 #[derive(Debug, Error)]
 pub enum SystemError {

@@ -1,5 +1,6 @@
 use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort};
 use crate::api::album::error::AlbumError;
+use crate::database::UpdateField;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
@@ -186,7 +187,15 @@ pub async fn create_album(
     if !media_item_ids.is_empty() {
         AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
         if let Some(thumb) = get_representative_thumbnail(&mut tx, media_item_ids).await? {
-            AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
+            AlbumStore::update(
+                &mut *tx,
+                &album_id,
+                None,
+                UpdateField::Ignore,
+                UpdateField::Value(thumb),
+                None,
+            )
+            .await?;
         }
     }
 
@@ -228,7 +237,15 @@ pub async fn add_media_to_album(
     if album.thumbnail_id.is_none()
         && let Some(tid) = get_representative_thumbnail(&mut tx, media_item_ids).await?
     {
-        AlbumStore::update(&mut *tx, album_id, None, None, Some(tid), None).await?;
+        AlbumStore::update(
+            &mut *tx,
+            album_id,
+            None,
+            UpdateField::Ignore,
+            UpdateField::Value(tid),
+            None,
+        )
+        .await?;
     }
 
     tx.commit().await?;
@@ -266,8 +283,15 @@ pub async fn remove_media_from_album(
                 .await?;
 
                 if let Some(thumbnail_id) = get_representative_thumbnail(&mut tx, &ids).await? {
-                    AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
-                        .await?;
+                    AlbumStore::update(
+                        &mut *tx,
+                        album_id,
+                        None,
+                        UpdateField::Ignore,
+                        UpdateField::Value(thumbnail_id),
+                        None,
+                    )
+                    .await?;
                 }
                 break;
             }
@@ -367,8 +391,8 @@ pub async fn update_album(
     album_id: &str,
     user_id: i32,
     name: Option<String>,
-    description: Option<String>,
-    thumbnail_id: Option<String>,
+    description: UpdateField<String>,
+    thumbnail_id: UpdateField<String>,
     is_public: Option<bool>,
 ) -> Result<Album, AlbumError> {
     // Permission Check: Only the owner can update album details.
@@ -379,14 +403,15 @@ pub async fn update_album(
     }
 
     // At least one field must be provided for the update.
-    if name.is_none() && description.is_none() && thumbnail_id.is_none() && is_public.is_none() {
+    if name.is_none() && description.is_ignore() && thumbnail_id.is_ignore() && is_public.is_none()
+    {
         let album = AlbumStore::find_by_id(pool, album_id)
             .await?
             .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()))?;
         return Ok(album);
     }
 
-    if let Some(thumbnail_id) = &thumbnail_id {
+    if let UpdateField::Value(thumbnail_id) = &thumbnail_id {
         let exists = AlbumStore::has_media_item(pool, album_id, thumbnail_id).await?;
         if !exists {
             return Err(AlbumError::BadRequest(
@@ -398,20 +423,6 @@ pub async fn update_album(
     let updated_album =
         AlbumStore::update(pool, album_id, name, description, thumbnail_id, is_public).await?;
     Ok(updated_album)
-}
-
-pub async fn remove_album_description(
-    pool: &PgPool,
-    album_id: &str,
-    user_id: i32,
-) -> Result<(), AlbumError> {
-    if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumError::NotFound(
-            "Album not found or permission denied.".to_string(),
-        ));
-    }
-    AlbumStore::remove_description(pool, album_id).await?;
-    Ok(())
 }
 
 #[instrument(skip(pool))]

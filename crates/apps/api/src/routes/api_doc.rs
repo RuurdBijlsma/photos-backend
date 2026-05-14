@@ -22,9 +22,7 @@ use utoipa::{Modify, OpenApi};
         onboarding::handlers::post_start_processing,
         // Photos handlers
         photos::handlers::get_random_photo,
-        photos::handlers::get_full_item_handler,
         photos::handlers::get_color_theme_handler,
-        photos::handlers::download_full_file,
         // Album handlers
         album::handlers::create_album_handler,
         album::handlers::get_user_albums_handler,

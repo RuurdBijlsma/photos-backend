@@ -30,7 +30,7 @@ pub fn extract_token_claims(token: &str, jwt_secret: &str) -> Result<AlbumShareC
 /// signed by a different server. The signature will be verified by the remote server
 /// when the token is actually used.
 pub fn insecure_extract_token_claims(token: &str) -> Result<AlbumShareClaims> {
-  jsonwebtoken::dangerous::insecure_decode::<AlbumShareClaims>(token)
+    jsonwebtoken::dangerous::insecure_decode::<AlbumShareClaims>(token)
         .map(|t| t.claims)
         .map_err(Into::into)
 }

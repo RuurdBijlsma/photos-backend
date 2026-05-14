@@ -1,6 +1,6 @@
 use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSort, AlbumSortField};
 use crate::api::timeline::interfaces::SortDirection;
-use crate::database::DbError;
+use crate::database::{DbError, UpdateField};
 use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use common_types::pb::api::{CollaboratorSummary, SimpleTimelineItem, TimelineItem};
@@ -86,8 +86,8 @@ impl AlbumStore {
         executor: impl PgExecutor<'_>,
         album_id: &str,
         name: Option<String>,
-        description: Option<String>,
-        thumbnail_id: Option<String>,
+        description: UpdateField<String>,
+        thumbnail_id: UpdateField<String>,
         is_public: Option<bool>,
     ) -> Result<Album, DbError> {
         Ok(sqlx::query_as!(
@@ -95,12 +95,12 @@ impl AlbumStore {
             r#"
             UPDATE album
             SET
-                name = COALESCE($1, name),
-                description = COALESCE($2, description),
-                thumbnail_id = COALESCE($3, thumbnail_id),
-                is_public = COALESCE($4, is_public),
+                name = COALESCE($2, name),
+                description = CASE WHEN $3::boolean THEN $4 ELSE description END,
+                thumbnail_id = CASE WHEN $5::boolean THEN $6 ELSE thumbnail_id END,
+                is_public = COALESCE($7, is_public),
                 updated_at = now()
-            WHERE id = $5
+            WHERE id = $1
             RETURNING
                 id,
                 owner_id,
@@ -115,30 +115,15 @@ impl AlbumStore {
                 created_at,
                 sort_mode as "sort_mode: AlbumSort"
             "#,
+            album_id,
             name,
-            description,
-            thumbnail_id,
+            description.is_ignore(),
+            description.value(),
+            thumbnail_id.is_ignore(),
+            thumbnail_id.value(),
             is_public,
-            album_id
         )
         .fetch_one(executor)
-        .await?)
-    }
-
-    /// Updates the details of a specific album.
-    pub async fn remove_description(
-        executor: impl PgExecutor<'_>,
-        album_id: &str,
-    ) -> Result<PgQueryResult, DbError> {
-        Ok(sqlx::query!(
-            r#"
-            UPDATE album
-            SET description = NULL
-            WHERE id = $1
-            "#,
-            album_id
-        )
-        .execute(executor)
         .await?)
     }
 

@@ -12,7 +12,7 @@ use common_services::api::album::interfaces::{
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, delete_album,
-    generate_invite, get_album_media, get_sorted_album_media, remove_album_description,
+    generate_invite, get_album_media, get_sorted_album_media,
     remove_collaborator, remove_media_from_album, reorder_media_items, update_album,
 };
 use common_services::database::album::album::{Album, AlbumSummary};
@@ -141,15 +141,6 @@ pub async fn delete_album_handler(
     Path(album_id): Path<String>,
 ) -> Result<(), AlbumError> {
     delete_album(&context.pool, &album_id, user.id).await?;
-    Ok(())
-}
-
-pub async fn remove_album_description_handler(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<User>,
-    Path(album_id): Path<String>,
-) -> Result<(), AlbumError> {
-    remove_album_description(&context.pool, &album_id, user.id).await?;
     Ok(())
 }
 
