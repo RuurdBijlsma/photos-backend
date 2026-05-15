@@ -138,7 +138,7 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     // 5. Listen for WebSocket messages
-    let timeout = Duration::from_secs(60);
+    let timeout = Duration::from_mins(1);
     let start = Instant::now();
     let mut received_count = 0;
 
@@ -183,14 +183,14 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
         .collect();
     let fs_paths: HashSet<_> = photos
         .into_iter()
-        .chain(videos.into_iter())
+        .chain(videos)
         .map(|p| p.make_relative(&context.settings.ingest.media_root))
         .collect::<Result<_>>()?;
     assert_eq!(db_paths, fs_paths);
 
     // Wait for ingest thumbnails to complete
     let start = Instant::now();
-    let timeout = Duration::from_secs(120);
+    let timeout = Duration::from_mins(2);
     loop {
         let jobs_completed = sqlx::query_scalar!(
             "SELECT COUNT(id) FROM jobs WHERE job_type = 'ingest_thumbnails' AND status = 'done'"

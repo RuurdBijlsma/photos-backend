@@ -109,7 +109,7 @@ async fn store_media_item(
         if let Some(album) = AlbumStore::find_by_id(&mut *tx, &info.album_id).await?
             && album.sort_mode != AlbumSort::None
         {
-            AlbumStore::sort_media_items(&mut *tx, &info.album_id, album.sort_mode).await?;
+            AlbumStore::sort_media_items(&mut tx, &info.album_id, album.sort_mode).await?;
         }
         if let Some(album) = AlbumStore::find_by_id(&mut *tx, &info.album_id).await?
             && album.thumbnail_id.is_none()

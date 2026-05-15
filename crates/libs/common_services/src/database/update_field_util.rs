@@ -1,3 +1,4 @@
+#![allow(clippy::option_if_let_else)]
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -32,15 +33,6 @@ impl<T> UpdateField<T> {
             Self::Value(v) => UpdateField::Value(f(v)),
             Self::SetNull => UpdateField::SetNull,
             Self::Ignore => UpdateField::Ignore,
-        }
-    }
-}
-
-impl<T> From<Option<T>> for UpdateField<T> {
-    fn from(value: Option<T>) -> Self {
-        match value {
-            Some(v) => Self::Value(v),
-            None => Self::SetNull,
         }
     }
 }

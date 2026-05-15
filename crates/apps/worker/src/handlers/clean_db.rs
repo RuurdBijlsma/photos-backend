@@ -10,7 +10,7 @@ pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
     // Remove expired refresh tokens
     sqlx::query!(
         "DELETE FROM refresh_token WHERE expires_at < $1",
-        Utc::now() - Duration::from_secs(1 * 60 * 60)
+        Utc::now() - Duration::from_hours(1)
     )
     .execute(&context.pool)
     .await?;

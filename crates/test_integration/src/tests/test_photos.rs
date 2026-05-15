@@ -214,7 +214,7 @@ pub async fn test_get_color_theme(context: &TestContext) -> Result<()> {
 }
 
 pub async fn test_get_random_photo(context: &TestContext) -> Result<()> {
-    let timeout = Duration::from_secs(120);
+    let timeout = Duration::from_mins(2);
     let start = Instant::now();
     info!("Waiting for 1 analysis job to complete...");
     loop {

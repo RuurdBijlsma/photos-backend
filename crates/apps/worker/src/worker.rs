@@ -55,7 +55,7 @@ pub async fn run_worker_loop(context: &WorkerContext, stop_on_sleep: bool) -> Re
                     return Ok(());
                 }
             }
-            sleep(Duration::from_millis(3000)).await;
+            sleep(Duration::from_secs(3)).await;
         }
     }
 }

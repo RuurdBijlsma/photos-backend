@@ -12,7 +12,6 @@ use common_services::database::user_store::UserStore;
 use common_types::dev_constants::EMAIL;
 use open_clip_inference::TextEmbedder;
 use std::sync::Arc;
-use std::time::Instant;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
@@ -27,8 +26,6 @@ async fn main() -> color_eyre::Result<()> {
     let embedder = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
         .build()
         .await?;
-
-    let now = Instant::now();
 
     let mut i = 0;
     let embedder = Arc::new(embedder);

@@ -7,6 +7,7 @@ use common_services::api::album::interfaces::{
 };
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album_store::AlbumStore;
+use common_services::database::UpdateField;
 use common_services::database::user_store::UserStore;
 use common_types::dev_constants::{EMAIL, USERNAME};
 use reqwest::StatusCode;
@@ -81,8 +82,8 @@ pub async fn test_update_album(context: &TestContext) -> Result<()> {
     // ACT - Update Name and Description
     let update_payload = UpdateAlbumRequest {
         name: Some("Updated Name".to_string()),
-        description: Some("Updated Description".to_string()),
-        thumbnail_id: None,
+        description: UpdateField::Value("Updated Description".to_string()),
+        thumbnail_id: UpdateField::Ignore,
         is_public: Some(true),
     };
 
@@ -261,7 +262,7 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
 
     // Wait for imported items to be processed
     let start_time = Instant::now();
-    let timeout = Duration::from_secs(120);
+    let timeout = Duration::from_mins(2);
     info!("Waiting for album import to complete.");
     // todo: om een of andere reden wordt de import album item job niet opgepakt?
     loop {

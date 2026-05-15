@@ -56,5 +56,5 @@ pub async fn list_users_handler(
     State(ctx): State<ApiContext>,
 ) -> Result<Json<Vec<SmallUser>>, UserError> {
     let users = UserStore::list_users(&ctx.pool).await?;
-    Ok(Json(users.iter().map(|u| u.into()).collect()))
+    Ok(Json(users.into_iter().map(Into::into).collect()))
 }
