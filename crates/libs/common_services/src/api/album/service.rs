@@ -1,12 +1,12 @@
 use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort};
 use crate::api::album::error::AlbumError;
-use crate::database::UpdateField;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
 use crate::database::system_metrics_store::SystemMetricsStore;
 use crate::database::user_store::UserStore;
+use crate::database::{CreateAlbumPayload, UpdateField};
 use crate::job_queue::enqueue_job;
 use crate::s2s_client::{S2SClient, insecure_extract_token_claims};
 use crate::utils::nice_id;
@@ -175,12 +175,14 @@ pub async fn create_album(
     let album = AlbumStore::create(
         &mut *tx,
         &album_id,
-        user_id,
-        name,
-        description,
-        None,
-        DEFAULT_ALBUM_SORT,
-        is_public,
+        CreateAlbumPayload {
+            owner_id: user_id,
+            name: name.to_owned(),
+            description,
+            thumbnail_id: None,
+            sort_mode: DEFAULT_ALBUM_SORT,
+            is_public,
+        },
     )
     .await?;
     AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
@@ -199,7 +201,7 @@ pub async fn create_album(
         }
     }
 
-    AlbumStore::sort_media_items(&mut *tx, &album_id, DEFAULT_ALBUM_SORT).await?;
+    AlbumStore::sort_media_items(&mut tx, &album_id, DEFAULT_ALBUM_SORT).await?;
 
     tx.commit().await?;
 
@@ -231,7 +233,7 @@ pub async fn add_media_to_album(
 
     // If NOT manually sorted, run the reorder logic immediately to interleave them
     if album.sort_mode != AlbumSort::None {
-        AlbumStore::sort_media_items(&mut *tx, album_id, album.sort_mode).await?;
+        AlbumStore::sort_media_items(&mut tx, album_id, album.sort_mode).await?;
     }
 
     if album.thumbnail_id.is_none()
@@ -485,12 +487,14 @@ pub async fn accept_invite(
     let album = AlbumStore::create(
         &mut *tx,
         &album_id,
-        user_id,
-        &payload.name,
-        description,
-        None,
-        DEFAULT_ALBUM_SORT,
-        false,
+        CreateAlbumPayload {
+            owner_id: user_id,
+            name: payload.name,
+            description,
+            thumbnail_id: None,
+            sort_mode: DEFAULT_ALBUM_SORT,
+            is_public: false,
+        },
     )
     .await?;
     AlbumStore::upsert_collaborator(&mut *tx, &album_id, user_id, AlbumRole::Owner).await?;
@@ -627,7 +631,7 @@ pub async fn reorder_media_items(
 
     let mut tx = pool.begin().await?;
 
-    AlbumStore::reorder_media_items(&mut *tx, album_id, media_item_ids).await?;
+    AlbumStore::reorder_media_items(&mut tx, album_id, media_item_ids).await?;
 
     // Mark album as manually sorted
     sqlx::query!(

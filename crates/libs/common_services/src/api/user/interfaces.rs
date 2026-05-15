@@ -2,6 +2,7 @@ use crate::database::app_user::User;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::database::UpdateField;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -27,7 +28,7 @@ pub struct UserProfile {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUserProfileRequest {
     pub name: Option<String>,
-    pub avatar_id: Option<String>,
+    pub avatar_id: UpdateField<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

@@ -26,6 +26,7 @@ pub fn extract_token_claims(token: &str, jwt_secret: &str) -> Result<AlbumShareC
 }
 
 /// Parses an invite token without verifying the signature.
+///
 /// Used by recipient servers to extract the issuer URL from a token
 /// signed by a different server. The signature will be verified by the remote server
 /// when the token is actually used.

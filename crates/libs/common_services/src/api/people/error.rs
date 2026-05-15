@@ -51,8 +51,7 @@ impl IntoResponse for PeopleError {
 impl From<DbError> for PeopleError {
     fn from(err: DbError) -> Self {
         match err {
-            DbError::Sqlx(sql_err) => Self::Database(sql_err),
-            DbError::UniqueViolation(sql_err) => Self::Database(sql_err),
+            DbError::Sqlx(sql_err) | DbError::UniqueViolation(sql_err) => Self::Database(sql_err),
             DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }
     }

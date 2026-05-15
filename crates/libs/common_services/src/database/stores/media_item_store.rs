@@ -8,9 +8,9 @@ use crate::database::media_item::media_item::{
 use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
+use crate::database::structs::UpdateMediaItemPayload;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
-use crate::database::{DbError, UpdateField, with_fallback_timezone};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use crate::database::{with_fallback_timezone, DbError};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
@@ -425,19 +425,8 @@ impl MediaItemStore {
     pub async fn update(
         executor: impl Executor<'_, Database = Postgres>,
         id: &str,
-        user_caption: UpdateField<String>,
-        taken_at_local: Option<NaiveDateTime>,
-        taken_at_utc: UpdateField<DateTime<Utc>>,
-        sort_timestamp: Option<DateTime<Utc>>,
-        timezone_offset_seconds: UpdateField<i32>,
-        use_panorama_viewer: Option<bool>,
+        payload: UpdateMediaItemPayload
     ) -> Result<PgQueryResult, DbError> {
-        dbg!(
-            &id,
-            &taken_at_utc.clone(),
-            taken_at_utc.clone().is_ignore(),
-            &taken_at_utc.clone().value()
-        );
         Ok(sqlx::query!(
             r#"
         UPDATE media_item
@@ -452,15 +441,15 @@ impl MediaItemStore {
         WHERE id = $1
         "#,
             id,
-            user_caption.is_ignore(),
-            user_caption.value(),
-            taken_at_local,
-            taken_at_utc.is_ignore(),
-            taken_at_utc.value(),
-            sort_timestamp,
-            timezone_offset_seconds.is_ignore(),
-            timezone_offset_seconds.value(),
-            use_panorama_viewer,
+            payload.user_caption.is_ignore(),
+            payload.user_caption.value(),
+            payload.taken_at_local,
+            payload.taken_at_utc.is_ignore(),
+            payload.taken_at_utc.value(),
+            payload.sort_timestamp,
+            payload.timezone_offset_seconds.is_ignore(),
+            payload.timezone_offset_seconds.value(),
+            payload.use_panorama_viewer,
         )
         .execute(executor)
         .await?)

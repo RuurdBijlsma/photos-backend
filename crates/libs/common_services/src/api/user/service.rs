@@ -1,7 +1,9 @@
 use crate::api::user::error::UserError;
 use crate::api::user::interfaces::{UserProfile, UserStats};
+use crate::database::UpdateField::Value;
 use crate::database::app_user::UserRole;
 use crate::database::user_store::UserStore;
+use crate::database::{UpdateField, UpdateUserPayload};
 use sqlx::PgPool;
 
 pub async fn get_user_profile(
@@ -57,9 +59,9 @@ pub async fn update_user_profile(
     pool: &PgPool,
     user_id: i32,
     name: Option<String>,
-    avatar_id: Option<String>,
+    avatar_id: UpdateField<String>,
 ) -> Result<UserProfile, UserError> {
-    if let Some(ref aid) = avatar_id {
+    if let Value(ref aid) = avatar_id {
         let is_accessible = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
@@ -80,7 +82,19 @@ pub async fn update_user_profile(
         }
     }
 
-    let user = UserStore::update(pool, user_id, name, None, None, None, None, avatar_id).await?;
+    let user = UserStore::update(
+        pool,
+        user_id,
+        UpdateUserPayload {
+            name,
+            email: None,
+            password: None,
+            role: None,
+            media_folder: None,
+            avatar_id,
+        },
+    )
+    .await?;
 
     let stats = get_user_stats(pool, user_id).await?;
 

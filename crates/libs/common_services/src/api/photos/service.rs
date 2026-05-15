@@ -2,7 +2,7 @@ use crate::api::photos::error::PhotosError;
 use crate::api::photos::interfaces::{RandomPhotoResponse, UpdateMediaItemRequest};
 use crate::database::app_user::{User, UserRole};
 use crate::database::media_item_store::MediaItemStore;
-use crate::database::{UpdateField, with_fallback_timezone};
+use crate::database::{UpdateField, UpdateMediaItemPayload, with_fallback_timezone};
 use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
 use axum_extra::headers::Range;
@@ -499,19 +499,17 @@ async fn compute_updated_timestamps(
         UpdateField::Ignore => current.timezone_offset_seconds,
     };
 
-    let taken_at_utc = if let Some(offset) = offset_secs.and_then(FixedOffset::east_opt) {
-        offset
-            .from_local_datetime(&local_dt)
-            .earliest()
-            .map(|dt| dt.with_timezone(&Utc))
-    } else {
-        None
-    };
+    let taken_at_utc = offset_secs
+        .and_then(FixedOffset::east_opt)
+        .and_then(|offset| {
+            offset
+                .from_local_datetime(&local_dt)
+                .earliest()
+                .map(|dt| dt.with_timezone(&Utc))
+        });
 
     let sort_timestamp = Some(with_fallback_timezone(taken_at_utc, &local_dt));
-    let utc_field = taken_at_utc
-        .map(UpdateField::Value)
-        .unwrap_or(UpdateField::SetNull);
+    let utc_field = taken_at_utc.map_or(UpdateField::SetNull, UpdateField::Value);
 
     Ok((utc_field, sort_timestamp))
 }
@@ -540,10 +538,10 @@ pub async fn update_media_item(
     } = payload;
 
     // Validate timezone offset
-    if let UpdateField::Value(v) = timezone_offset_seconds {
-        if FixedOffset::east_opt(*v).is_none() {
-            return Err(PhotosError::InvalidTimezoneOffset(*v));
-        }
+    if let UpdateField::Value(v) = timezone_offset_seconds
+        && FixedOffset::east_opt(*v).is_none()
+    {
+        return Err(PhotosError::InvalidTimezoneOffset(*v));
     }
 
     let taken_at_local_input = taken_at_local
@@ -562,12 +560,14 @@ pub async fn update_media_item(
     MediaItemStore::update(
         &mut *tx,
         media_item_id,
-        user_caption.clone(),
-        taken_at_local_input,
-        taken_at_utc,
-        sort_timestamp,
-        timezone_offset_seconds.clone(),
-        use_panorama_viewer.clone(),
+        UpdateMediaItemPayload {
+            user_caption: user_caption.clone(),
+            taken_at_local: taken_at_local_input,
+            taken_at_utc,
+            sort_timestamp,
+            timezone_offset_seconds: timezone_offset_seconds.clone(),
+            use_panorama_viewer: *use_panorama_viewer,
+        },
     )
     .await?;
 

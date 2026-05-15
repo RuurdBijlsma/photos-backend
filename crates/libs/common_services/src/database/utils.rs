@@ -73,6 +73,7 @@ pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Poo
     Ok(pool)
 }
 
+#[must_use]
 pub fn with_fallback_timezone(
     utc_dt: Option<DateTime<Utc>>,
     local_dt: &NaiveDateTime,
@@ -81,7 +82,7 @@ pub fn with_fallback_timezone(
         constants().fallback_timezone.as_ref().map_or_else(
             || local_dt.and_utc(),
             |tz| {
-                tz.from_local_datetime(&local_dt)
+                tz.from_local_datetime(local_dt)
                     .earliest()
                     .expect("Can't get datetime at timezone.")
                     .with_timezone(&Utc)

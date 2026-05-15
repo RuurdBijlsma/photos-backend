@@ -1,21 +1,22 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema, Default)]
 #[serde(untagged)]
 pub enum UpdateField<T> {
     Value(T),
     SetNull,
     #[serde(skip)]
+    #[default]
     Ignore,
 }
 
 impl<T> UpdateField<T> {
-    pub fn is_ignore(&self) -> bool {
+    pub const fn is_ignore(&self) -> bool {
         matches!(self, Self::Ignore)
     }
 
-    pub fn not_ignore(&self) -> bool {
+    pub const fn not_ignore(&self) -> bool {
         !Self::is_ignore(self)
     }
 
@@ -35,8 +36,11 @@ impl<T> UpdateField<T> {
     }
 }
 
-impl<T> Default for UpdateField<T> {
-    fn default() -> Self {
-        Self::Ignore
+impl<T> From<Option<T>> for UpdateField<T> {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(v) => Self::Value(v),
+            None => Self::SetNull,
+        }
     }
 }

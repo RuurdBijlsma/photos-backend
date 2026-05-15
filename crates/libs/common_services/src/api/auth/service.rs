@@ -78,25 +78,23 @@ pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, Au
             None,
         )
         .await?)
+    } else if let Some(token) = &payload.token {
+        let Some(invite) = UserStore::find_invite_by_token(pool, token).await? else {
+            return Err(AuthError::InvalidInvite);
+        };
+        let user = UserStore::create(
+            pool,
+            &payload.email,
+            &payload.name,
+            &hashed,
+            UserRole::User,
+            Some(invite.media_folder),
+        )
+        .await?;
+        UserStore::delete_invite(pool, token).await?;
+        Ok(user)
     } else {
-        if let Some(token) = &payload.token {
-            let Some(invite) = UserStore::find_invite_by_token(pool, token).await? else {
-                return Err(AuthError::InvalidInvite);
-            };
-            let user = UserStore::create(
-                pool,
-                &payload.email,
-                &payload.name,
-                &hashed,
-                UserRole::User,
-                Some(invite.media_folder),
-            )
-            .await?;
-            UserStore::delete_invite(pool, &token).await?;
-            Ok(user)
-        } else {
-            Err(AuthError::InvalidInvite)
-        }
+        Err(AuthError::InvalidInvite)
     }
 }
 
@@ -107,7 +105,7 @@ pub async fn generate_invite(
 ) -> Result<UserInvite, AuthError> {
     let token = nice_id(32);
     let expires_at = Utc::now() + Duration::days(7);
-    let user_folder = validate_user_folder(&ingest_settings.media_root, &user_folder).await?;
+    let user_folder = validate_user_folder(&ingest_settings.media_root, user_folder).await?;
     let relative = user_folder.make_relative_canon(&ingest_settings.media_root_canon)?;
     Ok(UserStore::create_invite(pool, &token, &relative, expires_at).await?)
 }

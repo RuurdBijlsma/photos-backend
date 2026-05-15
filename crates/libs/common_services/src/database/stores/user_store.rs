@@ -1,4 +1,5 @@
 use crate::database::DbError;
+use crate::database::structs::UpdateUserPayload;
 use crate::database::tables::app_user::{User, UserInvite, UserRole, UserWithPassword};
 use chrono::{DateTime, Utc};
 use sqlx::postgres::PgQueryResult;
@@ -51,26 +52,21 @@ impl UserStore {
     pub async fn update(
         executor: impl Executor<'_, Database = Postgres>,
         user_id: i32,
-        name: Option<String>,
-        email: Option<String>,
-        password: Option<String>,
-        role: Option<UserRole>,
-        media_folder: Option<String>,
-        avatar_id: Option<String>,
+        payload: UpdateUserPayload,
     ) -> Result<User, DbError> {
         Ok(sqlx::query_as!(
             User,
             r#"
             UPDATE app_user
             SET
-                name = COALESCE($1, name),
-                email = COALESCE($2, email),
-                password = COALESCE($3, password),
-                role = COALESCE($4, role),
-                media_folder = COALESCE($5, media_folder),
-                avatar_id = COALESCE($6, avatar_id),
+                name = COALESCE($2, name),
+                email = COALESCE($3, email),
+                password = COALESCE($4, password),
+                role = COALESCE($5, role),
+                media_folder = COALESCE($6, media_folder),
+                avatar_id = CASE WHEN $7::boolean THEN avatar_id ELSE $8 END,
                 updated_at = now()
-            WHERE id = $7
+            WHERE id = $1
             RETURNING
                 id,
                 created_at,
@@ -81,13 +77,14 @@ impl UserStore {
                 avatar_id,
                 role as "role: UserRole"
             "#,
-            name,
-            email,
-            password,
-            role as Option<UserRole>,
-            media_folder,
-            avatar_id,
-            user_id
+            user_id,
+            payload.name,
+            payload.email,
+            payload.password,
+            payload.role as Option<UserRole>,
+            payload.media_folder,
+            payload.avatar_id.is_ignore(),
+            payload.avatar_id.value()
         )
         .fetch_one(executor)
         .await?)

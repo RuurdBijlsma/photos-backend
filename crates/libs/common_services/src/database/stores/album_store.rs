@@ -2,6 +2,7 @@ use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSort, AlbumSortF
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
+use crate::database::structs::CreateAlbumPayload;
 use crate::database::{DbError, UpdateField};
 use common_types::pb::api::{CollaboratorSummary, SimpleTimelineItem, TimelineItem};
 use sqlx::postgres::PgQueryResult;
@@ -29,12 +30,7 @@ impl AlbumStore {
     pub async fn create(
         executor: impl PgExecutor<'_>,
         album_id: &str,
-        user_id: i32,
-        name: &str,
-        description: Option<String>,
-        thumbnail_id: Option<String>,
-        sort_mode: AlbumSort,
-        is_public: bool,
+        payload: CreateAlbumPayload,
     ) -> Result<Album, DbError> {
         Ok(sqlx::query_as!(
             Album,
@@ -56,12 +52,12 @@ impl AlbumStore {
                 sort_mode as "sort_mode: AlbumSort"
             "#,
             album_id,
-            user_id,
-            name,
-            description,
-            thumbnail_id,
-            is_public,
-            sort_mode as AlbumSort,
+            payload.owner_id,
+            payload.name,
+            payload.description,
+            payload.thumbnail_id,
+            payload.is_public,
+            payload.sort_mode as AlbumSort,
         )
         .fetch_one(executor)
         .await?)

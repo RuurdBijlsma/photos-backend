@@ -5,6 +5,7 @@ use crate::api::onboarding::helpers::{check_drive_info, list_folders};
 use crate::api::onboarding::interfaces::{
     DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
+use crate::database::{UpdateField, UpdateUserPayload};
 use crate::database::app_user::User;
 use crate::database::jobs::JobType;
 use crate::database::user_store::UserStore;
@@ -262,8 +263,19 @@ pub async fn start_processing(
     }
     let user_folder = validate_user_folder(media_root, &user_folder).await?;
     let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
-    let updated_user =
-        UserStore::update(pool, user_id, None, None, None, None, Some(relative), None).await?;
+    let updated_user = UserStore::update(
+        pool,
+        user_id,
+        UpdateUserPayload {
+            name: None,
+            email: None,
+            password: None,
+            role: None,
+            media_folder: Some(relative),
+            avatar_id: UpdateField::Ignore,
+        },
+    )
+    .await?;
 
     enqueue_job::<()>(pool, settings, JobType::Scan)
         .user_id(user_id)
