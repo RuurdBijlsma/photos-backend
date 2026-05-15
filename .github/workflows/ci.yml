@@ -9,6 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
+  SQLX_OFFLINE: true
 
 jobs:
   build-and-test:
@@ -17,14 +18,25 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: apt install
-        run: sudo apt update && sudo apt install -y protobuf-compiler libfontconfig1-dev pkg-config nasm postgresql-client
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
-      - name: Build
-        run: cargo build
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache and install system dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libfontconfig1-dev pkg-config exiftool protobuf-compiler nasm postgresql-client
+          version: 1.0
 
       - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
         run: cargo clippy --no-deps -- -D clippy::all -D clippy::pedantic -D clippy::nursery
+
+      - name: Build
+        run: cargo build
