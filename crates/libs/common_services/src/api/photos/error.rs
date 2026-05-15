@@ -38,6 +38,9 @@ pub enum PhotosError {
 
     #[error("Invalid datetime format")]
     InvalidDateTime(#[from] chrono::ParseError),
+
+    #[error("Invalid timezone offset: {0}")]
+    InvalidTimezoneOffset(i32),
 }
 
 impl IntoResponse for PhotosError {
@@ -62,6 +65,10 @@ impl IntoResponse for PhotosError {
             Self::InvalidRange => (StatusCode::RANGE_NOT_SATISFIABLE, self.to_string()),
             Self::ColorTheme(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
             Self::InvalidDateTime(err) => (StatusCode::BAD_REQUEST, err.to_string()),
+            Self::InvalidTimezoneOffset(offset) => (
+                StatusCode::BAD_REQUEST,
+                format!("Invalid timezone offset: {offset}. Must be between -86400 and 86400."),
+            ),
         };
 
         let body = Json(json!({ "error": error_message }));

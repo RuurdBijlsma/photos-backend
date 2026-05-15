@@ -15,7 +15,7 @@ use http::{Response, StatusCode, header};
 use image::ImageDecoder;
 use image::ImageReader;
 use rand::RngExt;
-use sqlx::PgPool;
+use sqlx::{Executor, PgPool, Postgres};
 use std::io::Cursor;
 use std::ops::Bound;
 use std::path::Path;
@@ -472,7 +472,7 @@ pub async fn stream_video_file(
 }
 
 async fn compute_updated_timestamps(
-    pool: &PgPool,
+    executor: impl Executor<'_, Database = Postgres>,
     media_item_id: &str,
     new_local: Option<NaiveDateTime>,
     new_offset: &UpdateField<i32>,
@@ -488,7 +488,7 @@ async fn compute_updated_timestamps(
         "SELECT taken_at_local, timezone_offset_seconds FROM media_item WHERE id = $1",
         media_item_id
     )
-        .fetch_one(pool)
+        .fetch_one(executor)
         .await?;
 
     // Determine the values for this calculation
@@ -522,7 +522,9 @@ pub async fn update_media_item(
     user_id: i32,
     payload: &UpdateMediaItemRequest,
 ) -> Result<(), PhotosError> {
-    let media_user_id = MediaItemStore::find_user_by_id(pool, &media_item_id)
+    let mut tx = pool.begin().await?;
+
+    let media_user_id = MediaItemStore::find_user_by_id(&mut *tx, media_item_id)
         .await?
         .ok_or_else(|| PhotosError::MediaNotFound(media_item_id.to_owned()))?;
 
@@ -537,22 +539,28 @@ pub async fn update_media_item(
         timezone_offset_seconds,
     } = payload;
 
+    // Validate timezone offset
+    if let UpdateField::Value(v) = timezone_offset_seconds {
+        if FixedOffset::east_opt(*v).is_none() {
+            return Err(PhotosError::InvalidTimezoneOffset(*v));
+        }
+    }
+
     let taken_at_local_input = taken_at_local
         .as_ref()
-        .map(|m| DateTime::parse_from_rfc3339(m))
-        .transpose()?
-        .map(|d| d.naive_local());
+        .map(|m| NaiveDateTime::parse_from_str(m, "%Y-%m-%dT%H:%M:%S"))
+        .transpose()?;
 
     let (taken_at_utc, sort_timestamp) = compute_updated_timestamps(
-        pool,
+        &mut *tx,
         media_item_id,
         taken_at_local_input,
         timezone_offset_seconds,
     )
-        .await?;
+    .await?;
 
     MediaItemStore::update(
-        pool,
+        &mut *tx,
         media_item_id,
         user_caption.clone(),
         taken_at_local_input,
@@ -561,7 +569,9 @@ pub async fn update_media_item(
         timezone_offset_seconds.clone(),
         use_panorama_viewer.clone(),
     )
-        .await?;
+    .await?;
+
+    tx.commit().await?;
 
     Ok(())
 }
