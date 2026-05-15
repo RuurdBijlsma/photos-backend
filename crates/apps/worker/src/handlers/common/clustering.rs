@@ -30,6 +30,7 @@ pub fn run_hdbscan(
     min_cluster_size: usize,
     min_samples: usize,
 ) -> Result<(Vec<i32>, Vec<Vec<f32>>)> {
+    let min_samples = min_samples.min(embeddings.len());
     let params = HdbscanHyperParams::builder()
         .min_cluster_size(min_cluster_size)
         .min_samples(min_samples)

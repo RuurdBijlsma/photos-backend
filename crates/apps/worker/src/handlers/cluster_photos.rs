@@ -12,7 +12,7 @@ use tracing::info;
 
 const ENTITY_NAME: &str = "photo";
 const MIN_ITEMS_TO_CLUSTER: usize = 3;
-const MIN_SAMPLES: usize = 4;
+const MIN_SAMPLES: usize = 2;
 const CENTROID_MATCH_THRESHOLD: f32 = 0.6;
 
 impl ClusterEntity for ExistingPhotoCluster {

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE album\n            SET\n                name = COALESCE($1, name),\n                description = COALESCE($2, description),\n                thumbnail_id = COALESCE($3, thumbnail_id),\n                is_public = COALESCE($4, is_public),\n                updated_at = now()\n            WHERE id = $5\n            RETURNING\n                id,\n                owner_id,\n                name,\n                description,\n                thumbnail_id,\n                is_public,\n                media_count,\n                latest_media_item_timestamp,\n                earliest_media_item_timestamp,\n                updated_at,\n                created_at,\n                sort_mode as \"sort_mode: AlbumSort\"\n            ",
+  "query": "\n            UPDATE album\n            SET\n                name = COALESCE($2, name),\n                description = CASE WHEN $3::boolean THEN description ELSE $4 END,\n                thumbnail_id = CASE WHEN $5::boolean THEN thumbnail_id ELSE $6 END,\n                is_public = COALESCE($7, is_public),\n                updated_at = now()\n            WHERE id = $1\n            RETURNING\n                id,\n                owner_id,\n                name,\n                description,\n                thumbnail_id,\n                is_public,\n                media_count,\n                latest_media_item_timestamp,\n                earliest_media_item_timestamp,\n                updated_at,\n                created_at,\n                sort_mode as \"sort_mode: AlbumSort\"\n            ",
   "describe": {
     "columns": [
       {
@@ -81,9 +81,11 @@
       "Left": [
         "Text",
         "Text",
-        "Varchar",
         "Bool",
-        "Text"
+        "Text",
+        "Bool",
+        "Varchar",
+        "Bool"
       ]
     },
     "nullable": [
@@ -101,5 +103,5 @@
       false
     ]
   },
-  "hash": "8465de2ed645907eff63ef503e81a30af7ebcf9b602d0163a6000ad7189bb6b1"
+  "hash": "103a96d439fa9abf0faa1cdbb3f08b1dd56d7e392b5c47e027e3e8f02fe2d049"
 }

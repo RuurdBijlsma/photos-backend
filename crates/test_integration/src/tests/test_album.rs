@@ -3,14 +3,13 @@ use crate::test_helpers::login;
 use color_eyre::eyre::{Result, bail};
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddMediaToAlbumRequest, CheckInviteRequest, CreateAlbumRequest,
-    UpdateAlbumRequest,
 };
-use common_services::database::UpdateField;
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album_store::AlbumStore;
 use common_services::database::user_store::UserStore;
 use common_types::dev_constants::{EMAIL, USERNAME};
 use reqwest::StatusCode;
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::time::sleep;
@@ -79,11 +78,17 @@ pub async fn test_update_album(context: &TestContext) -> Result<()> {
         .json()
         .await?;
 
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    struct UpdateAlbumTestRequest {
+        pub name: Option<String>,
+        pub description: Option<String>,
+        pub is_public: Option<bool>,
+    }
+
     // ACT - Update Name and Description
-    let update_payload = UpdateAlbumRequest {
+    let update_payload = UpdateAlbumTestRequest {
         name: Some("Updated Name".to_string()),
-        description: UpdateField::Value("Updated Description".to_string()),
-        thumbnail_id: UpdateField::Ignore,
+        description: Some("Updated Description".to_string()),
         is_public: Some(true),
     };
 

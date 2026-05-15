@@ -19,7 +19,7 @@ use tracing::info;
 
 const ENTITY_NAME: &str = "face";
 const MIN_ITEMS_TO_CLUSTER: usize = 4;
-const MIN_SAMPLES: usize = 5;
+const MIN_SAMPLES: usize = 3;
 const CENTROID_MATCH_THRESHOLD: f32 = 0.6;
 const THUMBNAIL_SIZE: u32 = 256;
 const PADDING_FACTOR: f32 = 1.8;
