@@ -31,6 +31,7 @@ use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
+use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 
 pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool) -> Result<()> {
     if run_task_scheduler {
@@ -50,7 +51,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         embedder: Arc::new(text_embedder),
     };
 
-    fs::create_dir_all(&settings.ingest.thumbnail_root.join(".jpg-cache")).await?;
+    fs::create_dir_all(&settings.ingest.thumbnail_root.join(ON_DEMAND_THUMBNAIL_CACHE_FOLDER)).await?;
 
     // --- CORS Configuration ---
     let allowed_origins: Vec<HeaderValue> = settings

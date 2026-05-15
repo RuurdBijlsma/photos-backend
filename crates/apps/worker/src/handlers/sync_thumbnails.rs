@@ -13,6 +13,7 @@ use std::path::Path;
 use tokio::fs;
 use tracing::info;
 use tracing::warn;
+use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 
 const EXCLUDED_THUMBNAIL_FOLDERS: [&str; 1] = ["people"];
 
@@ -25,6 +26,10 @@ async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String
             && let Some(name) = entry.file_name().to_str()
             && !EXCLUDED_THUMBNAIL_FOLDERS.contains(&name)
         {
+            // ignore .jpg-cache folder
+            if name == ON_DEMAND_THUMBNAIL_CACHE_FOLDER {
+                continue;
+            }
             set.insert(name.to_owned());
         }
     }

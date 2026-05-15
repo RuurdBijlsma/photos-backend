@@ -7,6 +7,7 @@
 pub mod dev_constants;
 pub mod ml_analysis;
 pub mod pb;
+pub mod constants;
 mod worker_payload;
 
 pub use worker_payload::*;

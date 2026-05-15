@@ -25,6 +25,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
+use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 
 /// Fetches a random photo with its color theme data for a specific user.
 ///
@@ -187,7 +188,7 @@ pub async fn thumbnail_on_demand_cached(
     media_item_id: &str,
     ingest_settings: &IngestSettings,
 ) -> Result<Vec<u8>, PhotosError> {
-    let cache_dir = ingest_settings.thumbnail_root.join(".jpg-cache");
+    let cache_dir = ingest_settings.thumbnail_root.join(ON_DEMAND_THUMBNAIL_CACHE_FOLDER);
     let cache_filename = format!("{media_item_id}_{size}.jpg");
     let cache_path = cache_dir.join(&cache_filename);
 

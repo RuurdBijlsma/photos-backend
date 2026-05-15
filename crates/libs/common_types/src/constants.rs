@@ -1,0 +1,1 @@
+pub const ON_DEMAND_THUMBNAIL_CACHE_FOLDER: &str = ".jpg-cache";
