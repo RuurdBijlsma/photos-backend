@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            (SELECT COUNT(*) FROM media_item WHERE user_id = $1 AND is_video = false AND deleted = false) as photo_count,\n            (SELECT COUNT(*) FROM media_item WHERE user_id = $1 AND is_video = true AND deleted = false) as video_count,\n            (SELECT COUNT(*) FROM album WHERE owner_id = $1) as album_count,\n            (SELECT COUNT(*) FROM album_collaborator ac JOIN album a ON ac.album_id = a.id WHERE ac.user_id = $1 AND a.owner_id != $1) as shared_album_count\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "photo_count",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "video_count",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "album_count",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "shared_album_count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "8fccc52b38c9c0cdaba6ed0483f9cfa0da771209349488614ec2ab90c48b7a89"
+}

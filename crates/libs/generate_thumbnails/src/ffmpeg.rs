@@ -16,6 +16,7 @@ pub struct FfmpegCommand {
 
 impl FfmpegCommand {
     /// Creates a new `FFmpeg` command with a primary input file.
+    #[must_use]
     pub fn new(input: &Path) -> Self {
         Self {
             inputs: vec![(input.to_path_buf(), None)],

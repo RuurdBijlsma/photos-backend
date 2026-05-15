@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                ac.id,\n                ac.user_id,\n                u.avatar_id,\n                u.name,\n                ac.role as \"role: String\"\n            FROM album_collaborator ac\n            JOIN app_user u ON ac.user_id = u.id\n            WHERE ac.album_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "avatar_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "role: String",
+        "type_info": {
+          "Custom": {
+            "name": "album_role",
+            "kind": {
+              "Enum": [
+                "owner",
+                "contributor",
+                "viewer"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "753f37ec2866d6321a1139b394a7419d178e61b16959ddcd83a4471e1b31cf4b"
+}

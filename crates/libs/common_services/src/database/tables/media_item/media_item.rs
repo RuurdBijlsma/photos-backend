@@ -21,6 +21,10 @@ pub struct CreateFullMediaItem {
     pub duration_ms: Option<i64>,
     pub taken_at_local: NaiveDateTime,
     pub taken_at_utc: Option<DateTime<Utc>>,
+    pub og_taken_at_local: NaiveDateTime,
+    pub timezone_name: Option<String>,
+    pub timezone_offset_seconds: Option<i32>,
+    pub og_timezone_offset_seconds: Option<i32>,
     pub use_panorama_viewer: bool,
     pub gps: Option<Gps>,
     pub time: TimeDetails,
@@ -58,6 +62,10 @@ impl From<MediaMetadata> for CreateFullMediaItem {
             duration_ms: result.basic.duration.map(|d_sec| (d_sec * 1000.0) as i64),
             taken_at_local: result.time.datetime_local,
             taken_at_utc: result.time.datetime_utc,
+            og_taken_at_local: result.time.datetime_local,
+            timezone_name: result.time.clone().timezone.map(|t| t.name),
+            timezone_offset_seconds: result.time.clone().timezone.map(|t| t.offset_seconds),
+            og_timezone_offset_seconds: result.time.clone().timezone.map(|t| t.offset_seconds),
             use_panorama_viewer: result.panorama.use_panorama_viewer,
             gps: result.gps.map(Into::into),
             time: result.time.into(),
@@ -76,6 +84,7 @@ pub struct FullMediaItem {
     pub id: String,
     pub user_id: i32,
     pub hash: String,
+    pub filename: String,
     pub relative_path: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -85,6 +94,10 @@ pub struct FullMediaItem {
     pub duration_ms: Option<i64>,
     pub taken_at_local: NaiveDateTime,
     pub taken_at_utc: Option<DateTime<Utc>>,
+    pub timezone_name: Option<String>,
+    pub timezone_offset_seconds: Option<i32>,
+    pub og_taken_at_local: NaiveDateTime,
+    pub og_timezone_offset_seconds: Option<i32>,
     pub use_panorama_viewer: bool,
     pub has_thumbnails: bool,
     pub visual_analyses: Vec<ReadVisualAnalysis>,
@@ -94,6 +107,7 @@ pub struct FullMediaItem {
     pub media_features: MediaFeatures,
     pub camera_settings: CameraSettings,
     pub panorama: Panorama,
+    pub user_caption: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -110,7 +124,11 @@ pub struct FullMediaItemRow {
     pub is_video: bool,
     pub duration_ms: Option<i64>,
     pub taken_at_local: NaiveDateTime,
+    pub og_taken_at_local: NaiveDateTime,
     pub taken_at_utc: Option<DateTime<Utc>>,
+    pub timezone_name: Option<String>,
+    pub timezone_offset_seconds: Option<i32>,
+    pub og_timezone_offset_seconds: Option<i32>,
     pub use_panorama_viewer: bool,
     pub has_thumbnails: bool,
     pub visual_analyses: Json<Vec<ReadVisualAnalysis>>,
@@ -120,6 +138,7 @@ pub struct FullMediaItemRow {
     pub media_features: Json<MediaFeatures>,
     pub camera_settings: Json<CameraSettings>,
     pub panorama: Json<Panorama>,
+    pub user_caption: Option<String>,
 }
 
 impl From<FullMediaItemRow> for FullMediaItem {
@@ -128,6 +147,7 @@ impl From<FullMediaItemRow> for FullMediaItem {
             id: r.id,
             user_id: r.user_id,
             hash: r.hash,
+            filename: r.filename,
             relative_path: r.relative_path,
             created_at: r.created_at,
             updated_at: r.updated_at,
@@ -137,6 +157,10 @@ impl From<FullMediaItemRow> for FullMediaItem {
             duration_ms: r.duration_ms,
             taken_at_local: r.taken_at_local,
             taken_at_utc: r.taken_at_utc,
+            og_taken_at_local: r.og_taken_at_local,
+            timezone_name: r.timezone_name,
+            timezone_offset_seconds: r.timezone_offset_seconds,
+            og_timezone_offset_seconds: r.og_timezone_offset_seconds,
             use_panorama_viewer: r.use_panorama_viewer,
             has_thumbnails: r.has_thumbnails,
             visual_analyses: r.visual_analyses.0,
@@ -146,6 +170,7 @@ impl From<FullMediaItemRow> for FullMediaItem {
             media_features: r.media_features.0,
             camera_settings: r.camera_settings.0,
             panorama: r.panorama.0,
+            user_caption: r.user_caption,
         }
     }
 }

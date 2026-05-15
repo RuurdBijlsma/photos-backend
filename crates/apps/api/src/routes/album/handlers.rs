@@ -6,19 +6,20 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
-    CreateAlbumRequest, ListAlbumsParam, UpdateAlbumRequest,
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumSort,
+    CheckInviteRequest, CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam,
+    ReorderMediaRequest, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
-    accept_invite, add_collaborator, add_media_to_album, create_album, generate_invite,
-    get_album_media, remove_album_description, remove_collaborator, remove_media_from_album,
-    sort_album_by_date, update_album,
+    accept_invite, add_collaborator, add_media_to_album, create_album, delete_album,
+    generate_invite, get_album_media, get_sorted_album_media, remove_collaborator,
+    remove_media_from_album, reorder_media_items, update_album,
 };
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use common_types::pb::api::FullAlbumMediaResponse;
+use common_types::pb::api::{FullAlbumMediaResponse, OrderedMediaResponse};
 use tracing::instrument;
 
 /// Create a new album.
@@ -119,12 +120,27 @@ pub async fn update_album_handler(
     Ok(Json(album))
 }
 
-pub async fn remove_album_description_handler(
+#[utoipa::path(
+    put,
+    path = "/album/{album_id}",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album to delete.")
+    ),
+    request_body = UpdateAlbumRequest,
+    responses(
+        (status = 200, description = "Album deleted successfully.", body = Album),
+        (status = 404, description = "Album not found or permission denied."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn delete_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
 ) -> Result<(), AlbumError> {
-    remove_album_description(&context.pool, &album_id, user.id).await?;
+    delete_album(&context.pool, &album_id, user.id).await?;
     Ok(())
 }
 
@@ -178,9 +194,14 @@ pub async fn add_media_to_album_handler(
 pub async fn remove_media_from_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    Path((album_id, media_item_id)): Path<(String, String)>,
+    Path((album_id, media_item_ids)): Path<(String, String)>,
 ) -> Result<StatusCode, AlbumError> {
-    remove_media_from_album(&context.pool, &album_id, &media_item_id, user.id).await?;
+    let media_item_ids = media_item_ids
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<String>>();
+    remove_media_from_album(&context.pool, &album_id, &media_item_ids, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -211,7 +232,7 @@ pub async fn add_collaborator_handler(
     let collaborator = add_collaborator(
         &context.pool,
         &album_id,
-        &payload.user_email,
+        payload.user_id,
         payload.role,
         user.id,
     )
@@ -240,19 +261,69 @@ pub async fn add_collaborator_handler(
 pub async fn remove_collaborator_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    Path((album_id, collaborator_id)): Path<(String, i64)>,
+    Path((album_id, user_id)): Path<(String, i64)>,
 ) -> Result<StatusCode, AlbumError> {
-    remove_collaborator(&context.pool, &album_id, collaborator_id, user.id).await?;
+    remove_collaborator(&context.pool, &album_id, user_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[instrument(skip(context), err(Debug))]
-pub async fn sort_album_by_date_handler(
+#[utoipa::path(
+    post,
+    path = "/album/{album_id}/media/order-by-date",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album.")
+    ),
+    request_body = AlbumSort,
+    responses(
+        (status = 200, description = "Media items ordered successfully.", body = OrderedMediaResponse),
+        (status = 403, description = "Permission denied."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_sorted_album_items_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
+    Query(request): Query<GetSortedAlbumItemsRequest>,
+) -> Result<Protobuf<OrderedMediaResponse>, AlbumError> {
+    let items =
+        get_sorted_album_media(&context.pool, &album_id, user.id, request.sort_mode).await?;
+    Ok(Protobuf(OrderedMediaResponse { items }))
+}
+
+#[utoipa::path(
+    put,
+    path = "/album/{album_id}/media/reorder",
+    tag = "Album",
+    params(
+        ("album_id" = String, Path, description = "The unique ID of the album.")
+    ),
+    request_body = ReorderMediaRequest,
+    responses(
+        (status = 200, description = "Media items reordered successfully."),
+        (status = 403, description = "Permission denied."),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+#[instrument(skip(context, user), err(Debug))]
+pub async fn reorder_media_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(album_id): Path<String>,
+    Json(payload): Json<ReorderMediaRequest>,
 ) -> Result<(), AlbumError> {
-    sort_album_by_date(&context.pool, &album_id, user.id).await?;
+    reorder_media_items(
+        &context.pool,
+        &album_id,
+        user.id,
+        &payload.media_item_ids,
+        payload.sort_mode,
+    )
+    .await?;
     Ok(())
 }
 
@@ -309,7 +380,7 @@ pub async fn check_invite_handler(
 ) -> Result<Json<AlbumSummary>, AlbumError> {
     let summary = context
         .s2s_client
-        .get_album_invite_summary(&payload.token, &context.settings.secrets.jwt)
+        .get_album_invite_summary(&payload.token)
         .await?;
     Ok(Json(summary))
 }

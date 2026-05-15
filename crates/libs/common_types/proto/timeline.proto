@@ -45,11 +45,16 @@ message FullAlbumMediaResponse {
   repeated SimpleTimelineItem items = 2;
 }
 
+message OrderedMediaResponse {
+  repeated SimpleTimelineItem items = 1;
+}
+
 message CollaboratorSummary {
   int64 id = 1;
   int32 user_id = 2;
   string name = 3;
   string role = 4;
+  optional string avatar_id = 5;
 }
 
 message AlbumInfo {
@@ -59,7 +64,8 @@ message AlbumInfo {
   bool is_public = 4;
   int32 owner_id = 5;
   string created_at = 6;
-  optional string thumbnail_id = 7;
+  string sort_mode = 7;
+  optional string thumbnail_id = 8;
   optional string first_date = 9;
   optional string last_date = 10;
   repeated CollaboratorSummary collaborators = 11;
@@ -70,7 +76,34 @@ message SearchResponse {
   repeated SimpleTimelineItem items = 1;
 }
 
+enum SuggestionType {
+  SEARCH = 0;
+  ALBUM = 1;
+}
+
+message SearchSuggestion {
+  string text = 1;
+  SuggestionType suggestion_type = 2;
+  optional string id = 3;
+}
+
 message SearchSuggestionsResponse {
-  repeated string suggestions = 1;
+  repeated SearchSuggestion suggestions = 1;
+}
+
+// --- Person
+message PersonInfo {
+  int64 id = 1;
+  optional string name = 2;
+  int32 photo_count = 3;
+  optional string thumbnail_id = 4;
+}
+
+message ListPeopleResponse {
+  repeated PersonInfo people = 1;
+}
+
+message FullPersonMediaResponse {
+  PersonInfo person = 1;
   repeated SimpleTimelineItem items = 2;
-}
+}

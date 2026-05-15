@@ -34,6 +34,7 @@ pub struct AnalyzerSettings {
 #[derive(Debug, Deserialize, Clone)]
 pub struct SearchSettings {
     pub embedder_model_id: String,
+    pub semantic_score_threshold: f64,
     pub semantic_weight: f64,
     pub text_weight: f64,
 }

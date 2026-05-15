@@ -5,14 +5,15 @@ ingest:
 
   analyzer:
     llm_base_url: "http://localhost:8080"
+    search:
+      embedder_model_id: RuteNL/MobileCLIP2-S3-OpenCLIP-ONNX
+      semantic_score_threshold: 0.8
+      semantic_weight: 0.5
+      text_weight: 0.5
     analyze_image_size: 360
     theme_generation:
       variant: Vibrant
       contrast_level: 0.5
-    search:
-      embedder_model_id: RuteNL/DFN5B-CLIP-ViT-H-14-378-ONNX
-      semantic_weight: 0.8
-      text_weight: 0.2
 
   file_detection:
     video_extensions:

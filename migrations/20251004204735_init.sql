@@ -1,6 +1,5 @@
 CREATE TYPE user_role AS ENUM ('admin', 'user');
 
--- Create the Location table. Many GPS entries can point to one Location.
 CREATE TABLE location
 (
     id           SERIAL PRIMARY KEY,
@@ -12,7 +11,6 @@ CREATE TABLE location
 );
 CREATE INDEX idx_location_lookup ON location (name, admin1, country_code);
 
--- Create the User table.
 CREATE TABLE app_user
 (
     id           SERIAL PRIMARY KEY,
@@ -23,6 +21,14 @@ CREATE TABLE app_user
     name         TEXT        NOT NULL,
     media_folder TEXT,
     role         user_role   NOT NULL DEFAULT 'user'
+);
+
+CREATE TABLE user_invite
+(
+    token        TEXT PRIMARY KEY,
+    media_folder TEXT        NOT NULL,
+    expires_at   TIMESTAMPTZ NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE remote_user
@@ -51,30 +57,44 @@ CREATE TABLE refresh_token
 -- Other tables with specific metadata will link to this one.
 CREATE TABLE media_item
 (
-    id                  VARCHAR(10) PRIMARY KEY,
-    relative_path       TEXT        NOT NULL UNIQUE,
-    hash                TEXT        NOT NULL,
-    filename            TEXT        NOT NULL,
-    user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    remote_user_id      INT         REFERENCES remote_user (id) ON DELETE SET NULL,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    width               INT         NOT NULL,
-    height              INT         NOT NULL,
-    is_video            BOOLEAN     NOT NULL,
-    duration_ms         BIGINT,
-    taken_at_local      TIMESTAMP   NOT NULL,
-    taken_at_utc        TIMESTAMPTZ,
-    sort_timestamp      TIMESTAMPTZ NOT NULL,
-    use_panorama_viewer BOOLEAN     NOT NULL,
-    orientation         INT         NOT NULL DEFAULT 1,
-    has_thumbnails      BOOLEAN     NOT NULL DEFAULT false,
-    deleted             BOOLEAN     NOT NULL DEFAULT false,
-    month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
-    search_vector       TSVECTOR,
+    -- Ids
+    id                         VARCHAR(10) PRIMARY KEY,
+    user_id                    INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    remote_user_id             INT         REFERENCES remote_user (id) ON DELETE SET NULL,
+    hash                       TEXT        NOT NULL,
+    -- File info
+    relative_path              TEXT        NOT NULL UNIQUE,
+    filename                   TEXT        NOT NULL,
+    created_at                 TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at                 TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Media info
+    width                      INT         NOT NULL,
+    height                     INT         NOT NULL,
+    is_video                   BOOLEAN     NOT NULL,
+    duration_ms                BIGINT,
+    orientation                INT         NOT NULL DEFAULT 1,
+    -- Time
+    taken_at_local             TIMESTAMP   NOT NULL,
+    og_taken_at_local          TIMESTAMP   NOT NULL,
+    taken_at_utc               TIMESTAMPTZ,
+    sort_timestamp             TIMESTAMPTZ NOT NULL,
+    timezone_name              TEXT,
+    timezone_offset_seconds    INT,
+    og_timezone_offset_seconds INT,
+    -- Frontend fields
+    use_panorama_viewer        BOOLEAN     NOT NULL,
+    has_thumbnails             BOOLEAN     NOT NULL DEFAULT false,
+    month_id                   DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
+    user_caption               TEXT,
+    -- Other
+    deleted                    BOOLEAN     NOT NULL DEFAULT false,
+    search_vector              TSVECTOR,
     CONSTRAINT width_positive CHECK (width > 0),
     CONSTRAINT height_positive CHECK (height > 0)
 );
+
+ALTER TABLE app_user
+    ADD COLUMN avatar_id VARCHAR(10) REFERENCES media_item (id) ON DELETE SET NULL;
 
 -- The following tables store optional, detailed metadata for a MediaItem.
 -- They use a one-to-one relationship where the primary key is also a foreign key
@@ -92,12 +112,10 @@ CREATE TABLE gps
 
 CREATE TABLE time
 (
-    media_item_id           VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    timezone_name           TEXT,
-    timezone_offset_seconds INT,
-    timezone_source         TEXT,
-    source_details          TEXT NOT NULL,
-    source_confidence       TEXT NOT NULL
+    media_item_id     VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
+    timezone_source   TEXT,
+    source_details    TEXT NOT NULL,
+    source_confidence TEXT NOT NULL
 );
 
 CREATE TABLE weather
@@ -178,8 +196,7 @@ CREATE INDEX idx_media_item_search_lookup ON media_item (user_id, deleted, id);
 
 -- For /timeline/ids
 CREATE INDEX idx_media_item_ids_timeline
-    ON media_item (user_id, sort_timestamp DESC)
-    INCLUDE (id)
+    ON media_item (user_id, sort_timestamp DESC) INCLUDE (id)
     WHERE deleted = false;
 
 -- For /timeline/ratios
@@ -188,6 +205,9 @@ CREATE INDEX idx_media_item_user_month_order_partial
                    user_id,
                    month_id,
                    sort_timestamp DESC
-        )
-    INCLUDE (width, height)
+        ) INCLUDE (width, height)
     WHERE deleted = false;
+
+-- Composite index for search filtering
+CREATE INDEX idx_media_item_search_filters
+    ON media_item (user_id, deleted, is_video) INCLUDE (id, taken_at_utc, sort_timestamp);

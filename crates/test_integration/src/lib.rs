@@ -27,6 +27,7 @@ mod test_runner {
         test_get_color_theme, test_get_full_item, test_get_random_photo, test_photo_download,
     };
     use crate::tests::test_root::test_health_endpoint;
+    use crate::tests::test_search::test_search_filters;
     use crate::tests::test_timeline::{
         test_get_photos_by_month, test_get_timeline_ids, test_get_timeline_ratios,
     };
@@ -68,6 +69,8 @@ mod test_runner {
                 test_get_full_item,
                 test_get_color_theme,
                 test_get_random_photo,
+                // -- Search --
+                test_search_filters,
             ]
         );
 

@@ -1,11 +1,12 @@
-use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSortField};
+use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSort, AlbumSortField};
 use crate::api::timeline::interfaces::SortDirection;
-use crate::database::DbError;
-use crate::database::album::album::{Album, AlbumRole, AlbumTimelineInfo};
+use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
-use common_types::pb::api::{CollaboratorSummary, TimelineItem};
+use crate::database::structs::CreateAlbumPayload;
+use crate::database::{DbError, UpdateField};
+use common_types::pb::api::{CollaboratorSummary, SimpleTimelineItem, TimelineItem};
 use sqlx::postgres::PgQueryResult;
-use sqlx::{PgExecutor, PgTransaction};
+use sqlx::{PgConnection, PgExecutor};
 
 pub struct AlbumStore;
 
@@ -29,17 +30,13 @@ impl AlbumStore {
     pub async fn create(
         executor: impl PgExecutor<'_>,
         album_id: &str,
-        user_id: i32,
-        name: &str,
-        description: Option<String>,
-        thumbnail_id: Option<String>,
-        is_public: bool,
+        payload: CreateAlbumPayload,
     ) -> Result<Album, DbError> {
         Ok(sqlx::query_as!(
             Album,
             r#"
-            INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public, manual_sort)
-            VALUES ($1, $2, $3, $4, $5, $6, false)
+            INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public, sort_mode)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING
                 id,
                 owner_id,
@@ -52,17 +49,32 @@ impl AlbumStore {
                 earliest_media_item_timestamp,
                 updated_at,
                 created_at,
-                manual_sort
+                sort_mode as "sort_mode: AlbumSort"
             "#,
             album_id,
-            user_id,
-            name,
-            description,
-            thumbnail_id,
-            is_public,
+            payload.owner_id,
+            payload.name,
+            payload.description,
+            payload.thumbnail_id,
+            payload.is_public,
+            payload.sort_mode as AlbumSort,
         )
-            .fetch_one(executor)
-            .await?)
+        .fetch_one(executor)
+        .await?)
+    }
+
+    pub async fn delete(
+        executor: impl PgExecutor<'_>,
+        album_id: &str,
+        user_id: i32,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            "DELETE FROM album WHERE id = $1 AND owner_id = $2",
+            album_id,
+            user_id
+        )
+        .execute(executor)
+        .await?)
     }
 
     /// Updates the details of a specific album.
@@ -70,8 +82,8 @@ impl AlbumStore {
         executor: impl PgExecutor<'_>,
         album_id: &str,
         name: Option<String>,
-        description: Option<String>,
-        thumbnail_id: Option<String>,
+        description: UpdateField<String>,
+        thumbnail_id: UpdateField<String>,
         is_public: Option<bool>,
     ) -> Result<Album, DbError> {
         Ok(sqlx::query_as!(
@@ -79,12 +91,12 @@ impl AlbumStore {
             r#"
             UPDATE album
             SET
-                name = COALESCE($1, name),
-                description = COALESCE($2, description),
-                thumbnail_id = COALESCE($3, thumbnail_id),
-                is_public = COALESCE($4, is_public),
+                name = COALESCE($2, name),
+                description = CASE WHEN $3::boolean THEN description ELSE $4 END,
+                thumbnail_id = CASE WHEN $5::boolean THEN thumbnail_id ELSE $6 END,
+                is_public = COALESCE($7, is_public),
                 updated_at = now()
-            WHERE id = $5
+            WHERE id = $1
             RETURNING
                 id,
                 owner_id,
@@ -97,32 +109,17 @@ impl AlbumStore {
                 earliest_media_item_timestamp,
                 updated_at,
                 created_at,
-                manual_sort
+                sort_mode as "sort_mode: AlbumSort"
             "#,
+            album_id,
             name,
-            description,
-            thumbnail_id,
+            description.is_ignore(),
+            description.value(),
+            thumbnail_id.is_ignore(),
+            thumbnail_id.value(),
             is_public,
-            album_id
         )
         .fetch_one(executor)
-        .await?)
-    }
-
-    /// Updates the details of a specific album.
-    pub async fn remove_description(
-        executor: impl PgExecutor<'_>,
-        album_id: &str,
-    ) -> Result<PgQueryResult, DbError> {
-        Ok(sqlx::query!(
-            r#"
-            UPDATE album
-            SET description = NULL
-            WHERE id = $1
-            "#,
-            album_id
-        )
-        .execute(executor)
         .await?)
     }
 
@@ -146,39 +143,9 @@ impl AlbumStore {
                 earliest_media_item_timestamp,
                 updated_at,
                 created_at,
-                manual_sort
+                sort_mode as "sort_mode: AlbumSort"
             FROM album
             WHERE id = $1
-            "#,
-            album_id
-        )
-        .fetch_optional(executor)
-        .await?)
-    }
-
-    /// Retrieves a single album by its ID, including the first and last date taken.
-    pub async fn find_timeline_info(
-        executor: impl PgExecutor<'_>,
-        album_id: &str,
-    ) -> Result<Option<AlbumTimelineInfo>, DbError> {
-        Ok(sqlx::query_as!(
-            AlbumTimelineInfo,
-            r#"
-            SELECT
-                a.id,
-                a.owner_id,
-                a.name,
-                a.description,
-                a.thumbnail_id,
-                a.is_public,
-                a.created_at,
-                MIN(mi.taken_at_local) as "first_date?",
-                MAX(mi.taken_at_local) as "last_date?"
-            FROM album a
-            LEFT JOIN album_media_item ami ON a.id = ami.album_id
-            LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
-            WHERE a.id = $1
-            GROUP BY a.id
             "#,
             album_id
         )
@@ -206,7 +173,7 @@ impl AlbumStore {
                 earliest_media_item_timestamp,
                 updated_at,
                 created_at,
-                manual_sort
+                sort_mode as "sort_mode: AlbumSort"
             FROM album a
             JOIN album_collaborator ac ON a.id = ac.album_id
             WHERE ac.user_id = $1
@@ -235,7 +202,7 @@ impl AlbumStore {
                 a.description,
                 a.thumbnail_id,
                 a.is_public,
-                a.manual_sort,
+                a.sort_mode as "sort_mode: AlbumSort",
                 a.created_at,
                 a.updated_at,
                 a.media_count,
@@ -295,39 +262,91 @@ impl AlbumStore {
         .await?)
     }
 
-    /// Resets the ranks of all items in an album based on their chronological `sort_timestamp`.
-    pub async fn reorder_by_date(
-        tx: &mut PgTransaction<'_>,
+    /// Resets the ranks of all items in an album based on specified criteria.
+    pub async fn sort_media_items(
+        executor: &mut PgConnection,
         album_id: &str,
+        sort_mode: AlbumSort,
     ) -> Result<(), DbError> {
-        // Re-rank everything
+        if sort_mode == AlbumSort::None {
+            return Ok(());
+        }
+
+        let items = Self::list_sorted_media_items(&mut *executor, album_id, sort_mode).await?;
+        let ids: Vec<String> = items.into_iter().map(|i| i.id).collect();
+
+        Self::reorder_media_items(executor, album_id, &ids).await?;
+
+        // Set the `sort_mode` flag
+        sqlx::query!(
+            "UPDATE album SET sort_mode = $2 WHERE id = $1",
+            album_id,
+            sort_mode as AlbumSort,
+        )
+        .execute(&mut *executor)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn list_sorted_media_items(
+        executor: impl PgExecutor<'_>,
+        album_id: &str,
+        sort_mode: AlbumSort,
+    ) -> Result<Vec<SimpleTimelineItem>, DbError> {
+        Ok(sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+            SELECT
+                mi.id,
+                is_video,
+                has_thumbnails,
+                duration_ms::INT as duration_ms,
+                (width::real / height::real) as "ratio!"
+            FROM album_media_item as ami
+            JOIN media_item mi ON mi.id = ami.media_item_id
+            WHERE ami.album_id = $1 AND mi.deleted = false
+            ORDER BY
+                CASE WHEN $2 = 'date_asc' THEN mi.sort_timestamp END ASC,
+                CASE WHEN $2 = 'date_asc' THEN mi.created_at END ASC,
+                CASE WHEN $2 = 'date_desc' THEN mi.sort_timestamp END DESC,
+                CASE WHEN $2 = 'date_desc' THEN mi.created_at END DESC,
+                CASE WHEN $2 = 'added_asc' THEN ami.added_at END ASC,
+                CASE WHEN $2 = 'added_desc' THEN ami.added_at END DESC,
+                ami.rank ASC
+            "#,
+            album_id,
+            sort_mode as AlbumSort
+        )
+        .fetch_all(executor)
+        .await?)
+    }
+
+    pub async fn reorder_media_items(
+        executor: &mut PgConnection,
+        album_id: &str,
+        media_item_ids: &[String],
+    ) -> Result<(), DbError> {
+        let ranks: Vec<f64> = (0..media_item_ids.len())
+            .map(|i| ((i + 1) * 1000) as f64)
+            .collect();
+
         sqlx::query!(
             r#"
-            UPDATE album_media_item ami
-            SET rank = sub.new_rank
+            UPDATE album_media_item
+            SET rank = updates.new_rank
             FROM (
-                SELECT
-                    ami2.album_id,
-                    ami2.media_item_id,
-                    ROW_NUMBER() OVER (ORDER BY mi.sort_timestamp ASC, mi.created_at ASC) * 1000.0 as new_rank
-                FROM album_media_item ami2
-                JOIN media_item mi ON ami2.media_item_id = mi.id
-                WHERE ami2.album_id = $1
-            ) sub
-            WHERE ami.album_id = sub.album_id
-              AND ami.media_item_id = sub.media_item_id;
+                SELECT unnest($1::text[]) AS media_item_id,
+                       unnest($2::float8[]) AS new_rank
+            ) AS updates
+            WHERE album_media_item.album_id = $3
+              AND album_media_item.media_item_id = updates.media_item_id
             "#,
+            media_item_ids as &[String],
+            &ranks,
             album_id
         )
-            .execute(&mut **tx)
-            .await?;
-
-        // Reset the manual_sort flag
-        sqlx::query!(
-            "UPDATE album SET manual_sort = false WHERE id = $1",
-            album_id
-        )
-        .execute(&mut **tx)
+        .execute(executor)
         .await?;
 
         Ok(())
@@ -368,7 +387,7 @@ impl AlbumStore {
             JOIN media_item mi ON ami.media_item_id = mi.id
             WHERE ami.album_id = $1
             AND mi.deleted = false
-            ORDER BY ami.added_at DESC
+            ORDER BY ami.rank ASC
             "#,
             album_id
         )
@@ -520,6 +539,7 @@ impl AlbumStore {
             SELECT
                 ac.id,
                 ac.user_id,
+                u.avatar_id,
                 u.name,
                 ac.role as "role: String"
             FROM album_collaborator ac

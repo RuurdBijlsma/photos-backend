@@ -6,7 +6,7 @@
 
 use app_state::load_app_settings;
 use common_services::api::auth::interfaces::CreateUser;
-use common_services::api::auth::service::create_user;
+use common_services::api::auth::service::{create_user, generate_invite};
 use common_services::api::onboarding::service::start_processing;
 use common_services::database::get_db_pool;
 use common_services::database::user_store::UserStore;
@@ -17,8 +17,7 @@ use worker::worker::create_worker;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
-    let filter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| "worker=info,ort=warn".into());
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,ort=warn".into());
     let subscriber = fmt::Subscriber::builder()
         .with_max_level(Level::INFO)
         .with_env_filter(filter)
@@ -33,6 +32,7 @@ async fn main() -> color_eyre::Result<()> {
         name: USERNAME.to_owned(),
         email: EMAIL.to_owned(),
         password: PASSWORD.to_owned(),
+        token: None,
     };
     let user_result = create_user(&pool, &create_user_payload).await;
     let user = if let Ok(u) = user_result {
@@ -45,6 +45,17 @@ async fn main() -> color_eyre::Result<()> {
             .clone()
     };
     println!("Created user {user:?}");
+    let user_invite = generate_invite(&pool, &settings.ingest, "otheruser").await?;
+    create_user(
+        &pool,
+        &CreateUser {
+            name: "other_user".to_owned(),
+            email: "other@example.com".to_owned(),
+            password: PASSWORD.to_owned(),
+            token: Some(user_invite.token),
+        },
+    )
+    .await?;
     let user = start_processing(&pool, &settings, user.id, String::new()).await?;
     println!("Started processing, media folder: {:?}", user.media_folder);
     create_worker(pool, settings, false, true).await?;

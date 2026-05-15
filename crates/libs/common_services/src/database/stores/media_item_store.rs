@@ -1,4 +1,3 @@
-use crate::database::DbError;
 use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
@@ -9,9 +8,9 @@ use crate::database::media_item::media_item::{
 use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
+use crate::database::structs::UpdateMediaItemPayload;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
-use app_state::constants;
-use chrono::{TimeZone, Utc};
+use crate::database::{DbError, with_fallback_timezone};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
@@ -108,6 +107,12 @@ impl MediaItemStore {
                                 jsonb_agg(to_jsonb(f)),
                                 '[]'::jsonb
                             ) FROM face f WHERE f.visual_analysis_id = va.id
+                        ),
+                        'objects', (
+                            SELECT COALESCE(
+                                jsonb_agg(to_jsonb(o)),
+                                '[]'::jsonb
+                            ) FROM object o WHERE o.visual_analysis_id = va.id
                         )
                     )
                     ORDER BY va.created_at DESC
@@ -130,8 +135,13 @@ impl MediaItemStore {
             mi.duration_ms,
             mi.taken_at_local,
             mi.taken_at_utc,
+            mi.og_taken_at_local,
+            mi.timezone_name,
+            mi.timezone_offset_seconds,
+            mi.og_timezone_offset_seconds,
             mi.use_panorama_viewer,
             mi.has_thumbnails,
+            mi.user_caption,
 
             COALESCE(va.data, '[]'::jsonb) AS "visual_analyses!: Json<Vec<ReadVisualAnalysis>>",
 
@@ -184,17 +194,8 @@ impl MediaItemStore {
         remote_user_id: Option<i32>,
         media_item: &CreateFullMediaItem,
     ) -> Result<(), DbError> {
-        let sort_timestamp = media_item.taken_at_utc.unwrap_or_else(|| {
-            constants().fallback_timezone.as_ref().map_or_else(
-                || media_item.taken_at_local.and_utc(),
-                |tz| {
-                    tz.from_local_datetime(&media_item.taken_at_local)
-                        .earliest()
-                        .expect("Can't get datetime at timezone.")
-                        .with_timezone(&Utc)
-                },
-            )
-        });
+        let sort_timestamp =
+            with_fallback_timezone(media_item.taken_at_utc, &media_item.taken_at_local);
         let filename = Path::new(relative_path).file_name().map_or_else(
             || relative_path.to_string(),
             |f| f.to_string_lossy().to_string(),
@@ -205,10 +206,11 @@ impl MediaItemStore {
             r#"
             INSERT INTO media_item (
                 id, relative_path, filename, user_id, remote_user_id, hash, width, height,
-                is_video, duration_ms, taken_at_local, taken_at_utc, sort_timestamp, orientation,
-                use_panorama_viewer
+                is_video, duration_ms, taken_at_local, taken_at_utc,
+                og_taken_at_local, sort_timestamp, orientation,
+                use_panorama_viewer, timezone_name, timezone_offset_seconds, og_timezone_offset_seconds
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
             "#,
             id,
             relative_path,
@@ -222,9 +224,13 @@ impl MediaItemStore {
             media_item.duration_ms,
             media_item.taken_at_local,
             media_item.taken_at_utc,
+            media_item.og_taken_at_local,
             sort_timestamp,
             media_item.orientation,
-            media_item.use_panorama_viewer
+            media_item.use_panorama_viewer,
+            media_item.timezone_name,
+            media_item.timezone_offset_seconds,
+            media_item.og_timezone_offset_seconds,
         )
         .execute(&mut **tx)
         .await?;
@@ -284,14 +290,11 @@ impl MediaItemStore {
         sqlx::query!(
             r#"
                 INSERT INTO time (
-                    media_item_id, timezone_name, timezone_offset_seconds,
-                    timezone_source, source_details, source_confidence
+                    media_item_id, timezone_source, source_details, source_confidence
                 )
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES ($1, $2, $3, $4)
                 "#,
             id,
-            media_item.time.timezone_name,
-            media_item.time.timezone_offset_seconds,
             media_item.time.timezone_source,
             &media_item.time.source_details,
             &media_item.time.source_confidence,
@@ -382,6 +385,73 @@ impl MediaItemStore {
             relative_path
         )
         .fetch_optional(executor)
+        .await?)
+    }
+
+    /// Deletes multiple media items by their relative paths.
+    pub async fn delete_by_relative_paths(
+        executor: impl Executor<'_, Database = Postgres>,
+        relative_paths: &[String],
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            r#"
+            DELETE FROM media_item
+            WHERE relative_path = ANY($1)
+            "#,
+            relative_paths
+        )
+        .execute(executor)
+        .await?)
+    }
+
+    /// Marks a media item as deleted without removing it from the database.
+    pub async fn soft_delete_by_relative_path(
+        executor: impl Executor<'_, Database = Postgres>,
+        relative_path: &str,
+    ) -> Result<Option<String>, DbError> {
+        Ok(sqlx::query_scalar!(
+            r#"
+            UPDATE media_item
+            SET deleted = true
+            WHERE relative_path = $1
+            RETURNING id
+            "#,
+            relative_path
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
+    pub async fn update(
+        executor: impl Executor<'_, Database = Postgres>,
+        id: &str,
+        payload: UpdateMediaItemPayload,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(sqlx::query!(
+            r#"
+        UPDATE media_item
+        SET
+            user_caption = CASE WHEN $2::boolean THEN user_caption ELSE $3 END,
+            taken_at_local = COALESCE($4, taken_at_local),
+            taken_at_utc = CASE WHEN $5::boolean THEN taken_at_utc ELSE $6 END,
+            sort_timestamp = COALESCE($7, sort_timestamp),
+            timezone_offset_seconds = CASE WHEN $8::boolean THEN timezone_offset_seconds ELSE $9 END,
+            use_panorama_viewer = COALESCE($10, use_panorama_viewer),
+            updated_at = now()
+        WHERE id = $1
+        "#,
+            id,
+            payload.user_caption.is_ignore(),
+            payload.user_caption.value(),
+            payload.taken_at_local,
+            payload.taken_at_utc.is_ignore(),
+            payload.taken_at_utc.value(),
+            payload.sort_timestamp,
+            payload.timezone_offset_seconds.is_ignore(),
+            payload.timezone_offset_seconds.value(),
+            payload.use_panorama_viewer,
+        )
+        .execute(executor)
         .await?)
     }
 

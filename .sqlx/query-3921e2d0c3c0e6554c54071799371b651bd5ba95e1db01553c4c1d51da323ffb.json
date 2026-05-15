@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE app_user\n            SET\n                name = COALESCE($2, name),\n                email = COALESCE($3, email),\n                password = COALESCE($4, password),\n                role = COALESCE($5, role),\n                media_folder = COALESCE($6, media_folder),\n                avatar_id = CASE WHEN $7::boolean THEN avatar_id ELSE $8 END,\n                updated_at = now()\n            WHERE id = $1\n            RETURNING\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                avatar_id,\n                role as \"role: UserRole\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "media_folder",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "avatar_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "role: UserRole",
+        "type_info": {
+          "Custom": {
+            "name": "user_role",
+            "kind": {
+              "Enum": [
+                "admin",
+                "user"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "user_role",
+            "kind": {
+              "Enum": [
+                "admin",
+                "user"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Bool",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "3921e2d0c3c0e6554c54071799371b651bd5ba95e1db01553c4c1d51da323ffb"
+}

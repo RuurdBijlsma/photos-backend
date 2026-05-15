@@ -13,6 +13,7 @@ pub struct User {
     pub email: String,
     pub name: String,
     pub media_folder: Option<String>,
+    pub avatar_id: Option<String>,
     pub role: UserRole,
 }
 
@@ -25,6 +26,7 @@ pub struct UserWithPassword {
     pub email: String,
     pub name: String,
     pub media_folder: Option<String>,
+    pub avatar_id: Option<String>,
     pub role: UserRole,
     pub password: String,
 }
@@ -45,4 +47,14 @@ impl fmt::Display for UserRole {
             Self::User => write!(f, "USER"),
         }
     }
+}
+
+/// Represents a user invite in the application.
+#[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserInvite {
+    pub token: String,
+    pub media_folder: String,
+    pub expires_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }

@@ -1,0 +1,15 @@
+[package]
+name = "tasks"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+app_state = { path = "../app_state" }
+common_services = { path = "../common_services" }
+tokio = { version = "1.47.1", features = ["full"] }
+color-eyre = "0.6.5"
+tracing = "0.1.41"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json", "uuid"] }
+
+[features]
+load-dynamic = ["common_services/load-dynamic"]

@@ -1,14 +1,14 @@
-use super::interfaces::{AcceptInviteRequest, AlbumShareClaims};
+use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort};
 use crate::api::album::error::AlbumError;
-use crate::database::DbError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
 use crate::database::system_metrics_store::SystemMetricsStore;
 use crate::database::user_store::UserStore;
+use crate::database::{CreateAlbumPayload, UpdateField};
 use crate::job_queue::enqueue_job;
-use crate::s2s_client::{S2SClient, extract_token_claims};
+use crate::s2s_client::{S2SClient, insecure_extract_token_claims};
 use crate::utils::nice_id;
 use app_state::{AppSettings, constants};
 use chrono::{Duration, Utc};
@@ -18,6 +18,8 @@ use common_types::pb::api::{AlbumInfo, FullAlbumMediaResponse, SimpleTimelineIte
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;
+
+const DEFAULT_ALBUM_SORT: AlbumSort = AlbumSort::DateDesc;
 
 #[instrument(skip(executor))]
 async fn check_user_role(
@@ -78,7 +80,7 @@ where
 /// Returns the image that has an embedding closest to the centroid if >50% have embeddings.
 /// Otherwise, returns the middle item chronologically.
 #[instrument(skip(tx))]
-async fn get_representative_thumbnail(
+pub async fn get_representative_thumbnail(
     tx: &mut PgTransaction<'_>,
     media_item_ids: &[String],
 ) -> Result<Option<String>, AlbumError> {
@@ -173,20 +175,33 @@ pub async fn create_album(
     let album = AlbumStore::create(
         &mut *tx,
         &album_id,
-        user_id,
-        name,
-        description,
-        None,
-        is_public,
+        CreateAlbumPayload {
+            owner_id: user_id,
+            name: name.to_owned(),
+            description,
+            thumbnail_id: None,
+            sort_mode: DEFAULT_ALBUM_SORT,
+            is_public,
+        },
     )
     .await?;
     AlbumStore::upsert_collaborator(&mut *tx, &album.id, user_id, AlbumRole::Owner).await?;
     if !media_item_ids.is_empty() {
         AlbumStore::add_media_items(&mut *tx, &album_id, media_item_ids, user_id).await?;
         if let Some(thumb) = get_representative_thumbnail(&mut tx, media_item_ids).await? {
-            AlbumStore::update(&mut *tx, &album_id, None, None, Some(thumb), None).await?;
+            AlbumStore::update(
+                &mut *tx,
+                &album_id,
+                None,
+                UpdateField::Ignore,
+                UpdateField::Value(thumb),
+                None,
+            )
+            .await?;
         }
     }
+
+    AlbumStore::sort_media_items(&mut tx, &album_id, DEFAULT_ALBUM_SORT).await?;
 
     tx.commit().await?;
 
@@ -217,14 +232,22 @@ pub async fn add_media_to_album(
     AlbumStore::add_media_items(&mut *tx, album_id, media_item_ids, user_id).await?;
 
     // If NOT manually sorted, run the reorder logic immediately to interleave them
-    if !album.manual_sort {
-        AlbumStore::reorder_by_date(&mut tx, album_id).await?;
+    if album.sort_mode != AlbumSort::None {
+        AlbumStore::sort_media_items(&mut tx, album_id, album.sort_mode).await?;
     }
 
     if album.thumbnail_id.is_none()
         && let Some(tid) = get_representative_thumbnail(&mut tx, media_item_ids).await?
     {
-        AlbumStore::update(&mut *tx, album_id, None, None, Some(tid), None).await?;
+        AlbumStore::update(
+            &mut *tx,
+            album_id,
+            None,
+            UpdateField::Ignore,
+            UpdateField::Value(tid),
+            None,
+        )
+        .await?;
     }
 
     tx.commit().await?;
@@ -237,7 +260,7 @@ pub async fn add_media_to_album(
 pub async fn remove_media_from_album(
     pool: &PgPool,
     album_id: &str,
-    media_item_id: &str,
+    media_item_ids: &[String],
     user_id: i32,
 ) -> Result<(), AlbumError> {
     if !can_edit_album(pool, user_id, album_id).await? {
@@ -247,30 +270,32 @@ pub async fn remove_media_from_album(
     }
 
     let mut tx = pool.begin().await?;
-    let result =
-        AlbumStore::remove_media_items_by_id(&mut *tx, album_id, &[media_item_id.to_owned()])
-            .await?;
-
-    if result.rows_affected() == 0 {
-        return Err(AlbumError::NotFound(format!(
-            "Media item {media_item_id} not found in album {album_id}"
-        )));
-    }
+    AlbumStore::remove_media_items_by_id(&mut *tx, album_id, media_item_ids).await?;
 
     // Fix thumbnail id if it was removed
     if let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? {
         // Check if removed item was the thumbnail
-        if Some(media_item_id.to_owned()) == album.thumbnail_id && album.media_count > 0 {
-            let ids: Vec<String> = sqlx::query_scalar!(
-                "SELECT media_item_id FROM album_media_item WHERE album_id = $1",
-                album_id
-            )
-            .fetch_all(&mut *tx)
-            .await?;
+        for media_item_id in media_item_ids {
+            if Some(media_item_id) == album.thumbnail_id.as_ref() && album.media_count > 0 {
+                let ids: Vec<String> = sqlx::query_scalar!(
+                    "SELECT media_item_id FROM album_media_item WHERE album_id = $1",
+                    album_id
+                )
+                .fetch_all(&mut *tx)
+                .await?;
 
-            if let Some(thumbnail_id) = get_representative_thumbnail(&mut tx, &ids).await? {
-                AlbumStore::update(&mut *tx, album_id, None, None, Some(thumbnail_id), None)
+                if let Some(thumbnail_id) = get_representative_thumbnail(&mut tx, &ids).await? {
+                    AlbumStore::update(
+                        &mut *tx,
+                        album_id,
+                        None,
+                        UpdateField::Ignore,
+                        UpdateField::Value(thumbnail_id),
+                        None,
+                    )
                     .await?;
+                }
+                break;
             }
         }
     }
@@ -285,7 +310,7 @@ pub async fn remove_media_from_album(
 pub async fn add_collaborator(
     pool: &PgPool,
     album_id: &str,
-    new_user_email: &str,
+    new_user_id: i32,
     role: AlbumRole,
     inviting_user_id: i32,
 ) -> Result<AlbumCollaborator, AlbumError> {
@@ -297,11 +322,9 @@ pub async fn add_collaborator(
     }
 
     // Find the user to add by their email.
-    let user_to_add = UserStore::find_by_email(pool, new_user_email)
+    let user_to_add = UserStore::find_by_id(pool, new_user_id)
         .await?
-        .ok_or_else(|| {
-            AlbumError::NotFound(format!("User with email {new_user_email} not found."))
-        })?;
+        .ok_or_else(|| AlbumError::NotFound(format!("User with id {new_user_id} not found.")))?;
 
     // An owner cannot be added or demoted via this function.
     if role == AlbumRole::Owner {
@@ -318,7 +341,7 @@ pub async fn add_collaborator(
 }
 
 /// Removes a collaborator from an album.
-/// The user performing the action must be the album owner.
+/// The user performing the action must be (the album owner, or the collaborator to be removed).
 #[instrument(skip(pool))]
 pub async fn remove_collaborator(
     pool: &PgPool,
@@ -326,19 +349,20 @@ pub async fn remove_collaborator(
     collaborator_id_to_remove: i64,
     requesting_user_id: i32,
 ) -> Result<(), AlbumError> {
-    if !is_album_owner(pool, requesting_user_id, album_id).await? {
+    let Some(collaborator_to_remove) =
+        AlbumStore::find_collaborator_by_id(pool, collaborator_id_to_remove).await?
+    else {
+        return Err(AlbumError::NotFound("Collaborator not found.".to_string()));
+    };
+    let is_self_removal = collaborator_to_remove.user_id == requesting_user_id;
+    let is_owner = is_album_owner(pool, requesting_user_id, album_id).await?;
+    if !is_owner && !is_self_removal {
         return Err(AlbumError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
 
-    // Get the collaborator record to check if we're trying to remove the owner.
-    let collaborator_to_remove =
-        AlbumStore::find_collaborator_by_id(pool, collaborator_id_to_remove)
-            .await?
-            .ok_or_else(|| AlbumError::NotFound("Collaborator not found.".to_string()))?;
-
-    // Safety check: The owner cannot be removed.
+    // The owner cannot be removed.
     if matches!(collaborator_to_remove.role, AlbumRole::Owner) {
         return Err(AlbumError::Internal(color_eyre::eyre::eyre!(
             "The album owner cannot be removed."
@@ -350,6 +374,17 @@ pub async fn remove_collaborator(
     Ok(())
 }
 
+pub async fn delete_album(pool: &PgPool, album_id: &str, user_id: i32) -> Result<(), AlbumError> {
+    // Permission Check: Only the owner can update album details.
+    if !is_album_owner(pool, user_id, album_id).await? {
+        return Err(AlbumError::NotFound(
+            "Album not found or permission denied.".to_string(),
+        ));
+    }
+    AlbumStore::delete(pool, album_id, user_id).await?;
+    Ok(())
+}
+
 /// Updates an album's name and/or description.
 /// The user must be the album owner.
 #[instrument(skip(pool))]
@@ -358,8 +393,8 @@ pub async fn update_album(
     album_id: &str,
     user_id: i32,
     name: Option<String>,
-    description: Option<String>,
-    thumbnail_id: Option<String>,
+    description: UpdateField<String>,
+    thumbnail_id: UpdateField<String>,
     is_public: Option<bool>,
 ) -> Result<Album, AlbumError> {
     // Permission Check: Only the owner can update album details.
@@ -370,14 +405,15 @@ pub async fn update_album(
     }
 
     // At least one field must be provided for the update.
-    if name.is_none() && description.is_none() && thumbnail_id.is_none() && is_public.is_none() {
+    if name.is_none() && description.is_ignore() && thumbnail_id.is_ignore() && is_public.is_none()
+    {
         let album = AlbumStore::find_by_id(pool, album_id)
             .await?
             .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()))?;
         return Ok(album);
     }
 
-    if let Some(thumbnail_id) = &thumbnail_id {
+    if let UpdateField::Value(thumbnail_id) = &thumbnail_id {
         let exists = AlbumStore::has_media_item(pool, album_id, thumbnail_id).await?;
         if !exists {
             return Err(AlbumError::BadRequest(
@@ -389,20 +425,6 @@ pub async fn update_album(
     let updated_album =
         AlbumStore::update(pool, album_id, name, description, thumbnail_id, is_public).await?;
     Ok(updated_album)
-}
-
-pub async fn remove_album_description(
-    pool: &PgPool,
-    album_id: &str,
-    user_id: i32,
-) -> Result<(), AlbumError> {
-    if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumError::NotFound(
-            "Album not found or permission denied.".to_string(),
-        ));
-    }
-    AlbumStore::remove_description(pool, album_id).await?;
-    Ok(())
 }
 
 #[instrument(skip(pool))]
@@ -449,26 +471,30 @@ pub async fn accept_invite(
     user_id: i32,
     payload: AcceptInviteRequest,
 ) -> Result<Album, AlbumError> {
-    let jwt_secret = &settings.secrets.jwt;
-    let claims = extract_token_claims(&payload.token, jwt_secret)
+    let claims = insecure_extract_token_claims(&payload.token)
         .map_err(|_| AlbumError::Forbidden("Invalid token.".to_string()))?;
 
     let summary: AlbumSummary = s2s_client
-        .get_album_invite_summary(&payload.token, jwt_secret)
+        .get_album_invite_summary(&payload.token)
         .await
         .wrap_err("Failed to get album invite summary from remote server")?;
 
     // 2. Create the new album locally
     let album_id = nice_id(constants().database.album_id_length);
     let mut tx = pool.begin().await?;
+    let description = payload.description.filter(|d| !d.trim().is_empty());
+
     let album = AlbumStore::create(
         &mut *tx,
         &album_id,
-        user_id,
-        &payload.name,
-        payload.description,
-        None,
-        false,
+        CreateAlbumPayload {
+            owner_id: user_id,
+            name: payload.name,
+            description,
+            thumbnail_id: None,
+            sort_mode: DEFAULT_ALBUM_SORT,
+            is_public: false,
+        },
     )
     .await?;
     AlbumStore::upsert_collaborator(&mut *tx, &album_id, user_id, AlbumRole::Owner).await?;
@@ -506,7 +532,7 @@ pub async fn get_album_media(
     album_id: &str,
     user_id: Option<i32>,
 ) -> Result<FullAlbumMediaResponse, AlbumError> {
-    let Some(album) = AlbumStore::find_timeline_info(pool, album_id).await? else {
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
         return Err(AlbumError::NotFound(album_id.to_owned()));
     };
     if !album.is_public {
@@ -517,27 +543,7 @@ pub async fn get_album_media(
             return Err(AlbumError::NotFound(album_id.to_string()));
         }
     }
-    let items_future = async {
-        sqlx::query_as!(
-            SimpleTimelineItem,
-            r#"
-            SELECT
-                mi.id,
-                is_video,
-                has_thumbnails,
-                duration_ms::INT as duration_ms,
-                (width::real / height::real) as "ratio!"
-            FROM album_media_item as ami
-            JOIN media_item mi ON mi.id = ami.media_item_id
-            WHERE ami.album_id = $1 AND mi.deleted = false
-            ORDER BY ami.rank
-            "#,
-            album_id
-        )
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::from)
-    };
+    let items_future = AlbumStore::list_sorted_media_items(pool, album_id, AlbumSort::None);
     let collaborators_future = AlbumStore::list_collaborators(pool, album_id);
     let (items, collaborators) = tokio::try_join!(items_future, collaborators_future)?;
 
@@ -551,8 +557,9 @@ pub async fn get_album_media(
             owner_id: album.owner_id,
             thumbnail_id: album.thumbnail_id,
             created_at: album.created_at.to_rfc3339(),
-            first_date: album.first_date.map(|d| d.to_string()),
-            last_date: album.last_date.map(|d| d.to_string()),
+            first_date: album.earliest_media_item_timestamp.map(|d| d.to_string()),
+            last_date: album.latest_media_item_timestamp.map(|d| d.to_string()),
+            sort_mode: format!("{:?}", album.sort_mode),
             collaborators,
         }),
     })
@@ -561,19 +568,17 @@ pub async fn get_album_media(
 // Re-ordering album logic
 
 #[instrument(skip(pool))]
-pub async fn sort_album_by_date(
+pub async fn get_sorted_album_media(
     pool: &PgPool,
     album_id: &str,
     user_id: i32,
-) -> Result<(), AlbumError> {
-    if !can_edit_album(pool, user_id, album_id).await? {
+    sort_mode: AlbumSort,
+) -> Result<Vec<SimpleTimelineItem>, AlbumError> {
+    if !can_view_album(pool, user_id, album_id).await? {
         return Err(AlbumError::Forbidden("Permission denied".into()));
     }
 
-    let mut tx = pool.begin().await?;
-    AlbumStore::reorder_by_date(&mut tx, album_id).await?;
-    tx.commit().await?;
-    Ok(())
+    Ok(AlbumStore::list_sorted_media_items(pool, album_id, sort_mode).await?)
 }
 
 #[instrument(skip(pool))]
@@ -602,8 +607,37 @@ pub async fn move_album_item(
 
     // Mark album as manually sorted
     sqlx::query!(
-        "UPDATE album SET manual_sort = true WHERE id = $1",
+        "UPDATE album SET sort_mode = 'date_asc' WHERE id = $1",
         album_id
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+    Ok(())
+}
+
+#[instrument(skip(pool))]
+pub async fn reorder_media_items(
+    pool: &PgPool,
+    album_id: &str,
+    user_id: i32,
+    media_item_ids: &[String],
+    sort_mode: AlbumSort,
+) -> Result<(), AlbumError> {
+    if !can_edit_album(pool, user_id, album_id).await? {
+        return Err(AlbumError::Forbidden("Permission denied".into()));
+    }
+
+    let mut tx = pool.begin().await?;
+
+    AlbumStore::reorder_media_items(&mut tx, album_id, media_item_ids).await?;
+
+    // Mark album as manually sorted
+    sqlx::query!(
+        "UPDATE album SET sort_mode = $2 WHERE id = $1",
+        album_id,
+        sort_mode as AlbumSort
     )
     .execute(&mut *tx)
     .await?;

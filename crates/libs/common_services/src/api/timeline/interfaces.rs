@@ -1,7 +1,7 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Deserialize, ToSchema, Debug, Default, Clone, Copy)]
+#[derive(Serialize, Deserialize, ToSchema, Debug, Default, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum SortDirection {
     #[default]

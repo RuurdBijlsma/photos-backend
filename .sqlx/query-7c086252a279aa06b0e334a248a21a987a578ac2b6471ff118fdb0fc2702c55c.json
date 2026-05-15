@@ -12,7 +12,7 @@
         "Float4",
         "Float4",
         "Int4",
-        "Text",
+        "Varchar",
         {
           "Custom": {
             "name": "vector",

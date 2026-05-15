@@ -7,12 +7,13 @@ ingest:
     llm_base_url: "http://localhost:8080"
     search:
       embedder_model_id: RuteNL/MobileCLIP2-S3-OpenCLIP-ONNX
+      semantic_score_threshold: 0.8
       semantic_weight: 0.5
       text_weight: 0.5
     analyze_image_size: 720
     theme_generation:
       variant: Vibrant
-      contrast_level: 0.5
+      contrast_level: 0.2
 
   file_detection:
     video_extensions:
@@ -83,7 +84,7 @@ api:
 
 secrets:
   jwt: "overwrite-me-with-env"
-  database_url: postgres://user:overwritemewithenv@localhost/photos
+  database_url: postgres://user:overwritemewithenv@127.0.0.1/photos
 
 constants:
   fallback_timezone: Europe/Amsterdam

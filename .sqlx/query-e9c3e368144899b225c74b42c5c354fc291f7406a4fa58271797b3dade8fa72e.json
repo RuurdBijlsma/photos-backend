@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE media_item\n        SET\n            user_caption = CASE WHEN $2::boolean THEN user_caption ELSE $3 END,\n            taken_at_local = COALESCE($4, taken_at_local),\n            taken_at_utc = CASE WHEN $5::boolean THEN taken_at_utc ELSE $6 END,\n            sort_timestamp = COALESCE($7, sort_timestamp),\n            timezone_offset_seconds = CASE WHEN $8::boolean THEN timezone_offset_seconds ELSE $9 END,\n            use_panorama_viewer = COALESCE($10, use_panorama_viewer),\n            updated_at = now()\n        WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bool",
+        "Text",
+        "Timestamp",
+        "Bool",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e9c3e368144899b225c74b42c5c354fc291f7406a4fa58271797b3dade8fa72e"
+}

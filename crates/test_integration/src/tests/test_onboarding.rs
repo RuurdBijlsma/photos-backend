@@ -12,6 +12,7 @@ use reqwest::StatusCode;
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
 use tokio::fs;
+use tokio::time::sleep;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::info;
@@ -137,7 +138,7 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
 
     // 5. Listen for WebSocket messages
-    let timeout = Duration::from_secs(60);
+    let timeout = Duration::from_mins(1);
     let start = Instant::now();
     let mut received_count = 0;
 
@@ -174,6 +175,38 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
     }
     info!("All media items are processed");
 
+    // 7. Check if media item relative paths match actual files in media root.
+    let db_paths: HashSet<String> = sqlx::query_scalar!("SELECT relative_path FROM media_item")
+        .fetch_all(&context.pool)
+        .await?
+        .into_iter()
+        .collect();
+    let fs_paths: HashSet<_> = photos
+        .into_iter()
+        .chain(videos)
+        .map(|p| p.make_relative(&context.settings.ingest.media_root))
+        .collect::<Result<_>>()?;
+    assert_eq!(db_paths, fs_paths);
+
+    // Wait for ingest thumbnails to complete
+    let start = Instant::now();
+    let timeout = Duration::from_mins(2);
+    loop {
+        let jobs_completed = sqlx::query_scalar!(
+            "SELECT COUNT(id) FROM jobs WHERE job_type = 'ingest_thumbnails' AND status = 'done'"
+        )
+        .fetch_one(&context.pool)
+        .await?
+        .expect("Couldn't get ingest_thumbnails job count");
+        if jobs_completed == expected_media_items as i64 {
+            break;
+        }
+        if start.elapsed() > timeout {
+            bail!("Timed out while waiting for 1 analysis job to complete");
+        }
+        sleep(Duration::from_secs(2)).await;
+    }
+
     // 6. Check if thumbnails are actually there.
     {
         struct MediaItem {
@@ -190,17 +223,5 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
         }
     }
 
-    // 7. Check if media item relative paths match actual files in media root.
-    let db_paths: HashSet<String> = sqlx::query_scalar!("SELECT relative_path FROM media_item")
-        .fetch_all(&context.pool)
-        .await?
-        .into_iter()
-        .collect();
-    let fs_paths: HashSet<_> = photos
-        .into_iter()
-        .chain(videos.into_iter())
-        .map(|p| p.make_relative(&context.settings.ingest.media_root))
-        .collect::<Result<_>>()?;
-    assert_eq!(db_paths, fs_paths);
     Ok(())
 }

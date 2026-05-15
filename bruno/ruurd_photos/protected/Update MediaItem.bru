@@ -1,0 +1,22 @@
+meta {
+  name: Update MediaItem
+  type: http
+  seq: 4
+}
+
+put {
+  url: http://localhost:9475/photos/DpIDA80kD8/item
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "takenAtLocal": "2026-05-14T20:31:44.693Z"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

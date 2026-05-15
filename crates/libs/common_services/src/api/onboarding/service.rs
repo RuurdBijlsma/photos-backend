@@ -8,6 +8,7 @@ use crate::api::onboarding::interfaces::{
 use crate::database::app_user::User;
 use crate::database::jobs::JobType;
 use crate::database::user_store::UserStore;
+use crate::database::{UpdateField, UpdateUserPayload};
 use crate::job_queue::enqueue_job;
 use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_posix_string};
 use sqlx::PgPool;
@@ -256,16 +257,31 @@ pub async fn start_processing(
     user_folder: String,
 ) -> Result<User, OnboardingError> {
     let media_root = &settings.ingest.media_root;
-    let user_folder = validate_user_folder(media_root, &user_folder).await?;
-    let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
     let existing_folder = UserStore::get_user_media_folder(pool, user_id).await?;
     if existing_folder.is_some() {
         return Err(OnboardingError::MediaFolderAlreadySet);
     }
-    let updated_user =
-        UserStore::update(pool, user_id, None, None, None, None, Some(relative)).await?;
+    let user_folder = validate_user_folder(media_root, &user_folder).await?;
+    let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
+    let updated_user = UserStore::update(
+        pool,
+        user_id,
+        UpdateUserPayload {
+            name: None,
+            email: None,
+            password: None,
+            role: None,
+            media_folder: Some(relative),
+            avatar_id: UpdateField::Ignore,
+        },
+    )
+    .await?;
 
     enqueue_job::<()>(pool, settings, JobType::Scan)
+        .user_id(user_id)
+        .call()
+        .await?;
+    enqueue_job::<()>(pool, settings, JobType::SyncThumbnails)
         .user_id(user_id)
         .call()
         .await?;

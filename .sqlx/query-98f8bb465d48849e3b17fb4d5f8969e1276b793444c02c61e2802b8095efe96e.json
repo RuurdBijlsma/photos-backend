@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO app_user (email, name, password, role, media_folder)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING\n                id,\n                created_at,\n                updated_at,\n                email,\n                name,\n                media_folder,\n                avatar_id,\n                role as \"role: UserRole\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "media_folder",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "avatar_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "role: UserRole",
+        "type_info": {
+          "Custom": {
+            "name": "user_role",
+            "kind": {
+              "Enum": [
+                "admin",
+                "user"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "user_role",
+            "kind": {
+              "Enum": [
+                "admin",
+                "user"
+              ]
+            }
+          }
+        },
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "98f8bb465d48849e3b17fb4d5f8969e1276b793444c02c61e2802b8095efe96e"
+}

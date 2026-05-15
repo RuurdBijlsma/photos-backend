@@ -4,9 +4,9 @@ members = [
     # Apps
     "crates/apps/api",
     "crates/apps/worker",
-    "crates/apps/tasks",
     "crates/apps/watcher",
     # Libs
+    "crates/libs/tasks",
     "crates/libs/app_state",
     "crates/libs/common_types",
     "crates/libs/common_services",

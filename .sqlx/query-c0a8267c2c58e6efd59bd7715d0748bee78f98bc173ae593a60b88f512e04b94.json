@@ -1,0 +1,120 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO album (id, owner_id, name, description, thumbnail_id, is_public, sort_mode)\n            VALUES ($1, $2, $3, $4, $5, $6, $7)\n            RETURNING\n                id,\n                owner_id,\n                name,\n                description,\n                thumbnail_id,\n                is_public,\n                media_count,\n                latest_media_item_timestamp,\n                earliest_media_item_timestamp,\n                updated_at,\n                created_at,\n                sort_mode as \"sort_mode: AlbumSort\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "thumbnail_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "media_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "latest_media_item_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "earliest_media_item_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "sort_mode: AlbumSort",
+        "type_info": {
+          "Custom": {
+            "name": "album_sort",
+            "kind": {
+              "Enum": [
+                "date_desc",
+                "date_asc",
+                "added_desc",
+                "added_asc",
+                "none"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int4",
+        "Text",
+        "Text",
+        "Varchar",
+        "Bool",
+        {
+          "Custom": {
+            "name": "album_sort",
+            "kind": {
+              "Enum": [
+                "date_desc",
+                "date_asc",
+                "added_desc",
+                "added_asc",
+                "none"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c0a8267c2c58e6efd59bd7715d0748bee78f98bc173ae593a60b88f512e04b94"
+}

@@ -15,8 +15,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let filter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| "worker=info,ort=warn".into());
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,ort=warn".into());
     let subscriber = fmt::Subscriber::builder()
         .with_max_level(Level::INFO)
         .with_env_filter(filter)
@@ -25,7 +24,7 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
+    let pool = get_db_pool(&settings.secrets.database_url, false).await?;
     create_worker(pool, settings, Args::parse().llm, false).await?;
 
     Ok(())

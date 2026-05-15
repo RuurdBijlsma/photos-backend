@@ -1,7 +1,6 @@
 use app_state::{AppSettings, MakeRelativePath};
-use common_services::database::jobs::JobType;
 use common_services::database::user_store::UserStore;
-use common_services::job_queue::{enqueue_full_ingest, enqueue_job};
+use common_services::job_queue::enqueue_full_ingest;
 use sqlx::PgPool;
 use std::path::Path;
 use tracing::{debug, info, warn};
@@ -68,14 +67,15 @@ async fn enqueue_file_job(
 
     match job_type {
         WatcherJobType::Ingest => {
-            enqueue_full_ingest(pool, settings, relative_path, user.id).await?;
+            enqueue_full_ingest(pool, settings, relative_path, user.id, None).await?;
         }
         WatcherJobType::Remove => {
-            enqueue_job::<()>(pool, settings, JobType::Remove)
-                .relative_path(relative_path)
-                .user_id(user.id)
-                .call()
-                .await?;
+            common_services::api::photos::removal::delete_item_and_thumbnails(
+                pool,
+                &settings.ingest.thumbnail_root,
+                relative_path,
+            )
+            .await?;
         }
     }
 

@@ -14,6 +14,7 @@ use tracing::warn;
 use url::Url;
 
 /// Parses an invite token to extract the claims, including the remote server URL.
+/// This function verifies the signature and should be used by the server that issued the token.
 pub fn extract_token_claims(token: &str, jwt_secret: &str) -> Result<AlbumShareClaims> {
     decode::<AlbumShareClaims>(
         token,
@@ -22,6 +23,17 @@ pub fn extract_token_claims(token: &str, jwt_secret: &str) -> Result<AlbumShareC
     )
     .map(|t| t.claims)
     .map_err(Into::into)
+}
+
+/// Parses an invite token without verifying the signature.
+///
+/// Used by recipient servers to extract the issuer URL from a token
+/// signed by a different server. The signature will be verified by the remote server
+/// when the token is actually used.
+pub fn insecure_extract_token_claims(token: &str) -> Result<AlbumShareClaims> {
+    jsonwebtoken::dangerous::insecure_decode::<AlbumShareClaims>(token)
+        .map(|t| t.claims)
+        .map_err(Into::into)
 }
 
 #[derive(Clone, Debug)]
@@ -36,12 +48,8 @@ impl S2SClient {
     }
 
     /// Fetches the summary of a shared album from a remote server using an invite token.
-    pub async fn get_album_invite_summary(
-        &self,
-        token: &str,
-        jwt_secret: &str,
-    ) -> Result<AlbumSummary> {
-        let claims = extract_token_claims(token, jwt_secret)?;
+    pub async fn get_album_invite_summary(&self, token: &str) -> Result<AlbumSummary> {
+        let claims = insecure_extract_token_claims(token)?;
         let remote_url = {
             let mut url: Url = claims.iss.parse()?;
             url.set_path("/s2s/album/invite-summary");
@@ -69,11 +77,10 @@ impl S2SClient {
     pub async fn download_remote_file(
         &self,
         token: &str,
-        jwt_secret: &str,
         remote_relative_path: &str,
         destination: &Path,
     ) -> Result<()> {
-        let claims = extract_token_claims(token, jwt_secret)?;
+        let claims = insecure_extract_token_claims(token)?;
         let remote_url = {
             let mut url: Url = claims.iss.parse()?;
             url.set_path("/s2s/album/files");

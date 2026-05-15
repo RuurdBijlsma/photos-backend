@@ -1,4 +1,4 @@
-use crate::routes::{album, auth, onboarding, photos, root, s2s, timeline};
+use crate::routes::{album, auth, onboarding, photos, root, s2s, timeline, user};
 use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 
@@ -22,9 +22,7 @@ use utoipa::{Modify, OpenApi};
         onboarding::handlers::post_start_processing,
         // Photos handlers
         photos::handlers::get_random_photo,
-        photos::handlers::get_full_item_handler,
         photos::handlers::get_color_theme_handler,
-        photos::handlers::download_full_file,
         // Album handlers
         album::handlers::create_album_handler,
         album::handlers::get_user_albums_handler,
@@ -45,9 +43,15 @@ use utoipa::{Modify, OpenApi};
         // S2S handlers
         s2s::handlers::invite_summary_handler,
         s2s::handlers::download_file_handler,
+        // User handlers
+        user::handlers::get_user_profile_handler,
+        user::handlers::update_my_profile,
     ),
     components(
         schemas(
+            common_services::api::user::interfaces::UserProfile,
+            common_services::api::user::interfaces::UserStats,
+            common_services::api::user::interfaces::UpdateUserProfileRequest,
         ),
     ),
     modifiers(&SecurityAddon),

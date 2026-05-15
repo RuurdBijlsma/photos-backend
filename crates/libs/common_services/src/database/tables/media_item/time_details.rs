@@ -5,8 +5,6 @@ use utoipa::ToSchema;
 /// Corresponds to the '`time_details`' table.
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct TimeDetails {
-    pub timezone_name: Option<String>,
-    pub timezone_offset_seconds: Option<i32>,
     pub timezone_source: Option<String>,
     pub source_details: String,
     pub source_confidence: String,
@@ -16,8 +14,6 @@ pub struct TimeDetails {
 impl From<TimeInfo> for TimeDetails {
     fn from(time_info: TimeInfo) -> Self {
         Self {
-            timezone_name: time_info.timezone.as_ref().map(|tz| tz.name.clone()),
-            timezone_offset_seconds: time_info.timezone.as_ref().map(|tz| tz.offset_seconds),
             timezone_source: time_info.timezone.map(|tz| tz.source),
             source_details: time_info.source_details.time_source,
             source_confidence: time_info.source_details.confidence,

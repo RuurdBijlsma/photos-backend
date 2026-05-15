@@ -1,10 +1,28 @@
 use crate::api::timeline::interfaces::SortDirection;
+use crate::database::UpdateField;
 use crate::database::album::album::AlbumRole;
 use chrono::{DateTime, Utc};
 use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use serde::{Deserialize, Serialize};
+use sqlx::Type;
 use utoipa::{IntoParams, ToSchema};
 // --- Request Payloads ---
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, ToSchema)]
+#[sqlx(type_name = "album_sort", rename_all = "snake_case")]
+pub enum AlbumSort {
+    DateAsc,
+    DateDesc,
+    AddedAsc,
+    AddedDesc,
+    None,
+}
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GetSortedAlbumItemsRequest {
+    pub sort_mode: AlbumSort,
+}
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -17,6 +35,13 @@ pub struct CreateAlbumRequest {
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct ReorderMediaRequest {
+    pub media_item_ids: Vec<String>,
+    pub sort_mode: AlbumSort,
+}
+
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct AddMediaToAlbumRequest {
     pub media_item_ids: Vec<String>,
 }
@@ -24,16 +49,20 @@ pub struct AddMediaToAlbumRequest {
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AddCollaboratorRequest {
-    pub user_email: String,
+    pub user_id: i32,
     pub role: AlbumRole,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, ToSchema, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAlbumRequest {
+    #[serde(default)]
     pub name: Option<String>,
-    pub description: Option<String>,
-    pub thumbnail_id: Option<String>,
+    #[serde(default, skip_serializing_if = "UpdateField::is_ignore")]
+    pub description: UpdateField<String>,
+    #[serde(default, skip_serializing_if = "UpdateField::is_ignore")]
+    pub thumbnail_id: UpdateField<String>,
+    #[serde(default)]
     pub is_public: Option<bool>,
 }
 

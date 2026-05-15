@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT \n               f.id, \n               va.media_item_id, \n               f.embedding as \"embedding!: Vector\", \n               f.position_x, \n               f.position_y, \n               f.width, \n               f.height,\n               va.percentage\n           FROM face f\n           JOIN visual_analysis va ON f.visual_analysis_id = va.id\n           JOIN media_item mi ON mi.id = va.media_item_id\n           WHERE mi.user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "media_item_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "embedding!: Vector",
+        "type_info": {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "position_x",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 4,
+        "name": "position_y",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 5,
+        "name": "width",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "height",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 7,
+        "name": "percentage",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e230a01e66974d4f102249291df4882d88b968ecd413448e769b6169b40e4424"
+}

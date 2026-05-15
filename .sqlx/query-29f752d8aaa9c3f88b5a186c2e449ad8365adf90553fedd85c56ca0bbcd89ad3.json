@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT taken_at_local, timezone_offset_seconds FROM media_item WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "taken_at_local",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 1,
+        "name": "timezone_offset_seconds",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "29f752d8aaa9c3f88b5a186c2e449ad8365adf90553fedd85c56ca0bbcd89ad3"
+}

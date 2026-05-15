@@ -5,7 +5,8 @@
 )]
 
 use app_state::load_app_settings;
-use common_services::api::search::service::{SearchMediaConfig, search_media};
+use common_services::api::search::interfaces::{SearchMediaConfig, SearchMediaType, SearchSortBy};
+use common_services::api::search::service::search_media;
 use common_services::database::get_db_pool;
 use common_services::database::user_store::UserStore;
 use common_types::dev_constants::EMAIL;
@@ -26,23 +27,53 @@ async fn main() -> color_eyre::Result<()> {
         .build()
         .await?;
 
-    let search_result = search_media(
-        &user,
-        &pool,
-        Arc::new(embedder).clone(),
-        "kayak",
-        SearchMediaConfig {
-            text_weight: 0.3,
-            semantic_weight: 1.0,
-            limit: Some(100),
-        },
-    )
-    .await?;
-
-    println!(
-        "search result: {}",
-        serde_json::to_string_pretty(&search_result)?
-    );
+    let mut i = 0;
+    let embedder = Arc::new(embedder);
+    loop {
+        let search_results = search_media(
+            &user,
+            &pool,
+            embedder.clone(),
+            "cat",
+            SearchMediaConfig {
+                embedder_model_id: settings.ingest.analyzer.search.embedder_model_id.clone(),
+                text_weight: 0.5,
+                semantic_weight: 0.5,
+                semantic_score_threshold: 0.8,
+                limit: Some(250),
+                offset: Some(0),
+                media_type: SearchMediaType::All,
+                sort_by: SearchSortBy::Relevancy,
+                country_codes: vec![],
+                face_names: vec![],
+                all_faces_required: false,
+                negative_query: None,
+                start_date: None,
+                end_date: None,
+            },
+        )
+        .await?;
+        println!(
+            "{i} | results count: {:?} | {}",
+            search_results.len(),
+            if search_results.len() == 250 {
+                "[✅ ]"
+            } else {
+                "[⛔ ]"
+            }
+        );
+        tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
+        i += 1;
+        if i > 30 {
+            break;
+        }
+    }
+    // println!("Search took {:?}", now.elapsed());
+    //
+    // println!(
+    //     "search result: {}",
+    //     serde_json::to_string_pretty(&search_results)?
+    // );
 
     Ok(())
 }

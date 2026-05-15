@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT token, media_folder, expires_at, created_at\n            FROM user_invite\n            WHERE token = $1 AND expires_at > NOW()\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "media_folder",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "382a34e7dceed669d753986640c6a9024f84fe804e9280d6c9d60c4f419c2137"
+}

@@ -10,6 +10,7 @@ pub struct CreateUser {
     pub name: String,
     #[schema(value_type = String, format = "password", example = "my-secret-password")]
     pub password: String,
+    pub token: Option<String>,
 }
 
 /// Represents the data required for user login.
@@ -26,6 +27,12 @@ pub struct LoginUser {
 #[serde(rename_all = "camelCase")]
 pub struct RefreshTokenPayload {
     pub refresh_token: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateInvitePayload {
+    pub user_folder: String,
 }
 
 /// Represents a pair of access and refresh tokens.

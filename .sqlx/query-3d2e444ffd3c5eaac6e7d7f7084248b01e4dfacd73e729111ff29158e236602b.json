@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            EXISTS(SELECT 1 FROM person WHERE user_id = $1) AS \"has_people!\",\n            EXISTS(SELECT 1 FROM photo_cluster WHERE user_id = $1) AS \"has_photo_clusters!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "has_people!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "has_photo_clusters!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "3d2e444ffd3c5eaac6e7d7f7084248b01e4dfacd73e729111ff29158e236602b"
+}

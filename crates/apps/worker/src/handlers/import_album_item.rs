@@ -8,10 +8,10 @@ use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::user_store::UserStore;
-use common_services::job_queue::enqueue_full_ingest;
+use common_services::job_queue::{IngestMetadataPayload, enqueue_full_ingest};
 use common_types::ImportAlbumItemPayload;
+use common_types::constants::ALBUM_IMPORT_FOLDER;
 use serde_json::from_value;
-use sqlx::query;
 use std::path::Path;
 use std::slice;
 use tokio::fs;
@@ -37,7 +37,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let remote_identity = format!("{}@{}", payload.remote_username, remote_host);
     let sanitized_identity = sanitize_filename::sanitize(&remote_identity);
     let relative_dir = Path::new(&user_media_folder)
-        .join("import")
+        .join(ALBUM_IMPORT_FOLDER)
         .join(&sanitized_identity);
     let full_save_dir = media_root.join(&relative_dir);
     let filename = payload
@@ -71,25 +71,22 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         .s2s_client
         .download_remote_file(
             &payload.token,
-            &context.settings.secrets.jwt,
             &payload.remote_relative_path,
             &full_save_path,
         )
         .await?;
 
-    query!(
-        r#"
-        INSERT INTO pending_album_media_items (relative_path, album_id, remote_user_identity)
-        VALUES ($1, $2, $3)
-        "#,
-        relative_path,
-        payload.local_album_id,
-        remote_identity,
+    enqueue_full_ingest(
+        &context.pool,
+        &context.settings,
+        &relative_path,
+        user_id,
+        Some(IngestMetadataPayload {
+            album_id: payload.local_album_id,
+            remote_user_identity: remote_identity,
+        }),
     )
-    .execute(&context.pool)
     .await?;
-
-    enqueue_full_ingest(&context.pool, &context.settings, &relative_path, user_id).await?;
 
     Ok(JobResult::Done)
 }

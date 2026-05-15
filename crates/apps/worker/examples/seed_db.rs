@@ -7,10 +7,12 @@
 use app_state::{constants, load_app_settings};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use color_eyre::eyre::Result;
+use common_services::api::auth::hashing::hash_password;
 use common_services::database::app_user::UserRole;
 use common_services::database::get_db_pool;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::utils::nice_id;
+use common_types::dev_constants::{EMAIL, PASSWORD, USERNAME};
 use media_analyzer::{
     BasicMetadata, CameraSettings, MediaFeatures, MediaMetadata, PanoInfo, SourceDetails, TimeInfo,
 };
@@ -50,9 +52,9 @@ pub async fn seed_database_for_dev(pool: &PgPool, num_items: u32) -> Result<()> 
 
 /// Creates a specific user from the provided details or updates them if they exist.
 async fn create_or_update_mock_user(tx: &mut PgTransaction<'_>) -> Result<i32> {
-    let email = "ruurd@bijlsma.dev";
-    let password_hash = "$argon2id$v=19$m=19456,t=2,p=1$YaxGnrPYSbvNCw3DzW7DdA$IawtPEn4ATtgulHRHZtIQ3fiOtgGSPeIwXlZ9+VFgp0";
-    let name = "Ruurd";
+    let email = EMAIL;
+    let password_hash = hash_password(PASSWORD.as_ref())?;
+    let name = USERNAME;
     let role = UserRole::Admin;
 
     // This query inserts the user. If a user with that email already exists

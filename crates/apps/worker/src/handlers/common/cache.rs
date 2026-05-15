@@ -9,10 +9,12 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::warn;
 
-const THUMBNAILS_FOLDER: &str = "thumbnails";
-const INGEST_RESULT_FILENAME: &str = "ingest_result.json";
-const ANALYSIS_RESULT_FILENAME: &str = "analysis_result.json";
-const LLM_RESULT_FILENAME: &str = "llm_result.json";
+// Category folder names
+const THUMBNAILS_DIR: &str = "thumbnails";
+const INGEST_DIR: &str = "ingest";
+const ANALYSIS_DIR: &str = "analysis";
+const LLM_DIR: &str = "llm";
+
 const INGEST_CACHE_VERSION: u32 = 2;
 const ANALYSIS_CACHE_VERSION: u32 = 1;
 const LLM_CACHE_VERSION: u32 = 1;
@@ -39,28 +41,37 @@ pub struct CachedLlmResult {
 pub fn hash_file(path: &Path) -> Result<String> {
     let mut hasher = blake3::Hasher::new();
     hasher.update_mmap_rayon(path)?;
-
     let hash = hasher.finalize();
     Ok(hash.to_hex().to_string())
 }
 
-fn cache_folder() -> PathBuf {
+fn cache_root() -> PathBuf {
     ProjectDirs::from("dev", "ruurd", "photos").map_or_else(
         || Path::new(".cache").to_path_buf(),
         |proj| proj.cache_dir().to_path_buf(),
     )
 }
 
-async fn hash_cache_folder(hash: &str) -> Result<PathBuf> {
-    let hash_folder = cache_folder().join(hash);
-    if !hash_folder.exists() {
-        fs::create_dir_all(&hash_folder).await?;
-    }
-    Ok(hash_folder)
+/// Helper to get the path for a JSON cache file: cache/{category}/{hash}.json
+fn get_json_path(category: &str, hash: &str) -> PathBuf {
+    cache_root().join(category).join(format!("{hash}.json"))
 }
 
+/// Helper to ensure the parent directory exists before writing a file
+async fn ensure_parent_dir(path: &Path) -> Result<()> {
+    if let Some(parent) = path.parent()
+        && !parent.exists()
+    {
+        fs::create_dir_all(parent).await?;
+    }
+
+    Ok(())
+}
+
+// --- Thumbnails ---
+
 pub async fn get_thumbnail_cache(hash: &str) -> Result<Option<PathBuf>> {
-    let thumbs_folder = cache_folder().join(hash).join(THUMBNAILS_FOLDER);
+    let thumbs_folder = cache_root().join(THUMBNAILS_DIR).join(hash);
     if !thumbs_folder.exists() {
         return Ok(None);
     }
@@ -68,7 +79,7 @@ pub async fn get_thumbnail_cache(hash: &str) -> Result<Option<PathBuf>> {
 }
 
 pub async fn write_thumbnail_cache(hash: &str, source_folder: &Path) -> Result<()> {
-    let dest_folder = cache_folder().join(hash).join(THUMBNAILS_FOLDER);
+    let dest_folder = cache_root().join(THUMBNAILS_DIR).join(hash);
     if !dest_folder.exists() {
         fs::create_dir_all(&dest_folder).await?;
     }
@@ -76,58 +87,60 @@ pub async fn write_thumbnail_cache(hash: &str, source_folder: &Path) -> Result<(
     Ok(())
 }
 
+// --- Ingest ---
+
 pub async fn get_ingest_cache(hash: &str) -> Result<Option<MediaMetadata>> {
-    let process_cache_file = cache_folder().join(hash).join(INGEST_RESULT_FILENAME);
-    if !process_cache_file.exists() {
+    let path = get_json_path(INGEST_DIR, hash);
+    if !path.exists() {
         return Ok(None);
     }
-    let data = fs::read_to_string(&process_cache_file).await?;
-    if let Ok(cached_ingest) = serde_json::from_str::<CachedIngestResult>(&data)
-        && cached_ingest.version == INGEST_CACHE_VERSION
+
+    let data = fs::read_to_string(&path).await?;
+    if let Ok(cached) = serde_json::from_str::<CachedIngestResult>(&data)
+        && cached.version == INGEST_CACHE_VERSION
     {
-        return Ok(Some(cached_ingest.media_metadata));
+        return Ok(Some(cached.media_metadata));
     }
-    warn!(
-        "Found invalid cache file for ingest. Deleting {}/{}.",
-        hash, INGEST_RESULT_FILENAME
-    );
-    fs::remove_file(&process_cache_file).await?;
+
+    warn!("Invalid ingest cache, deleting: {:?}", path);
+    let _ = fs::remove_file(&path).await;
     Ok(None)
 }
 
 pub async fn write_ingest_cache(hash: &str, media_metadata: MediaMetadata) -> Result<()> {
-    let hash_folder = hash_cache_folder(hash).await?;
-    let ingest_cache_file = hash_folder.join(INGEST_RESULT_FILENAME);
+    let path = get_json_path(INGEST_DIR, hash);
+    ensure_parent_dir(&path).await?;
+
     let json = serde_json::to_string(&CachedIngestResult {
         version: INGEST_CACHE_VERSION,
         media_metadata,
     })?;
-    fs::write(ingest_cache_file, json).await?;
+    fs::write(path, json).await?;
     Ok(())
 }
 
+// --- Analysis ---
+
 pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<MLFastAnalysis>>> {
-    let process_cache_file = cache_folder().join(hash).join(ANALYSIS_RESULT_FILENAME);
-    if !process_cache_file.exists() {
+    let path = get_json_path(ANALYSIS_DIR, hash);
+    if !path.exists() {
         return Ok(None);
     }
 
-    let data = fs::read_to_string(&process_cache_file).await?;
-    if let Ok(cached_analysis) = serde_json::from_str::<CachedAnalysisResult>(&data)
-        && cached_analysis.version == ANALYSIS_CACHE_VERSION
+    let data = fs::read_to_string(&path).await?;
+    if let Ok(cached) = serde_json::from_str::<CachedAnalysisResult>(&data)
+        && cached.version == ANALYSIS_CACHE_VERSION
     {
-        if let Some(va) = cached_analysis.fast_analyses.first()
+        if let Some(va) = cached.fast_analyses.first()
             && va.embedding.len() != EXPECTED_EMBEDDING_LENGTH
         {
             return Ok(None);
         }
-        return Ok(Some(cached_analysis.fast_analyses));
+        return Ok(Some(cached.fast_analyses));
     }
-    warn!(
-        "Found invalid cache file for analysis. Deleting {}/{}.",
-        hash, ANALYSIS_RESULT_FILENAME
-    );
-    fs::remove_file(&process_cache_file).await?;
+
+    warn!("Invalid analysis cache, deleting: {:?}", path);
+    let _ = fs::remove_file(&path).await;
     Ok(None)
 }
 
@@ -135,49 +148,52 @@ pub async fn write_analysis_cache(hash: &str, analyses: &[MLFastAnalysis]) -> Re
     for analysis in analyses {
         if analysis.embedding.len() != EXPECTED_EMBEDDING_LENGTH {
             bail!(
-                "Trying to write incorrect embedding length to cache. Expected: {}, found {}",
+                "Incorrect embedding length: expected {}, found {}",
                 EXPECTED_EMBEDDING_LENGTH,
                 analysis.embedding.len()
             );
         }
     }
-    let hash_folder = hash_cache_folder(hash).await?;
-    let ingest_cache_file = hash_folder.join(ANALYSIS_RESULT_FILENAME);
+
+    let path = get_json_path(ANALYSIS_DIR, hash);
+    ensure_parent_dir(&path).await?;
+
     let json = serde_json::to_string(&CachedAnalysisResult {
         version: ANALYSIS_CACHE_VERSION,
         fast_analyses: Vec::from(analyses),
     })?;
-    fs::write(ingest_cache_file, json).await?;
+    fs::write(path, json).await?;
     Ok(())
 }
 
+// --- LLM ---
+
 pub async fn get_llm_cache(hash: &str) -> Result<Option<Vec<MLChatAnalysis>>> {
-    let process_cache_file = cache_folder().join(hash).join(LLM_RESULT_FILENAME);
-    if !process_cache_file.exists() {
+    let path = get_json_path(LLM_DIR, hash);
+    if !path.exists() {
         return Ok(None);
     }
 
-    let data = fs::read_to_string(&process_cache_file).await?;
-    if let Ok(cached_analysis) = serde_json::from_str::<CachedLlmResult>(&data)
-        && cached_analysis.version == LLM_CACHE_VERSION
+    let data = fs::read_to_string(&path).await?;
+    if let Ok(cached) = serde_json::from_str::<CachedLlmResult>(&data)
+        && cached.version == LLM_CACHE_VERSION
     {
-        return Ok(Some(cached_analysis.llm_analyses));
+        return Ok(Some(cached.llm_analyses));
     }
-    warn!(
-        "Found invalid cache file for llm analysis. Deleting {}/{}.",
-        hash, LLM_RESULT_FILENAME
-    );
-    fs::remove_file(&process_cache_file).await?;
+
+    warn!("Invalid LLM cache, deleting: {:?}", path);
+    let _ = fs::remove_file(&path).await;
     Ok(None)
 }
 
 pub async fn write_llm_cache(hash: &str, analyses: &[MLChatAnalysis]) -> Result<()> {
-    let hash_folder = hash_cache_folder(hash).await?;
-    let ingest_cache_file = hash_folder.join(LLM_RESULT_FILENAME);
+    let path = get_json_path(LLM_DIR, hash);
+    ensure_parent_dir(&path).await?;
+
     let json = serde_json::to_string(&CachedLlmResult {
         version: LLM_CACHE_VERSION,
         llm_analyses: Vec::from(analyses),
     })?;
-    fs::write(ingest_cache_file, json).await?;
+    fs::write(path, json).await?;
     Ok(())
 }

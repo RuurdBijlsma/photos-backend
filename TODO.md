@@ -137,7 +137,25 @@
 * ✅ non-analysis-worker spawns embedder
 * ✅ i think ocr_text should have higher prio
 * ✅ ocr_languages in settings doet niks meer
-* api:
+* ✅ er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
+* ✅ play with weights for full text search
+* ✅ vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
+* ✅ probeer reciprocal rank fusion ofzo
+* ✅ on demand video thumbnails
+* ✅ on demand videos?
+* ✅ Voeg toe aan album tabel: earliest_media_item_timestamp -> zodat ik 2019-2020 kan laten zien in UI.
+* ✅ make get_representative_thumbnail or something, that returns the image that has an embedding closest to the centroid
+  of the list sent to the function. if no embeddings are available yet, return the middle item in the list
+  chronologically. If partial embeddings are available, use centroid logic for >50% available embeddings, otherwise
+  middle item chronologically. Use get_representative_thumbnail when creating an album, to set as the album thumbnail.
+* ✅ Fix performance of get_representative_thumbnail
+* ✅ videos hebben te hoge prio in the simple timeline
+* ontwikkel snelle object detection oid zodat search suggestions kan zonder llm
+* ✅ negative query in search does not work
+* ✅ sort by date in search is beetje dom
+* ✅ basic search is langzamer nu dan eerst
+* ✅ todo: if negative query exists, use embed_texts to batch embed 2 texts
+* ✅ api:
     * ✅ add random image + theme endpoint
     * ✅ cors met tower-http::cors
     * ✅ change the json output of vec<photo> to have small field names (is like 50% smaller)
@@ -147,10 +165,26 @@
     * ✅ add expiry time to auth responses (zit er al in via jwt, moet dat nog? ik denk t wel)
     * 👎 axum-gate? crate voor axum auth
     * ✅ rate limit met tower-http::limit voor /login en /auth/refresh en password reset endpoint als ik die krijg
-    * password reset flow (email) (make mail optional)
-    * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
-      db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
-      user account)
+* ✅ kan camelcase op de proto generated structs?
+* ✅ make search result item protobuf
+* ✅ benchmark albums endpoints
+* ✅ cache embeddings for search? could be big speedup
+* ✅ search filter params moet person thumbnails geven
+* ✅ in de person face clustering task, zorg dat die ook face thumbnails genereert, en die op te halen zijn via de person
+  table
+* ✅ sommige jobs moeten altijd runnen nadat ingest klaar is, bijvoorbeeld:
+    * ✅ cluster faces
+    * ✅ UpdateGlobalCentroid
+    * ✅ ClusterPhotos
+* ✅ gebruik get_representative-thumbnail voor face thumb selection
+* ✅ current albums pb interface misses collaborators
+* ✅ clean thumbnails folder task in task runner
+* ✅ Fix search zo dat je alle resultaten boven een bepaalde relevancy vind
+    * ✅ Als ik zoek "food" moet ik iets van duizend plaatjes krijgen
+* password reset flow (email) (make mail optional)
+* Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
+  db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
+  user account)
 * check of readme uitleg klopt met verse windows installatie & linux
 * make sure cache control on thumbnails are immutable/max age.
 * monitoring/alerting
@@ -158,41 +192,34 @@
     * grafana
     * alertmanager
     * loki? denk t niet
-* at some point copy paste all sql queries into gemini en ask for proper indices
+* at some point: delete all indices in migration files -> copy paste all sql queries into gemini en ask for proper
+  indices
+    * Ik denk dat ik veel overbodige indices heb
 * automatic onboarding
 * [weird bug] crates dont start when migration isnt in sync for some reason?
 * also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
   items (2e sort toevoegen? idk)
-* benchmark albums endpoints
 * review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
     * is auth wel goed implemented? met is_public enzo
     * minder repeated code maken voor de auth check daar
-* kan camelcase op de proto generated structs?
-* current albums pb interface misses collaborators
-* better error if exiftool or numpy isnt there (worker wont work then)
+* better error if exiftool isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * improve speed of album/{id} endpoint
-* make search result item protobuf
-* ✅ er is iets mis met portret videos (ze krijgen een 16:9 ratio), zal iets met orientation zijn ofzo
-* ✅ play with weights for full text search
-* ✅ vector search lijkt wel wat beter dan fts, test met meer fotos ingested. Lijkt nu wel redelijk afgesteld. Vector
-  search zit meer in de 0-0.3 range, FTS kan wel tot 4.0 gaan ofzo, dus weight voor FTS moet lager dan vector. nu 0.8 en
-  0.2 dat lijkt wel goeie resultaten te geven. Toch meer experimenteren.
-* ✅ probeer reciprocal rank fusion ofzo
-* ✅ on demand video thumbnails
-* ✅ on demand videos?
 * maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
-* llm instelbaar maken in settings
-* ✅ Voeg toe aan album tabel: earliest_media_item_timestamp -> zodat ik 2019-2020 kan laten zien in UI.
-* ✅ make get_representative_thumbnail or something, that returns the image that has an embedding closest to the centroid
-  of the list sent to the function. if no embeddings are available yet, return the middle item in the list
-  chronologically. If partial embeddings are available, use centroid logic for >50% available embeddings, otherwise
-  middle item chronologically. Use get_representative_thumbnail when creating an album, to set as the album thumbnail.
-* ✅ Fix performance of get_representative_thumbnail
-* videos hebben te hoge prio in the simple timeline
+* llm instelbaar maken in settings?
+* search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
+    * hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
+* thumbnail hosting is niet veilig
+* retrieve person face thumb not safe (something like /thumbnails/people/1.webp)
+* ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
+    * misschien moet dit met een andere methode
+* when a second user registers, make sure to do a scan / sync
+* [BUG] when a second user registers with a subfolder of the first user as media folder, and there's already media in
+  there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
+  sure how to handle this case.
 
 # Features
 

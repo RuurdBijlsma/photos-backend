@@ -19,6 +19,7 @@ pub async fn test_register(context: &TestContext) -> Result<()> {
             name: USERNAME.to_owned(),
             email: EMAIL.to_owned(),
             password: PASSWORD.to_owned(),
+            token: None,
         })
         .send()
         .await?;
@@ -56,6 +57,7 @@ pub async fn test_second_register_attempt(context: &TestContext) -> Result<()> {
             email: EMAIL.to_owned(),
             password: PASSWORD.to_owned(),
             name: USERNAME.to_owned(),
+            token: None,
         })
         .send()
         .await?;

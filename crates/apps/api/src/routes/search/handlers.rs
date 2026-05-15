@@ -1,11 +1,13 @@
 use crate::api_state::ApiContext;
-use axum::Extension;
 use axum::extract::{Query, State};
+use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::search::error::SearchError;
-use common_services::api::search::interfaces::SearchParams;
+use common_services::api::search::interfaces::{
+    SearchFilterRanges, SearchMediaConfig, SearchParams,
+};
 use common_services::api::search::service::{
-    SearchMediaConfig, get_search_suggestions, search_media,
+    get_random_search_suggestion, get_search_suggestions, search_filter_ranges, search_media,
 };
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
@@ -41,9 +43,43 @@ pub async fn get_search_results(
         context.embedder,
         &params.query,
         SearchMediaConfig {
+            embedder_model_id: context
+                .settings
+                .ingest
+                .analyzer
+                .search
+                .embedder_model_id
+                .clone(),
+            semantic_score_threshold: context
+                .settings
+                .ingest
+                .analyzer
+                .search
+                .semantic_score_threshold,
             text_weight: context.settings.ingest.analyzer.search.text_weight,
             semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
             limit: params.limit,
+            offset: params.offset,
+            start_date: params.start_date,
+            end_date: params.end_date,
+            media_type: params.media_type,
+            sort_by: params.sort_by,
+            negative_query: params.negative_query,
+            country_codes: params
+                .country_codes
+                .unwrap_or_default()
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
+            face_names: params
+                .face_names
+                .unwrap_or_default()
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
+            all_faces_required: params.all_faces_required.unwrap_or_default(),
         },
     )
     .await?;
@@ -56,17 +92,24 @@ pub async fn get_search_suggestions_handler(
     Extension(user): Extension<User>,
     Query(params): Query<SearchParams>,
 ) -> Result<Protobuf<SearchSuggestionsResponse>, SearchError> {
-    let result = get_search_suggestions(
-        &user,
-        &context.pool,
-        context.embedder,
-        &params.query,
-        SearchMediaConfig {
-            text_weight: context.settings.ingest.analyzer.search.text_weight,
-            semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
-            limit: params.limit,
-        },
-    )
-    .await?;
+    let result = get_search_suggestions(&user, &context.pool, &params.query, params.limit).await?;
     Ok(Protobuf(result))
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_random_search_suggestion_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+) -> Result<String, SearchError> {
+    let result = get_random_search_suggestion(&user, &context.pool).await?;
+    Ok(result.unwrap_or_default())
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_search_filter_ranges(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+) -> Result<Json<SearchFilterRanges>, SearchError> {
+    let result = search_filter_ranges(&user, &context.pool).await?;
+    Ok(Json(result))
 }

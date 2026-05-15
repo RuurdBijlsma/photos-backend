@@ -1,19 +1,22 @@
 use crate::api::photos::error::PhotosError;
-use crate::api::photos::interfaces::RandomPhotoResponse;
+use crate::api::photos::interfaces::{RandomPhotoResponse, UpdateMediaItemRequest};
 use crate::database::app_user::{User, UserRole};
 use crate::database::media_item_store::MediaItemStore;
+use crate::database::{UpdateField, UpdateMediaItemPayload, with_fallback_timezone};
 use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
 use axum_extra::headers::Range;
+use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use color_eyre::Report;
 use color_eyre::eyre::eyre;
+use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 use exif::{In, Tag, Value};
 use fast_image_resize as fr;
 use http::{Response, StatusCode, header};
 use image::ImageDecoder;
 use image::ImageReader;
 use rand::RngExt;
-use sqlx::PgPool;
+use sqlx::{Executor, PgPool, Postgres};
 use std::io::Cursor;
 use std::ops::Bound;
 use std::path::Path;
@@ -101,7 +104,7 @@ pub async fn download_media_file(
     user: &User,
     path: &str,
 ) -> Result<Response<Body>, PhotosError> {
-    // --- 1. Security & Path Validation ---
+    // Path Validation
     let media_dir_canon = ingestion
         .media_root
         .canonicalize()
@@ -126,7 +129,7 @@ pub async fn download_media_file(
         return Err(PhotosError::InvalidPath);
     }
 
-    // --- 2. Authorization ---
+    // Authorization
     let relative_path = file_canon.make_relative_canon(&ingestion.media_root_canon)?;
     if user.role != UserRole::Admin {
         let Some(user_media_folder) = &user.media_folder else {
@@ -145,13 +148,11 @@ pub async fn download_media_file(
         }
     }
 
-    // --- 3. Media Type Validation ---
+    // Get file
     if !ingestion.is_media_file(&file_canon) {
         warn!("Unsupported media type requested: {}", file_canon.display());
         return Err(PhotosError::UnsupportedMediaType);
     }
-
-    // --- 4. File Access ---
     let file = match File::open(&file_canon).await {
         Ok(file) => file,
         Err(e) => match e.kind() {
@@ -161,7 +162,7 @@ pub async fn download_media_file(
         }?,
     };
 
-    // --- 5. Build the Streaming Response ---
+    // Streaming Response
     let stream = FramedRead::new(file, BytesCodec::new());
     let body = Body::from_stream(stream);
     let mime_type = mime_guess::from_path(&file_canon).first_or_octet_stream();
@@ -187,7 +188,9 @@ pub async fn thumbnail_on_demand_cached(
     media_item_id: &str,
     ingest_settings: &IngestSettings,
 ) -> Result<Vec<u8>, PhotosError> {
-    let cache_dir = ingest_settings.thumbnail_root.join(".jpg-cache");
+    let cache_dir = ingest_settings
+        .thumbnail_root
+        .join(ON_DEMAND_THUMBNAIL_CACHE_FOLDER);
     let cache_filename = format!("{media_item_id}_{size}.jpg");
     let cache_path = cache_dir.join(&cache_filename);
 
@@ -469,4 +472,109 @@ pub async fn stream_video_file(
         .header(header::CONTENT_LENGTH, content_length)
         .body(body)
         .map_err(|e| eyre!("Can't create video stream response {e}"))?)
+}
+
+async fn compute_updated_timestamps(
+    executor: impl Executor<'_, Database = Postgres>,
+    media_item_id: &str,
+    new_local: Option<NaiveDateTime>,
+    new_offset: &UpdateField<i32>,
+) -> Result<(UpdateField<DateTime<Utc>>, Option<DateTime<Utc>>), PhotosError> {
+    let is_updating_local = new_local.is_some();
+    let is_updating_offset = !matches!(new_offset, UpdateField::Ignore);
+    // If neither is changing, we don't need to update these derived fields
+    if !is_updating_local && !is_updating_offset {
+        return Ok((UpdateField::Ignore, None));
+    }
+
+    let current = sqlx::query!(
+        "SELECT taken_at_local, timezone_offset_seconds FROM media_item WHERE id = $1",
+        media_item_id
+    )
+    .fetch_one(executor)
+    .await?;
+
+    // Determine the values for this calculation
+    let local_dt = new_local.unwrap_or(current.taken_at_local);
+    let offset_secs = match new_offset {
+        UpdateField::Value(v) => Some(*v),
+        UpdateField::SetNull => None,
+        UpdateField::Ignore => current.timezone_offset_seconds,
+    };
+
+    let taken_at_utc = offset_secs
+        .and_then(FixedOffset::east_opt)
+        .and_then(|offset| {
+            offset
+                .from_local_datetime(&local_dt)
+                .earliest()
+                .map(|dt| dt.with_timezone(&Utc))
+        });
+
+    let sort_timestamp = Some(with_fallback_timezone(taken_at_utc, &local_dt));
+    let utc_field = taken_at_utc.map_or(UpdateField::SetNull, UpdateField::Value);
+
+    Ok((utc_field, sort_timestamp))
+}
+
+pub async fn update_media_item(
+    pool: &PgPool,
+    media_item_id: &str,
+    user_id: i32,
+    payload: &UpdateMediaItemRequest,
+) -> Result<(), PhotosError> {
+    let mut tx = pool.begin().await?;
+
+    let media_user_id = MediaItemStore::find_user_by_id(&mut *tx, media_item_id)
+        .await?
+        .ok_or_else(|| PhotosError::MediaNotFound(media_item_id.to_owned()))?;
+
+    if media_user_id != user_id {
+        return Err(PhotosError::AccessDenied);
+    }
+
+    let UpdateMediaItemRequest {
+        taken_at_local,
+        user_caption,
+        use_panorama_viewer,
+        timezone_offset_seconds,
+    } = payload;
+
+    // Validate timezone offset
+    if let UpdateField::Value(v) = timezone_offset_seconds
+        && FixedOffset::east_opt(*v).is_none()
+    {
+        return Err(PhotosError::InvalidTimezoneOffset(*v));
+    }
+
+    let taken_at_local_input = taken_at_local
+        .as_ref()
+        .map(|m| NaiveDateTime::parse_from_str(m, "%Y-%m-%dT%H:%M:%S"))
+        .transpose()?;
+
+    let (taken_at_utc, sort_timestamp) = compute_updated_timestamps(
+        &mut *tx,
+        media_item_id,
+        taken_at_local_input,
+        timezone_offset_seconds,
+    )
+    .await?;
+
+    MediaItemStore::update(
+        &mut *tx,
+        media_item_id,
+        UpdateMediaItemPayload {
+            user_caption: user_caption.clone(),
+            taken_at_local: taken_at_local_input,
+            taken_at_utc,
+            sort_timestamp,
+            timezone_offset_seconds: timezone_offset_seconds.clone(),
+            use_panorama_viewer: *use_panorama_viewer,
+        },
+    )
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(())
 }

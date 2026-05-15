@@ -1,6 +1,7 @@
 -- Step 1: Define custom ENUM types for roles and statuses to ensure data integrity.
 
 CREATE TYPE album_role AS ENUM ('owner', 'contributor', 'viewer');
+CREATE TYPE album_sort AS ENUM ('date_desc', 'date_asc', 'added_desc', 'added_asc', 'none');
 CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'rejected');
 
 
@@ -19,7 +20,7 @@ CREATE TABLE album
     -- sort columns: automatically updated via trigger
     latest_media_item_timestamp   TIMESTAMPTZ,
     earliest_media_item_timestamp TIMESTAMPTZ,
-    manual_sort                   BOOLEAN     NOT NULL DEFAULT false,
+    sort_mode                     album_sort  NOT NULL,
     media_count                   INT         NOT NULL DEFAULT 0,
     created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -68,14 +69,5 @@ CREATE TABLE album_collaborator
 
 CREATE INDEX idx_album_collaborator_user_album ON album_collaborator (user_id, album_id);
 
--- A table to link imported media to a target album and remote owner before ingestion is complete.
-CREATE TABLE pending_album_media_items
-(
-    relative_path        TEXT PRIMARY KEY,
-    album_id             VARCHAR(10) NOT NULL REFERENCES album (id) ON DELETE CASCADE,
-    -- The string identity of the original owner (e.g., 'alice@photos.alice.com').
-    remote_user_identity TEXT        NOT NULL
-);
-
--- Index for finding all pending items for a specific album import.
-CREATE INDEX idx_pending_album_media_items_target_album_id ON pending_album_media_items (album_id);
+-- For search suggestion performance:
+CREATE INDEX idx_album_name ON album (name);

@@ -1,4 +1,5 @@
 use app_state::constants;
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use color_eyre::eyre::Result;
 use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
@@ -51,6 +52,14 @@ pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Poo
         .idle_timeout(Duration::from_secs(db_config.idle_timeout))
         .acquire_timeout(Duration::from_secs(db_config.acquire_timeout))
         .test_before_acquire(true)
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                sqlx::query("SET plan_cache_mode = force_custom_plan")
+                    .execute(conn)
+                    .await?;
+                Ok(())
+            })
+        })
         .connect(database_url)
         .await?;
     if run_migrations {
@@ -62,4 +71,22 @@ pub async fn get_db_pool(database_url: &str, run_migrations: bool) -> Result<Poo
         }
     }
     Ok(pool)
+}
+
+#[must_use]
+pub fn with_fallback_timezone(
+    utc_dt: Option<DateTime<Utc>>,
+    local_dt: &NaiveDateTime,
+) -> DateTime<Utc> {
+    utc_dt.unwrap_or_else(|| {
+        constants().fallback_timezone.as_ref().map_or_else(
+            || local_dt.and_utc(),
+            |tz| {
+                tz.from_local_datetime(local_dt)
+                    .earliest()
+                    .expect("Can't get datetime at timezone.")
+                    .with_timezone(&Utc)
+            },
+        )
+    })
 }

@@ -1,5 +1,6 @@
 use face_id::analyzer::FaceAnalysis;
 use material_color_utils::MaterializedTheme;
+use object_detector::DetectedObject;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -135,6 +136,7 @@ pub struct MLFastAnalysis {
     pub color_data: MLColorData,
     pub embedding: Vec<f32>,
     pub faces: Vec<FaceAnalysis>,
+    pub objects: Vec<DetectedObject>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]

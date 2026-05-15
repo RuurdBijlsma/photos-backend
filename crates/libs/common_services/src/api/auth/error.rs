@@ -1,3 +1,4 @@
+use crate::api::onboarding::error::OnboardingError;
 use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
@@ -25,6 +26,8 @@ pub enum AuthError {
     UserNotFound,
     #[error("permission denied for {user_email} on {path}")]
     PermissionDenied { user_email: String, path: String },
+    #[error("invalid or expired invite token")]
+    InvalidInvite,
     #[error(transparent)]
     Internal(#[from] eyre::Report),
 }
@@ -47,6 +50,7 @@ fn log_auth_failure(error: &AuthError) {
                 user_email, path
             );
         }
+        AuthError::InvalidInvite => info!("Registration failed: Invalid or expired invite token."),
         AuthError::Internal(e) => println!("Error in /auth: {e:?}"),
     }
 }
@@ -73,6 +77,7 @@ impl IntoResponse for AuthError {
                 "A user with this email already exists",
             ),
             Self::PermissionDenied { .. } => (StatusCode::FORBIDDEN, "Permission denied"),
+            Self::InvalidInvite => (StatusCode::FORBIDDEN, "Invalid or expired invite token"),
             Self::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An internal error occurred",
@@ -103,5 +108,11 @@ impl From<DbError> for AuthError {
             DbError::Sqlx(err) => Self::Internal(eyre::Report::new(err)),
             DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
         }
+    }
+}
+
+impl From<OnboardingError> for AuthError {
+    fn from(err: OnboardingError) -> Self {
+        Self::Internal(eyre::Report::new(err))
     }
 }

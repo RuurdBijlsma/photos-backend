@@ -2,17 +2,14 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use app_state::{AppSettings, MakeRelativePath};
 use color_eyre::eyre::Result;
-use color_eyre::eyre::eyre;
-use common_services::alert;
 use common_services::database::jobs::{Job, JobType};
+use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::user_store::UserStore;
-use common_services::job_queue::{bulk_enqueue_full_ingest, enqueue_full_ingest, enqueue_job};
+use common_services::job_queue::{bulk_enqueue_full_ingest, enqueue_job};
 use sqlx::PgPool;
 use std::collections::HashSet;
 use std::path::Path;
-use tokio::fs;
-use tracing::warn;
-use tracing::{error, info};
+use tracing::info;
 use walkdir::WalkDir;
 
 /// Checks if a file path has an extension present in a given set of allowed extensions.
@@ -49,12 +46,33 @@ pub async fn sync_user_files_to_db(
         .collect();
 
     let all_files = get_media_files(user_folder, &allowed);
+    let other_media_folders = sqlx::query_scalar!(
+        r#"
+            SELECT media_folder as "media_folder!"
+            FROM app_user
+            WHERE id != $1 AND media_folder IS NOT NULL
+            "#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await?;
+    let user_rel_path = user_folder.make_relative(&settings.ingest.media_root)?;
+    let sub_folders = other_media_folders
+        .iter()
+        .filter(|f| f.starts_with(&user_rel_path))
+        .collect::<Vec<&String>>();
     let fs_paths: HashSet<String> = all_files
         .into_iter()
         .flat_map(|p| p.make_relative(&settings.ingest.media_root))
+        // Filter out all fs_paths that start with another user's media_folder
+        .filter(|fs_path| {
+            sub_folders
+                .iter()
+                .all(|sub_folder| !fs_path.starts_with(*sub_folder))
+        })
         .collect();
 
-    let db_paths: HashSet<String> = sqlx::query_scalar!(
+    let db_paths_all: HashSet<String> = sqlx::query_scalar!(
         "SELECT relative_path FROM media_item WHERE user_id = $1",
         user_id
     )
@@ -63,92 +81,25 @@ pub async fn sync_user_files_to_db(
     .into_iter()
     .collect();
 
-    let to_ingest: Vec<_> = fs_paths.difference(&db_paths).cloned().collect();
-    let to_remove: Vec<_> = db_paths.difference(&fs_paths).cloned().collect();
+    let to_ingest: Vec<_> = fs_paths.difference(&db_paths_all).cloned().collect();
+    let to_remove: Vec<_> = db_paths_all.difference(&fs_paths).cloned().collect();
 
     bulk_enqueue_full_ingest(pool, &settings.ingest, &to_ingest, user_id).await?;
 
-    // for rel_path in to_ingest {
-    //     if let Err(e) = enqueue_full_ingest(pool, settings, &rel_path, user_id).await {
-    //         error!("Error enqueueing file ingest: {:?}", e.to_string());
-    //     }
-    // }
-    for rel_path in to_remove {
-        if let Err(e) = enqueue_job::<()>(pool, settings, JobType::Remove)
-            .relative_path(rel_path)
-            .user_id(user_id)
-            .call()
-            .await
-        {
-            error!("Error enqueueing file remove: {:?}", e.to_string());
-        }
+    tokio::try_join!(
+        enqueue_job::<()>(pool, settings, JobType::UpdateGlobalCentroid).call(),
+        enqueue_job::<()>(pool, settings, JobType::ClusterFaces).call(),
+        enqueue_job::<()>(pool, settings, JobType::ClusterPhotos).call()
+    )?;
+
+    if !to_remove.is_empty() {
+        info!(
+            "Cleaning up {} missing files for user {}",
+            to_remove.len(),
+            user_id
+        );
+        MediaItemStore::delete_by_relative_paths(pool, &to_remove).await?;
     }
-    Ok(())
-}
-
-/// Reads the thumbnails directory and returns a set of all subdirectory names (media item IDs).
-async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String>> {
-    let mut set = HashSet::new();
-    let mut entries = fs::read_dir(thumbnail_folder).await?;
-    while let Some(entry) = entries.next_entry().await? {
-        if entry.file_type().await?.is_dir()
-            && let Some(name) = entry.file_name().to_str()
-        {
-            set.insert(name.to_owned());
-        }
-    }
-    Ok(set)
-}
-
-/// Synchronises thumbnail folders with the database, deleting orphans and re-ingesting items with missing thumbnails.
-async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
-    let Some(job_count) = sqlx::query_scalar!(
-        "SELECT count(id) FROM jobs WHERE status IN ('running', 'queued') AND job_type in ('ingest_thumbnails', 'remove')"
-    )
-        .fetch_one(pool)
-        .await?
-    else {
-        return Err(eyre!("Can't get job count"));
-    };
-    if job_count > 0 {
-        return Ok(()); // skip if ingest jobs are pending
-    }
-
-    let thumbnails_root = &settings.ingest.thumbnail_root;
-    let media_root = &settings.ingest.media_root;
-
-    let (thumb_ids, db_ids) = tokio::try_join!(get_thumbnail_folders(thumbnails_root), async {
-        let rows: Vec<String> = sqlx::query_scalar!("SELECT id FROM media_item")
-            .fetch_all(pool)
-            .await?;
-        Ok::<HashSet<String>, color_eyre::Report>(rows.into_iter().collect())
-    })?;
-
-    let to_delete: Vec<_> = thumb_ids.difference(&db_ids).cloned().collect();
-    for id in to_delete {
-        info!("Deleting thumbnail folder {}", id);
-        fs::remove_dir_all(thumbnails_root.join(id)).await?;
-    }
-
-    let db_items_missing_thumbnails = db_ids.difference(&thumb_ids).cloned().collect::<Vec<_>>();
-    for id in db_items_missing_thumbnails {
-        let relative_path: String =
-            sqlx::query_scalar!("SELECT relative_path FROM media_item WHERE id = $1", id)
-                .fetch_one(pool)
-                .await?;
-        let file = media_root.join(&relative_path);
-        if file.exists() {
-            info!("Media item has no thumbnail, re-ingesting now. {:?}", file);
-            // Re-ingest files with missing thumbnails, as long as the fs file exists.
-
-            if let Some(user) = UserStore::find_user_by_relative_path(pool, &relative_path).await? {
-                enqueue_full_ingest(pool, settings, &relative_path, user.id).await?;
-            } else {
-                alert!("[Sync - Thumbnail scan] Cannot find user from relative path.");
-            }
-        }
-    }
-
     Ok(())
 }
 
@@ -164,8 +115,6 @@ pub async fn run_scan(pool: &PgPool, settings: &AppSettings) -> Result<()> {
         sync_user_files_to_db(pool, settings, &media_root.join(media_folder), user.id).await?;
     }
     info!("User scan complete");
-    sync_thumbnails(pool, settings).await?;
-    info!("Thumbnail sync complete.");
 
     Ok(())
 }

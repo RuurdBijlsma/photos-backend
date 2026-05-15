@@ -1,10 +1,12 @@
 use app_state::IngestSettings;
-use axum::{Extension, Json, extract};
+use axum::extract::{Path, Query, State};
+use axum::{Extension, Json};
 use common_services::api::photos::interfaces::{
-    ColorThemeParams, DownloadMediaParams, GetMediaItemParams, RandomPhotoResponse,
+    ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest,
 };
 use common_services::api::photos::service::{
     download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
+    update_media_item,
 };
 use common_services::database::app_user::User;
 use common_services::database::media_item::media_item::FullMediaItem;
@@ -21,34 +23,32 @@ use material_color_utils::utils::color_utils::Argb;
 use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
 
-#[utoipa::path(
-    get,
-    path = "/photos/item",
-    tag = "Photos",
-    params(
-        GetMediaItemParams
-    ),
-    responses(
-        (status = 200, description = "Get random photo and associated themes.", body = FullMediaItem),
-        (status = 404, description = "Item not found."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_full_item_handler(
-    extract::State(context): extract::State<ApiContext>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    extract::Query(params): extract::Query<GetMediaItemParams>,
+    Path(media_item_id): Path<String>,
 ) -> Result<Json<FullMediaItem>, PhotosError> {
-    let item = MediaItemStore::find_by_id(&context.pool, &params.id).await?;
+    let item = MediaItemStore::find_by_id(&context.pool, &media_item_id).await?;
     if let Some(item) = item
         && item.user_id == user.id
     {
         Ok(Json(item))
     } else {
-        Err(PhotosError::MediaNotFound(params.id))
+        Err(PhotosError::MediaNotFound(media_item_id))
     }
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn update_media_item_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(media_item_id): Path<String>,
+    Json(payload): Json<UpdateMediaItemRequest>,
+) -> Result<(), PhotosError> {
+    update_media_item(&context.pool, &media_item_id, user.id, &payload).await?;
+
+    Ok(())
 }
 
 #[utoipa::path(
@@ -62,7 +62,7 @@ pub async fn get_full_item_handler(
     security(("bearer_auth" = []))
 )]
 pub async fn get_random_photo(
-    extract::State(context): extract::State<ApiContext>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
 ) -> Result<Json<Option<RandomPhotoResponse>>, PhotosError> {
     let result = random_photo(&user, &context.pool).await?;
@@ -83,8 +83,8 @@ pub async fn get_random_photo(
     security(("bearer_auth" = []))
 )]
 pub async fn get_color_theme_handler(
-    extract::State(ingestion): extract::State<IngestSettings>,
-    extract::Query(params): extract::Query<ColorThemeParams>,
+    State(ingestion): State<IngestSettings>,
+    Query(params): Query<ColorThemeParams>,
 ) -> Result<Json<MaterializedTheme>, PhotosError> {
     let variant = &ingestion.analyzer.theme_generation.variant;
     let contrast_level = ingestion.analyzer.theme_generation.contrast_level;
@@ -111,20 +111,34 @@ pub async fn get_color_theme_handler(
         (status = 500, description = "An internal server error occurred."),
     )
 )]
-pub async fn download_full_file(
-    extract::State(ingestion): extract::State<IngestSettings>,
+pub async fn download_full_file_by_rel_path(
+    State(ingestion): State<IngestSettings>,
     Extension(user): Extension<User>,
-    extract::Query(query): extract::Query<DownloadMediaParams>,
+    Query(query): Query<DownloadMediaParams>,
 ) -> Result<impl IntoResponse, PhotosError> {
     let response = download_media_file(&ingestion, &user, &query.path).await?;
     Ok(response)
 }
 
+pub async fn download_full_file_by_id(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(media_item_id): Path<String>,
+) -> Result<impl IntoResponse, PhotosError> {
+    let Some(rel_path) =
+        MediaItemStore::find_relative_path_by_id(&context.pool, &media_item_id).await?
+    else {
+        return Err(PhotosError::MediaNotFound(media_item_id));
+    };
+    let response = download_media_file(&context.settings.ingest, &user, &rel_path).await?;
+    Ok(response)
+}
+
 #[instrument(skip(context), err(Debug))]
 pub async fn get_photo_thumbnail(
-    extract::State(context): extract::State<ApiContext>,
-    extract::Query(query): extract::Query<PhotoThumbnailParams>,
-    extract::Path(media_item_id): extract::Path<String>,
+    State(context): State<ApiContext>,
+    Query(query): Query<PhotoThumbnailParams>,
+    Path(media_item_id): Path<String>,
 ) -> Result<impl IntoResponse, PhotosError> {
     let size = query.size.unwrap_or(360);
     if size > 1440 {
@@ -155,8 +169,8 @@ pub async fn get_photo_thumbnail(
     responses((status = 206, description = "Partial video content"))
 )]
 pub async fn stream_video_handler(
-    extract::State(context): extract::State<ApiContext>,
-    extract::Path(media_item_id): extract::Path<String>,
+    State(context): State<ApiContext>,
+    Path(media_item_id): Path<String>,
     range: Option<TypedHeader<Range>>,
 ) -> Result<impl IntoResponse, PhotosError> {
     let range_inner = range.map(|TypedHeader(r)| r);

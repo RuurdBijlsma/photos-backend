@@ -7,9 +7,9 @@ use common_services::database::media_item::media_item::FullMediaItem;
 use material_color_utils::dynamic::variant::Variant;
 use reqwest::StatusCode;
 use serde_json::Value;
-use sqlx::__rt::sleep;
 use std::time::{Duration, Instant};
 use tokio::fs;
+use tokio::time::sleep;
 use tracing::info;
 
 pub async fn test_photo_download(context: &TestContext) -> Result<()> {
@@ -135,7 +135,6 @@ pub async fn test_get_full_item(context: &TestContext) -> Result<()> {
     // ARRANGE
     let token = login(context).await?;
     let client = &context.http_client;
-    let url = format!("{}/photos/item", context.settings.api.public_url);
 
     // Get a valid ID from the database
     let media_item = sqlx::query!("SELECT id FROM media_item LIMIT 1")
@@ -144,23 +143,19 @@ pub async fn test_get_full_item(context: &TestContext) -> Result<()> {
 
     if let Some(record) = media_item {
         let valid_id = record.id;
+        let valid_id_url = format!("{}/photos/{valid_id}/item", context.settings.api.public_url);
 
         // --- TEST 1: Valid ID ---
-        let response = client
-            .get(&url)
-            .query(&[("id", &valid_id)])
-            .bearer_auth(&token)
-            .send()
-            .await?;
+        let response = client.get(&valid_id_url).bearer_auth(&token).send().await?;
 
         assert_eq!(response.status(), StatusCode::OK);
         let item: FullMediaItem = response.json().await?;
         assert_eq!(item.id, valid_id);
 
         // --- TEST 2: Invalid ID ---
+        let invalid_id_url = format!("{}/photos/invalid-id/item", context.settings.api.public_url);
         let response = client
-            .get(&url)
-            .query(&[("id", "invalid-media-item-id")])
+            .get(&invalid_id_url)
             .bearer_auth(&token)
             .send()
             .await?;
@@ -196,13 +191,13 @@ pub async fn test_get_color_theme(context: &TestContext) -> Result<()> {
     // Verify it looks like a theme object
     assert!(body.is_object());
     if let Some(obj) = body.as_object() {
-        assert!(obj.contains_key("source"));
+        assert!(obj.contains_key("source_color"));
         assert!(obj.contains_key("schemes"));
         let variant = obj
             .get("variant")
             .and_then(|v| v.as_str())
             .expect("key: variant not found");
-        let variant_from_json: Variant = serde_json::from_str(variant)?;
+        let variant_from_json: Variant = serde_json::from_str(&format!("\"{variant}\""))?;
         assert_eq!(
             variant_from_json,
             context.settings.ingest.analyzer.theme_generation.variant
@@ -213,7 +208,7 @@ pub async fn test_get_color_theme(context: &TestContext) -> Result<()> {
 }
 
 pub async fn test_get_random_photo(context: &TestContext) -> Result<()> {
-    let timeout = Duration::from_secs(120);
+    let timeout = Duration::from_mins(2);
     let start = Instant::now();
     info!("Waiting for 1 analysis job to complete...");
     loop {

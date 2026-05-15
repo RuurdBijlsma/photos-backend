@@ -10,4 +10,5 @@ pub struct AlbumMediaItem {
     pub media_item_id: String,
     pub added_by_user: Option<i32>,
     pub added_at: DateTime<Utc>,
+    pub rank: f64,
 }

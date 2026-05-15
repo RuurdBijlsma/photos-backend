@@ -72,10 +72,37 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
     config.type_attribute(
+        ".api.OrderedMediaResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
         ".api.SearchSuggestionsResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
+    );
+    config.type_attribute(
+        ".api.SearchSuggestion",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.SuggestionType",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );
 
+    // --- PERSON STRUCTS ---
+    config.type_attribute(
+        ".api.PersonInfo",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.ListPeopleResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.FullPersonMediaResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+
+    config.type_attribute(".api", "#[serde(rename_all = \"camelCase\")]");
     config.compile_fds(file_descriptors)?;
 
     Ok(())

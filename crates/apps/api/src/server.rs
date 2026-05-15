@@ -14,6 +14,7 @@ use app_state::AppSettings;
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
+use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 use http::{HeaderValue, header};
 use open_clip_inference::TextEmbedder;
 use reqwest::Client;
@@ -21,6 +22,7 @@ use sqlx::PgPool;
 use std::iter::once;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tasks::task_runner::schedule_tasks;
 use tokio::fs;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
@@ -31,7 +33,10 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 
-pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
+pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool) -> Result<()> {
+    if run_task_scheduler {
+        schedule_tasks(&pool, &settings)?;
+    }
     info!("Loading CLIP text embedder...");
     let text_embedder = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
         .build()
@@ -46,7 +51,13 @@ pub async fn serve(pool: PgPool, settings: AppSettings) -> Result<()> {
         embedder: Arc::new(text_embedder),
     };
 
-    fs::create_dir_all(&settings.ingest.thumbnail_root.join(".jpg-cache")).await?;
+    fs::create_dir_all(
+        &settings
+            .ingest
+            .thumbnail_root
+            .join(ON_DEMAND_THUMBNAIL_CACHE_FOLDER),
+    )
+    .await?;
 
     // --- CORS Configuration ---
     let allowed_origins: Vec<HeaderValue> = settings

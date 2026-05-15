@@ -1,5 +1,7 @@
 use crate::database::DbError;
-use crate::database::tables::app_user::{User, UserRole, UserWithPassword};
+use crate::database::structs::UpdateUserPayload;
+use crate::database::tables::app_user::{User, UserInvite, UserRole, UserWithPassword};
+use chrono::{DateTime, Utc};
 use sqlx::postgres::PgQueryResult;
 use sqlx::{Executor, Postgres};
 
@@ -31,6 +33,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             "#,
             email,
@@ -49,24 +52,21 @@ impl UserStore {
     pub async fn update(
         executor: impl Executor<'_, Database = Postgres>,
         user_id: i32,
-        name: Option<String>,
-        email: Option<String>,
-        password: Option<String>,
-        role: Option<UserRole>,
-        media_folder: Option<String>,
+        payload: UpdateUserPayload,
     ) -> Result<User, DbError> {
         Ok(sqlx::query_as!(
             User,
             r#"
             UPDATE app_user
             SET
-                name = COALESCE($1, name),
-                email = COALESCE($2, email),
-                password = COALESCE($3, password),
-                role = COALESCE($4, role),
-                media_folder = COALESCE($5, media_folder),
+                name = COALESCE($2, name),
+                email = COALESCE($3, email),
+                password = COALESCE($4, password),
+                role = COALESCE($5, role),
+                media_folder = COALESCE($6, media_folder),
+                avatar_id = CASE WHEN $7::boolean THEN avatar_id ELSE $8 END,
                 updated_at = now()
-            WHERE id = $6
+            WHERE id = $1
             RETURNING
                 id,
                 created_at,
@@ -74,14 +74,17 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             "#,
-            name,
-            email,
-            password,
-            role as Option<UserRole>,
-            media_folder,
-            user_id
+            user_id,
+            payload.name,
+            payload.email,
+            payload.password,
+            payload.role as Option<UserRole>,
+            payload.media_folder,
+            payload.avatar_id.is_ignore(),
+            payload.avatar_id.value()
         )
         .fetch_one(executor)
         .await?)
@@ -115,6 +118,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             WHERE id = $1
@@ -139,6 +143,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             WHERE email = $1
@@ -164,6 +169,7 @@ impl UserStore {
                 name,
                 password,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             WHERE email = $1
@@ -222,14 +228,14 @@ impl UserStore {
         let users = Self::list_users_with_media_folders(executor).await?;
 
         let mut best_match: Option<User> = None;
-        let mut max_len = 0;
+        let mut max_len = -1;
 
         for user in users {
             if let Some(media_folder) = &user.media_folder
                 && relative_path.starts_with(media_folder)
-                && media_folder.len() > max_len
+                && media_folder.len() as i32 > max_len
             {
-                max_len = media_folder.len();
+                max_len = media_folder.len() as i32;
                 best_match = Some(user);
             }
         }
@@ -256,6 +262,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             WHERE media_folder IS NOT NULL
@@ -278,6 +285,7 @@ impl UserStore {
                 email,
                 name,
                 media_folder,
+                avatar_id,
                 role as "role: UserRole"
             FROM app_user
             "#,
@@ -292,5 +300,58 @@ impl UserStore {
         Ok(sqlx::query_scalar!(r#"SELECT id FROM app_user"#)
             .fetch_all(executor)
             .await?)
+    }
+
+    //================================================================================
+    // User Invites
+    //================================================================================
+
+    pub async fn create_invite(
+        executor: impl Executor<'_, Database = Postgres>,
+        token: &str,
+        media_folder: &str,
+        expires_at: DateTime<Utc>,
+    ) -> Result<UserInvite, DbError> {
+        Ok(sqlx::query_as!(
+            UserInvite,
+            r#"
+            INSERT INTO user_invite (token, media_folder, expires_at)
+            VALUES ($1, $2, $3)
+            RETURNING token, media_folder, expires_at, created_at
+            "#,
+            token,
+            media_folder,
+            expires_at
+        )
+        .fetch_one(executor)
+        .await?)
+    }
+
+    pub async fn find_invite_by_token(
+        executor: impl Executor<'_, Database = Postgres>,
+        token: &str,
+    ) -> Result<Option<UserInvite>, DbError> {
+        Ok(sqlx::query_as!(
+            UserInvite,
+            r#"
+            SELECT token, media_folder, expires_at, created_at
+            FROM user_invite
+            WHERE token = $1 AND expires_at > NOW()
+            "#,
+            token
+        )
+        .fetch_optional(executor)
+        .await?)
+    }
+
+    pub async fn delete_invite(
+        executor: impl Executor<'_, Database = Postgres>,
+        token: &str,
+    ) -> Result<PgQueryResult, DbError> {
+        Ok(
+            sqlx::query!("DELETE FROM user_invite WHERE token = $1", token)
+                .execute(executor)
+                .await?,
+        )
     }
 }

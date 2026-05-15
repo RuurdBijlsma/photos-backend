@@ -112,3 +112,18 @@ cargo run -p worker
    frontend: [https://github.com/RuurdBijlsma/photos-frontend](https://github.com/RuurdBijlsma/photos-frontend)
 2. Follow the frontend instructions to run it
 3. Access the application
+
+## Troubleshooting
+
+### Dynamic Linking
+
+If you are using the `load-dynamic` feature and encounter library errors:
+
+1. Download the `onnxruntime` library from [GitHub Releases](https://github.com/microsoft/onnxruntime/releases).
+2. Set the `ORT_DYLIB_PATH` environment variable:
+   ```shell
+   # Linux/macOS
+   export ORT_DYLIB_PATH="/path/to/libonnxruntime.so"
+   # Windows (PowerShell)
+   $env:ORT_DYLIB_PATH = "C:/Apps/onnxruntime/lib/onnxruntime.dll"
+   ```

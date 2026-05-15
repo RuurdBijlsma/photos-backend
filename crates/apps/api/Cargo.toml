@@ -7,11 +7,11 @@ edition = "2024"
 app_state = { path = "../../libs/app_state" }
 common_types = { path = "../../libs/common_types" }
 common_services = { path = "../../libs/common_services" }
+tasks = { path = "../../libs/tasks" }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["ansi", "env-filter"] }
 color-eyre = "0.6.5"
 axum = { version = "0.8.8", features = ["macros", "ws", "http2"] }
-rustls = { version = "0.23", features = ["ring"] }
 tokio = { version = "1.47.1", features = ["full"] }
 jsonwebtoken = { version = "10.0.0", features = ["rust_crypto"] }
 chrono = { version = "0.4.42", features = ["serde"] }
@@ -27,5 +27,10 @@ axum-extra = { version = "0.12.2", features = ["protobuf", "typed-header"] }
 reqwest = { version = "0.13.2", features = ["json"] }
 tower_governor = { version = "0.8.0" }
 serde = { version = "1.0.228", features = ["derive"] }
-open_clip_inference = { version = "0.3.0", features = ["load-dynamic"] }
+open_clip_inference = { version = "0.4.0" }
 material-color-utils = "0.1.3"
+clap = { version = "4.5.48", features = ["derive"] }
+
+
+[features]
+load-dynamic = ["open_clip_inference/load-dynamic", "common_services/load-dynamic", "common_types/load-dynamic", "tasks/load-dynamic"]
