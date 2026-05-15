@@ -432,8 +432,12 @@ impl MediaItemStore {
         timezone_offset_seconds: UpdateField<i32>,
         use_panorama_viewer: Option<bool>,
     ) -> Result<PgQueryResult, DbError> {
-
-        dbg!(&id, &taken_at_utc.clone(), taken_at_utc.clone().is_ignore(), &taken_at_utc.clone().value());
+        dbg!(
+            &id,
+            &taken_at_utc.clone(),
+            taken_at_utc.clone().is_ignore(),
+            &taken_at_utc.clone().value()
+        );
         Ok(sqlx::query!(
             r#"
         UPDATE media_item

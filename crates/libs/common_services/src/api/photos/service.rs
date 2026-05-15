@@ -488,8 +488,8 @@ async fn compute_updated_timestamps(
         "SELECT taken_at_local, timezone_offset_seconds FROM media_item WHERE id = $1",
         media_item_id
     )
-        .fetch_one(executor)
-        .await?;
+    .fetch_one(executor)
+    .await?;
 
     // Determine the values for this calculation
     let local_dt = new_local.unwrap_or(current.taken_at_local);

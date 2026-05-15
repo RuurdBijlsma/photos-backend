@@ -1,8 +1,8 @@
 use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSort, AlbumSortField};
 use crate::api::timeline::interfaces::SortDirection;
-use crate::database::{DbError, UpdateField};
 use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
+use crate::database::{DbError, UpdateField};
 use common_types::pb::api::{CollaboratorSummary, SimpleTimelineItem, TimelineItem};
 use sqlx::postgres::PgQueryResult;
 use sqlx::{PgConnection, PgExecutor};

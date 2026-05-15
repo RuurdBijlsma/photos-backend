@@ -14,7 +14,7 @@ impl<T> UpdateField<T> {
     pub fn is_ignore(&self) -> bool {
         matches!(self, Self::Ignore)
     }
-    
+
     pub fn not_ignore(&self) -> bool {
         !Self::is_ignore(self)
     }

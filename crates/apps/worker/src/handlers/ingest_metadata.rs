@@ -7,6 +7,7 @@ use app_state::constants;
 use color_eyre::eyre::Context;
 use color_eyre::{Result, eyre::eyre};
 use common_services::api::album::interfaces::AlbumSort;
+use common_services::database::UpdateField;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
@@ -17,7 +18,6 @@ use serde_json::from_value;
 use sqlx::PgPool;
 use std::path::Path;
 use tracing::debug;
-use common_services::database::UpdateField;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let relative_path = job

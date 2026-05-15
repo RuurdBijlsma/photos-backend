@@ -1,11 +1,11 @@
 use crate::api::timeline::interfaces::SortDirection;
+use crate::database::UpdateField;
 use crate::database::album::album::AlbumRole;
 use chrono::{DateTime, Utc};
 use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use utoipa::{IntoParams, ToSchema};
-use crate::database::UpdateField;
 // --- Request Payloads ---
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, ToSchema)]
