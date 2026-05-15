@@ -1,6 +1,5 @@
 CREATE TYPE user_role AS ENUM ('admin', 'user');
 
--- Create the Location table. Many GPS entries can point to one Location.
 CREATE TABLE location
 (
     id           SERIAL PRIMARY KEY,
@@ -58,30 +57,38 @@ CREATE TABLE refresh_token
 -- Other tables with specific metadata will link to this one.
 CREATE TABLE media_item
 (
-    id                  VARCHAR(10) PRIMARY KEY,
-    relative_path       TEXT        NOT NULL UNIQUE,
-    hash                TEXT        NOT NULL,
-    filename            TEXT        NOT NULL,
-    user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    remote_user_id      INT         REFERENCES remote_user (id) ON DELETE SET NULL,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    width               INT         NOT NULL,
-    height              INT         NOT NULL,
-    is_video            BOOLEAN     NOT NULL,
-    duration_ms         BIGINT,
-    taken_at_local      TIMESTAMP   NOT NULL,
-    taken_at_utc        TIMESTAMPTZ,
-    og_taken_at_local   TIMESTAMP   NOT NULL,
-    og_taken_at_utc     TIMESTAMPTZ,
-    sort_timestamp      TIMESTAMPTZ NOT NULL,
-    use_panorama_viewer BOOLEAN     NOT NULL,
-    orientation         INT         NOT NULL DEFAULT 1,
-    has_thumbnails      BOOLEAN     NOT NULL DEFAULT false,
-    deleted             BOOLEAN     NOT NULL DEFAULT false,
-    month_id            DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
-    search_vector       TSVECTOR,
-    user_caption        TEXT,
+    -- Ids
+    id                         VARCHAR(10) PRIMARY KEY,
+    user_id                    INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    remote_user_id             INT         REFERENCES remote_user (id) ON DELETE SET NULL,
+    hash                       TEXT        NOT NULL,
+    -- File info
+    relative_path              TEXT        NOT NULL UNIQUE,
+    filename                   TEXT        NOT NULL,
+    created_at                 TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at                 TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Media info
+    width                      INT         NOT NULL,
+    height                     INT         NOT NULL,
+    is_video                   BOOLEAN     NOT NULL,
+    duration_ms                BIGINT,
+    orientation                INT         NOT NULL DEFAULT 1,
+    -- Time
+    taken_at_local             TIMESTAMP   NOT NULL,
+    og_taken_at_local          TIMESTAMP   NOT NULL,
+    taken_at_utc               TIMESTAMPTZ,
+    sort_timestamp             TIMESTAMPTZ NOT NULL,
+    timezone_name              TEXT,
+    timezone_offset_seconds    INT,
+    og_timezone_offset_seconds INT,
+    -- Frontend fields
+    use_panorama_viewer        BOOLEAN     NOT NULL,
+    has_thumbnails             BOOLEAN     NOT NULL DEFAULT false,
+    month_id                   DATE GENERATED ALWAYS AS (date_trunc('month', taken_at_local)) STORED,
+    user_caption               TEXT,
+    -- Other
+    deleted                    BOOLEAN     NOT NULL DEFAULT false,
+    search_vector              TSVECTOR,
     CONSTRAINT width_positive CHECK (width > 0),
     CONSTRAINT height_positive CHECK (height > 0)
 );
@@ -105,12 +112,10 @@ CREATE TABLE gps
 
 CREATE TABLE time
 (
-    media_item_id           VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    timezone_name           TEXT,
-    timezone_offset_seconds INT,
-    timezone_source         TEXT,
-    source_details          TEXT NOT NULL,
-    source_confidence       TEXT NOT NULL
+    media_item_id     VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
+    timezone_source   TEXT,
+    source_details    TEXT NOT NULL,
+    source_confidence TEXT NOT NULL
 );
 
 CREATE TABLE weather

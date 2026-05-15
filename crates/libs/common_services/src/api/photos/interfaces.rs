@@ -37,4 +37,6 @@ pub struct UpdateMediaItemRequest {
     pub taken_at_local: Option<String>,
     #[serde(default)]
     pub use_panorama_viewer: Option<bool>,
+    #[serde(default)]
+    pub timezone_offset_seconds: UpdateField<i32>,
 }

@@ -2,9 +2,11 @@ use crate::api::photos::error::PhotosError;
 use crate::api::photos::interfaces::{RandomPhotoResponse, UpdateMediaItemRequest};
 use crate::database::app_user::{User, UserRole};
 use crate::database::media_item_store::MediaItemStore;
+use crate::database::{UpdateField, with_fallback_timezone};
 use app_state::{IngestSettings, MakeRelativePath};
 use axum::body::Body;
 use axum_extra::headers::Range;
+use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use color_eyre::Report;
 use color_eyre::eyre::eyre;
 use exif::{In, Tag, Value};
@@ -18,13 +20,11 @@ use std::io::Cursor;
 use std::ops::Bound;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use chrono::{DateTime, FixedOffset, TimeZone, Utc};
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
-use crate::database::{with_fallback_timezone, UpdateField};
 
 /// Fetches a random photo with its color theme data for a specific user.
 ///
@@ -471,64 +471,94 @@ pub async fn stream_video_file(
         .map_err(|e| eyre!("Can't create video stream response {e}"))?)
 }
 
-pub async fn update_media_item(pool: &PgPool, media_item_id: &str, user_id:i32, payload: &UpdateMediaItemRequest)->Result<(), PhotosError>{
+async fn compute_updated_timestamps(
+    pool: &PgPool,
+    media_item_id: &str,
+    new_local: Option<NaiveDateTime>,
+    new_offset: &UpdateField<i32>,
+) -> Result<(UpdateField<DateTime<Utc>>, Option<DateTime<Utc>>), PhotosError> {
+    let is_updating_local = new_local.is_some();
+    let is_updating_offset = !matches!(new_offset, UpdateField::Ignore);
+    // If neither is changing, we don't need to update these derived fields
+    if !is_updating_local && !is_updating_offset {
+        return Ok((UpdateField::Ignore, None));
+    }
+
+    let current = sqlx::query!(
+        "SELECT taken_at_local, timezone_offset_seconds FROM media_item WHERE id = $1",
+        media_item_id
+    )
+        .fetch_one(pool)
+        .await?;
+
+    // Determine the values for this calculation
+    let local_dt = new_local.unwrap_or(current.taken_at_local);
+    let offset_secs = match new_offset {
+        UpdateField::Value(v) => Some(*v),
+        UpdateField::SetNull => None,
+        UpdateField::Ignore => current.timezone_offset_seconds,
+    };
+
+    let taken_at_utc = if let Some(offset) = offset_secs.and_then(FixedOffset::east_opt) {
+        offset
+            .from_local_datetime(&local_dt)
+            .earliest()
+            .map(|dt| dt.with_timezone(&Utc))
+    } else {
+        None
+    };
+
+    let sort_timestamp = Some(with_fallback_timezone(taken_at_utc, &local_dt));
+    let utc_field = taken_at_utc
+        .map(UpdateField::Value)
+        .unwrap_or(UpdateField::SetNull);
+
+    Ok((utc_field, sort_timestamp))
+}
+
+pub async fn update_media_item(
+    pool: &PgPool,
+    media_item_id: &str,
+    user_id: i32,
+    payload: &UpdateMediaItemRequest,
+) -> Result<(), PhotosError> {
     let media_user_id = MediaItemStore::find_user_by_id(pool, &media_item_id)
         .await?
         .ok_or_else(|| PhotosError::MediaNotFound(media_item_id.to_owned()))?;
 
-    if media_user_id != user_id{
+    if media_user_id != user_id {
         return Err(PhotosError::AccessDenied);
     }
 
-    let UpdateMediaItemRequest{taken_at_local, user_caption, use_panorama_viewer} = payload;
+    let UpdateMediaItemRequest {
+        taken_at_local,
+        user_caption,
+        use_panorama_viewer,
+        timezone_offset_seconds,
+    } = payload;
 
-    let taken_at_local = taken_at_local
+    let taken_at_local_input = taken_at_local
         .as_ref()
         .map(|m| DateTime::parse_from_rfc3339(m))
         .transpose()?
         .map(|d| d.naive_local());
 
-    let (taken_at_utc, sort_timestamp) = if let Some(local_dt) = &taken_at_local {
-        let offset_seconds = sqlx::query_scalar!(
-            "SELECT timezone_offset_seconds FROM time WHERE media_item_id = $1",
-            &media_item_id
-        )
-            .fetch_one(pool)
-            .await?;
-        let taken_at_utc = if let Some(offset_seconds) =
-            offset_seconds.map(|os| FixedOffset::east_opt(os)).flatten()
-        {
-            dbg!(&offset_seconds);
-            taken_at_local.and_then(|dt| {
-                offset_seconds
-                    .from_local_datetime(&dt)
-                    .earliest()
-                    .map(|dt| dt.with_timezone(&Utc))
-            })
-        } else {
-            None
-        };
-        dbg!(&taken_at_utc);
-        (
-            taken_at_utc
-                .map(|tau| UpdateField::Value(tau))
-                .unwrap_or(UpdateField::SetNull),
-            Some(with_fallback_timezone(taken_at_utc, local_dt)),
-        )
-    } else {
-        (UpdateField::Ignore, None)
-    };
-    dbg!(&taken_at_utc);
-    dbg!(&taken_at_local);
-    dbg!(&sort_timestamp);
+    let (taken_at_utc, sort_timestamp) = compute_updated_timestamps(
+        pool,
+        media_item_id,
+        taken_at_local_input,
+        timezone_offset_seconds,
+    )
+        .await?;
 
     MediaItemStore::update(
         pool,
         media_item_id,
         user_caption.clone(),
-        taken_at_local,
+        taken_at_local_input,
         taken_at_utc,
         sort_timestamp,
+        timezone_offset_seconds.clone(),
         use_panorama_viewer.clone(),
     )
         .await?;

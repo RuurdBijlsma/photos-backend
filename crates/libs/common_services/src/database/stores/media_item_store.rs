@@ -136,7 +136,9 @@ impl MediaItemStore {
             mi.taken_at_local,
             mi.taken_at_utc,
             mi.og_taken_at_local,
-            mi.og_taken_at_utc,
+            mi.timezone_name,
+            mi.timezone_offset_seconds,
+            mi.og_timezone_offset_seconds,
             mi.use_panorama_viewer,
             mi.has_thumbnails,
             mi.user_caption,
@@ -205,10 +207,10 @@ impl MediaItemStore {
             INSERT INTO media_item (
                 id, relative_path, filename, user_id, remote_user_id, hash, width, height,
                 is_video, duration_ms, taken_at_local, taken_at_utc,
-                og_taken_at_local, og_taken_at_utc, sort_timestamp, orientation,
-                use_panorama_viewer
+                og_taken_at_local, sort_timestamp, orientation,
+                use_panorama_viewer, timezone_name, timezone_offset_seconds, og_timezone_offset_seconds
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
             "#,
             id,
             relative_path,
@@ -223,10 +225,12 @@ impl MediaItemStore {
             media_item.taken_at_local,
             media_item.taken_at_utc,
             media_item.og_taken_at_local,
-            media_item.og_taken_at_utc,
             sort_timestamp,
             media_item.orientation,
-            media_item.use_panorama_viewer
+            media_item.use_panorama_viewer,
+            media_item.timezone_name,
+            media_item.timezone_offset_seconds,
+            media_item.og_timezone_offset_seconds,
         )
         .execute(&mut **tx)
         .await?;
@@ -286,14 +290,11 @@ impl MediaItemStore {
         sqlx::query!(
             r#"
                 INSERT INTO time (
-                    media_item_id, timezone_name, timezone_offset_seconds,
-                    timezone_source, source_details, source_confidence
+                    media_item_id, timezone_source, source_details, source_confidence
                 )
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES ($1, $2, $3, $4)
                 "#,
             id,
-            media_item.time.timezone_name,
-            media_item.time.timezone_offset_seconds,
             media_item.time.timezone_source,
             &media_item.time.source_details,
             &media_item.time.source_confidence,
@@ -428,6 +429,7 @@ impl MediaItemStore {
         taken_at_local: Option<NaiveDateTime>,
         taken_at_utc: UpdateField<DateTime<Utc>>,
         sort_timestamp: Option<DateTime<Utc>>,
+        timezone_offset_seconds: UpdateField<i32>,
         use_panorama_viewer: Option<bool>,
     ) -> Result<PgQueryResult, DbError> {
 
@@ -440,7 +442,8 @@ impl MediaItemStore {
             taken_at_local = COALESCE($4, taken_at_local),
             taken_at_utc = CASE WHEN $5::boolean THEN taken_at_utc ELSE $6 END,
             sort_timestamp = COALESCE($7, sort_timestamp),
-            use_panorama_viewer = COALESCE($8, use_panorama_viewer),
+            timezone_offset_seconds = CASE WHEN $8::boolean THEN timezone_offset_seconds ELSE $9 END,
+            use_panorama_viewer = COALESCE($10, use_panorama_viewer),
             updated_at = now()
         WHERE id = $1
         "#,
@@ -451,6 +454,8 @@ impl MediaItemStore {
             taken_at_utc.is_ignore(),
             taken_at_utc.value(),
             sort_timestamp,
+            timezone_offset_seconds.is_ignore(),
+            timezone_offset_seconds.value(),
             use_panorama_viewer,
         )
         .execute(executor)
