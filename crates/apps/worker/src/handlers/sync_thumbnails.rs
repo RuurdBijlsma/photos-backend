@@ -7,13 +7,13 @@ use common_services::alert;
 use common_services::database::jobs::Job;
 use common_services::database::user_store::UserStore;
 use common_services::job_queue::enqueue_full_ingest;
+use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 use sqlx::PgPool;
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
 use tracing::info;
 use tracing::warn;
-use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 
 const EXCLUDED_THUMBNAIL_FOLDERS: [&str; 1] = ["people"];
 

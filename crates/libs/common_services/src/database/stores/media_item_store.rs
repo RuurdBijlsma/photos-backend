@@ -10,7 +10,7 @@ use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::structs::UpdateMediaItemPayload;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
-use crate::database::{with_fallback_timezone, DbError};
+use crate::database::{DbError, with_fallback_timezone};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
@@ -425,7 +425,7 @@ impl MediaItemStore {
     pub async fn update(
         executor: impl Executor<'_, Database = Postgres>,
         id: &str,
-        payload: UpdateMediaItemPayload
+        payload: UpdateMediaItemPayload,
     ) -> Result<PgQueryResult, DbError> {
         Ok(sqlx::query!(
             r#"

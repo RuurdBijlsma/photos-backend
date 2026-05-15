@@ -5,10 +5,10 @@ use crate::api::onboarding::helpers::{check_drive_info, list_folders};
 use crate::api::onboarding::interfaces::{
     DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
-use crate::database::{UpdateField, UpdateUserPayload};
 use crate::database::app_user::User;
 use crate::database::jobs::JobType;
 use crate::database::user_store::UserStore;
+use crate::database::{UpdateField, UpdateUserPayload};
 use crate::job_queue::enqueue_job;
 use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_posix_string};
 use sqlx::PgPool;
