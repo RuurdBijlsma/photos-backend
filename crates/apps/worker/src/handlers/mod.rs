@@ -19,6 +19,7 @@ pub mod remove;
 pub mod scan;
 pub mod sync_thumbnails;
 pub mod update_global_centroid;
+pub mod delayed_scan;
 
 /// The outcome of a job handler's execution.
 #[derive(Debug, PartialEq, Eq)]
@@ -44,6 +45,7 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::Remove => remove::handle(context, job).await,
         JobType::Scan => scan::handle(context, job).await,
         JobType::CleanDB => clean_db::handle(context, job).await,
+        JobType::DelayedScan => delayed_scan::handle(context, job).await,
         JobType::ClusterFaces => cluster_faces::handle(context, job).await,
         JobType::ClusterPhotos => cluster_photos::handle(context, job).await,
         JobType::SyncThumbnails => sync_thumbnails::handle(context, job).await,

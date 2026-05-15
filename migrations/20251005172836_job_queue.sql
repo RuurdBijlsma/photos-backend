@@ -1,25 +1,26 @@
 CREATE TYPE job_type AS ENUM ('ingest_metadata', 'ingest_thumbnails', 'ingest_analysis', 'ingest_llm',
-    'remove', 'scan', 'clean_db', 'cluster_faces', 'cluster_photos', 'import_album_item', 'update_global_centroid', 'sync_thumbnails');
+    'remove', 'scan', 'clean_db', 'cluster_faces', 'cluster_photos', 'import_album_item', 'update_global_centroid',
+    'sync_thumbnails', 'delayed_scan');
 CREATE TYPE job_status AS ENUM ('queued', 'running', 'failed', 'done', 'cancelled');
 
 CREATE TABLE jobs
 (
     id                  BIGSERIAL PRIMARY KEY,
-    relative_path       TEXT,                                 -- references files table
+    relative_path       TEXT,                                  -- references files table
     user_id             INT REFERENCES app_user (id) ON DELETE CASCADE,
-    job_type            job_type   NOT NULL,
-    payload             JSONB,                                -- For storing extra job parameters
-    priority            INT        NOT NULL DEFAULT 100,      -- lower = higher priority
-    status              job_status NOT NULL DEFAULT 'queued', -- queued, running, failed, done, cancelled
-    attempts            INT        NOT NULL DEFAULT 0,
-    dependency_attempts INT        NOT NULL DEFAULT 0,
-    max_attempts        INT        NOT NULL DEFAULT 5,
-    owner               TEXT,                                 -- worker id that claimed it
+    job_type            job_type    NOT NULL,
+    payload             JSONB,                                 -- For storing extra job parameters
+    priority            INT         NOT NULL DEFAULT 100,      -- lower = higher priority
+    status              job_status  NOT NULL DEFAULT 'queued', -- queued, running, failed, done, cancelled
+    attempts            INT         NOT NULL DEFAULT 0,
+    dependency_attempts INT         NOT NULL DEFAULT 0,
+    max_attempts        INT         NOT NULL DEFAULT 5,
+    owner               TEXT,                                  -- worker id that claimed it
     started_at          TIMESTAMPTZ,
     finished_at         TIMESTAMPTZ,
-    created_at          TIMESTAMPTZ         DEFAULT now(),
-    scheduled_at        TIMESTAMPTZ         DEFAULT now(),
-    last_heartbeat      TIMESTAMPTZ         DEFAULT now(),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    scheduled_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_heartbeat      TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_error          TEXT
 );
 
