@@ -10,6 +10,7 @@ use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::user_store::UserStore;
 use common_services::job_queue::{IngestMetadataPayload, enqueue_full_ingest};
 use common_types::ImportAlbumItemPayload;
+use common_types::constants::ALBUM_IMPORT_FOLDER;
 use serde_json::from_value;
 use std::path::Path;
 use std::slice;
@@ -36,7 +37,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let remote_identity = format!("{}@{}", payload.remote_username, remote_host);
     let sanitized_identity = sanitize_filename::sanitize(&remote_identity);
     let relative_dir = Path::new(&user_media_folder)
-        .join("import")
+        .join(ALBUM_IMPORT_FOLDER)
         .join(&sanitized_identity);
     let full_save_dir = media_root.join(&relative_dir);
     let filename = payload

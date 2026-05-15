@@ -3,13 +3,15 @@ use crate::test_helpers::login;
 use color_eyre::eyre::{Result, bail};
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddMediaToAlbumRequest, CheckInviteRequest, CreateAlbumRequest,
+    UpdateAlbumRequest,
 };
+use common_services::database::UpdateField;
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album_store::AlbumStore;
 use common_services::database::user_store::UserStore;
+use common_types::constants::ALBUM_IMPORT_FOLDER;
 use common_types::dev_constants::{EMAIL, USERNAME};
 use reqwest::StatusCode;
-use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::time::sleep;
@@ -78,18 +80,12 @@ pub async fn test_update_album(context: &TestContext) -> Result<()> {
         .json()
         .await?;
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    struct UpdateAlbumTestRequest {
-        pub name: Option<String>,
-        pub description: Option<String>,
-        pub is_public: Option<bool>,
-    }
-
     // ACT - Update Name and Description
-    let update_payload = UpdateAlbumTestRequest {
+    let update_payload = UpdateAlbumRequest {
         name: Some("Updated Name".to_string()),
-        description: Some("Updated Description".to_string()),
+        description: UpdateField::Value("Updated Description".to_string()),
         is_public: Some(true),
+        ..Default::default()
     };
 
     let response = client
@@ -234,8 +230,8 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
         })
         .send()
         .await?;
-    let staus_code = response.status();
-    assert_eq!(staus_code, StatusCode::OK);
+    let status_code = response.status();
+    assert_eq!(status_code, StatusCode::OK);
     let album_summary: AlbumSummary = response.json().await?;
     assert_eq!(album_summary.name, source_album_name);
     assert_eq!(album_summary.description, None);
@@ -256,8 +252,8 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
         })
         .send()
         .await?;
-    let staus_code = response.status();
-    assert_eq!(staus_code, StatusCode::OK);
+    let status_code = response.status();
+    assert_eq!(status_code, StatusCode::OK);
     let album: Album = response.json().await?;
     assert_eq!(album.name, imported_album_name);
     assert_eq!(
@@ -267,7 +263,7 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
 
     // Wait for imported items to be processed
     let start_time = Instant::now();
-    let timeout = Duration::from_mins(2);
+    let timeout = Duration::from_mins(1);
     info!("Waiting for album import to complete.");
     // todo: om een of andere reden wordt de import album item job niet opgepakt?
     loop {
@@ -319,7 +315,7 @@ pub async fn test_album_sharing(context: &TestContext) -> Result<()> {
     }
 
     // Check for import folder structure
-    let import_folder = context.settings.ingest.media_root.join("import");
+    let import_folder = context.settings.ingest.media_root.join(ALBUM_IMPORT_FOLDER);
     assert!(import_folder.exists());
     let dirs = {
         let mut dirs = Vec::new();

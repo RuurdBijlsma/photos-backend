@@ -225,9 +225,7 @@ impl UserStore {
         executor: impl Executor<'_, Database = Postgres>,
         relative_path: &str,
     ) -> color_eyre::Result<Option<User>> {
-        dbg!(&relative_path);
         let users = Self::list_users_with_media_folders(executor).await?;
-        dbg!(&users);
 
         let mut best_match: Option<User> = None;
         let mut max_len = -1;

@@ -135,7 +135,6 @@ pub async fn test_get_full_item(context: &TestContext) -> Result<()> {
     // ARRANGE
     let token = login(context).await?;
     let client = &context.http_client;
-    let url = format!("{}/photos/item", context.settings.api.public_url);
 
     // Get a valid ID from the database
     let media_item = sqlx::query!("SELECT id FROM media_item LIMIT 1")
@@ -144,23 +143,19 @@ pub async fn test_get_full_item(context: &TestContext) -> Result<()> {
 
     if let Some(record) = media_item {
         let valid_id = record.id;
+        let valid_id_url = format!("{}/photos/{valid_id}/item", context.settings.api.public_url);
 
         // --- TEST 1: Valid ID ---
-        let response = client
-            .get(&url)
-            .query(&[("id", &valid_id)])
-            .bearer_auth(&token)
-            .send()
-            .await?;
+        let response = client.get(&valid_id_url).bearer_auth(&token).send().await?;
 
         assert_eq!(response.status(), StatusCode::OK);
         let item: FullMediaItem = response.json().await?;
         assert_eq!(item.id, valid_id);
 
         // --- TEST 2: Invalid ID ---
+        let invalid_id_url = format!("{}/photos/invalid-id/item", context.settings.api.public_url);
         let response = client
-            .get(&url)
-            .query(&[("id", "invalid-media-item-id")])
+            .get(&invalid_id_url)
             .bearer_auth(&token)
             .send()
             .await?;
@@ -202,7 +197,6 @@ pub async fn test_get_color_theme(context: &TestContext) -> Result<()> {
             .get("variant")
             .and_then(|v| v.as_str())
             .expect("key: variant not found");
-        dbg!(variant);
         let variant_from_json: Variant = serde_json::from_str(&format!("\"{variant}\""))?;
         assert_eq!(
             variant_from_json,

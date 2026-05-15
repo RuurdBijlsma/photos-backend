@@ -53,12 +53,16 @@ pub struct AddCollaboratorRequest {
     pub role: AlbumRole,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, ToSchema, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAlbumRequest {
+    #[serde(default)]
     pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "UpdateField::is_ignore")]
     pub description: UpdateField<String>,
+    #[serde(default, skip_serializing_if = "UpdateField::is_ignore")]
     pub thumbnail_id: UpdateField<String>,
+    #[serde(default)]
     pub is_public: Option<bool>,
 }
 

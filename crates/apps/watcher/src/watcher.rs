@@ -1,9 +1,11 @@
 use crate::handlers::{handle_create, handle_remove};
 use app_state::AppSettings;
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{Result, eyre};
 use common_services::alert;
+use common_types::constants::ALBUM_IMPORT_FOLDER;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use sqlx::PgPool;
+use std::path::Component;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
@@ -45,7 +47,9 @@ async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
                     return;
                 }
             };
-            process_event(&pool, &settings, event).await;
+            if let Err(e) = process_event(&pool, &settings, event).await {
+                warn!("Error while processing file watcher event {e}");
+            }
         });
     }
 
@@ -53,9 +57,9 @@ async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
 }
 
 /// Processes a single file system event from the watcher.
-async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) {
+async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) -> Result<()> {
     let Some(path) = event.paths.first() else {
-        return;
+        return Ok(());
     };
 
     // Ignore temporary or hidden files.
@@ -65,16 +69,24 @@ async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) {
         .is_some_and(|s| s.starts_with('.'))
     {
         info!("Ignoring hidden file event for: {:?}", path);
-        return;
+        return Ok(());
+    }
+
+    let rel_path = path.strip_prefix(&settings.ingest.media_root)?;
+    if let Some(Component::Normal(name)) = rel_path.components().next()
+        && name == ALBUM_IMPORT_FOLDER
+    {
+        return Ok(());
     }
 
     let result = match event.kind {
         EventKind::Create(_) => handle_create(pool, settings, path).await,
         EventKind::Remove(_) => handle_remove(pool, settings, path).await,
-        _ => return,
+        _ => Err(eyre!("Unknown event type")),
     };
 
     if let Err(e) = result {
         warn!("Error handling file event for {:?}: {:?}", path, e);
     }
+    Ok(())
 }
