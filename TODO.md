@@ -220,6 +220,7 @@
 * [BUG] when a second user registers with a subfolder of the first user as media folder, and there's already media in
   there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
   sure how to handle this case.
+* mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
 
 # Features
 

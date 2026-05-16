@@ -8,12 +8,12 @@ use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumSort,
     CheckInviteRequest, CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam,
-    ReorderMediaRequest, UpdateAlbumRequest,
+    ReorderMediaRequest, SharedMediaItem, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, delete_album,
-    generate_invite, get_album_media, get_sorted_album_media, remove_collaborator,
-    remove_media_from_album, reorder_media_items, update_album,
+    generate_invite, get_album_media, get_album_media_item, get_sorted_album_media,
+    remove_collaborator, remove_media_from_album, reorder_media_items, update_album,
 };
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
@@ -442,4 +442,12 @@ pub async fn get_album_media_handler(
 ) -> Result<Protobuf<FullAlbumMediaResponse>, AlbumError> {
     let response = get_album_media(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
     Ok(Protobuf(response))
+}
+
+pub async fn get_album_media_item_handler(
+    State(context): State<ApiContext>,
+    Path((album_id, media_item_id)): Path<(String, String)>,
+) -> Result<Json<SharedMediaItem>, AlbumError> {
+    let response = get_album_media_item(&context.pool, &album_id, &media_item_id).await?;
+    Ok(Json(response))
 }

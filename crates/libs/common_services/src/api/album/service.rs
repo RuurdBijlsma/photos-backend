@@ -1,9 +1,10 @@
-use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort};
+use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort, SharedMediaItem};
 use crate::api::album::error::AlbumError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
+use crate::database::media_item_store::MediaItemStore;
 use crate::database::system_metrics_store::SystemMetricsStore;
 use crate::database::user_store::UserStore;
 use crate::database::{CreateAlbumPayload, UpdateField};
@@ -563,6 +564,27 @@ pub async fn get_album_media(
             collaborators,
         }),
     })
+}
+
+pub async fn get_album_media_item(
+    pool: &PgPool,
+    album_id: &str,
+    media_item_id: &str,
+) -> Result<SharedMediaItem, AlbumError> {
+    let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_owned()));
+    };
+    if !album.is_public {
+        return Err(AlbumError::NotFound(album_id.to_string()));
+    }
+    let has = AlbumStore::has_media_item(pool, album_id, media_item_id).await?;
+    if !has {
+        return Err(AlbumError::NotFound(album_id.to_string()));
+    }
+    let Some(item) = MediaItemStore::find_by_id(pool, media_item_id).await? else {
+        return Err(AlbumError::NotFound(album_id.to_string()));
+    };
+    Ok(item.into())
 }
 
 // Re-ordering album logic

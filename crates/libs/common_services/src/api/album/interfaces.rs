@@ -1,7 +1,13 @@
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::UpdateField;
 use crate::database::album::album::AlbumRole;
-use chrono::{DateTime, Utc};
+use crate::database::media_item::camera_settings::CameraSettings;
+use crate::database::media_item::media_item::FullMediaItem;
+use crate::database::media_item::panorama::Panorama;
+use crate::database::media_item::time_details::TimeDetails;
+use crate::database::media_item::weather::Weather;
+use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
@@ -173,6 +179,84 @@ impl AlbumSortField {
             Self::Name => "name",
             Self::UpdatedAt => "updated_at",
             Self::LatestPhoto => "latest_photo",
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct SharedMediaFeatures {
+    pub mime_type: String,
+    pub size_bytes: i64,
+    pub is_motion_photo: bool,
+    pub motion_photo_presentation_timestamp: Option<i64>,
+    pub is_hdr: bool,
+    pub is_burst: bool,
+    pub burst_id: Option<String>,
+    pub capture_fps: Option<f32>,
+    pub video_fps: Option<f32>,
+    pub is_nightsight: bool,
+    pub is_timelapse: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct SharedMediaItem {
+    pub id: String,
+    pub filename: String,
+    pub width: i32,
+    pub height: i32,
+    pub is_video: bool,
+    pub duration_ms: Option<i64>,
+    pub taken_at_local: NaiveDateTime,
+    pub taken_at_utc: Option<DateTime<Utc>>,
+    pub timezone_name: Option<String>,
+    pub timezone_offset_seconds: Option<i32>,
+    pub use_panorama_viewer: bool,
+    pub has_thumbnails: bool,
+    pub visual_analyses: Vec<ReadVisualAnalysis>,
+    pub time: TimeDetails,
+    pub weather: Option<Weather>,
+    pub media_features: SharedMediaFeatures,
+    pub camera_settings: CameraSettings,
+    pub panorama: Panorama,
+    pub user_caption: Option<String>,
+}
+
+impl From<FullMediaItem> for SharedMediaItem {
+    fn from(item: FullMediaItem) -> Self {
+        Self {
+            id: item.id,
+            filename: item.filename,
+            width: item.width,
+            height: item.height,
+            is_video: item.is_video,
+            duration_ms: item.duration_ms,
+            taken_at_local: item.taken_at_local,
+            taken_at_utc: item.taken_at_utc,
+            timezone_name: item.timezone_name,
+            timezone_offset_seconds: item.timezone_offset_seconds,
+            use_panorama_viewer: item.use_panorama_viewer,
+            has_thumbnails: item.has_thumbnails,
+            visual_analyses: item.visual_analyses,
+            time: item.time,
+            weather: item.weather,
+            camera_settings: item.camera_settings,
+            panorama: item.panorama,
+            user_caption: item.user_caption,
+            media_features: SharedMediaFeatures {
+                mime_type: item.media_features.mime_type,
+                size_bytes: item.media_features.size_bytes,
+                is_motion_photo: item.media_features.is_motion_photo,
+                motion_photo_presentation_timestamp: item
+                    .media_features
+                    .motion_photo_presentation_timestamp,
+                is_hdr: item.media_features.is_hdr,
+                is_burst: item.media_features.is_burst,
+                burst_id: item.media_features.burst_id,
+                capture_fps: item.media_features.capture_fps,
+                video_fps: item.media_features.video_fps,
+                is_nightsight: item.media_features.is_nightsight,
+                is_timelapse: item.media_features.is_timelapse,
+            },
         }
     }
 }
