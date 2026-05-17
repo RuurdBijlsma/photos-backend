@@ -10,6 +10,7 @@ pub mod common;
 pub mod clean_db;
 pub mod cluster_faces;
 pub mod cluster_photos;
+pub mod delayed_scan;
 pub mod import_album_item;
 pub mod ingest_analysis;
 pub mod ingest_llm;
@@ -19,7 +20,6 @@ pub mod remove;
 pub mod scan;
 pub mod sync_thumbnails;
 pub mod update_global_centroid;
-pub mod delayed_scan;
 
 /// The outcome of a job handler's execution.
 #[derive(Debug, PartialEq, Eq)]

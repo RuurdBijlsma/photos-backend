@@ -10,6 +10,6 @@ sqlx migrate run
 if ($LASTEXITCODE -ne 0) { throw "sqlx migrate run failed" }
 
 $env:ORT_DYLIB_PATH="C:/Apps/onnxruntime/lib/onnxruntime.dll"
-cargo run --package worker --example auto_do_setup --profile release --features load-dynamic
+cargo run --package worker --example create_users_start_processing --profile release --features load-dynamic
 
 Pop-Location
