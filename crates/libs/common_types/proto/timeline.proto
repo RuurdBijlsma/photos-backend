@@ -93,10 +93,11 @@ message SearchSuggestionsResponse {
 
 // --- Person
 message PersonInfo {
-  int64 id = 1;
+  string id = 1;
   optional string name = 2;
   int32 photo_count = 3;
-  optional string thumbnail_id = 4;
+  optional string face_thumb_id = 4;
+  repeated string face_cluster_ids = 5;
 }
 
 message ListPeopleResponse {

@@ -285,7 +285,8 @@ async fn advanced_search_media(
                   SELECT COUNT(DISTINCT p.name)
                   FROM visual_analysis va
                   JOIN face f ON f.visual_analysis_id = va.id
-                  JOIN person p ON f.person_id = p.id
+                  JOIN face_cluster fc ON f.face_cluster_id = fc.id
+                  JOIN person p ON fc.person_id = p.id
                   WHERE va.media_item_id = mi.id AND p.name = ANY($13)
               ) >= (CASE WHEN $16 THEN cardinality($13) ELSE 1 END))
         ),
@@ -408,7 +409,8 @@ pub async fn get_search_suggestions(
 
             (SELECT p.name as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count, 'SEARCH' as "type!", NULL as "id"
             FROM person p
-            JOIN face f ON f.person_id = p.id
+            JOIN face_cluster fc ON fc.person_id = p.id
+            JOIN face f ON f.face_cluster_id = fc.id
             JOIN visual_analysis va ON f.visual_analysis_id = va.id
             WHERE p.user_id = $1
               AND p.name ILIKE $2
@@ -503,7 +505,8 @@ pub async fn get_random_search_suggestion(
 
             (SELECT p.name as suggestion
             FROM person p
-            JOIN face f ON f.person_id = p.id
+            JOIN face_cluster fc ON fc.person_id = p.id
+            JOIN face f ON f.face_cluster_id = fc.id
             JOIN visual_analysis va ON f.visual_analysis_id = va.id
             WHERE p.user_id = $1
               AND p.name != ''

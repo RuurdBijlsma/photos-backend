@@ -11,6 +11,7 @@ pub struct UpdatePersonRequest {
 pub struct PersonSummary {
     pub id: String,
     pub name: Option<String>,
-    pub thumbnail_media_item_id: Option<String>,
+    pub face_thumb_id: Option<String>,
+    pub face_cluster_ids: Vec<String>,
     pub photo_count: i32,
 }

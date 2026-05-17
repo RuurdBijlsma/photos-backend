@@ -1,5 +1,6 @@
 use crate::api_state::ApiContext;
-use axum::{Extension, Json, extract};
+use axum::{Extension, Json};
+use axum::extract::{Path, State};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::people::error::PeopleError;
 use common_services::api::people::interfaces::UpdatePersonRequest;
@@ -20,7 +21,7 @@ use tracing::instrument;
 )]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn list_people_handler(
-    extract::State(context): extract::State<ApiContext>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
 ) -> Result<Protobuf<ListPeopleResponse>, PeopleError> {
     let result = get_all_people(&context.pool, user.id).await?;
@@ -43,12 +44,12 @@ pub async fn list_people_handler(
 )]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn update_person_handler(
-    extract::State(context): extract::State<ApiContext>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    extract::Path(person_id): extract::Path<i64>,
+    Path(person_id): Path<String>,
     Json(payload): Json<UpdatePersonRequest>,
 ) -> Result<(), PeopleError> {
-    update_person(&context.pool, person_id, user.id, payload.name).await?;
+    update_person(&context.pool, &person_id, user.id, payload.name).await?;
     Ok(())
 }
 
@@ -68,10 +69,10 @@ pub async fn update_person_handler(
 )]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_person_photos_handler(
-    extract::State(context): extract::State<ApiContext>,
+    State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    extract::Path(person_id): extract::Path<i64>,
+    Path(person_id): Path<String>,
 ) -> Result<Protobuf<FullPersonMediaResponse>, PeopleError> {
-    let result = get_person_photos(&context.pool, person_id, user.id).await?;
+    let result = get_person_photos(&context.pool, &person_id, user.id).await?;
     Ok(Protobuf(result))
 }

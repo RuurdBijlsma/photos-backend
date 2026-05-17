@@ -15,13 +15,15 @@ impl PersonStore {
         let people = sqlx::query_as!(
             PersonSummary,
             r#"
-            SELECT 
-                p.id, 
-                p.name, 
-                p.thumbnail_media_item_id,
-                COUNT(DISTINCT va.media_item_id)::INT as "photo_count!"
+            SELECT
+                p.id,
+                p.name,
+                p.face_thumb_id,
+                COUNT(DISTINCT va.media_item_id)::INT as "photo_count!",
+                COALESCE(array_agg(DISTINCT fc.id) FILTER (WHERE fc.id IS NOT NULL), '{}') as "face_cluster_ids!"
             FROM person p
-            LEFT JOIN face f ON f.person_id = p.id
+            LEFT JOIN face_cluster fc ON fc.person_id = p.id
+            LEFT JOIN face f ON f.face_cluster_id = fc.id
             LEFT JOIN visual_analysis va ON f.visual_analysis_id = va.id
             WHERE p.user_id = $1
             GROUP BY p.id
@@ -29,8 +31,8 @@ impl PersonStore {
             "#,
             user_id
         )
-        .fetch_all(executor)
-        .await?;
+            .fetch_all(executor)
+            .await?;
 
         Ok(people)
     }
@@ -38,19 +40,21 @@ impl PersonStore {
     #[instrument(skip(executor))]
     pub async fn find_by_id(
         executor: impl PgExecutor<'_>,
-        person_id: i64,
+        person_id: &str,
         user_id: i32,
     ) -> Result<Option<PersonSummary>, DbError> {
         let person = sqlx::query_as!(
             PersonSummary,
             r#"
-            SELECT 
-                p.id, 
-                p.name, 
-                p.thumbnail_media_item_id,
-                COUNT(DISTINCT va.media_item_id)::INT as "photo_count!"
+            SELECT
+                p.id,
+                p.name,
+                p.face_thumb_id,
+                COUNT(DISTINCT va.media_item_id)::INT as "photo_count!",
+                COALESCE(array_agg(DISTINCT fc.id) FILTER (WHERE fc.id IS NOT NULL), '{}') as "face_cluster_ids!"
             FROM person p
-            LEFT JOIN face f ON f.person_id = p.id
+            LEFT JOIN face_cluster fc ON fc.person_id = p.id
+            LEFT JOIN face f ON f.face_cluster_id = fc.id
             LEFT JOIN visual_analysis va ON f.visual_analysis_id = va.id
             WHERE p.id = $1 AND p.user_id = $2
             GROUP BY p.id
@@ -58,8 +62,8 @@ impl PersonStore {
             person_id,
             user_id
         )
-        .fetch_optional(executor)
-        .await?;
+            .fetch_optional(executor)
+            .await?;
 
         Ok(person)
     }
@@ -67,13 +71,13 @@ impl PersonStore {
     #[instrument(skip(executor))]
     pub async fn update_name(
         executor: impl PgExecutor<'_>,
-        person_id: i64,
+        person_id: &str,
         user_id: i32,
         name: Option<String>,
     ) -> Result<u64, DbError> {
         let result = sqlx::query!(
             r#"
-            UPDATE person 
+            UPDATE person
             SET name = $1, updated_at = now()
             WHERE id = $2 AND user_id = $3
             "#,
@@ -90,13 +94,13 @@ impl PersonStore {
     #[instrument(skip(pool))]
     pub async fn get_person_media_items(
         pool: &PgPool,
-        person_id: i64,
+        person_id: &str, // Changed from i64
         user_id: i32,
     ) -> Result<Vec<SimpleTimelineItem>, DbError> {
         let items = sqlx::query_as!(
             SimpleTimelineItem,
             r#"
-            SELECT 
+            SELECT
                 id,
                 is_video,
                 has_thumbnails,
@@ -110,10 +114,12 @@ impl PersonStore {
                     mi.duration_ms,
                     (mi.width::real / mi.height::real) as ratio,
                     mi.sort_timestamp
-                FROM face f
+                FROM person p
+                JOIN face_cluster fc ON fc.person_id = p.id
+                JOIN face f ON f.face_cluster_id = fc.id
                 JOIN visual_analysis va ON f.visual_analysis_id = va.id
                 JOIN media_item mi ON va.media_item_id = mi.id
-                WHERE f.person_id = $1 AND mi.user_id = $2 AND mi.deleted = false
+                WHERE p.id = $1 AND mi.user_id = $2 AND mi.deleted = false
                 ORDER BY mi.id
             ) sub
             ORDER BY sub.sort_timestamp DESC

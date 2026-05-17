@@ -75,9 +75,9 @@ pub fn match_centroids<T: ClusterEntity>(
         }
 
         if let Some((id, _)) = best_match
-            && used_old_ids.insert(&id)
+            && used_old_ids.insert(id.clone())
         {
-            map.insert(new_cid, id);
+            map.insert(new_cid, id.clone());
         }
     }
     Ok(map)

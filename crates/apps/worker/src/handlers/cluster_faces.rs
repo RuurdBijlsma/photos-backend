@@ -13,7 +13,7 @@ use face_id::helpers::extract_face_thumbnail;
 use generate_thumbnails::ffmpeg::FfmpegCommand;
 use itertools::Itertools;
 use pgvector::Vector;
-use sqlx::{PgPool, Transaction, query, query_as, query_scalar};
+use sqlx::{PgPool, Transaction, query, query_as};
 use std::collections::{HashMap, HashSet};
 use tempfile::Builder;
 use tracing::info;
@@ -27,7 +27,7 @@ const PADDING_FACTOR: f32 = 1.8;
 
 impl ClusterEntity for ExistingFaceCluster {
     fn id(&self) -> String {
-        self.id
+        self.id.clone()
     }
     fn centroid(&self) -> Option<&Vector> {
         self.centroid.as_ref()
@@ -197,16 +197,13 @@ async fn upsert_and_link(
             .get(cluster_idx)
             .map(|v| Vector::from(v.clone()));
 
-        let representative_face = get_representative_face(tx, &faces_in_cluster).await?;
-        let thumb_media_id = &representative_face.media_item_id;
-
         let cluster_id = if let Some(existing_cluster_id) = cluster_map.get(&cluster_idx) {
             // Update existing cluster
-            query!(
-                "UPDATE face_cluster SET centroid = $1, thumbnail_media_item_id = $2, updated_at = now() WHERE id = $3",
-                new_centroid, thumb_media_id, existing_cluster_id
-            )
-                .execute(&mut **tx).await?;
+            query("UPDATE face_cluster SET centroid = $1, updated_at = now() WHERE id = $2")
+                .bind(new_centroid)
+                .bind(existing_cluster_id)
+                .execute(&mut **tx)
+                .await?;
             existing_cluster_id.clone()
         } else {
             // New discovery: Create Person AND Cluster
@@ -214,19 +211,19 @@ async fn upsert_and_link(
             let new_cluster_id = nice_id(10);
 
             query!(
-                "INSERT INTO person (id, user_id, face_thumb_id) VALUES ($1, $2, $3)",
+                "INSERT INTO person (id, user_id) VALUES ($1, $2)",
                 new_person_id,
-                user_id,
-                new_cluster_id
+                user_id
             )
             .execute(&mut **tx)
             .await?;
 
-            query!(
-                "INSERT INTO face_cluster (id, person_id, centroid, thumbnail_media_item_id) VALUES ($1, $2, $3, $4)",
-                new_cluster_id, new_person_id, new_centroid, thumb_media_id
-            )
-                .execute(&mut **tx).await?;
+            query("INSERT INTO face_cluster (id, person_id, centroid) VALUES ($1, $2, $3)")
+                .bind(&new_cluster_id)
+                .bind(&new_person_id)
+                .bind(new_centroid)
+                .execute(&mut **tx)
+                .await?;
 
             new_cluster_id
         };
@@ -240,6 +237,7 @@ async fn upsert_and_link(
         .execute(&mut **tx)
         .await?;
 
+        let representative_face = get_representative_face(tx, &faces_in_cluster).await?;
         extract_and_save_cluster_thumbnail(context, &representative_face, &cluster_id).await?;
     }
     Ok(())
@@ -274,11 +272,11 @@ async fn cleanup_obsolete(
     }
 
     query!(
-            "DELETE FROM person p
+        "DELETE FROM person p
              WHERE NOT EXISTS (SELECT 1 FROM face_cluster fc WHERE fc.person_id = p.id)"
-        )
-        .execute(&mut **tx)
-        .await?;
+    )
+    .execute(&mut **tx)
+    .await?;
     Ok(())
 }
 
@@ -315,7 +313,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             new_clusters,
             &new_centroids,
             &cluster_map,
-        ).await?;
+        )
+        .await?;
 
         // Cleanup
         let matched_old_ids: HashSet<String> = cluster_map.values().cloned().collect();
