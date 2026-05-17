@@ -1,4 +1,5 @@
 use super::error::PeopleError;
+use crate::api::people::interfaces::{MergePersonRequest, UpdatePersonRequest};
 use crate::database::person_store::PersonStore;
 use common_types::pb::api::{FullPersonMediaResponse, ListPeopleResponse, PersonInfo};
 use sqlx::PgPool;
@@ -16,7 +17,8 @@ pub async fn get_all_people(
             id: p.id,
             name: p.name,
             photo_count: p.photo_count,
-            thumbnail_id: p.thumbnail_media_item_id,
+            face_thumb_id: p.face_thumb_id,
+            face_cluster_ids: p.face_cluster_ids,
         })
         .collect();
 
@@ -26,26 +28,65 @@ pub async fn get_all_people(
 #[instrument(skip(pool))]
 pub async fn update_person(
     pool: &PgPool,
-    person_id: i64,
+    person_id: &str,
     user_id: i32,
-    name: Option<String>,
+    payload: &UpdatePersonRequest,
 ) -> Result<(), PeopleError> {
-    let rows = PersonStore::update_name(pool, person_id, user_id, name).await?;
+    let rows = PersonStore::update(pool, person_id, user_id, payload).await?;
     if rows == 0 {
-        return Err(PeopleError::NotFound(person_id));
+        return Err(PeopleError::NotFound(person_id.to_string()));
     }
+    Ok(())
+}
+
+#[instrument(skip(pool))]
+pub async fn merge_person(
+    pool: &PgPool,
+    person_id: &str,
+    user_id: i32,
+    payload: &MergePersonRequest,
+) -> Result<(), PeopleError> {
+    if person_id == payload.target_person_id {
+        PersonStore::find_by_id(pool, person_id, user_id)
+            .await?
+            .ok_or_else(|| PeopleError::NotFound(person_id.to_string()))?;
+        return Ok(());
+    }
+
+    PersonStore::find_by_id(pool, person_id, user_id)
+        .await?
+        .ok_or_else(|| PeopleError::NotFound(person_id.to_string()))?;
+    PersonStore::find_by_id(pool, &payload.target_person_id, user_id)
+        .await?
+        .ok_or_else(|| PeopleError::NotFound(payload.target_person_id.clone()))?;
+
+    PersonStore::merge(pool, person_id, &payload.target_person_id).await?;
+    Ok(())
+}
+
+#[instrument(skip(pool))]
+pub async fn unmerge_person(
+    pool: &PgPool,
+    person_id: &str,
+    user_id: i32,
+) -> Result<(), PeopleError> {
+    let person = PersonStore::find_by_id(pool, person_id, user_id)
+        .await?
+        .ok_or_else(|| PeopleError::NotFound(person_id.to_string()))?;
+
+    PersonStore::unmerge(pool, &person, user_id).await?;
     Ok(())
 }
 
 #[instrument(skip(pool))]
 pub async fn get_person_photos(
     pool: &PgPool,
-    person_id: i64,
+    person_id: &str,
     user_id: i32,
 ) -> Result<FullPersonMediaResponse, PeopleError> {
     let person = PersonStore::find_by_id(pool, person_id, user_id)
         .await?
-        .ok_or(PeopleError::NotFound(person_id))?;
+        .ok_or_else(|| PeopleError::NotFound(person_id.to_string()))?;
 
     let items = PersonStore::get_person_media_items(pool, person_id, user_id).await?;
 
@@ -54,7 +95,8 @@ pub async fn get_person_photos(
             id: person.id,
             name: person.name,
             photo_count: person.photo_count,
-            thumbnail_id: person.thumbnail_media_item_id,
+            face_thumb_id: person.face_thumb_id,
+            face_cluster_ids: person.face_cluster_ids,
         }),
         items,
     })

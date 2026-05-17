@@ -16,7 +16,7 @@ pub enum PeopleError {
     Internal(#[from] eyre::Report),
 
     #[error("Person not found: {0}")]
-    NotFound(i64),
+    NotFound(String),
 }
 
 fn log_error(error: &PeopleError) {

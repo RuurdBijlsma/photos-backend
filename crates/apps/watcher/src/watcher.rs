@@ -9,6 +9,8 @@ use std::path::Component;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
+const EXCLUDED_WATCH_FOLDER: [&str; 1] = [ALBUM_IMPORT_FOLDER];
+
 pub async fn start_watching(pool: PgPool, settings: AppSettings) -> Result<()> {
     if let Err(e) = run(&pool, &settings).await {
         alert!("Watcher failed with an error: {}", e);
@@ -74,7 +76,7 @@ async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) -> R
 
     let rel_path = path.strip_prefix(&settings.ingest.media_root)?;
     if let Some(Component::Normal(name)) = rel_path.components().next()
-        && name == ALBUM_IMPORT_FOLDER
+        && EXCLUDED_WATCH_FOLDER.contains(&name.to_string_lossy().as_ref())
     {
         return Ok(());
     }

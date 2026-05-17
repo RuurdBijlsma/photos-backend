@@ -33,11 +33,11 @@ CREATE TABLE face
     age                INT         NOT NULL,
     sex                VARCHAR(10) NOT NULL,
     embedding          VECTOR(512) NOT NULL,
-    person_id          BIGINT      REFERENCES person (id) ON DELETE SET NULL
+    face_cluster_id    VARCHAR(10) REFERENCES face_cluster (id) ON DELETE SET NULL
 );
 CREATE INDEX idx_face_visual_analysis_id ON face (visual_analysis_id);
 CREATE INDEX ON face USING hnsw (embedding vector_cosine_ops);
-CREATE INDEX idx_face_person_id ON face (person_id);
+CREATE INDEX idx_face_cluster_id ON face (face_cluster_id);
 
 
 CREATE TABLE object

@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                p.id,\n                p.name,\n                p.face_thumb_id,\n                COUNT(DISTINCT va.media_item_id)::INT as \"photo_count!\",\n                COALESCE(array_agg(DISTINCT fc.id) FILTER (WHERE fc.id IS NOT NULL), '{}') as \"face_cluster_ids!\"\n            FROM person p\n            LEFT JOIN face_cluster fc ON fc.person_id = p.id\n            LEFT JOIN face f ON f.face_cluster_id = fc.id\n            LEFT JOIN visual_analysis va ON f.visual_analysis_id = va.id\n            WHERE p.id = $1 AND p.user_id = $2\n            GROUP BY p.id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "face_thumb_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "photo_count!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "face_cluster_ids!",
+        "type_info": "VarcharArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "d5a26ac3d4c49c926d867b8e99ff8ad0fe857571b052211df89e2a60725cb5c0"
+}

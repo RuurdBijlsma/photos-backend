@@ -1,16 +1,27 @@
+use crate::database::UpdateField;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct MergePersonRequest {
+    pub target_person_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdatePersonRequest {
-    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "UpdateField::is_ignore")]
+    pub name: UpdateField<String>,
+    #[serde(default, skip_serializing_if = "UpdateField::is_ignore")]
+    pub face_thumb_id: UpdateField<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PersonSummary {
-    pub id: i64,
+    pub id: String,
     pub name: Option<String>,
-    pub thumbnail_media_item_id: Option<String>,
+    pub face_thumb_id: Option<String>,
+    pub face_cluster_ids: Vec<String>,
     pub photo_count: i32,
 }

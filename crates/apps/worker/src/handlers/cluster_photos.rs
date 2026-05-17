@@ -5,6 +5,7 @@ use color_eyre::Result;
 use common_services::database::jobs::Job;
 use common_services::database::photo_cluster::ExistingPhotoCluster;
 use common_services::database::visual_analysis::visual_analysis::MediaEmbedding;
+use common_services::utils::nice_id;
 use pgvector::Vector;
 use sqlx::{PgPool, Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
@@ -12,19 +13,17 @@ use tracing::info;
 
 const ENTITY_NAME: &str = "photo";
 const MIN_ITEMS_TO_CLUSTER: usize = 3;
-const MIN_SAMPLES: usize = 2;
+const MIN_SAMPLES: usize = 4;
 const CENTROID_MATCH_THRESHOLD: f32 = 0.6;
 
 impl ClusterEntity for ExistingPhotoCluster {
-    fn id(&self) -> i64 {
-        self.id
+    fn id(&self) -> String {
+        self.id.clone()
     }
     fn centroid(&self) -> Option<&Vector> {
         self.centroid.as_ref()
     }
 }
-
-// Duplicated logic was moved to common/clustering.rs
 
 async fn fetch_existing_clusters(pool: &PgPool, user_id: i32) -> Result<Vec<ExistingPhotoCluster>> {
     query_as!(
@@ -59,7 +58,7 @@ async fn upsert_and_link(
     user_id: i32,
     clusters: HashMap<usize, Vec<&MediaEmbedding>>,
     new_centroids: &[Vec<f32>],
-    cluster_map: &HashMap<usize, i64>,
+    cluster_map: &HashMap<usize, String>,
 ) -> Result<()> {
     for (cluster_idx, photos_in_cluster) in clusters {
         let media_item_ids: Vec<String> = photos_in_cluster
@@ -75,10 +74,13 @@ async fn upsert_and_link(
             query("UPDATE photo_cluster SET centroid = $1, thumbnail_media_item_id = $2, updated_at = now() WHERE id = $3")
                 .bind(&new_centroid).bind(thumbnail_media_item_id).bind(existing_id)
                 .execute(&mut **tx).await?;
-            *existing_id
+            existing_id.to_owned()
         } else {
-            query_scalar("INSERT INTO photo_cluster (user_id, thumbnail_media_item_id, centroid) VALUES ($1, $2, $3) RETURNING id")
-                .bind(user_id).bind(thumbnail_media_item_id).bind(&new_centroid)
+            query_scalar("INSERT INTO photo_cluster (id, user_id, thumbnail_media_item_id, centroid) VALUES ($1, $2, $3) RETURNING id")
+                .bind(nice_id(10))
+                .bind(user_id)
+                .bind(thumbnail_media_item_id)
+                .bind(&new_centroid)
                 .fetch_one(&mut **tx).await?
         };
 
@@ -91,12 +93,12 @@ async fn upsert_and_link(
 async fn cleanup_obsolete(
     tx: &mut Transaction<'_, sqlx::Postgres>,
     existing_clusters: &[ExistingPhotoCluster],
-    matched_ids: &HashSet<i64>,
+    matched_ids: &HashSet<String>,
 ) -> Result<()> {
-    let obsolete: Vec<i64> = existing_clusters
+    let obsolete: Vec<String> = existing_clusters
         .iter()
         .filter(|c| !matched_ids.contains(&c.id))
-        .map(|c| c.id)
+        .map(|c| c.id.clone())
         .collect();
     if !obsolete.is_empty() {
         query!(
@@ -135,7 +137,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             &existing_clusters,
             CENTROID_MATCH_THRESHOLD,
         )?;
-        let matched_old_ids: HashSet<i64> = cluster_map.values().copied().collect();
+        let matched_old_ids: HashSet<String> = cluster_map.values().cloned().collect();
         let new_clusters = clustering::group_by_cluster(&labels, &items_to_cluster);
 
         let mut tx = context.pool.begin().await?;

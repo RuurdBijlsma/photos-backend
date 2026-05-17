@@ -6,27 +6,29 @@ use color_eyre::{Result, eyre::eyre};
 use common_services::api::album::service::get_representative_thumbnail;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
-use common_services::database::person::ExistingPerson;
+use common_services::database::person::ExistingFaceCluster;
+use common_services::utils::nice_id;
+use common_types::constants::FACE_CLUSTERS_FOLDER;
 use face_id::detector::BoundingBox;
 use face_id::helpers::extract_face_thumbnail;
 use generate_thumbnails::ffmpeg::FfmpegCommand;
 use itertools::Itertools;
 use pgvector::Vector;
-use sqlx::{PgPool, Transaction, query, query_as, query_scalar};
+use sqlx::{PgPool, Transaction, query, query_as};
 use std::collections::{HashMap, HashSet};
 use tempfile::Builder;
 use tracing::info;
 
 const ENTITY_NAME: &str = "face";
 const MIN_ITEMS_TO_CLUSTER: usize = 4;
-const MIN_SAMPLES: usize = 3;
+const MIN_SAMPLES: usize = 5;
 const CENTROID_MATCH_THRESHOLD: f32 = 0.6;
 const THUMBNAIL_SIZE: u32 = 256;
 const PADDING_FACTOR: f32 = 1.8;
 
-impl ClusterEntity for ExistingPerson {
-    fn id(&self) -> i64 {
-        self.id
+impl ClusterEntity for ExistingFaceCluster {
+    fn id(&self) -> String {
+        self.id.clone()
     }
     fn centroid(&self) -> Option<&Vector> {
         self.centroid.as_ref()
@@ -45,10 +47,14 @@ struct FaceToCluster {
     percentage: i32,
 }
 
-async fn fetch_existing_clusters(pool: &PgPool, user_id: i32) -> Result<Vec<ExistingPerson>> {
+async fn fetch_existing_clusters(pool: &PgPool, user_id: i32) -> Result<Vec<ExistingFaceCluster>> {
+    // Join through person to ensure we only get clusters for this user
     query_as!(
-        ExistingPerson,
-        r#"SELECT id, name, centroid as "centroid: _" FROM person WHERE user_id = $1"#,
+        ExistingFaceCluster,
+        r#"SELECT fc.id, fc.person_id, fc.centroid as "centroid: _"
+           FROM face_cluster fc
+           JOIN person p ON fc.person_id = p.id
+           WHERE p.user_id = $1"#,
         user_id
     )
     .fetch_all(pool)
@@ -59,13 +65,13 @@ async fn fetch_existing_clusters(pool: &PgPool, user_id: i32) -> Result<Vec<Exis
 async fn fetch_embeddings(pool: &PgPool, user_id: i32) -> Result<Vec<FaceToCluster>> {
     query_as!(
         FaceToCluster,
-        r#"SELECT 
-               f.id, 
-               va.media_item_id, 
-               f.embedding as "embedding!: Vector", 
-               f.position_x, 
-               f.position_y, 
-               f.width, 
+        r#"SELECT
+               f.id,
+               va.media_item_id,
+               f.embedding as "embedding!: Vector",
+               f.position_x,
+               f.position_y,
+               f.width,
                f.height,
                va.percentage
            FROM face f
@@ -79,10 +85,10 @@ async fn fetch_embeddings(pool: &PgPool, user_id: i32) -> Result<Vec<FaceToClust
     .map_err(Into::into)
 }
 
-async fn extract_and_save_face_thumbnail(
+async fn extract_and_save_cluster_thumbnail(
     context: &WorkerContext,
     face: &FaceToCluster,
-    person_id: i64,
+    cluster_id: &str,
 ) -> Result<()> {
     let relative_path =
         MediaItemStore::find_relative_path_by_id(&context.pool, &face.media_item_id)
@@ -122,7 +128,6 @@ async fn extract_and_save_face_thumbnail(
     ffmpeg.map_still_output("0:v", &temp_path);
     ffmpeg.run().await?;
 
-    // Load and decode the analysis image (which is already oriented correctly)
     let img = image::ImageReader::open(&temp_path)?
         .with_guessed_format()?
         .decode()?;
@@ -136,10 +141,14 @@ async fn extract_and_save_face_thumbnail(
 
     let thumb = extract_face_thumbnail(&img, &bbox, PADDING_FACTOR, THUMBNAIL_SIZE);
 
-    let out_dir = context.settings.ingest.thumbnail_root.join("people");
+    let out_dir = context
+        .settings
+        .ingest
+        .thumbnail_root
+        .join(FACE_CLUSTERS_FOLDER);
     tokio::fs::create_dir_all(&out_dir).await?;
 
-    let out_path = out_dir.join(format!("{person_id}.webp"));
+    let out_path = out_dir.join(format!("{cluster_id}.webp"));
     thumb.save(out_path)?;
 
     Ok(())
@@ -185,63 +194,105 @@ async fn upsert_and_link(
     user_id: i32,
     clusters: HashMap<usize, Vec<&FaceToCluster>>,
     new_centroids: &[Vec<f32>],
-    cluster_map: &HashMap<usize, i64>,
+    cluster_map: &HashMap<usize, String>, // Map of cluster_idx -> face_cluster.id (String)
 ) -> Result<()> {
     for (cluster_idx, faces_in_cluster) in clusters {
         let face_ids: Vec<i64> = faces_in_cluster.iter().map(|f| f.id).collect();
         let new_centroid = new_centroids
             .get(cluster_idx)
             .map(|v| Vector::from(v.clone()));
-
         let representative_face = get_representative_face(tx, &faces_in_cluster).await?;
-        let thumbnail_media_item_id = &representative_face.media_item_id;
 
-        let person_id = if let Some(existing_id) = cluster_map.get(&cluster_idx) {
-            query("UPDATE person SET centroid = $1, thumbnail_media_item_id = $2, updated_at = now() WHERE id = $3")
-                .bind(&new_centroid).bind(thumbnail_media_item_id).bind(existing_id)
-                .execute(&mut **tx).await?;
-            *existing_id
+        let cluster_id = if let Some(existing_cluster_id) = cluster_map.get(&cluster_idx) {
+            // Update existing cluster
+            query("UPDATE face_cluster SET centroid = $1, updated_at = now() WHERE id = $2")
+                .bind(new_centroid)
+                .bind(existing_cluster_id)
+                .execute(&mut **tx)
+                .await?;
+            existing_cluster_id.clone()
         } else {
-            query_scalar("INSERT INTO person (user_id, thumbnail_media_item_id, centroid) VALUES ($1, $2, $3) RETURNING id")
-                .bind(user_id).bind(thumbnail_media_item_id).bind(&new_centroid)
-                .fetch_one(&mut **tx).await?
+            // New discovery: Create Person AND Cluster
+            let new_person_id = nice_id(10);
+            let new_cluster_id = nice_id(10);
+
+            query!(
+                "INSERT INTO person (id, user_id) VALUES ($1, $2)",
+                new_person_id,
+                user_id
+            )
+            .execute(&mut **tx)
+            .await?;
+
+            query("INSERT INTO face_cluster (id, user_id, person_id, centroid, thumb_media_item_id) VALUES ($1, $2, $3, $4, $5)")
+                .bind(&new_cluster_id)
+                .bind(user_id)
+                .bind(&new_person_id)
+                .bind(new_centroid)
+                .bind(&representative_face.media_item_id)
+                .execute(&mut **tx)
+                .await?;
+
+            // Now update the person to point to this cluster for its thumbnail
+            query!(
+                "UPDATE person SET face_thumb_id = $1 WHERE id = $2",
+                new_cluster_id,
+                new_person_id
+            )
+            .execute(&mut **tx)
+            .await?;
+
+            new_cluster_id
         };
 
+        // Link faces to the cluster
         query!(
-            "UPDATE face SET person_id = $1 WHERE id = ANY($2)",
-            person_id,
+            "UPDATE face SET face_cluster_id = $1 WHERE id = ANY($2)",
+            cluster_id,
             &face_ids
         )
         .execute(&mut **tx)
         .await?;
 
-        // Extract and save face thumbnail for this person.
-        extract_and_save_face_thumbnail(context, &representative_face, person_id).await?;
+        extract_and_save_cluster_thumbnail(context, &representative_face, &cluster_id).await?;
     }
     Ok(())
 }
 
 async fn cleanup_obsolete(
     tx: &mut Transaction<'_, sqlx::Postgres>,
-    existing_clusters: &[ExistingPerson],
-    matched_ids: &HashSet<i64>,
+    existing_clusters: &[ExistingFaceCluster],
+    matched_ids: &HashSet<String>,
 ) -> Result<()> {
-    let obsolete_ids: Vec<i64> = existing_clusters
+    let obsolete_cluster_ids: Vec<String> = existing_clusters
         .iter()
-        .filter(|p| !matched_ids.contains(&p.id))
-        .map(|p| p.id)
+        .filter(|c| !matched_ids.contains(&c.id))
+        .map(|c| c.id.clone())
         .collect();
-    if !obsolete_ids.is_empty() {
+
+    if !obsolete_cluster_ids.is_empty() {
+        // Unlink faces from these clusters
         query!(
-            "UPDATE face SET person_id = NULL WHERE person_id = ANY($1)",
-            &obsolete_ids
+            "UPDATE face SET face_cluster_id = NULL WHERE face_cluster_id = ANY($1)",
+            &obsolete_cluster_ids
         )
         .execute(&mut **tx)
         .await?;
-        query!("DELETE FROM person WHERE id = ANY($1)", &obsolete_ids)
-            .execute(&mut **tx)
-            .await?;
+
+        query!(
+            "DELETE FROM face_cluster WHERE id = ANY($1)",
+            &obsolete_cluster_ids
+        )
+        .execute(&mut **tx)
+        .await?;
     }
+
+    query!(
+        "DELETE FROM person p
+             WHERE NOT EXISTS (SELECT 1 FROM face_cluster fc WHERE fc.person_id = p.id)"
+    )
+    .execute(&mut **tx)
+    .await?;
     Ok(())
 }
 
@@ -251,28 +302,26 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     for user_id in user_ids {
         let existing_clusters = fetch_existing_clusters(&context.pool, user_id).await?;
         let items_to_cluster = fetch_embeddings(&context.pool, user_id).await?;
-
         if items_to_cluster.len() < MIN_ITEMS_TO_CLUSTER {
             continue;
         }
-
         let embeddings: Vec<Vec<f32>> = items_to_cluster
             .iter()
             .map(|f| f.embedding.to_vec())
             .collect();
+
+        // Run clustering
         let (labels, new_centroids) =
             clustering::run_hdbscan(&embeddings, MIN_ITEMS_TO_CLUSTER, MIN_SAMPLES)?;
-
         let cluster_map = clustering::match_centroids(
             &new_centroids,
             &existing_clusters,
             CENTROID_MATCH_THRESHOLD,
         )?;
-        let matched_old_ids: HashSet<i64> = cluster_map.values().copied().collect();
         let new_clusters = clustering::group_by_cluster(&labels, &items_to_cluster);
 
+        // Perform DB updates
         let mut tx = context.pool.begin().await?;
-
         upsert_and_link(
             context,
             &mut tx,
@@ -282,6 +331,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             &cluster_map,
         )
         .await?;
+
+        // Cleanup
+        let matched_old_ids: HashSet<String> = cluster_map.values().cloned().collect();
         cleanup_obsolete(&mut tx, &existing_clusters, &matched_old_ids).await?;
 
         tx.commit().await?;

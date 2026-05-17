@@ -1,17 +1,17 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, centroid as \"centroid: _\" FROM person WHERE user_id = $1",
+  "query": "SELECT fc.id, fc.person_id, fc.centroid as \"centroid: _\"\n           FROM face_cluster fc\n           JOIN person p ON fc.person_id = p.id\n           WHERE p.user_id = $1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Int8"
+        "type_info": "Varchar"
       },
       {
         "ordinal": 1,
-        "name": "name",
-        "type_info": "Text"
+        "name": "person_id",
+        "type_info": "Varchar"
       },
       {
         "ordinal": 2,
@@ -31,9 +31,9 @@
     },
     "nullable": [
       false,
-      true,
+      false,
       true
     ]
   },
-  "hash": "f09b89b8b42a5c4ef20cb89b612c8fe9e5e54ec2bd7fd9ddeb3826d1be6f62fb"
+  "hash": "4b77910a76dac831b8c38d6f384cc9dfa6ed31f4afd1755d681d33871e7023d9"
 }

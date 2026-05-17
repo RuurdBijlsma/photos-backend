@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE person source\n        SET\n            name = COALESCE(source.name, target.name),\n            face_thumb_id = COALESCE(source.face_thumb_id, target.face_thumb_id),\n            updated_at = now()\n        FROM person target\n        WHERE source.id = $1 AND target.id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cbac0361a125df43528d06c25ae2894c913fbae06d990975a658794c3e2d97ea"
+}

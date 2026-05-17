@@ -1,6 +1,7 @@
 use crate::database::jobs::{JobStatus, JobType};
 use app_state::{AppSettings, IngestSettings};
 use bon::builder;
+use chrono::{DateTime, Utc};
 use color_eyre::eyre::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
@@ -24,6 +25,7 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
     #[builder(start_fn)] settings: &AppSettings,
     #[builder(start_fn)] job_type: JobType,
     #[builder(into)] relative_path: Option<String>,
+    scheduled_at: Option<DateTime<Utc>>,
     user_id: Option<i32>,
     payload: Option<&T>,
 ) -> Result<bool> {
@@ -44,8 +46,8 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
 
     let result = sqlx::query!(
         r#"
-        INSERT INTO jobs (relative_path, job_type, priority, user_id, payload)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO jobs (relative_path, job_type, priority, user_id, payload, scheduled_at)
+        VALUES ($1, $2, $3, $4, $5, COALESCE($6, now()))
         -- THIS PART MUST MATCH THE INDEX DEFINITION EXACTLY
         ON CONFLICT (job_type, coalesce(user_id, -1), coalesce(md5(payload::text), ''), coalesce(relative_path, ''))
         WHERE (status IN ('queued', 'running'))
@@ -56,6 +58,7 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         priority,
         user_id,
         json_payload,
+        scheduled_at,
     )
         .execute(&mut *tx)
         .await?;

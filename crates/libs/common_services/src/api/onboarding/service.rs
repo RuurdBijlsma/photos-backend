@@ -11,6 +11,7 @@ use crate::database::user_store::UserStore;
 use crate::database::{UpdateField, UpdateUserPayload};
 use crate::job_queue::enqueue_job;
 use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_posix_string};
+use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -281,8 +282,14 @@ pub async fn start_processing(
         .user_id(user_id)
         .call()
         .await?;
+    enqueue_job::<()>(pool, settings, JobType::DelayedScan)
+        .user_id(user_id)
+        .scheduled_at(Utc::now() + Duration::seconds(30))
+        .call()
+        .await?;
     enqueue_job::<()>(pool, settings, JobType::SyncThumbnails)
         .user_id(user_id)
+        .scheduled_at(Utc::now() + Duration::minutes(1))
         .call()
         .await?;
 

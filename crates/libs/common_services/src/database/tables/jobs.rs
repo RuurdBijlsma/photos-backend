@@ -25,6 +25,7 @@ pub enum JobType {
     Remove,
     Scan,
     CleanDB,
+    DelayedScan,
     ClusterFaces,
     ClusterPhotos,
     SyncThumbnails,
@@ -59,14 +60,15 @@ impl JobType {
                 }
             }
             Self::Remove => 0,
-            Self::Scan => 10,
             Self::CleanDB => 20,
             Self::ImportAlbumItem => 25,
+            Self::Scan => 70,
             // These can be done after ingest analysis is done
             Self::UpdateGlobalCentroid => 99,
             Self::ClusterFaces => 100,
             Self::ClusterPhotos => 101,
             Self::SyncThumbnails => 102,
+            Self::DelayedScan => 103,
         }
     }
 }

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE face_cluster\n            SET person_id = $1, updated_at = now()\n            WHERE id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f00ac4caf3325b18b5d685084fc67a210ea22c799937fa5e9c20d36d1d8007fd"
+}

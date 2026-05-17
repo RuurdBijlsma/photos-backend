@@ -41,11 +41,12 @@ BEGIN
                                              GROUP BY va.media_item_id) class_agg ON mi.id = class_agg.media_item_id
 
                              -- Faces aggregation
-                                  LEFT JOIN (SELECT va_inner.media_item_id, string_agg(pers.name, ' ') as names
+                                  LEFT JOIN (SELECT va_inner.media_item_id, string_agg(DISTINCT pers.name, ' ') as names
                                              FROM face f
-                                                      JOIN person pers
-                                                           ON f.person_id = pers.id
-                                                      JOIN visual_analysis va_inner ON f.visual_analysis_id = va_inner.id
+                                                 JOIN face_cluster fc
+                                                        ON f.face_cluster_id = fc.id
+                                                 JOIN person pers ON fc.person_id = pers.id
+                                                 JOIN visual_analysis va_inner ON f.visual_analysis_id = va_inner.id
                                              GROUP BY va_inner.media_item_id) p_agg ON mi.id = p_agg.media_item_id
                          WHERE mi.id = target_id)
     WHERE id = target_id;
@@ -124,8 +125,9 @@ BEGIN
         OLD.name IS DISTINCT FROM NEW.name THEN
         PERFORM rebuild_media_item_search_vector(va.media_item_id)
         FROM face f
+                 JOIN face_cluster fc ON f.face_cluster_id = fc.id
                  JOIN visual_analysis va ON f.visual_analysis_id = va.id
-        WHERE f.person_id = NEW.id;
+        WHERE fc.person_id = NEW.id;
     END IF;
     RETURN NEW;
 END;
