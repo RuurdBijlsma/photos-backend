@@ -5,6 +5,7 @@ use color_eyre::Result;
 use common_services::database::jobs::Job;
 use common_services::database::photo_cluster::ExistingPhotoCluster;
 use common_services::database::visual_analysis::visual_analysis::MediaEmbedding;
+use common_services::utils::nice_id;
 use pgvector::Vector;
 use sqlx::{PgPool, Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
@@ -75,8 +76,11 @@ async fn upsert_and_link(
                 .execute(&mut **tx).await?;
             existing_id.to_owned()
         } else {
-            query_scalar("INSERT INTO photo_cluster (user_id, thumbnail_media_item_id, centroid) VALUES ($1, $2, $3) RETURNING id")
-                .bind(user_id).bind(thumbnail_media_item_id).bind(&new_centroid)
+            query_scalar("INSERT INTO photo_cluster (id, user_id, thumbnail_media_item_id, centroid) VALUES ($1, $2, $3) RETURNING id")
+                .bind(nice_id(10))
+                .bind(user_id)
+                .bind(thumbnail_media_item_id)
+                .bind(&new_centroid)
                 .fetch_one(&mut **tx).await?
         };
 

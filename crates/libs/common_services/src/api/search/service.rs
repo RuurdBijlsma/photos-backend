@@ -58,7 +58,7 @@ pub async fn search_filter_ranges(
         .collect();
     let people = people_records
         .into_iter()
-        .filter_map(|c| c.name.map(|name| (name, c.id.to_string())))
+        .filter_map(|c| c.name.map(|name| (name, c.id.clone())))
         .collect();
     let available_months = available_month_records.iter().map(|r| r.months).collect();
 

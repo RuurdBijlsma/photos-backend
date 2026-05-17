@@ -1,32 +1,33 @@
 -- Ensure the vector extension is available.
-CREATE EXTENSION IF NOT EXISTS vector;
+CREATE
+EXTENSION IF NOT EXISTS vector;
 
 -- Represents a person, which is a collection of one or more face clusters.
 CREATE TABLE person
 (
     id            VARCHAR(10) PRIMARY KEY,
     user_id       INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    name          TEXT, -- The name assigned by the user, e.g., "Jane Doe"
+    name          TEXT,        -- The name assigned by the user, e.g., "Jane Doe"
     face_thumb_id VARCHAR(10), -- Will be linked to a face_cluster ID later
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_person_user_id ON person (user_id);
+CREATE INDEX idx_person_public_thumb_lookup ON person (id) INCLUDE (face_thumb_id);
 
 -- Represents a cluster of similar faces. Many clusters can belong to one person.
 CREATE TABLE face_cluster
 (
-    id         VARCHAR(10) PRIMARY KEY,
-    user_id    INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    centroid   VECTOR(512), -- The average face embedding for this cluster
-    person_id  VARCHAR(10) NOT NULL REFERENCES person (id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    id                  VARCHAR(10) PRIMARY KEY,
+    user_id             INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    centroid            VECTOR(512), -- The average face embedding for this cluster
+    person_id           VARCHAR(10) NOT NULL REFERENCES person (id) ON DELETE CASCADE,
+    thumb_media_item_id VARCHAR(10) REFERENCES media_item (id) ON DELETE SET NULL,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_face_cluster_user_id ON face_cluster (user_id);
 CREATE INDEX idx_face_cluster_person_id ON face_cluster (person_id);
-
--- Add the foreign key constraint to person now that face_cluster exists
 ALTER TABLE person
     ADD CONSTRAINT fk_person_face_thumb
         FOREIGN KEY (face_thumb_id) REFERENCES face_cluster (id) ON DELETE SET NULL;
@@ -49,7 +50,7 @@ CREATE INDEX idx_photo_cluster_user_id ON photo_cluster (user_id);
 CREATE TABLE media_item_photo_cluster
 (
     media_item_id    VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
-    photo_cluster_id VARCHAR(10)      NOT NULL REFERENCES photo_cluster (id) ON DELETE CASCADE,
+    photo_cluster_id VARCHAR(10) NOT NULL REFERENCES photo_cluster (id) ON DELETE CASCADE,
     PRIMARY KEY (media_item_id, photo_cluster_id)
 );
 

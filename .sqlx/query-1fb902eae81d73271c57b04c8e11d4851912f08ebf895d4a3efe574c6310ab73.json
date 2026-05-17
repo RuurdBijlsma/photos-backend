@@ -37,7 +37,8 @@
                 "cluster_photos",
                 "import_album_item",
                 "update_global_centroid",
-                "sync_thumbnails"
+                "sync_thumbnails",
+                "delayed_scan"
               ]
             }
           }

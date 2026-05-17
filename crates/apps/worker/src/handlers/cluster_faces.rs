@@ -8,6 +8,7 @@ use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::person::ExistingFaceCluster;
 use common_services::utils::nice_id;
+use common_types::constants::FACE_CLUSTERS_FOLDER;
 use face_id::detector::BoundingBox;
 use face_id::helpers::extract_face_thumbnail;
 use generate_thumbnails::ffmpeg::FfmpegCommand;
@@ -140,7 +141,11 @@ async fn extract_and_save_cluster_thumbnail(
 
     let thumb = extract_face_thumbnail(&img, &bbox, PADDING_FACTOR, THUMBNAIL_SIZE);
 
-    let out_dir = context.settings.ingest.thumbnail_root.join("face_clusters");
+    let out_dir = context
+        .settings
+        .ingest
+        .thumbnail_root
+        .join(FACE_CLUSTERS_FOLDER);
     tokio::fs::create_dir_all(&out_dir).await?;
 
     let out_path = out_dir.join(format!("{cluster_id}.webp"));
@@ -196,6 +201,7 @@ async fn upsert_and_link(
         let new_centroid = new_centroids
             .get(cluster_idx)
             .map(|v| Vector::from(v.clone()));
+        let representative_face = get_representative_face(tx, &faces_in_cluster).await?;
 
         let cluster_id = if let Some(existing_cluster_id) = cluster_map.get(&cluster_idx) {
             // Update existing cluster
@@ -218,12 +224,23 @@ async fn upsert_and_link(
             .execute(&mut **tx)
             .await?;
 
-            query("INSERT INTO face_cluster (id, person_id, centroid) VALUES ($1, $2, $3)")
+            query("INSERT INTO face_cluster (id, user_id, person_id, centroid, thumb_media_item_id) VALUES ($1, $2, $3, $4, $5)")
                 .bind(&new_cluster_id)
+                .bind(user_id)
                 .bind(&new_person_id)
                 .bind(new_centroid)
+                .bind(&representative_face.media_item_id)
                 .execute(&mut **tx)
                 .await?;
+
+            // Now update the person to point to this cluster for its thumbnail
+            query!(
+                "UPDATE person SET face_thumb_id = $1 WHERE id = $2",
+                new_cluster_id,
+                new_person_id
+            )
+            .execute(&mut **tx)
+            .await?;
 
             new_cluster_id
         };
@@ -237,7 +254,6 @@ async fn upsert_and_link(
         .execute(&mut **tx)
         .await?;
 
-        let representative_face = get_representative_face(tx, &faces_in_cluster).await?;
         extract_and_save_cluster_thumbnail(context, &representative_face, &cluster_id).await?;
     }
     Ok(())

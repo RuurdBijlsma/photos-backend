@@ -1,12 +1,15 @@
 use crate::api_state::ApiContext;
-use axum::{Extension, Json};
 use axum::extract::{Path, State};
+use axum::response::{IntoResponse, Redirect};
+use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::people::error::PeopleError;
 use common_services::api::people::interfaces::UpdatePersonRequest;
 use common_services::api::people::service::{get_all_people, get_person_photos, update_person};
 use common_services::database::app_user::User;
+use common_types::constants::FACE_CLUSTERS_FOLDER;
 use common_types::pb::api::{FullPersonMediaResponse, ListPeopleResponse};
+use http::header::CACHE_CONTROL;
 use tracing::instrument;
 
 #[utoipa::path(
@@ -75,4 +78,20 @@ pub async fn get_person_photos_handler(
 ) -> Result<Protobuf<FullPersonMediaResponse>, PeopleError> {
     let result = get_person_photos(&context.pool, &person_id, user.id).await?;
     Ok(Protobuf(result))
+}
+
+pub async fn get_person_thumbnail_redirect_handler(
+    State(context): State<ApiContext>,
+    Path(person_id): Path<String>,
+) -> Result<impl IntoResponse, PeopleError> {
+    let cluster_id = sqlx::query_scalar!(
+        "SELECT id FROM face_cluster WHERE person_id = $1",
+        person_id
+    )
+    .fetch_one(&context.pool)
+    .await?;
+
+    let target_url = format!("/thumbnails/{FACE_CLUSTERS_FOLDER}/{cluster_id}.webp");
+    let headers = [(CACHE_CONTROL, "public, max-age=86400")];
+    Ok((headers, Redirect::temporary(&target_url)))
 }

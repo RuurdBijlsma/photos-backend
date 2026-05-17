@@ -13,7 +13,7 @@ pub mod timeline;
 pub mod user;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
-use crate::people::router::people_protected_router;
+use crate::people::router::{people_protected_router, people_public_router};
 use crate::user::router::user_protected_router;
 
 use crate::api_state::ApiContext;
@@ -55,6 +55,7 @@ fn public_routes(rate_limiting: &RateLimitingSettings) -> Router<ApiContext> {
         .merge(auth_public_router(rate_limiting))
         .merge(root_public_router())
         .merge(s2s_public_router())
+        .merge(people_public_router())
         .merge(photos_public_router())
 }
 

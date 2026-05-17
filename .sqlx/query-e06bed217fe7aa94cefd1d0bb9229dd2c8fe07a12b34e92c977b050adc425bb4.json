@@ -6,7 +6,7 @@
     "parameters": {
       "Left": [
         "VarcharArray",
-        "Int8"
+        "Varchar"
       ]
     },
     "nullable": []
