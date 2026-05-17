@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT fc.id, fc.person_id, fc.centroid as \"centroid: _\"\n           FROM face_cluster fc\n           JOIN person p ON fc.person_id = p.id\n           WHERE p.user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "person_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "centroid: _",
+        "type_info": {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "4b77910a76dac831b8c38d6f384cc9dfa6ed31f4afd1755d681d33871e7023d9"
+}

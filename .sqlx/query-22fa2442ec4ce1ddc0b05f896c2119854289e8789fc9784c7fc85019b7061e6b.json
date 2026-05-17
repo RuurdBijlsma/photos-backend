@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE face SET face_cluster_id = $1 WHERE id = ANY($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "22fa2442ec4ce1ddc0b05f896c2119854289e8789fc9784c7fc85019b7061e6b"
+}
