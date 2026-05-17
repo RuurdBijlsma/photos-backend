@@ -1,4 +1,4 @@
-use crate::api::people::interfaces::PersonSummary;
+use crate::api::people::interfaces::{PersonSummary, UpdatePersonRequest};
 use crate::database::DbError;
 use common_types::pb::api::SimpleTimelineItem;
 use sqlx::{PgExecutor, PgPool};
@@ -69,21 +69,27 @@ impl PersonStore {
     }
 
     #[instrument(skip(executor))]
-    pub async fn update_name(
+    pub async fn update(
         executor: impl PgExecutor<'_>,
         person_id: &str,
         user_id: i32,
-        name: Option<String>,
+        payload: &UpdatePersonRequest,
     ) -> Result<u64, DbError> {
         let result = sqlx::query!(
             r#"
             UPDATE person
-            SET name = $1, updated_at = now()
-            WHERE id = $2 AND user_id = $3
+            SET
+                name = CASE WHEN $3::boolean THEN name ELSE $4 END,
+                face_thumb_id = CASE WHEN $5::boolean THEN face_thumb_id ELSE $6 END,
+                updated_at = now()
+            WHERE id = $1 AND user_id = $2
             "#,
-            name,
             person_id,
-            user_id
+            user_id,
+            payload.name.is_ignore(),
+            payload.name.clone().value(),
+            payload.face_thumb_id.is_ignore(),
+            payload.face_thumb_id.clone().value(),
         )
         .execute(executor)
         .await?;

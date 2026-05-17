@@ -3,6 +3,7 @@ use crate::database::person_store::PersonStore;
 use common_types::pb::api::{FullPersonMediaResponse, ListPeopleResponse, PersonInfo};
 use sqlx::PgPool;
 use tracing::instrument;
+use crate::api::people::interfaces::UpdatePersonRequest;
 
 #[instrument(skip(pool))]
 pub async fn get_all_people(
@@ -29,9 +30,9 @@ pub async fn update_person(
     pool: &PgPool,
     person_id: &str,
     user_id: i32,
-    name: Option<String>,
+    payload: &UpdatePersonRequest,
 ) -> Result<(), PeopleError> {
-    let rows = PersonStore::update_name(pool, person_id, user_id, name).await?;
+    let rows = PersonStore::update(pool, person_id, user_id, payload).await?;
     if rows == 0 {
         return Err(PeopleError::NotFound(person_id.to_string()));
     }

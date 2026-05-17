@@ -52,7 +52,7 @@ pub async fn update_person_handler(
     Path(person_id): Path<String>,
     Json(payload): Json<UpdatePersonRequest>,
 ) -> Result<(), PeopleError> {
-    update_person(&context.pool, &person_id, user.id, payload.name).await?;
+    update_person(&context.pool, &person_id, user.id, &payload).await?;
     Ok(())
 }
 
