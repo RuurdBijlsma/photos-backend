@@ -98,51 +98,53 @@ impl PersonStore {
         Ok(result.rows_affected())
     }
 
+    /// Merge target person into source person.
+    ///
+    /// Target person will be deleted.
     #[instrument(skip(pool))]
     pub async fn merge(
         pool: &PgPool,
         source_person_id: &str,
         target_person_id: &str,
     ) -> Result<(), DbError> {
+        if source_person_id == target_person_id {
+            return Ok(());
+        }
+
         let mut tx = pool.begin().await?;
 
+        // Move all clusters from target to source
         sqlx::query!(
             r#"
-            UPDATE face_cluster
-            SET person_id = $1, updated_at = now()
-            WHERE person_id = $2
-            "#,
+        UPDATE face_cluster
+        SET person_id = $1, updated_at = now()
+        WHERE person_id = $2
+        "#,
             source_person_id,
             target_person_id
         )
         .execute(&mut *tx)
         .await?;
 
+        // If source.name is NOT NULL, it stays. If it IS NULL, it takes target.name.
+        // The same logic applies to face_thumb_id.
         sqlx::query!(
             r#"
-            UPDATE person source
-            SET
-                face_thumb_id = (
-                    SELECT fc.id
-                    FROM face_cluster fc
-                    LEFT JOIN face f ON f.face_cluster_id = fc.id
-                    LEFT JOIN visual_analysis va ON va.id = f.visual_analysis_id
-                    WHERE fc.person_id = $1
-                    GROUP BY fc.id
-                    ORDER BY COUNT(DISTINCT va.media_item_id) DESC, fc.id ASC
-                    LIMIT 1
-                ),
-                name = COALESCE(source.name, target.name),
-                updated_at = now()
-            FROM person target
-            WHERE source.id = $1 AND target.id = $2
-            "#,
+        UPDATE person source
+        SET
+            name = COALESCE(source.name, target.name),
+            face_thumb_id = COALESCE(source.face_thumb_id, target.face_thumb_id),
+            updated_at = now()
+        FROM person target
+        WHERE source.id = $1 AND target.id = $2
+        "#,
             source_person_id,
             target_person_id
         )
         .execute(&mut *tx)
         .await?;
 
+        // Delete the target person
         sqlx::query!("DELETE FROM person WHERE id = $1", target_person_id)
             .execute(&mut *tx)
             .await?;
