@@ -88,10 +88,27 @@ pub async fn get_person_thumbnail_redirect_handler(
         "SELECT id FROM face_cluster WHERE person_id = $1",
         person_id
     )
-    .fetch_one(&context.pool)
-    .await?;
+        .fetch_one(&context.pool)
+        .await?;
 
     let target_url = format!("/thumbnails/{FACE_CLUSTERS_FOLDER}/{cluster_id}.webp");
     let headers = [(CACHE_CONTROL, "public, max-age=86400")];
     Ok((headers, Redirect::temporary(&target_url)))
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_person_media_item_id(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(person_id): Path<String>,
+) -> Result<Json<String>, PeopleError> {
+    let Some(result) = sqlx::query_scalar!(
+        "SELECT thumb_media_item_id FROM face_cluster WHERE person_id = $1 AND user_id = $2 AND thumb_media_item_id IS NOT NULL",
+        person_id, user.id
+    )
+        .fetch_one(&context.pool)
+        .await? else {
+        return Err(PeopleError::NotFound(person_id));
+    };
+    Ok(Json(result))
 }
