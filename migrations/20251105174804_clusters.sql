@@ -34,7 +34,7 @@ ALTER TABLE person
 -- Represents a cluster of visually similar photos.
 CREATE TABLE photo_cluster
 (
-    id                      BIGSERIAL PRIMARY KEY,
+    id                      VARCHAR(10) PRIMARY KEY,
     user_id                 INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     title                   TEXT,        -- Optional auto generated title
     thumbnail_media_item_id VARCHAR(10) REFERENCES media_item (id) ON DELETE SET NULL,
@@ -49,7 +49,7 @@ CREATE INDEX idx_photo_cluster_user_id ON photo_cluster (user_id);
 CREATE TABLE media_item_photo_cluster
 (
     media_item_id    VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
-    photo_cluster_id BIGINT      NOT NULL REFERENCES photo_cluster (id) ON DELETE CASCADE,
+    photo_cluster_id VARCHAR(10)      NOT NULL REFERENCES photo_cluster (id) ON DELETE CASCADE,
     PRIMARY KEY (media_item_id, photo_cluster_id)
 );
 

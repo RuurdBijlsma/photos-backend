@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 pub trait ClusterEntity {
-    fn id(&self) -> i64;
+    fn id(&self) -> String;
     fn centroid(&self) -> Option<&Vector>;
 }
 
@@ -53,12 +53,12 @@ pub fn match_centroids<T: ClusterEntity>(
     new_centroids: &[Vec<f32>],
     existing_clusters: &[T],
     threshold: f32,
-) -> Result<HashMap<usize, i64>> {
+) -> Result<HashMap<usize, String>> {
     let mut map = HashMap::new();
     let mut used_old_ids = HashSet::new();
 
     for (new_cid, new_centroid) in new_centroids.iter().enumerate() {
-        let mut best_match: Option<(i64, f32)> = None;
+        let mut best_match: Option<(String, f32)> = None;
         for existing_cluster in existing_clusters {
             if let Some(existing_centroid) = existing_cluster.centroid() {
                 let distance = l2_distance(new_centroid.as_slice(), existing_centroid.as_slice())?;
@@ -75,7 +75,7 @@ pub fn match_centroids<T: ClusterEntity>(
         }
 
         if let Some((id, _)) = best_match
-            && used_old_ids.insert(id)
+            && used_old_ids.insert(&id)
         {
             map.insert(new_cid, id);
         }

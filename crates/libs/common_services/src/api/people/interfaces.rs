@@ -9,7 +9,7 @@ pub struct UpdatePersonRequest {
 
 #[derive(Debug, Clone)]
 pub struct PersonSummary {
-    pub id: i64,
+    pub id: String,
     pub name: Option<String>,
     pub thumbnail_media_item_id: Option<String>,
     pub photo_count: i32,

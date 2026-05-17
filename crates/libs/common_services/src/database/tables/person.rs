@@ -1,8 +1,8 @@
 use pgvector::Vector;
 
 #[derive(Debug, Clone)]
-pub struct ExistingPerson {
-    pub id: i64,
-    pub name: Option<String>,
+pub struct ExistingFaceCluster {
+    pub id: String,
+    pub person_id: String,
     pub centroid: Option<Vector>,
 }
