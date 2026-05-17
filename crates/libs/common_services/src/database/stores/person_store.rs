@@ -1,7 +1,8 @@
 use crate::api::people::interfaces::{PersonSummary, UpdatePersonRequest};
 use crate::database::DbError;
+use crate::utils::nice_id;
 use common_types::pb::api::SimpleTimelineItem;
-use sqlx::{PgExecutor, PgPool};
+use sqlx::{PgExecutor, PgPool, Postgres, Transaction};
 use tracing::instrument;
 
 pub struct PersonStore;
@@ -95,6 +96,140 @@ impl PersonStore {
         .await?;
 
         Ok(result.rows_affected())
+    }
+
+    #[instrument(skip(pool))]
+    pub async fn merge(
+        pool: &PgPool,
+        source_person_id: &str,
+        target_person_id: &str,
+    ) -> Result<(), DbError> {
+        let mut tx = pool.begin().await?;
+
+        sqlx::query!(
+            r#"
+            UPDATE face_cluster
+            SET person_id = $1, updated_at = now()
+            WHERE person_id = $2
+            "#,
+            source_person_id,
+            target_person_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            UPDATE person source
+            SET
+                face_thumb_id = (
+                    SELECT fc.id
+                    FROM face_cluster fc
+                    LEFT JOIN face f ON f.face_cluster_id = fc.id
+                    LEFT JOIN visual_analysis va ON va.id = f.visual_analysis_id
+                    WHERE fc.person_id = $1
+                    GROUP BY fc.id
+                    ORDER BY COUNT(DISTINCT va.media_item_id) DESC, fc.id ASC
+                    LIMIT 1
+                ),
+                name = COALESCE(source.name, target.name),
+                updated_at = now()
+            FROM person target
+            WHERE source.id = $1 AND target.id = $2
+            "#,
+            source_person_id,
+            target_person_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query!("DELETE FROM person WHERE id = $1", target_person_id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    #[instrument(skip(pool))]
+    pub async fn unmerge(
+        pool: &PgPool,
+        person: &PersonSummary,
+        user_id: i32,
+    ) -> Result<(), DbError> {
+        let cluster_ids = Self::ordered_cluster_ids(person);
+        if cluster_ids.len() <= 1 {
+            return Ok(());
+        }
+
+        let kept_cluster_id = cluster_ids[0].clone();
+        let mut tx = pool.begin().await?;
+
+        sqlx::query!(
+            r#"
+            UPDATE person
+            SET face_thumb_id = $1, updated_at = now()
+            WHERE id = $2
+            "#,
+            kept_cluster_id,
+            person.id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        for cluster_id in cluster_ids.iter().skip(1) {
+            let new_person_id = nice_id(10);
+            Self::move_cluster_to_new_person(&mut tx, user_id, &new_person_id, cluster_id).await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    fn ordered_cluster_ids(person: &PersonSummary) -> Vec<String> {
+        let mut cluster_ids = person.face_cluster_ids.clone();
+        cluster_ids.sort_unstable();
+
+        if let Some(thumb_id) = &person.face_thumb_id
+            && let Some(thumb_index) = cluster_ids.iter().position(|id| id == thumb_id)
+        {
+            cluster_ids.swap(0, thumb_index);
+        }
+
+        cluster_ids
+    }
+
+    async fn move_cluster_to_new_person(
+        tx: &mut Transaction<'_, Postgres>,
+        user_id: i32,
+        new_person_id: &str,
+        cluster_id: &str,
+    ) -> Result<(), DbError> {
+        sqlx::query!(
+            r#"
+            INSERT INTO person (id, user_id, face_thumb_id)
+            VALUES ($1, $2, $3)
+            "#,
+            new_person_id,
+            user_id,
+            cluster_id
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            UPDATE face_cluster
+            SET person_id = $1, updated_at = now()
+            WHERE id = $2
+            "#,
+            new_person_id,
+            cluster_id
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
     }
 
     #[instrument(skip(pool))]

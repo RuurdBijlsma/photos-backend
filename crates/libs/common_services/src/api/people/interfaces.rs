@@ -1,6 +1,12 @@
+use crate::database::UpdateField;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use crate::database::UpdateField;
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MergePersonRequest {
+    pub target_person_id: String,
+}
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
