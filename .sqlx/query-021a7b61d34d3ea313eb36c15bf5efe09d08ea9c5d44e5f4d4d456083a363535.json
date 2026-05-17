@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE person\n            SET\n                name = CASE WHEN $3::boolean THEN name ELSE $4 END,\n                face_thumb_id = CASE WHEN $5::boolean THEN face_thumb_id ELSE $6 END,\n                updated_at = now()\n            WHERE id = $1 AND user_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Bool",
+        "Text",
+        "Bool",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "021a7b61d34d3ea313eb36c15bf5efe09d08ea9c5d44e5f4d4d456083a363535"
+}
