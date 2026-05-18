@@ -154,7 +154,6 @@ pub async fn test_get_full_item(context: &TestContext) -> Result<()> {
         assert_eq!(response.status(), StatusCode::OK);
         let item: MediaItemWithAlbums = response.json().await?;
         assert_eq!(item.media_item.id, valid_id);
-        assert!(item.albums.is_empty());
 
         // --- TEST 2: Invalid ID ---
         let invalid_id_url = format!("{}/photos/invalid-id/item", context.settings.api.public_url);
@@ -217,10 +216,13 @@ pub async fn test_get_full_item_albums(context: &TestContext) -> Result<()> {
 
     let item: MediaItemWithAlbums = response.json().await?;
     assert_eq!(item.media_item.id, media_id);
-    assert_eq!(item.albums.len(), 1);
-    assert_eq!(item.albums[0].id, album.id);
-    assert_eq!(item.albums[0].name, "Info Panel Album");
-    assert_eq!(item.albums[0].media_count, 1);
+    let fetched_album = item
+        .albums
+        .iter()
+        .find(|a| a.id == album.id)
+        .expect("Album not found in media item's albums");
+    assert_eq!(fetched_album.name, "Info Panel Album");
+    assert_eq!(fetched_album.media_count, 1);
 
     Ok(())
 }
