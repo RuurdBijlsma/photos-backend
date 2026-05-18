@@ -69,6 +69,75 @@ pub async fn search_filter_ranges(
     })
 }
 
+fn has_active_filters(config: &SearchMediaConfig) -> bool {
+    config.media_type != SearchMediaType::All
+        || config.start_date.is_some()
+        || config.end_date.is_some()
+        || !config.country_codes.is_empty()
+        || !config.face_names.is_empty()
+        || config.negative_query.is_some()
+}
+
+async fn filter_only_search_media(
+    user: &User,
+    pool: &PgPool,
+    config: SearchMediaConfig,
+) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+    let limit = config.limit.unwrap_or(100).min(500);
+    let offset = config.offset.unwrap_or(0);
+
+    let is_video_filter = match config.media_type {
+        SearchMediaType::Video => Some(true),
+        SearchMediaType::Photo => Some(false),
+        SearchMediaType::All => None,
+    };
+
+    let items = sqlx::query_as!(
+        SimpleTimelineItem,
+        r#"
+        SELECT
+            mi.id::text as "id!",
+            mi.is_video as "is_video!",
+            mi.has_thumbnails as "has_thumbnails!",
+            mi.duration_ms as "duration_ms: i32",
+            (mi.width::real / mi.height::real) as "ratio!"
+        FROM media_item mi
+        WHERE mi.user_id = $1
+          AND mi.deleted = false
+          AND ($2::timestamptz IS NULL OR mi.taken_at_utc >= $2)
+          AND ($3::timestamptz IS NULL OR mi.taken_at_utc <= $3)
+          AND ($4::bool IS NULL OR mi.is_video = $4)
+          AND (cardinality($5::text[]) = 0 OR EXISTS (
+              SELECT 1 FROM gps g JOIN location l ON g.location_id = l.id
+              WHERE g.media_item_id = mi.id AND l.country_code = ANY($5)
+          ))
+          AND (cardinality($6::text[]) = 0 OR (
+              SELECT COUNT(DISTINCT p.name)
+              FROM visual_analysis va
+              JOIN face f ON f.visual_analysis_id = va.id
+              JOIN face_cluster fc ON f.face_cluster_id = fc.id
+              JOIN person p ON fc.person_id = p.id
+              WHERE va.media_item_id = mi.id AND p.name = ANY($6)
+          ) >= (CASE WHEN $7 THEN cardinality($6) ELSE 1 END))
+        ORDER BY mi.sort_timestamp DESC
+        LIMIT $8 OFFSET $9
+        "#,
+        user.id,
+        config.start_date,
+        config.end_date,
+        is_video_filter,
+        &config.country_codes,
+        &config.face_names,
+        config.all_faces_required,
+        limit,
+        offset,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(items)
+}
+
 pub async fn search_media(
     user: &User,
     pool: &PgPool,
@@ -76,6 +145,13 @@ pub async fn search_media(
     query: &str,
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+    if query.trim().is_empty() {
+        if has_active_filters(&config) {
+            return filter_only_search_media(user, pool, config).await;
+        }
+        return Ok(vec![]);
+    }
+
     if config.media_type == SearchMediaType::All
         && config.sort_by == SearchSortBy::Relevancy
         && config.start_date.is_none()

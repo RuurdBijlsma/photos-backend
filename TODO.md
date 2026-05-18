@@ -221,6 +221,7 @@
   there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
   sure how to handle this case.
 * mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
+* [SPECIAL CASE] WHEN SEARCH TERM = "", then return all photos that match the filters
 
 # Features
 
