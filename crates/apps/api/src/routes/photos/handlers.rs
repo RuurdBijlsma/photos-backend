@@ -1,6 +1,7 @@
 use app_state::IngestSettings;
 use axum::extract::{Path, Query, State};
 use axum::{Extension, Json};
+use common_services::api::album::interfaces::MediaItemWithAlbums;
 use common_services::api::photos::interfaces::{
     ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest,
 };
@@ -8,8 +9,8 @@ use common_services::api::photos::service::{
     download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
     update_media_item,
 };
+use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use common_services::database::media_item::media_item::FullMediaItem;
 
 use crate::api_state::ApiContext;
 use axum::http::header;
@@ -28,12 +29,15 @@ pub async fn get_full_item_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path(media_item_id): Path<String>,
-) -> Result<Json<FullMediaItem>, PhotosError> {
+) -> Result<Json<MediaItemWithAlbums>, PhotosError> {
     let item = MediaItemStore::find_by_id(&context.pool, &media_item_id).await?;
     if let Some(item) = item
         && item.user_id == user.id
     {
-        Ok(Json(item))
+        Ok(Json(MediaItemWithAlbums {
+            media_item: item,
+            albums: AlbumStore::list_for_media_item(&context.pool, user.id, &media_item_id).await?,
+        }))
     } else {
         Err(PhotosError::MediaNotFound(media_item_id))
     }

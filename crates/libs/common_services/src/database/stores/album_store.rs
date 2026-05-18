@@ -1,4 +1,6 @@
-use crate::api::album::interfaces::{AlbumMediaItemSummary, AlbumSort, AlbumSortField};
+use crate::api::album::interfaces::{
+    AlbumMediaItemSummary, AlbumSort, AlbumSortField, MediaItemAlbumRef,
+};
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::album::album::{Album, AlbumRole};
 use crate::database::album::album_collaborator::AlbumCollaborator;
@@ -226,6 +228,32 @@ impl AlbumStore {
     )
             .fetch_all(executor)
             .await?)
+    }
+
+    /// Albums containing a media item that the user owns or collaborates on.
+    pub async fn list_for_media_item(
+        executor: impl PgExecutor<'_>,
+        user_id: i32,
+        media_item_id: &str,
+    ) -> Result<Vec<MediaItemAlbumRef>, DbError> {
+        // todo maybe include user's role in media item album ref
+        Ok(sqlx::query_as!(
+            MediaItemAlbumRef,
+            r#"
+            SELECT a.id, a.name, a.thumbnail_id, a.media_count
+            FROM album a
+            JOIN album_media_item ami ON a.id = ami.album_id
+            JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
+            LEFT JOIN album_collaborator ac ON a.id = ac.album_id AND ac.user_id = $1
+            WHERE ami.media_item_id = $2
+              AND (a.owner_id = $1 OR ac.user_id IS NOT NULL)
+            ORDER BY a.name ASC
+            "#,
+            user_id,
+            media_item_id
+        )
+        .fetch_all(executor)
+        .await?)
     }
 
     //================================================================================

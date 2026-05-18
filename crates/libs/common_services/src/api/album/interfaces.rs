@@ -155,6 +155,22 @@ pub struct AlbumMediaItemSummary {
     pub added_at: DateTime<Utc>,
 }
 
+/// Album reference for a media item detail response (info panel).
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct MediaItemAlbumRef {
+    pub id: String,
+    pub name: String,
+    pub thumbnail_id: Option<String>,
+    pub media_count: i32,
+}
+
+/// Full media item detail with albums that contain it.
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+pub struct MediaItemWithAlbums {
+    pub media_item: FullMediaItem,
+    pub albums: Vec<MediaItemAlbumRef>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AlbumShareClaims {
     pub iss: String, // Issuer (server's public_url)

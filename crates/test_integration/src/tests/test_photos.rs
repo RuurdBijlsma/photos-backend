@@ -2,8 +2,11 @@ use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::{login, media_dir_contents};
 use app_state::MakeRelativePath;
 use color_eyre::eyre::{ContextCompat, Result, bail};
+use common_services::api::album::interfaces::{
+    AddMediaToAlbumRequest, CreateAlbumRequest, MediaItemWithAlbums,
+};
 use common_services::api::photos::interfaces::RandomPhotoResponse;
-use common_services::database::media_item::media_item::FullMediaItem;
+use common_services::database::album::album::Album;
 use material_color_utils::dynamic::variant::Variant;
 use reqwest::StatusCode;
 use serde_json::Value;
@@ -149,8 +152,9 @@ pub async fn test_get_full_item(context: &TestContext) -> Result<()> {
         let response = client.get(&valid_id_url).bearer_auth(&token).send().await?;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let item: FullMediaItem = response.json().await?;
-        assert_eq!(item.id, valid_id);
+        let item: MediaItemWithAlbums = response.json().await?;
+        assert_eq!(item.media_item.id, valid_id);
+        assert!(item.albums.is_empty());
 
         // --- TEST 2: Invalid ID ---
         let invalid_id_url = format!("{}/photos/invalid-id/item", context.settings.api.public_url);
@@ -165,6 +169,58 @@ pub async fn test_get_full_item(context: &TestContext) -> Result<()> {
         // This might happen if previous tests failed to populate DB
         println!("Skipping test_get_full_item (no media items in DB)");
     }
+
+    Ok(())
+}
+
+pub async fn test_get_full_item_albums(context: &TestContext) -> Result<()> {
+    let token = login(context).await?;
+    let client = &context.http_client;
+    let base_url = &context.settings.api.public_url;
+
+    let Some(media_record) = sqlx::query!("SELECT id FROM media_item LIMIT 1")
+        .fetch_optional(&context.pool)
+        .await?
+    else {
+        println!("Skipping test_get_full_item_albums (no media items in DB)");
+        return Ok(());
+    };
+    let media_id = media_record.id;
+
+    let album: Album = client
+        .post(format!("{base_url}/album"))
+        .bearer_auth(&token)
+        .json(&CreateAlbumRequest {
+            name: "Info Panel Album".to_string(),
+            description: None,
+            is_public: false,
+            media_item_ids: vec![],
+        })
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let response = client
+        .post(format!("{base_url}/album/{}/media", album.id))
+        .bearer_auth(&token)
+        .json(&AddMediaToAlbumRequest {
+            media_item_ids: vec![media_id.clone()],
+        })
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let item_url = format!("{base_url}/photos/{media_id}/item");
+    let response = client.get(&item_url).bearer_auth(&token).send().await?;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let item: MediaItemWithAlbums = response.json().await?;
+    assert_eq!(item.media_item.id, media_id);
+    assert_eq!(item.albums.len(), 1);
+    assert_eq!(item.albums[0].id, album.id);
+    assert_eq!(item.albums[0].name, "Info Panel Album");
+    assert_eq!(item.albums[0].media_count, 1);
 
     Ok(())
 }
