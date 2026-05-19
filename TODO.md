@@ -181,6 +181,7 @@
 * ✅ clean thumbnails folder task in task runner
 * ✅ Fix search zo dat je alle resultaten boven een bepaalde relevancy vind
     * ✅ Als ik zoek "food" moet ik iets van duizend plaatjes krijgen
+* ✅ [SPECIAL CASE] WHEN SEARCH TERM = "", then return all photos that match the filters
 * password reset flow (email) (make mail optional)
 * Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
   db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
@@ -221,7 +222,6 @@
   there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
   sure how to handle this case.
 * mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
-* [SPECIAL CASE] WHEN SEARCH TERM = "", then return all photos that match the filters
 
 # Features
 
