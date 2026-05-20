@@ -23,6 +23,7 @@ use utoipa::{Modify, OpenApi};
         // Photos handlers
         photos::handlers::get_random_photo,
         photos::handlers::get_color_theme_handler,
+        photos::handlers::get_geo_photos_handler,
         // People handlers
         people::handlers::list_people_handler,
         people::handlers::update_person_handler,
