@@ -108,3 +108,15 @@ message FullPersonMediaResponse {
   PersonInfo person = 1;
   repeated SimpleTimelineItem items = 2;
 }
+
+// --- Map specific ---
+message MapPhotoItem {
+  double latitude = 1;
+  double longitude = 2;
+  SimpleTimelineItem item = 3;
+}
+
+message MapPhotosResponse {
+  repeated MapPhotoItem items = 1;
+}
+

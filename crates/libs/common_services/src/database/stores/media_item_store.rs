@@ -1,5 +1,6 @@
 use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
+use common_types::pb::api::{MapPhotoItem, SimpleTimelineItem};
 use crate::database::media_item::location::Location;
 use crate::database::media_item::media_features::MediaFeatures;
 use crate::database::media_item::media_item::{
@@ -507,5 +508,47 @@ impl MediaItemStore {
             .await?;
             Ok(new_id)
         }
+    }
+
+    pub async fn find_all_geo_by_user_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        user_id: i32,
+    ) -> Result<Vec<MapPhotoItem>, DbError> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT
+                mi.id,
+                mi.is_video,
+                mi.has_thumbnails,
+                mi.duration_ms::INT as duration_ms,
+                (mi.width::real / mi.height::real) as "ratio!",
+                g.latitude,
+                g.longitude
+            FROM media_item mi
+            JOIN gps g ON mi.id = g.media_item_id
+            WHERE mi.user_id = $1 AND mi.deleted = false
+            ORDER BY mi.taken_at_local DESC
+            "#,
+            user_id
+        )
+        .fetch_all(executor)
+        .await?;
+
+        let items = rows
+            .into_iter()
+            .map(|r| MapPhotoItem {
+                latitude: r.latitude,
+                longitude: r.longitude,
+                item: Some(SimpleTimelineItem {
+                    id: r.id,
+                    is_video: r.is_video,
+                    has_thumbnails: r.has_thumbnails,
+                    duration_ms: r.duration_ms,
+                    ratio: r.ratio,
+                }),
+            })
+            .collect();
+
+        Ok(items)
     }
 }

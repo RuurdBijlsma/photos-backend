@@ -80,6 +80,14 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
     );
     config.type_attribute(
+        ".api.MapPhotoItem",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
+        ".api.MapPhotosResponse",
+        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+    );
+    config.type_attribute(
         ".api.SearchSuggestion",
         "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
     );

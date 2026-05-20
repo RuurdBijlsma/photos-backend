@@ -1,6 +1,7 @@
 use app_state::IngestSettings;
 use axum::extract::{Path, Query, State};
 use axum::{Extension, Json};
+use axum_extra::protobuf::Protobuf;
 use common_services::api::album::interfaces::MediaItemWithAlbums;
 use common_services::api::photos::interfaces::{
     ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest,
@@ -20,6 +21,7 @@ use axum_extra::headers::Range;
 use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::PhotoThumbnailParams;
 use common_services::database::media_item_store::MediaItemStore;
+use common_types::pb::api::MapPhotosResponse;
 use material_color_utils::utils::color_utils::Argb;
 use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
@@ -185,4 +187,23 @@ pub async fn stream_video_handler(
         range_inner,
     )
     .await
+}
+
+#[utoipa::path(
+    get,
+    path = "/photos/geo",
+    tag = "Photos",
+    responses(
+        (status = 200, description = "Get all geo-tagged photos and coordinates as Protobuf binary.", body = MapPhotosResponse),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_geo_photos_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+) -> Result<Protobuf<MapPhotosResponse>, PhotosError> {
+    let items = MediaItemStore::find_all_geo_by_user_id(&context.pool, user.id).await?;
+    Ok(Protobuf(MapPhotosResponse { items }))
 }
