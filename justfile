@@ -20,6 +20,9 @@ clippy:
 clean:
     cargo clean
 
+setup:
+    script/start_postgres.ps1
+
 # --- Execution:
 
 test:
@@ -27,4 +30,7 @@ test:
 
 bench:
     cargo bench --features load-dynamic,cuda
+
+run:
+    cargo run --example visualize --profile release --features load-dynamic
 
