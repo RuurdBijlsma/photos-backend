@@ -214,4 +214,4 @@ CREATE INDEX idx_media_item_search_filters
 
 -- For /photos/geo (Map view)
 CREATE INDEX idx_media_item_geo_lookup
-    ON media_item (user_id, deleted, taken_at_local DESC) INCLUDE (id, width, height, is_video, has_thumbnails, duration_ms);
+    ON media_item (user_id, deleted, sort_timestamp DESC) INCLUDE (id, width, height, is_video, has_thumbnails, duration_ms);

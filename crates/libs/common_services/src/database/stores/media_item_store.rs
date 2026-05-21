@@ -1,6 +1,5 @@
 use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
-use common_types::pb::api::{MapPhotoItem, SimpleTimelineItem};
 use crate::database::media_item::location::Location;
 use crate::database::media_item::media_features::MediaFeatures;
 use crate::database::media_item::media_item::{
@@ -12,6 +11,7 @@ use crate::database::media_item::weather::Weather;
 use crate::database::structs::UpdateMediaItemPayload;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
 use crate::database::{DbError, with_fallback_timezone};
+use common_types::pb::api::{MapPhotoItem, SimpleTimelineItem};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
@@ -527,7 +527,7 @@ impl MediaItemStore {
             FROM media_item mi
             JOIN gps g ON mi.id = g.media_item_id
             WHERE mi.user_id = $1 AND mi.deleted = false
-            ORDER BY mi.taken_at_local DESC
+            ORDER BY mi.sort_timestamp DESC
             "#,
             user_id
         )
