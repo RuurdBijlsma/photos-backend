@@ -87,7 +87,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         ]);
 
     // Static file serving
-    let serve_dir = ServeDir::new("thumbnails");
+    let serve_dir = ServeDir::new(&settings.ingest.thumbnail_root);
 
     // Create a middleware layer to add the Cache-Control header.
     let cache_layer = SetResponseHeaderLayer::if_not_present(
