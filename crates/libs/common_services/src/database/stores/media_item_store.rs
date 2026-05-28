@@ -16,6 +16,7 @@ use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
 use std::path::Path;
+use chrono::{DateTime, Utc};
 
 pub struct MediaItemStore;
 
@@ -513,6 +514,8 @@ impl MediaItemStore {
     pub async fn find_all_geo_by_user_id(
         executor: impl Executor<'_, Database = Postgres>,
         user_id: i32,
+        start_date: Option<DateTime<Utc>>,
+        end_date: Option<DateTime<Utc>>,
     ) -> Result<Vec<MapPhotoItem>, DbError> {
         let rows = sqlx::query!(
             r#"
@@ -527,9 +530,13 @@ impl MediaItemStore {
             FROM media_item mi
             JOIN gps g ON mi.id = g.media_item_id
             WHERE mi.user_id = $1 AND mi.deleted = false
+              AND ($2::TIMESTAMPTZ IS NULL OR mi.sort_timestamp >= $2)
+              AND ($3::TIMESTAMPTZ IS NULL OR mi.sort_timestamp <= $3)
             ORDER BY mi.sort_timestamp DESC
             "#,
-            user_id
+            user_id,
+            start_date,
+            end_date
         )
         .fetch_all(executor)
         .await?;

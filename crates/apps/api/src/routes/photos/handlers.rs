@@ -4,7 +4,7 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::album::interfaces::MediaItemWithAlbums;
 use common_services::api::photos::interfaces::{
-    ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest,
+    ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest, GeoPhotosParams,
 };
 use common_services::api::photos::service::{
     download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
@@ -193,6 +193,9 @@ pub async fn stream_video_handler(
     get,
     path = "/photos/geo",
     tag = "Photos",
+    params(
+        GeoPhotosParams
+    ),
     responses(
         (status = 200, description = "Get all geo-tagged photos and coordinates as Protobuf binary.", body = MapPhotosResponse),
         (status = 500, description = "A database or internal error occurred."),
@@ -203,7 +206,14 @@ pub async fn stream_video_handler(
 pub async fn get_geo_photos_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
+    Query(params): Query<GeoPhotosParams>,
 ) -> Result<Protobuf<MapPhotosResponse>, PhotosError> {
-    let items = MediaItemStore::find_all_geo_by_user_id(&context.pool, user.id).await?;
+    let items = MediaItemStore::find_all_geo_by_user_id(
+        &context.pool,
+        user.id,
+        params.start_date,
+        params.end_date,
+    )
+    .await?;
     Ok(Protobuf(MapPhotosResponse { items }))
 }

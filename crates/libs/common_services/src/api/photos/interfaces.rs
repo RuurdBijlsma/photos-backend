@@ -2,6 +2,14 @@ use crate::database::UpdateField;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
+use chrono::{DateTime, Utc};
+
+#[derive(Serialize, Deserialize, IntoParams, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GeoPhotosParams {
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
+}
 
 #[derive(Serialize, Deserialize, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
