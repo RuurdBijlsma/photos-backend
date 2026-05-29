@@ -79,6 +79,7 @@ message SearchResponse {
 enum SuggestionType {
   SEARCH = 0;
   ALBUM = 1;
+  PERSON = 2;
 }
 
 message SearchSuggestion {

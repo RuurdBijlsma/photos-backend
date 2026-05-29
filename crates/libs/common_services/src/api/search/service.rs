@@ -483,7 +483,7 @@ pub async fn get_search_suggestions(
 
             UNION ALL
 
-            (SELECT p.name as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count, 'SEARCH' as "type!", NULL as "id"
+            (SELECT p.name as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count, 'PERSON' as "type!", p.id::text as "id"
             FROM person p
             JOIN face_cluster fc ON fc.person_id = p.id
             JOIN face f ON f.face_cluster_id = fc.id
@@ -491,7 +491,7 @@ pub async fn get_search_suggestions(
             WHERE p.user_id = $1
               AND p.name ILIKE $2
               AND p.name != ''
-            GROUP BY p.name
+            GROUP BY p.name, p.id
             LIMIT $3 * 2)
 
             UNION ALL
@@ -536,7 +536,7 @@ pub async fn get_search_suggestions(
         SELECT suggestion as "suggestion!", "type!" as "type!", "id" as "id?", SUM(photo_count)::int8 as "photo_count!"
         FROM matched_terms
         GROUP BY suggestion, "type!", "id"
-        ORDER BY (CASE WHEN "type!" = 'ALBUM' THEN 0 ELSE 1 END), "photo_count!" DESC, suggestion ASC
+        ORDER BY (CASE WHEN "type!" = 'ALBUM' THEN 0 ELSE (CASE WHEN "type!" = 'PERSON' THEN 1 ELSE 2 END) END), "photo_count!" DESC, suggestion ASC
         LIMIT $3
         "#,
         user.id,
@@ -553,6 +553,7 @@ pub async fn get_search_suggestions(
                 text: row.suggestion,
                 suggestion_type: match row.r#type.as_str() {
                     "ALBUM" => SuggestionType::Album as i32,
+                    "PERSON" => SuggestionType::Person as i32,
                     _ => SuggestionType::Search as i32,
                 },
                 id: row.id,
