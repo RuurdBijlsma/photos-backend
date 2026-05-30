@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Corresponds to the '`capture_details`' table.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CameraSettings {
     pub iso: Option<i32>,
     pub exposure_time: Option<f32>,

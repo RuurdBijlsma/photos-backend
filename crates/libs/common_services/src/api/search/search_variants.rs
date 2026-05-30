@@ -1,12 +1,12 @@
-use std::sync::Arc;
-use open_clip_inference::TextEmbedder;
-use pgvector::Vector;
-use sqlx::PgPool;
-use common_types::pb::api::SimpleTimelineItem;
 use crate::api::search::cache::get_cached_text_embedding;
 use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::{SearchMediaConfig, SearchMediaType, SearchSortBy};
 use crate::database::app_user::User;
+use common_types::pb::api::SimpleTimelineItem;
+use open_clip_inference::TextEmbedder;
+use pgvector::Vector;
+use sqlx::PgPool;
+use std::sync::Arc;
 
 pub async fn basic_search_media(
     user: &User,
@@ -353,8 +353,8 @@ pub async fn filter_only_search_media(
         limit,
         offset,
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     Ok(items)
 }

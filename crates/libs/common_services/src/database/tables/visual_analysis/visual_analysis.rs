@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use common_types::ml_analysis::MLFastAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+
 
 /// Represents a single photo's embedding data fetched for clustering.
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ impl From<MLFastAnalysis> for CreateVisualAnalysis {
 }
 
 /// A composite struct representing a '`visual_analysis`' run and all its associated nested data.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReadVisualAnalysis {
     pub created_at: DateTime<Utc>,
     pub percentage: i32,

@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
 use media_analyzer::WeatherInfo;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+
 
 /// Corresponds to the 'weather' table.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Weather {
     pub temperature: Option<f32>,
     pub dew_point: Option<f32>,

@@ -3,9 +3,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::Display;
-use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, sqlx::Type, ToSchema, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "album_role", rename_all = "lowercase")]
 pub enum AlbumRole {
     Owner,
@@ -25,7 +24,7 @@ impl Display for AlbumRole {
 }
 
 /// Represents a single album in the database.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Album {
     pub id: String,
@@ -42,7 +41,7 @@ pub struct Album {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumSummary {
     pub name: String,

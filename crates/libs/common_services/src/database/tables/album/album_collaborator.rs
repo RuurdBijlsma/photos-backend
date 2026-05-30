@@ -1,10 +1,9 @@
 use crate::database::album::album::AlbumRole;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use utoipa::ToSchema;
 
 /// Represents a user's role in an album (a collaborator).
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumCollaborator {
     pub id: i64,

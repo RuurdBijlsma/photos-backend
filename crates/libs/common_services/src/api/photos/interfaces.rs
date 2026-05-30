@@ -1,42 +1,41 @@
 use crate::database::UpdateField;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use utoipa::{IntoParams, ToSchema};
-use chrono::{DateTime, Utc};
 
-#[derive(Serialize, Deserialize, IntoParams, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GeoPhotosParams {
     pub start_date: Option<DateTime<Utc>>,
     pub end_date: Option<DateTime<Utc>>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct RandomPhotoResponse {
     pub media_id: String,
     pub themes: Option<Vec<Value>>,
 }
 
-#[derive(Serialize, Deserialize, IntoParams, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ColorThemeParams {
     pub color: String,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadMediaParams {
     pub path: String,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PhotoThumbnailParams {
     pub size: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateMediaItemRequest {
     #[serde(default)]

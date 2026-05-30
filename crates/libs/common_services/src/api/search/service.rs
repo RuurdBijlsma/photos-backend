@@ -57,13 +57,7 @@ pub async fn search_by_image(
     let pool_clone = pool.clone();
     let model_id_clone = config.embedder_model_id.clone();
     let image_task = tokio::spawn(async move {
-        get_cached_image_embedding(
-            img,
-            &model_id_clone,
-            &pool_clone,
-            vision_embedder,
-        )
-            .await
+        get_cached_image_embedding(img, &model_id_clone, &pool_clone, vision_embedder).await
     });
 
     // 2. Spawn optional text query embedding task

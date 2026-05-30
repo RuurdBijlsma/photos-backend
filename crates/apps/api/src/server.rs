@@ -42,9 +42,10 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         .build()
         .await?;
     info!("Loading CLIP vision embedder...");
-    let vision_embedder = VisionEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
-        .build()
-        .await?;
+    let vision_embedder =
+        VisionEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
+            .build()
+            .await?;
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let api_state = ApiContext {

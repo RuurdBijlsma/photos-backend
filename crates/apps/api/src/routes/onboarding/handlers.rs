@@ -17,15 +17,6 @@ use common_services::api::onboarding::service::{
 use common_services::database::app_user::User;
 
 /// Retrieves information about the configured media and thumbnail disks.
-#[utoipa::path(
-    get,
-    path = "/onboarding/disk-info",
-    tag = "Onboarding",
-    responses(
-        (status = 200, description = "Disk information retrieved successfully", body = DiskResponse),
-        (status = 500, description = "A configured path is not a valid directory"),
-    )
-)]
 pub async fn get_disk_response(
     State(ingestion): State<IngestSettings>,
 ) -> Result<Json<DiskResponse>, OnboardingError> {
@@ -34,18 +25,6 @@ pub async fn get_disk_response(
 }
 
 /// Retrieves a sample of media files from a specified folder.
-#[utoipa::path(
-    get,
-    path = "/onboarding/media-sample",
-    tag = "Onboarding",
-    params(
-        ("folder" = String, Query, description = "The folder to sample media from")
-    ),
-    responses(
-        (status = 200, description = "Media sample retrieved successfully", body = MediaSampleResponse),
-        (status = 400, description = "Invalid folder path provided"),
-    )
-)]
 pub async fn get_folder_media_sample(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
@@ -56,18 +35,6 @@ pub async fn get_folder_media_sample(
 }
 
 /// Scans a folder and returns a list of unsupported file types.
-#[utoipa::path(
-    get,
-    path = "/onboarding/unsupported-files",
-    tag = "Onboarding",
-    params(
-        ("folder" = String, Query, description = "The folder to scan for unsupported files")
-    ),
-    responses(
-        (status = 200, description = "Unsupported files listed successfully", body = UnsupportedFilesResponse),
-        (status = 400, description = "Invalid folder path provided"),
-    )
-)]
 pub async fn get_folder_unsupported(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
@@ -78,18 +45,6 @@ pub async fn get_folder_unsupported(
 }
 
 /// Lists the subfolders within a given directory.
-#[utoipa::path(
-    get,
-    path = "/onboarding/folders",
-    tag = "Onboarding",
-    params(
-        ("folder" = String, Query, description = "The base folder to list subdirectories from")
-    ),
-    responses(
-        (status = 200, description = "Folders listed successfully", body = Vec<String>),
-        (status = 400, description = "Invalid base folder path provided"),
-    )
-)]
 pub async fn get_folders(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
@@ -99,16 +54,6 @@ pub async fn get_folders(
 }
 
 /// Creates a new folder within a specified base directory.
-#[utoipa::path(
-    post,
-    path = "/onboarding/make-folder",
-    tag = "Onboarding",
-    request_body = MakeFolderBody,
-    responses(
-        (status = 204, description = "Folder created successfully"),
-        (status = 400, description = "Invalid folder name or path"),
-    )
-)]
 pub async fn make_folder(
     State(ingestion): State<IngestSettings>,
     Json(params): Json<MakeFolderBody>,
@@ -122,15 +67,6 @@ pub async fn make_folder(
 /// # Errors
 ///
 /// Returns a `OnboardingError` if a database connection cannot be established or the query fails.
-#[utoipa::path(
-    post,
-    path = "/onboarding/start-processing",
-    tag = "Onboarding",
-    responses(
-        (status = 200, description = "Processing job enqueued successfully.", body = bool),
-        (status = 500, description = "Database error"),
-    )
-)]
 pub async fn post_start_processing(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,

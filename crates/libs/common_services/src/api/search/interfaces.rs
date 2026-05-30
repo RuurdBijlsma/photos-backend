@@ -2,9 +2,8 @@ use chrono::{DateTime, NaiveDate, Utc};
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
-use utoipa::{IntoParams, ToSchema};
 
-#[derive(Serialize, ToSchema, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchFilterRanges {
     pub available_months: Vec<NaiveDate>,
@@ -30,7 +29,7 @@ pub struct SearchMediaConfig {
     pub all_faces_required: bool,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchParams {
     pub query: Option<String>,
@@ -48,14 +47,20 @@ pub struct SearchParams {
     pub all_faces_required: Option<bool>,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchSuggestionsParams {
     pub query: String,
     pub limit: Option<i64>,
 }
 
-#[derive(Deserialize, ToSchema, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchByImageUuid {
+    pub session_id: Uuid,
+}
+
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchMediaType {
     #[default]
@@ -64,7 +69,7 @@ pub enum SearchMediaType {
     Video,
 }
 
-#[derive(Deserialize, ToSchema, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchSortBy {
     #[default]

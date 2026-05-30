@@ -1,5 +1,5 @@
 use crate::api_state::ApiContext;
-use axum::extract::{Multipart, Query, State};
+use axum::extract::{Multipart, Path, Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use color_eyre::eyre;
@@ -24,19 +24,6 @@ use uuid::Uuid;
 /// # Errors
 ///
 /// Returns a `TimelineError` if the database query fails.
-#[utoipa::path(
-    get,
-    path = "/search",
-    tag = "Search",
-    params(
-        SearchParams
-    ),
-    responses(
-        (status = 200, description = "Search results", body = Vec<SearchResponse>),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_search_results(
     State(context): State<ApiContext>,
@@ -85,22 +72,6 @@ pub async fn get_search_filter_ranges(
     Ok(Json(result))
 }
 
-#[utoipa::path(
-    post,
-    path = "/search/image",
-    tag = "Search",
-    request_body(content = String, description = "Image file (multipart/form-data)", content_type = "multipart/form-data"
-    ),
-    params(
-        SearchParams
-    ),
-    responses(
-        (status = 200, description = "Search results", body = Vec<SearchResponse>),
-        (status = 400, description = "Invalid image"),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user, multipart), err(Debug))]
 pub async fn get_search_by_image_results(
     State(context): State<ApiContext>,
@@ -163,6 +134,32 @@ pub async fn get_search_by_image_results(
         params.clone().query,
         SearchImage {
             image: Some(img),
+            session_id,
+        },
+        to_search_config(&context.settings.ingest.analyzer.search, params),
+    )
+    .await?;
+    Ok(Protobuf(SearchResponse {
+        items,
+        session_id: Some(session_id.to_string()),
+    }))
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_search_by_image_uuid(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(session_id): Path<Uuid>,
+    Query(params): Query<SearchParams>,
+) -> Result<Protobuf<SearchResponse>, SearchError> {
+    let items = search_by_image(
+        &user,
+        &context.pool,
+        context.text_embedder,
+        context.vision_embedder,
+        params.clone().query,
+        SearchImage {
+            image: None,
             session_id,
         },
         to_search_config(&context.settings.ingest.analyzer.search, params),

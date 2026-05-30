@@ -1,9 +1,9 @@
 use common_types::ml_analysis;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+
 
 /// Corresponds to the '`judged_quality`' table.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct QualityScore {
     pub exposure: u8,
     pub contrast: u8,

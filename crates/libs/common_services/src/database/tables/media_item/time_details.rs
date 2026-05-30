@@ -1,9 +1,9 @@
 use media_analyzer::TimeInfo;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+
 
 /// Corresponds to the '`time_details`' table.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimeDetails {
     pub timezone_source: Option<String>,
     pub source_details: String,

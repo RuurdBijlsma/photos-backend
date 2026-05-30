@@ -1,9 +1,9 @@
 use common_types::ml_analysis::MLLlmClassification;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+
 
 /// Corresponds to the '`caption_data`' table.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ClassificationData {
     pub caption: String,
     pub main_subject: String,

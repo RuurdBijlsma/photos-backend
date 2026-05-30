@@ -1,8 +1,8 @@
 #![allow(clippy::option_if_let_else)]
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ToSchema, Default)]
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(untagged)]
 pub enum UpdateField<T> {
     Value(T),

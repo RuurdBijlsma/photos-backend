@@ -4,7 +4,8 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::album::interfaces::MediaItemWithAlbums;
 use common_services::api::photos::interfaces::{
-    ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest, GeoPhotosParams,
+    ColorThemeParams, DownloadMediaParams, GeoPhotosParams, RandomPhotoResponse,
+    UpdateMediaItemRequest,
 };
 use common_services::api::photos::service::{
     download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
@@ -57,16 +58,6 @@ pub async fn update_media_item_handler(
     Ok(())
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/random",
-    tag = "Photos",
-    responses(
-        (status = 200, description = "Get random photo and associated themes.", body = RandomPhotoResponse),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn get_random_photo(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -75,19 +66,6 @@ pub async fn get_random_photo(
     Ok(Json(result))
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/theme",
-    tag = "Photos",
-    params(
-        ColorThemeParams
-    ),
-    responses(
-        (status = 200, description = "Get theme object from a color.", body = Value),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn get_color_theme_handler(
     State(ingestion): State<IngestSettings>,
     Query(params): Query<ColorThemeParams>,
@@ -101,22 +79,6 @@ pub async fn get_color_theme_handler(
     Ok(Json(theme))
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/download",
-    tag = "Photos",
-    params(
-        ("path" = String, Query, description = "The path of the media file to download")
-    ),
-    responses(
-        (status = 200, description = "Media file streamed successfully.", body = Vec<u8>, content_type = "application/octet-stream"),
-        (status = 400, description = "Invalid path provided, such as a directory traversal attempt."),
-        (status = 403, description = "Permission denied when trying to access the file."),
-        (status = 404, description = "The requested media file could not be found."),
-        (status = 415, description = "The requested file is not a supported media type."),
-        (status = 500, description = "An internal server error occurred."),
-    )
-)]
 pub async fn download_full_file_by_rel_path(
     State(ingestion): State<IngestSettings>,
     Extension(user): Extension<User>,
@@ -168,12 +130,6 @@ pub async fn get_photo_thumbnail(
     ))
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/video/{media_item_id}",
-    tag = "Photos",
-    responses((status = 206, description = "Partial video content"))
-)]
 pub async fn stream_video_handler(
     State(context): State<ApiContext>,
     Path(media_item_id): Path<String>,
@@ -189,19 +145,6 @@ pub async fn stream_video_handler(
     .await
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/geo",
-    tag = "Photos",
-    params(
-        GeoPhotosParams
-    ),
-    responses(
-        (status = 200, description = "Get all geo-tagged photos and coordinates as Protobuf binary.", body = MapPhotosResponse),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_geo_photos_handler(
     State(context): State<ApiContext>,

@@ -14,16 +14,6 @@ use common_types::pb::api::{FullPersonMediaResponse, ListPeopleResponse};
 use http::header::CACHE_CONTROL;
 use tracing::instrument;
 
-#[utoipa::path(
-    get,
-    path = "/people",
-    tag = "People",
-    responses(
-        (status = 200, description = "List all identified people clusters.", body = ListPeopleResponse),
-        (status = 500, description = "Internal server error."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn list_people_handler(
     State(context): State<ApiContext>,
@@ -33,20 +23,6 @@ pub async fn list_people_handler(
     Ok(Protobuf(result))
 }
 
-#[utoipa::path(
-    patch,
-    path = "/people/{id}",
-    tag = "People",
-    params(
-        ("id" = i64, Path, description = "Person ID")
-    ),
-    responses(
-        (status = 200, description = "Person label updated successfully."),
-        (status = 404, description = "Person not found."),
-        (status = 500, description = "Internal server error."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn update_person_handler(
     State(context): State<ApiContext>,
@@ -58,21 +34,6 @@ pub async fn update_person_handler(
     Ok(())
 }
 
-#[utoipa::path(
-    post,
-    path = "/people/{id}/merge",
-    tag = "People",
-    params(
-        ("id" = String, Path, description = "Person ID to keep")
-    ),
-    request_body = MergePersonRequest,
-    responses(
-        (status = 200, description = "People merged successfully."),
-        (status = 404, description = "Person not found."),
-        (status = 500, description = "Internal server error."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn merge_person_handler(
     State(context): State<ApiContext>,
@@ -84,20 +45,6 @@ pub async fn merge_person_handler(
     Ok(())
 }
 
-#[utoipa::path(
-    post,
-    path = "/people/{id}/unmerge",
-    tag = "People",
-    params(
-        ("id" = String, Path, description = "Person ID to split")
-    ),
-    responses(
-        (status = 200, description = "Person split successfully."),
-        (status = 404, description = "Person not found."),
-        (status = 500, description = "Internal server error."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn unmerge_person_handler(
     State(context): State<ApiContext>,
@@ -108,20 +55,6 @@ pub async fn unmerge_person_handler(
     Ok(())
 }
 
-#[utoipa::path(
-    get,
-    path = "/people/{id}/photos",
-    tag = "People",
-    params(
-        ("id" = i64, Path, description = "Person ID")
-    ),
-    responses(
-        (status = 200, description = "Get all photos of a person.", body = FullPersonMediaResponse),
-        (status = 404, description = "Person not found."),
-        (status = 500, description = "Internal server error."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_person_photos_handler(
     State(context): State<ApiContext>,

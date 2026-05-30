@@ -11,12 +11,12 @@ use crate::database::media_item::weather::Weather;
 use crate::database::structs::UpdateMediaItemPayload;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
 use crate::database::{DbError, with_fallback_timezone};
+use chrono::{DateTime, Utc};
 use common_types::pb::api::{MapPhotoItem, SimpleTimelineItem};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
 use std::path::Path;
-use chrono::{DateTime, Utc};
 
 pub struct MediaItemStore;
 

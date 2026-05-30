@@ -9,10 +9,9 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use media_analyzer::MediaMetadata;
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
-use utoipa::ToSchema;
 
 /// The root struct representing a '`media_item`' and all its available, nested information.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateFullMediaItem {
     pub hash: String,
     pub width: i32,
@@ -79,7 +78,7 @@ impl From<MediaMetadata> for CreateFullMediaItem {
 }
 
 /// The root struct representing a '`media_item`' and all its available, nested information.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FullMediaItem {
     pub id: String,
     pub user_id: i32,

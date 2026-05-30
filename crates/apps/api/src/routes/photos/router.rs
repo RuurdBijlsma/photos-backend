@@ -1,9 +1,9 @@
 use crate::api_state::ApiContext;
 
 use crate::photos::handlers::{
-    download_full_file_by_rel_path, get_color_theme_handler, get_full_item_handler,
-    get_geo_photos_handler, get_photo_thumbnail, get_random_photo, stream_video_handler,
-    update_media_item_handler,
+    download_full_file_by_id, download_full_file_by_rel_path, get_color_theme_handler,
+    get_full_item_handler, get_geo_photos_handler, get_photo_thumbnail, get_random_photo,
+    stream_video_handler, update_media_item_handler,
 };
 use axum::{Router, routing::get};
 
@@ -18,7 +18,7 @@ pub fn photos_protected_router() -> Router<ApiContext> {
         )
         .route(
             "/photos/{media_item_id}/download",
-            get(download_full_file_by_rel_path),
+            get(download_full_file_by_id),
         )
         .route("/photos/download", get(download_full_file_by_rel_path))
 }

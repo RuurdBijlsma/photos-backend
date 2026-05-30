@@ -16,17 +16,6 @@ use common_services::database::media_item_store::MediaItemStore;
 use tokio_util::io::ReaderStream;
 use tracing::instrument;
 
-#[utoipa::path(
-    get,
-    path = "/s2s/album/invite-summary",
-    tag = "S2S",
-    responses(
-        (status = 200, description = "Invite summary", body = AlbumSummary),
-        (status = 401, description = "Invalid token"),
-        (status = 500, description = "Internal server error")
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context), err(Debug))]
 pub async fn invite_summary_handler(
     State(context): State<ApiContext>,
@@ -37,21 +26,6 @@ pub async fn invite_summary_handler(
     Ok(Json(summary))
 }
 
-#[utoipa::path(
-    get,
-    path = "/s2s/album/files",
-    tag = "S2S",
-    params(
-        DownloadParams
-    ),
-    responses(
-        (status = 200, description = "File download", body = Vec<u8>, content_type = "application/octet-stream"),
-        (status = 404, description = "File not found"),
-        (status = 401, description = "Invalid token"),
-        (status = 500, description = "Internal server error")
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context), err(Debug))]
 pub async fn download_file_handler(
     State(context): State<ApiContext>,

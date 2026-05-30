@@ -17,19 +17,6 @@ use common_types::pb::api::{TimelineItemsResponse, TimelineRatiosResponse};
 /// # Errors
 ///
 /// Returns a `TimelineError` if the database query fails.
-#[utoipa::path(
-    get,
-    path = "/timeline/ratios",
-    tag = "Timeline",
-    params(
-        TimelineParams
-    ),
-    responses(
-        (status = 200, description = "A timeline of media items grouped by month.", body = TimelineRatiosResponse),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn get_timeline_ratios_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -44,19 +31,6 @@ pub async fn get_timeline_ratios_handler(
 /// # Errors
 ///
 /// Returns a `TimelineError` if the database query fails.
-#[utoipa::path(
-    get,
-    path = "/timeline/ids",
-    tag = "Timeline",
-    params(
-        TimelineParams
-    ),
-    responses(
-        (status = 200, description = "A timeline of media items grouped by month.", body = Vec<String>),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn get_timeline_ids_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -71,19 +45,6 @@ pub async fn get_timeline_ids_handler(
 /// # Errors
 ///
 /// Returns a `TimelineError` if the database query fails.
-#[utoipa::path(
-    get,
-    path = "/timeline/by-month",
-    tag = "Timeline",
-    params(
-        GetMediaByMonthParams
-    ),
-    responses(
-        (status = 200, description = "A collection of media items for the requested months.", body = TimelineItemsResponse),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn get_photos_by_month_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -109,17 +70,6 @@ pub async fn get_photos_by_month_handler(
 /// Real-time timeline updates via WebSocket.
 ///
 /// Requires `Sec-WebSocket-Protocol: access_token, <YOUR_JWT>` header.
-#[utoipa::path(
-    get,
-    path = "/timeline/ws",
-    tag = "Timeline",
-    responses(
-        (status = 101, description = "WebSocket upgrade")
-    ),
-    params(
-        ("Sec-WebSocket-Protocol" = String, Header, description = "Auth: 'access_token, <JWT>'")
-    )
-)]
 pub async fn timeline_websocket_handler(
     ws: WebSocketUpgrade,
     State(context): State<ApiContext>,

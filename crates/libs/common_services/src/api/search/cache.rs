@@ -1,7 +1,6 @@
 use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::SearchImage;
 use color_eyre::eyre::eyre;
-use image::DynamicImage;
 use moka::future::Cache;
 use open_clip_inference::{TextEmbedder, VisionEmbedder};
 use pgvector::Vector;

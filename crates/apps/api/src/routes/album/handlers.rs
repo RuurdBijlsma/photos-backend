@@ -6,7 +6,7 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, AlbumSort,
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest,
     CheckInviteRequest, CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam,
     ReorderMediaRequest, SharedMediaItem, UpdateAlbumRequest,
 };
@@ -25,17 +25,6 @@ use tracing::instrument;
 /// Create a new album.
 ///
 /// The user creating the album will be designated as the owner.
-#[utoipa::path(
-    post,
-    path = "/album",
-    tag = "Album",
-    request_body = CreateAlbumRequest,
-    responses(
-        (status = 201, description = "Album created successfully.", body = Album),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user, payload), err(Debug))]
 pub async fn create_album_handler(
     State(context): State<ApiContext>,
@@ -57,16 +46,6 @@ pub async fn create_album_handler(
 /// List all albums for the current user.
 ///
 /// Returns all albums where the user is a collaborator (owner, contributor, or viewer).
-#[utoipa::path(
-    get,
-    path = "/album",
-    tag = "Album",
-    responses(
-        (status = 200, description = "A list of the user's albums.", body = Vec<Album>),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_user_albums_handler(
     State(context): State<ApiContext>,
@@ -86,21 +65,6 @@ pub async fn get_user_albums_handler(
 /// Update an album's details.
 ///
 /// Allows updating the name and/or description. The user must be the album owner.
-#[utoipa::path(
-    put,
-    path = "/album/{album_id}",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album to update.")
-    ),
-    request_body = UpdateAlbumRequest,
-    responses(
-        (status = 200, description = "Album updated successfully.", body = Album),
-        (status = 404, description = "Album not found or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn update_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -120,21 +84,6 @@ pub async fn update_album_handler(
     Ok(Json(album))
 }
 
-#[utoipa::path(
-    put,
-    path = "/album/{album_id}",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album to delete.")
-    ),
-    request_body = UpdateAlbumRequest,
-    responses(
-        (status = 200, description = "Album deleted successfully.", body = Album),
-        (status = 404, description = "Album not found or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn delete_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -147,21 +96,6 @@ pub async fn delete_album_handler(
 /// Add media items to an album.
 ///
 /// The user must be an owner or contributor of the album.
-#[utoipa::path(
-    post,
-    path = "/album/{album_id}/media",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album.")
-    ),
-    request_body = AddMediaToAlbumRequest,
-    responses(
-        (status = 200, description = "Media items added successfully."),
-        (status = 404, description = "Album not found or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn add_media_to_album_handler(
     State(context): State<ApiContext>,
@@ -176,21 +110,6 @@ pub async fn add_media_to_album_handler(
 /// Remove a media item from an album.
 ///
 /// The user must be an owner or contributor of the album.
-#[utoipa::path(
-    delete,
-    path = "/album/{album_id}/media/{media_item_id}",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album."),
-        ("media_item_id" = String, Path, description = "The ID of the media item to remove.")
-    ),
-    responses(
-        (status = 204, description = "Media item removed successfully."),
-        (status = 404, description = "Album or media item not found, or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn remove_media_from_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -208,21 +127,6 @@ pub async fn remove_media_from_album_handler(
 /// Add a collaborator to an album.
 ///
 /// The inviting user must be the album owner.
-#[utoipa::path(
-    post,
-    path = "/album/{album_id}/collaborators",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album.")
-    ),
-    request_body = AddCollaboratorRequest,
-    responses(
-        (status = 200, description = "Collaborator added successfully.", body = AlbumCollaborator),
-        (status = 404, description = "Album or user not found, or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn add_collaborator_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -243,21 +147,6 @@ pub async fn add_collaborator_handler(
 /// Remove a collaborator from an album.
 ///
 /// The user performing the action must be the album owner. The owner cannot be removed.
-#[utoipa::path(
-    delete,
-    path = "/album/{album_id}/collaborators/{collaborator_id}",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album."),
-        ("collaborator_id" = i64, Path, description = "The numeric ID of the collaborator record.")
-    ),
-    responses(
-        (status = 204, description = "Collaborator removed successfully."),
-        (status = 404, description = "Album or collaborator not found, or permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn remove_collaborator_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -267,21 +156,6 @@ pub async fn remove_collaborator_handler(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[utoipa::path(
-    post,
-    path = "/album/{album_id}/media/order-by-date",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album.")
-    ),
-    request_body = AlbumSort,
-    responses(
-        (status = 200, description = "Media items ordered successfully.", body = OrderedMediaResponse),
-        (status = 403, description = "Permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_sorted_album_items_handler(
     State(context): State<ApiContext>,
@@ -294,21 +168,6 @@ pub async fn get_sorted_album_items_handler(
     Ok(Protobuf(OrderedMediaResponse { items }))
 }
 
-#[utoipa::path(
-    put,
-    path = "/album/{album_id}/media/reorder",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album.")
-    ),
-    request_body = ReorderMediaRequest,
-    responses(
-        (status = 200, description = "Media items reordered successfully."),
-        (status = 403, description = "Permission denied."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn reorder_media_handler(
     State(context): State<ApiContext>,
@@ -330,21 +189,6 @@ pub async fn reorder_media_handler(
 /// Generate a cross-server invitation link for an album.
 ///
 /// The inviting user must be the album owner. The generated token has a configurable expiry time.
-#[utoipa::path(
-    get,
-    path = "/album/{album_id}/invite",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album to share.")
-    ),
-    responses(
-        (status = 200, description = "Invitation token generated successfully.", body = String),
-        (status = 404, description = "Album not found."),
-        (status = 401, description = "User is not the album owner."),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn generate_invite_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -362,18 +206,6 @@ pub async fn generate_invite_handler(
     Ok(Json(token))
 }
 
-#[utoipa::path(
-    post,
-    path = "/album/invite/check",
-    tag = "Album",
-    request_body = CheckInviteRequest,
-    responses(
-        (status = 200, description = "Invitation summary retrieved successfully.", body = AlbumSummary),
-        (status = 400, description = "The invitation token is malformed."),
-        (status = 502, description = "The remote server could not be reached or returned an error."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn check_invite_handler(
     State(context): State<ApiContext>,
     Json(payload): Json<CheckInviteRequest>,
@@ -389,18 +221,6 @@ pub async fn check_invite_handler(
 ///
 /// This will enqueue a background job to begin the process of importing the album
 /// from the remote server.
-#[utoipa::path(
-    post,
-    path = "/album/invite/accept",
-    tag = "Album",
-    request_body = AcceptInviteRequest,
-    responses(
-        (status = 202, description = "Album import process has been started."),
-        (status = 400, description = "The invitation token is malformed."),
-        (status = 500, description = "A database error occurred while creating the job."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn accept_invite_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -422,19 +242,6 @@ pub async fn accept_invite_handler(
 // ====================================== //
 
 /// Get media items for specific rank groups within an album.
-#[utoipa::path(
-    get,
-    path = "/album/{album_id}",
-    tag = "Album",
-    params(
-        ("album_id" = String, Path, description = "The unique ID of the album."),
-    ),
-    responses(
-        (status = 200, description = "Media items for the requested groups.", body = FullAlbumMediaResponse),
-        (status = 500, description = "Internal Error."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn get_album_media_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<OptionalUser>,

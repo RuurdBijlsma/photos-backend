@@ -1,42 +1,39 @@
 use crate::database::app_user::UserRole;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Represents the data required to create a new user.
-#[derive(Deserialize, Debug, ToSchema, Serialize)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateUser {
     pub email: String,
     pub name: String,
-    #[schema(value_type = String, format = "password", example = "my-secret-password")]
     pub password: String,
     pub token: Option<String>,
 }
 
 /// Represents the data required for user login.
-#[derive(Deserialize, Serialize, Debug, ToSchema)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginUser {
     pub email: String,
-    #[schema(value_type = String, format = "password", example = "my-secret-password")]
     pub password: String,
 }
 
 /// Represents the payload for a refresh token request.
-#[derive(Deserialize, Serialize, Debug, ToSchema)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct RefreshTokenPayload {
     pub refresh_token: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, ToSchema)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateInvitePayload {
     pub user_folder: String,
 }
 
 /// Represents a pair of access and refresh tokens.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Tokens {
     pub expiry: u64,
@@ -45,7 +42,7 @@ pub struct Tokens {
 }
 
 /// Represents the claims contained within a JWT.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthClaims {
     pub sub: i32, // Subject (user ID)
