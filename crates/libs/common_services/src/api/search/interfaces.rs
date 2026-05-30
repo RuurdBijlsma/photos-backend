@@ -30,8 +30,7 @@ pub struct SearchMediaConfig {
 
 #[derive(Deserialize, IntoParams, ToSchema, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct SearchParams {
-    pub query: String,
+pub struct BaseSearchParams {
     pub limit: Option<i64>,
     pub offset: Option<i64>,
     pub start_date: Option<DateTime<Utc>>,
@@ -41,9 +40,25 @@ pub struct SearchParams {
     #[serde(default)]
     pub sort_by: SearchSortBy,
     pub negative_query: Option<String>,
-    pub country_codes: Option<String>,    // comma separated
-    pub face_names: Option<String>,       // comma separated
-    pub all_faces_required: Option<bool>, // all persons must be in the photo/video if true, otherwise just one of them
+    pub country_codes: Option<String>,
+    pub face_names: Option<String>,
+    pub all_faces_required: Option<bool>,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchParams {
+    pub query: String,
+
+    #[serde(flatten)]
+    pub base: BaseSearchParams,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchSuggestionsParams {
+    pub query: String,
+    pub limit: Option<i64>,
 }
 
 #[derive(Deserialize, ToSchema, Debug, Clone, Copy, PartialEq, Eq, Default)]

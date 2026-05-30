@@ -5,7 +5,7 @@ use axum_extra::protobuf::Protobuf;
 use color_eyre::eyre;
 use common_services::api::search::error::SearchError;
 use common_services::api::search::interfaces::{
-    SearchFilterRanges, SearchMediaConfig, SearchParams,
+    BaseSearchParams, SearchFilterRanges, SearchMediaConfig, SearchParams, SearchSuggestionsParams,
 };
 use common_services::api::search::service::{
     get_random_search_suggestion, get_search_suggestions, search_filter_ranges, search_media,
@@ -61,14 +61,15 @@ pub async fn get_search_results(
                 .semantic_score_threshold,
             text_weight: context.settings.ingest.analyzer.search.text_weight,
             semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
-            limit: params.limit,
-            offset: params.offset,
-            start_date: params.start_date,
-            end_date: params.end_date,
-            media_type: params.media_type,
-            sort_by: params.sort_by,
-            negative_query: params.negative_query,
+            limit: params.base.limit,
+            offset: params.base.offset,
+            start_date: params.base.start_date,
+            end_date: params.base.end_date,
+            media_type: params.base.media_type,
+            sort_by: params.base.sort_by,
+            negative_query: params.base.negative_query,
             country_codes: params
+                .base
                 .country_codes
                 .unwrap_or_default()
                 .split(',')
@@ -76,13 +77,14 @@ pub async fn get_search_results(
                 .filter(|s| !s.is_empty())
                 .collect(),
             face_names: params
+                .base
                 .face_names
                 .unwrap_or_default()
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect(),
-            all_faces_required: params.all_faces_required.unwrap_or_default(),
+            all_faces_required: params.base.all_faces_required.unwrap_or_default(),
         },
     )
     .await?;
@@ -93,7 +95,7 @@ pub async fn get_search_results(
 pub async fn get_search_suggestions_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    Query(params): Query<SearchParams>,
+    Query(params): Query<SearchSuggestionsParams>,
 ) -> Result<Protobuf<SearchSuggestionsResponse>, SearchError> {
     let result = get_search_suggestions(&user, &context.pool, &params.query, params.limit).await?;
     Ok(Protobuf(result))
@@ -137,7 +139,7 @@ pub async fn get_search_filter_ranges(
 pub async fn get_search_by_image_results(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    Query(params): Query<SearchParams>,
+    Query(params): Query<BaseSearchParams>,
     mut multipart: Multipart,
 ) -> Result<Protobuf<SearchResponse>, SearchError> {
     const MAX_IMAGE_SIZE: usize = 10 * 1024 * 1024; // 10MB
@@ -184,9 +186,9 @@ pub async fn get_search_by_image_results(
         .with_guessed_format()?
         .decode()?;
 
-    dbg!(&img);
+    dbg!(&img.width(), img.height());
 
-    //todo: Calculate image embedding -> store image_hash -> embedding -> search_by_embedding
+    //todo: Calculate image embedding -> search_by_embedding -> return image
 
     Ok(Protobuf(SearchResponse { items: vec![] }))
 }
