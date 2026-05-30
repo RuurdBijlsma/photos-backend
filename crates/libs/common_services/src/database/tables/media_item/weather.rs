@@ -2,7 +2,6 @@ use chrono::{DateTime, Utc};
 use media_analyzer::WeatherInfo;
 use serde::{Deserialize, Serialize};
 
-
 /// Corresponds to the 'weather' table.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Weather {

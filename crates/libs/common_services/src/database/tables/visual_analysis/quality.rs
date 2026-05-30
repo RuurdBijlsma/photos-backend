@@ -1,7 +1,6 @@
 use common_types::ml_analysis;
 use serde::{Deserialize, Serialize};
 
-
 /// Corresponds to the '`judged_quality`' table.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct QualityScore {

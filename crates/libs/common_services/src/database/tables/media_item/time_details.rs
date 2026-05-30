@@ -1,7 +1,6 @@
 use media_analyzer::TimeInfo;
 use serde::{Deserialize, Serialize};
 
-
 /// Corresponds to the '`time_details`' table.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimeDetails {

@@ -1,7 +1,6 @@
 use media_analyzer::PanoInfo;
 use serde::{Deserialize, Serialize};
 
-
 /// Corresponds to the 'panorama' table.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Panorama {

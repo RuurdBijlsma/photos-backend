@@ -6,9 +6,9 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest,
-    CheckInviteRequest, CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam,
-    ReorderMediaRequest, SharedMediaItem, UpdateAlbumRequest,
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
+    CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam, ReorderMediaRequest,
+    SharedMediaItem, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, delete_album,

@@ -2,7 +2,6 @@ use common_types::ml_analysis::MLColorData;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-
 /// Corresponds to the '`color_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ColorData {

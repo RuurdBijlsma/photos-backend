@@ -3,7 +3,6 @@ use face_id::gender_age::Gender;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Debug, Clone)]
 pub struct FaceEmbedding {
     pub id: i64,

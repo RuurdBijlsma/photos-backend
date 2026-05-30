@@ -1,5 +1,5 @@
-use crate::database::app_user::User;
 use crate::database::UpdateField;
+use crate::database::app_user::User;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

@@ -8,7 +8,6 @@ use common_types::ml_analysis::MLFastAnalysis;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 
-
 /// Represents a single photo's embedding data fetched for clustering.
 #[derive(Debug, Clone)]
 pub struct MediaEmbedding {

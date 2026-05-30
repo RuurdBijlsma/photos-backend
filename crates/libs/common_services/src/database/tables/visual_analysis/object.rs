@@ -1,7 +1,6 @@
 use object_detector::DetectedObject;
 use serde::{Deserialize, Serialize};
 
-
 /// Corresponds to the 'object' table.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Object {
