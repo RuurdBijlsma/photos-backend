@@ -4,8 +4,9 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use color_eyre::eyre;
 use common_services::api::search::error::SearchError;
+use common_services::api::search::handler_utils::to_search_config;
 use common_services::api::search::interfaces::{
-    BaseSearchParams, SearchFilterRanges, SearchMediaConfig, SearchParams, SearchSuggestionsParams,
+    BaseSearchParams, SearchFilterRanges, SearchParams, SearchSuggestionsParams,
 };
 use common_services::api::search::service::{get_random_search_suggestion, get_search_suggestions, search_by_image, search_filter_ranges, search_media};
 use common_services::database::app_user::User;
@@ -13,7 +14,6 @@ use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
 use image::ImageReader;
 use std::io::Cursor;
 use tracing::instrument;
-use common_services::api::search::handler_utils::to_search_config;
 
 /// Get a timeline of all media ratios, grouped by month.
 ///
@@ -44,7 +44,7 @@ pub async fn get_search_results(
         &context.pool,
         context.text_embedder,
         &params.query,
-        to_search_config(&context.settings.ingest.analyzer.search, &params.base),
+        to_search_config(&context.settings.ingest.analyzer.search, params.base),
     )
     .await?;
     Ok(Protobuf(SearchResponse { items }))
@@ -98,7 +98,7 @@ pub async fn get_search_filter_ranges(
 pub async fn get_search_by_image_results(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
-    Query(params): Query<BaseSearchParams>,
+    Query(params): Query<SearchParams>,
     mut multipart: Multipart,
 ) -> Result<Protobuf<SearchResponse>, SearchError> {
     const MAX_IMAGE_SIZE: usize = 10 * 1024 * 1024; // 10MB
@@ -153,9 +153,9 @@ pub async fn get_search_by_image_results(
         &context.pool,
         context.text_embedder,
         context.vision_embedder,
-        None,
+        Some(params.query),
         &img,
-        to_search_config(&context.settings.ingest.analyzer.search, &params),
+        to_search_config(&context.settings.ingest.analyzer.search, params.base),
     )
         .await?;
     Ok(Protobuf(SearchResponse { items }))

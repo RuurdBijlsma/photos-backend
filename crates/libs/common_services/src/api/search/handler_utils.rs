@@ -3,7 +3,7 @@ use app_state::SearchSettings;
 
 pub fn to_search_config(
     search_settings: &SearchSettings,
-    search_params: &BaseSearchParams,
+    search_params: BaseSearchParams,
 ) -> SearchMediaConfig {
     SearchMediaConfig {
         embedder_model_id: search_settings.embedder_model_id.clone(),
