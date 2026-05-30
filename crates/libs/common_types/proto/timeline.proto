@@ -74,6 +74,7 @@ message AlbumInfo {
 // --- Search
 message SearchResponse {
   repeated SimpleTimelineItem items = 1;
+  optional string session_id = 2;
 }
 
 enum SuggestionType {

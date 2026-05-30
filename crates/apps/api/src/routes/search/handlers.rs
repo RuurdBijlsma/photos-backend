@@ -6,14 +6,18 @@ use color_eyre::eyre;
 use common_services::api::search::error::SearchError;
 use common_services::api::search::handler_utils::to_search_config;
 use common_services::api::search::interfaces::{
-    SearchFilterRanges, SearchParams, SearchSuggestionsParams,
+    SearchFilterRanges, SearchImage, SearchParams, SearchSuggestionsParams,
 };
-use common_services::api::search::service::{get_random_search_suggestion, get_search_suggestions, search_by_image, search_filter_ranges, search_media};
+use common_services::api::search::service::{
+    get_random_search_suggestion, get_search_suggestions, search_by_image, search_filter_ranges,
+    search_media,
+};
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
 use image::ImageReader;
 use std::io::Cursor;
 use tracing::instrument;
+use uuid::Uuid;
 
 /// Get a timeline of all media ratios, grouped by month.
 ///
@@ -47,7 +51,10 @@ pub async fn get_search_results(
         to_search_config(&context.settings.ingest.analyzer.search, params),
     )
     .await?;
-    Ok(Protobuf(SearchResponse { items }))
+    Ok(Protobuf(SearchResponse {
+        items,
+        session_id: None,
+    }))
 }
 
 #[instrument(skip(context, user), err(Debug))]
@@ -123,6 +130,8 @@ pub async fn get_search_by_image_results(
                 )));
             }
 
+            // TODO: sometimes it can't read bytes for perfectly normal request
+            // Image too big? idk
             let bytes = field.bytes().await.map_err(|e| {
                 SearchError::Internal(eyre::eyre!("Failed to read image bytes: {}", e))
             })?;
@@ -144,6 +153,7 @@ pub async fn get_search_by_image_results(
     let img = ImageReader::new(Cursor::new(image_bytes))
         .with_guessed_format()?
         .decode()?;
+    let session_id = Uuid::new_v4();
 
     let items = search_by_image(
         &user,
@@ -151,9 +161,15 @@ pub async fn get_search_by_image_results(
         context.text_embedder,
         context.vision_embedder,
         params.clone().query,
-        &img,
+        SearchImage {
+            image: Some(img),
+            session_id,
+        },
         to_search_config(&context.settings.ingest.analyzer.search, params),
     )
-        .await?;
-    Ok(Protobuf(SearchResponse { items }))
+    .await?;
+    Ok(Protobuf(SearchResponse {
+        items,
+        session_id: Some(session_id.to_string()),
+    }))
 }

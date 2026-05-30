@@ -1,5 +1,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
+use image::DynamicImage;
 use serde::{Deserialize, Serialize};
+use sqlx::types::Uuid;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Serialize, ToSchema, Debug, Clone)]
@@ -68,4 +70,10 @@ pub enum SearchSortBy {
     #[default]
     Relevancy,
     Date,
+}
+
+#[derive(Debug, Clone)]
+pub struct SearchImage {
+    pub session_id: Uuid,
+    pub image: Option<DynamicImage>,
 }

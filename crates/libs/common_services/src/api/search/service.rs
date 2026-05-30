@@ -1,7 +1,7 @@
-use crate::api::search::cache::get_cached_text_embedding;
+use crate::api::search::cache::{get_cached_image_embedding, get_cached_text_embedding};
 use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::{
-    SearchFilterRanges, SearchMediaConfig, SearchMediaType, SearchSortBy,
+    SearchFilterRanges, SearchImage, SearchMediaConfig, SearchMediaType, SearchSortBy,
 };
 use crate::api::search::search_variants::{
     advanced_search_media, basic_search_media, filter_only_search_media,
@@ -10,7 +10,6 @@ use crate::database::app_user::User;
 use common_types::pb::api::{
     SearchSuggestion, SearchSuggestionsResponse, SimpleTimelineItem, SuggestionType,
 };
-use image::DynamicImage;
 use open_clip_inference::{TextEmbedder, VisionEmbedder};
 use pgvector::Vector;
 use sqlx::PgPool;
@@ -51,16 +50,23 @@ pub async fn search_by_image(
     text_embedder: Arc<TextEmbedder>,
     vision_embedder: Arc<VisionEmbedder>,
     query: Option<String>,
-    img: &DynamicImage,
+    img: SearchImage,
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
-    // 1. Spawning vision embedding (CPU-bound / blocking)
-    let img_clone = img.clone();
-    let vision_embedder_clone = vision_embedder.clone();
-    let image_task =
-        tokio::task::spawn_blocking(move || vision_embedder_clone.embed_image(&img_clone));
+    // 1. Spawn vision embedding (CPU-bound / blocking task)
+    let pool_clone = pool.clone();
+    let model_id_clone = config.embedder_model_id.clone();
+    let image_task = tokio::spawn(async move {
+        get_cached_image_embedding(
+            img,
+            &model_id_clone,
+            &pool_clone,
+            vision_embedder,
+        )
+            .await
+    });
 
-    // 2. Spawning optional text query embedding task
+    // 2. Spawn optional text query embedding task
     let text_task = if let Some(ref q) = query {
         let q_clone = q.clone();
         let text_embedder_clone = text_embedder.clone();
@@ -74,7 +80,7 @@ pub async fn search_by_image(
         None
     };
 
-    // 3. Spawning optional negative query embedding task
+    // 3. Spawn optional negative query embedding task
     let negative_task = if let Some(ref neg_q) = config.negative_query {
         let neg_q_clone = neg_q.clone();
         let text_embedder_clone = text_embedder.clone();
@@ -93,7 +99,7 @@ pub async fn search_by_image(
         None
     };
 
-    // Await embedding calculations concurrently
+    // Await all embedding calculations
     let image_emb_array = image_task.await??;
     let mut final_embedding = image_emb_array.to_vec();
 
@@ -119,21 +125,6 @@ pub async fn search_by_image(
         }
     }
 
-    // Format the FTS query for the text side of the hybrid search if present
-    let fts_query = if let Some(ref q) = query {
-        if let Some(ref negative_query) = config.negative_query {
-            let neg_terms: Vec<String> = negative_query
-                .split_whitespace()
-                .map(|s| format!("-{s}"))
-                .collect();
-            format!("{} {}", q, neg_terms.join(" "))
-        } else {
-            q.to_string()
-        }
-    } else {
-        "".to_string()
-    };
-
     let vector_param = Vector::from(final_embedding);
     let limit = config.limit.unwrap_or(100).min(500);
     let offset = config.offset.unwrap_or(0);
@@ -157,9 +148,21 @@ pub async fn search_by_image(
         SearchSortBy::Date => "date",
     };
 
-    let items = sqlx::query_as!(
-        SimpleTimelineItem,
-        r#"
+    if let Some(q) = query {
+        // --- PATHWAY A: Text + Image query ---
+        let fts_query = if let Some(ref negative_query) = config.negative_query {
+            let neg_terms: Vec<String> = negative_query
+                .split_whitespace()
+                .map(|s| format!("-{s}"))
+                .collect();
+            format!("{} {}", q, neg_terms.join(" "))
+        } else {
+            q
+        };
+
+        let items = sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
         WITH
         filtered_media AS MATERIALIZED (
             SELECT mi.id, mi.search_vector
@@ -248,29 +251,108 @@ pub async fn search_by_image(
             (CASE WHEN $14 = 'date' THEN NULL ELSE sc.combined_score END) DESC NULLS LAST,
             mi.sort_timestamp DESC
         LIMIT $5 OFFSET $17
-         "#,
-        fts_query,                // $1
-        user.id,                  // $2
-        vector_param as _,        // $3
-        candidate_limit,          // $4
-        limit,                    // $5
-        k,                        // $6
-        config.text_weight,       // $7
-        config.semantic_weight,   // $8
-        config.start_date,        // $9
-        config.end_date,          // $10
-        is_video_filter,          // $11
-        &config.country_codes,    // $12
-        &config.face_names,       // $13
-        sort_by_str,              // $14
-        semantic_score_threshold, // $15
-        config.all_faces_required, // $16
-        offset                     // $17
-    )
+             "#,
+            fts_query,                // $1
+            user.id,                  // $2
+            vector_param as _,        // $3
+            candidate_limit,          // $4
+            limit,                    // $5
+            k,                        // $6
+            config.text_weight,       // $7
+            config.semantic_weight,   // $8
+            config.start_date,        // $9
+            config.end_date,          // $10
+            is_video_filter,          // $11
+            &config.country_codes,    // $12
+            &config.face_names,       // $13
+            sort_by_str,              // $14
+            semantic_score_threshold, // $15
+            config.all_faces_required, // $16
+            offset                     // $17
+        )
+            .fetch_all(pool)
+            .await?;
+
+        Ok(items)
+    } else {
+        // --- PATHWAY B: Direct Vector Search (Image-only query) ---
+        let items = sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+            WITH
+            filtered_media AS MATERIALIZED (
+                SELECT mi.id
+                FROM media_item mi
+                WHERE mi.user_id = $1
+                  AND mi.deleted = false
+                  AND ($5::timestamptz IS NULL OR mi.taken_at_utc >= $5)
+                  AND ($6::timestamptz IS NULL OR mi.taken_at_utc <= $6)
+                  AND ($7::bool IS NULL OR mi.is_video = $7)
+                  AND (cardinality($8::text[]) = 0 OR EXISTS (
+                      SELECT 1 FROM gps g JOIN location l ON g.location_id = l.id
+                      WHERE g.media_item_id = mi.id AND l.country_code = ANY($8)
+                  ))
+                  AND (cardinality($9::text[]) = 0 OR (
+                      SELECT COUNT(DISTINCT p.name)
+                      FROM visual_analysis va
+                      JOIN face f ON f.visual_analysis_id = va.id
+                      JOIN face_cluster fc ON f.face_cluster_id = fc.id
+                      JOIN person p ON fc.person_id = p.id
+                      WHERE va.media_item_id = mi.id AND p.name = ANY($9)
+                  ) >= (CASE WHEN $12 THEN cardinality($9) ELSE 1 END))
+            ),
+            vec AS (
+                SELECT DISTINCT ON (media_item_id)
+                    media_item_id as id,
+                    distance
+                FROM (
+                    SELECT va.media_item_id, va.embedding <=> $2::vector as distance
+                    FROM visual_analysis va
+                    WHERE va.user_id = $1
+                      AND va.deleted = false
+                      AND (va.embedding <=> $2::vector) < $11
+                      AND EXISTS (
+                          SELECT 1 FROM filtered_media fm
+                          WHERE fm.id = va.media_item_id
+                      )
+                    ORDER BY va.embedding <=> $2::vector
+                    LIMIT $3 * 5
+                ) sub_ordered
+                ORDER BY media_item_id, distance
+                LIMIT $3
+            )
+            SELECT
+                mi.id::text as "id!",
+                mi.is_video as "is_video!",
+                mi.has_thumbnails as "has_thumbnails!",
+                mi.duration_ms as "duration_ms: i32",
+                (mi.width::real / mi.height::real) as "ratio!"
+            FROM vec v
+            JOIN media_item mi ON mi.id = v.id
+            ORDER BY
+                (CASE WHEN $10 = 'date' THEN NULL ELSE v.distance END) ASC NULLS LAST,
+                mi.sort_timestamp DESC
+            LIMIT $4 OFFSET $13
+            "#,
+            user.id,                   // $1
+            vector_param as _,         // $2
+            candidate_limit as i32,    // $3
+            limit,                     // $4
+            config.start_date,         // $5
+            config.end_date,           // $6
+            is_video_filter,           // $7
+            &config.country_codes,     // $8
+            &config.face_names,        // $9
+            sort_by_str,               // $10
+            semantic_score_threshold,  // $11
+            config.all_faces_required, // $12
+            offset                     // $13
+        )
         .fetch_all(pool)
         .await?;
 
-    Ok(items)
+        Ok(items)
+    }
 }
 
 pub async fn search_filter_ranges(
