@@ -7,14 +7,13 @@ use common_services::api::search::error::SearchError;
 use common_services::api::search::interfaces::{
     BaseSearchParams, SearchFilterRanges, SearchMediaConfig, SearchParams, SearchSuggestionsParams,
 };
-use common_services::api::search::service::{
-    get_random_search_suggestion, get_search_suggestions, search_filter_ranges, search_media,
-};
+use common_services::api::search::service::{get_random_search_suggestion, get_search_suggestions, search_by_image, search_filter_ranges, search_media};
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
 use image::ImageReader;
 use std::io::Cursor;
 use tracing::instrument;
+use common_services::api::search::handler_utils::to_search_config;
 
 /// Get a timeline of all media ratios, grouped by month.
 ///
@@ -45,47 +44,7 @@ pub async fn get_search_results(
         &context.pool,
         context.text_embedder,
         &params.query,
-        SearchMediaConfig {
-            embedder_model_id: context
-                .settings
-                .ingest
-                .analyzer
-                .search
-                .embedder_model_id
-                .clone(),
-            semantic_score_threshold: context
-                .settings
-                .ingest
-                .analyzer
-                .search
-                .semantic_score_threshold,
-            text_weight: context.settings.ingest.analyzer.search.text_weight,
-            semantic_weight: context.settings.ingest.analyzer.search.semantic_weight,
-            limit: params.base.limit,
-            offset: params.base.offset,
-            start_date: params.base.start_date,
-            end_date: params.base.end_date,
-            media_type: params.base.media_type,
-            sort_by: params.base.sort_by,
-            negative_query: params.base.negative_query,
-            country_codes: params
-                .base
-                .country_codes
-                .unwrap_or_default()
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect(),
-            face_names: params
-                .base
-                .face_names
-                .unwrap_or_default()
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect(),
-            all_faces_required: params.base.all_faces_required.unwrap_or_default(),
-        },
+        to_search_config(&context.settings.ingest.analyzer.search, &params.base),
     )
     .await?;
     Ok(Protobuf(SearchResponse { items }))
@@ -189,6 +148,15 @@ pub async fn get_search_by_image_results(
     dbg!(&img.width(), img.height());
 
     //todo: Calculate image embedding -> search_by_embedding -> return image
-
-    Ok(Protobuf(SearchResponse { items: vec![] }))
+    let items = search_by_image(
+        &user,
+        &context.pool,
+        context.text_embedder,
+        context.vision_embedder,
+        None,
+        &img,
+        to_search_config(&context.settings.ingest.analyzer.search, &params),
+    )
+        .await?;
+    Ok(Protobuf(SearchResponse { items }))
 }
