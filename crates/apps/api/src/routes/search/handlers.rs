@@ -1,7 +1,8 @@
 use crate::api_state::ApiContext;
-use axum::extract::{Query, State};
+use axum::extract::{Multipart, Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
+use color_eyre::eyre;
 use common_services::api::search::error::SearchError;
 use common_services::api::search::interfaces::{
     SearchFilterRanges, SearchMediaConfig, SearchParams,
@@ -11,6 +12,8 @@ use common_services::api::search::service::{
 };
 use common_services::database::app_user::User;
 use common_types::pb::api::{SearchResponse, SearchSuggestionsResponse};
+use image::ImageReader;
+use std::io::Cursor;
 use tracing::instrument;
 
 /// Get a timeline of all media ratios, grouped by month.
@@ -40,7 +43,7 @@ pub async fn get_search_results(
     let items = search_media(
         &user,
         &context.pool,
-        context.embedder,
+        context.text_embedder,
         &params.query,
         SearchMediaConfig {
             embedder_model_id: context
@@ -112,4 +115,78 @@ pub async fn get_search_filter_ranges(
 ) -> Result<Json<SearchFilterRanges>, SearchError> {
     let result = search_filter_ranges(&user, &context.pool).await?;
     Ok(Json(result))
+}
+
+#[utoipa::path(
+    post,
+    path = "/search/image",
+    tag = "Search",
+    request_body(content = String, description = "Image file (multipart/form-data)", content_type = "multipart/form-data"
+    ),
+    params(
+        SearchParams
+    ),
+    responses(
+        (status = 200, description = "Search results", body = Vec<SearchResponse>),
+        (status = 400, description = "Invalid image"),
+        (status = 500, description = "A database or internal error occurred."),
+    ),
+    security(("bearer_auth" = []))
+)]
+#[instrument(skip(context, user, multipart), err(Debug))]
+pub async fn get_search_by_image_results(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Query(params): Query<SearchParams>,
+    mut multipart: Multipart,
+) -> Result<Protobuf<SearchResponse>, SearchError> {
+    const MAX_IMAGE_SIZE: usize = 10 * 1024 * 1024; // 10MB
+    const ALLOWED_EXTENSIONS: [&str; 4] = ["jpg", "jpeg", "png", "webp"];
+
+    let mut image_bytes: Option<Vec<u8>> = None;
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| SearchError::Internal(eyre::eyre!("Failed to read multipart field: {}", e)))?
+    {
+        let name = field.name().unwrap_or("");
+        if name == "image" {
+            let file_name = field.file_name().unwrap_or("").to_string();
+            let extension = file_name.rsplit('.').next().unwrap_or("").to_lowercase();
+
+            if !ALLOWED_EXTENSIONS.contains(&extension.as_str()) {
+                return Err(SearchError::Internal(eyre::eyre!(
+                    "Invalid image format. Allowed formats: {}",
+                    ALLOWED_EXTENSIONS.join(", ")
+                )));
+            }
+
+            let bytes = field.bytes().await.map_err(|e| {
+                SearchError::Internal(eyre::eyre!("Failed to read image bytes: {}", e))
+            })?;
+
+            if bytes.len() > MAX_IMAGE_SIZE {
+                return Err(SearchError::Internal(eyre::eyre!(
+                    "Image too large. Maximum size is 10MB, got {}MB",
+                    bytes.len() / (1024 * 1024)
+                )));
+            }
+
+            image_bytes = Some(bytes.to_vec());
+        }
+    }
+
+    let image_bytes = image_bytes.ok_or_else(|| {
+        SearchError::Internal(eyre::eyre!("No image file provided in the request"))
+    })?;
+    let img = ImageReader::new(Cursor::new(image_bytes))
+        .with_guessed_format()?
+        .decode()?;
+
+    dbg!(&img);
+
+    //todo: Calculate image embedding -> store image_hash -> embedding -> search_by_embedding
+
+    Ok(Protobuf(SearchResponse { items: vec![] }))
 }

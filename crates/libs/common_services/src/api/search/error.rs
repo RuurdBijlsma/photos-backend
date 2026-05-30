@@ -18,6 +18,12 @@ pub enum SearchError {
 
     #[error("embedding error")]
     Embedding(#[from] ClipError),
+
+    #[error("image error")]
+    Image(#[from] image::error::ImageError),
+
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
 }
 
 fn log_error(error: &SearchError) {
@@ -25,6 +31,8 @@ fn log_error(error: &SearchError) {
         SearchError::Database(e) => error!("Database query failed: {}", e),
         SearchError::Internal(e) => error!("Internal error: {}", e),
         SearchError::Embedding(e) => error!("Embedding error: {}", e),
+        SearchError::Image(e) => error!("Search image error: {}", e),
+        SearchError::IO(e) => error!("Search IO error: {}", e),
     }
 }
 
@@ -44,6 +52,14 @@ impl IntoResponse for SearchError {
             Self::Embedding(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An embedding error occurred.".to_string(),
+            ),
+            SearchError::Image(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An image error occurred.".to_string(),
+            ),
+            SearchError::IO(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An IO error occurred.".to_string(),
             ),
         };
 

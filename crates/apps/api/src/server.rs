@@ -16,7 +16,7 @@ use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
 use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 use http::{HeaderValue, header};
-use open_clip_inference::TextEmbedder;
+use open_clip_inference::{TextEmbedder, VisionEmbedder};
 use reqwest::Client;
 use sqlx::PgPool;
 use std::iter::once;
@@ -41,6 +41,10 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
     let text_embedder = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
         .build()
         .await?;
+    info!("Loading CLIP vision embedder...");
+    let vision_embedder = VisionEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
+        .build()
+        .await?;
     // --- Server Startup ---
     info!("🚀 Initializing server...");
     let api_state = ApiContext {
@@ -48,7 +52,8 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         s2s_client: S2SClient::new(Client::new()),
         settings: settings.clone(),
         timeline_broadcaster: create_media_item_transmitter(&pool)?,
-        embedder: Arc::new(text_embedder),
+        text_embedder: Arc::new(text_embedder),
+        vision_embedder: Arc::new(vision_embedder),
     };
 
     fs::create_dir_all(
