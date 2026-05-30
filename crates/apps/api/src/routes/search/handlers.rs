@@ -6,7 +6,7 @@ use color_eyre::eyre;
 use common_services::api::search::error::SearchError;
 use common_services::api::search::handler_utils::to_search_config;
 use common_services::api::search::interfaces::{
-    BaseSearchParams, SearchFilterRanges, SearchParams, SearchSuggestionsParams,
+    SearchFilterRanges, SearchParams, SearchSuggestionsParams,
 };
 use common_services::api::search::service::{get_random_search_suggestion, get_search_suggestions, search_by_image, search_filter_ranges, search_media};
 use common_services::database::app_user::User;
@@ -43,8 +43,8 @@ pub async fn get_search_results(
         &user,
         &context.pool,
         context.text_embedder,
-        &params.query,
-        to_search_config(&context.settings.ingest.analyzer.search, params.base),
+        params.clone().query,
+        to_search_config(&context.settings.ingest.analyzer.search, params),
     )
     .await?;
     Ok(Protobuf(SearchResponse { items }))
@@ -145,17 +145,14 @@ pub async fn get_search_by_image_results(
         .with_guessed_format()?
         .decode()?;
 
-    dbg!(&img.width(), img.height());
-
-    //todo: Calculate image embedding -> search_by_embedding -> return image
     let items = search_by_image(
         &user,
         &context.pool,
         context.text_embedder,
         context.vision_embedder,
-        Some(params.query),
+        params.clone().query,
         &img,
-        to_search_config(&context.settings.ingest.analyzer.search, params.base),
+        to_search_config(&context.settings.ingest.analyzer.search, params),
     )
         .await?;
     Ok(Protobuf(SearchResponse { items }))

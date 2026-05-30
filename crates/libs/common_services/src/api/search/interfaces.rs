@@ -28,9 +28,10 @@ pub struct SearchMediaConfig {
     pub all_faces_required: bool,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, Debug)]
+#[derive(Deserialize, IntoParams, ToSchema, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct BaseSearchParams {
+pub struct SearchParams {
+    pub query: Option<String>,
     pub limit: Option<i64>,
     pub offset: Option<i64>,
     pub start_date: Option<DateTime<Utc>>,
@@ -43,15 +44,6 @@ pub struct BaseSearchParams {
     pub country_codes: Option<String>,
     pub face_names: Option<String>,
     pub all_faces_required: Option<bool>,
-}
-
-#[derive(Deserialize, IntoParams, ToSchema, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct SearchParams {
-    pub query: String,
-
-    #[serde(flatten)]
-    pub base: BaseSearchParams,
 }
 
 #[derive(Deserialize, IntoParams, ToSchema, Debug)]

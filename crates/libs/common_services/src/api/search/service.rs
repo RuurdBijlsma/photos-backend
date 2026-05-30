@@ -20,9 +20,10 @@ pub async fn search_media(
     user: &User,
     pool: &PgPool,
     embedder: Arc<TextEmbedder>,
-    query: &str,
+    query: Option<String>,
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+    let query = query.unwrap_or("".to_string());
     if query.trim().is_empty() {
         if has_active_filters(&config) {
             return filter_only_search_media(user, pool, config).await;
@@ -38,9 +39,9 @@ pub async fn search_media(
         && config.face_names.is_empty()
         && config.country_codes.is_empty()
     {
-        basic_search_media(user, pool, embedder, query, config).await
+        basic_search_media(user, pool, embedder, &query, config).await
     } else {
-        advanced_search_media(user, pool, embedder, query, config).await
+        advanced_search_media(user, pool, embedder, &query, config).await
     }
 }
 
