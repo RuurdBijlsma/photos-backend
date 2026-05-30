@@ -1,6 +1,7 @@
 use crate::api::search::interfaces::{SearchMediaConfig, SearchParams};
 use app_state::SearchSettings;
 
+#[must_use]
 pub fn to_search_config(
     search_settings: &SearchSettings,
     search_params: SearchParams,

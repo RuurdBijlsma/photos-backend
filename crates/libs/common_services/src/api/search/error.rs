@@ -53,11 +53,11 @@ impl IntoResponse for SearchError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An embedding error occurred.".to_string(),
             ),
-            SearchError::Image(_) => (
+            Self::Image(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An image error occurred.".to_string(),
             ),
-            SearchError::IO(_) => (
+            Self::IO(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An IO error occurred.".to_string(),
             ),

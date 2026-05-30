@@ -22,7 +22,7 @@ pub async fn search_media(
     query: Option<String>,
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
-    let query = query.unwrap_or("".to_string());
+    let query = query.unwrap_or_default();
     if query.trim().is_empty() {
         if has_active_filters(&config) {
             return filter_only_search_media(user, pool, config).await;
@@ -94,18 +94,19 @@ pub async fn search_by_image(
     };
 
     // Await all embedding calculations
-    let image_emb_array = image_task.await??;
-    let mut final_embedding = image_emb_array.to_vec();
+    let mut final_embedding = image_task.await??;
 
     if let Some(task) = text_task {
         let text_emb = task.await??;
+        // Average text and image embedding
         for (img_val, text_val) in final_embedding.iter_mut().zip(text_emb.iter()) {
-            *img_val = (*img_val + *text_val) / 2.0;
+            *img_val = f32::midpoint(*img_val, *text_val);
         }
     }
 
     if let Some(task) = negative_task {
         let neg_emb = task.await??;
+        // Subtract negative text embedding
         for (pos_val, neg_val) in final_embedding.iter_mut().zip(neg_emb.iter()) {
             *pos_val -= 0.5 * *neg_val;
         }
