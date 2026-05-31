@@ -15,6 +15,14 @@ pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
     .execute(&context.pool)
     .await?;
 
+    // Remove cached uploaded image embeddings once search sessions have expired.
+    sqlx::query!(
+        "DELETE FROM vision_embedding_cache WHERE created_at < $1",
+        Utc::now() - Duration::from_hours(24)
+    )
+    .execute(&context.pool)
+    .await?;
+
     // Sync media_count field on albums in case it drifted for some reason
     sqlx::query!(
         r"UPDATE album a

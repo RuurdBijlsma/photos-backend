@@ -8,19 +8,6 @@ use common_services::database::app_user::User;
 use common_services::database::user_store::UserStore;
 
 /// Fetch the profile data and library statistics for any user.
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/profile",
-    responses(
-        (status = 200, description = "Profile data and stats fetched successfully", body = UserProfile),
-        (status = 404, description = "User not found")
-    ),
-    params(
-        ("user_id" = i32, Path, description = "User ID")
-    ),
-    tag = "User",
-    security(("bearer_auth" = []))
-)]
 pub async fn get_user_profile_handler(
     State(ctx): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -31,17 +18,6 @@ pub async fn get_user_profile_handler(
 }
 
 /// Update the current authenticated user's settings.
-#[utoipa::path(
-    put,
-    path = "/user/profile",
-    responses(
-        (status = 200, description = "Profile updated successfully", body = UserProfile),
-        (status = 400, description = "Invalid input or avatar item")
-    ),
-    request_body = UpdateUserProfileRequest,
-    tag = "User",
-    security(("bearer_auth" = []))
-)]
 pub async fn update_my_profile(
     State(ctx): State<ApiContext>,
     Extension(user): Extension<User>,

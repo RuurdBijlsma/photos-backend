@@ -2,7 +2,6 @@ use face_id::analyzer::FaceAnalysis;
 use face_id::gender_age::Gender;
 use pgvector::Vector;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 #[derive(Debug, Clone)]
 pub struct FaceEmbedding {
@@ -12,7 +11,7 @@ pub struct FaceEmbedding {
 }
 
 /// Corresponds to the 'face' table.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Face {
     pub position_x: f32,
     pub position_y: f32,

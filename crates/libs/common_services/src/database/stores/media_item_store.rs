@@ -11,6 +11,8 @@ use crate::database::media_item::weather::Weather;
 use crate::database::structs::UpdateMediaItemPayload;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
 use crate::database::{DbError, with_fallback_timezone};
+use chrono::{DateTime, Utc};
+use common_types::pb::api::{MapPhotoItem, SimpleTimelineItem};
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::Json;
 use sqlx::{Executor, PgTransaction, Postgres};
@@ -507,5 +509,53 @@ impl MediaItemStore {
             .await?;
             Ok(new_id)
         }
+    }
+
+    pub async fn find_all_geo_by_user_id(
+        executor: impl Executor<'_, Database = Postgres>,
+        user_id: i32,
+        start_date: Option<DateTime<Utc>>,
+        end_date: Option<DateTime<Utc>>,
+    ) -> Result<Vec<MapPhotoItem>, DbError> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT
+                mi.id,
+                mi.is_video,
+                mi.has_thumbnails,
+                mi.duration_ms::INT as duration_ms,
+                (mi.width::real / mi.height::real) as "ratio!",
+                g.latitude,
+                g.longitude
+            FROM media_item mi
+            JOIN gps g ON mi.id = g.media_item_id
+            WHERE mi.user_id = $1 AND mi.deleted = false
+              AND ($2::TIMESTAMPTZ IS NULL OR mi.sort_timestamp >= $2)
+              AND ($3::TIMESTAMPTZ IS NULL OR mi.sort_timestamp <= $3)
+            ORDER BY mi.sort_timestamp DESC
+            "#,
+            user_id,
+            start_date,
+            end_date
+        )
+        .fetch_all(executor)
+        .await?;
+
+        let items = rows
+            .into_iter()
+            .map(|r| MapPhotoItem {
+                latitude: r.latitude,
+                longitude: r.longitude,
+                item: Some(SimpleTimelineItem {
+                    id: r.id,
+                    is_video: r.is_video,
+                    has_thumbnails: r.has_thumbnails,
+                    duration_ms: r.duration_ms,
+                    ratio: r.ratio,
+                }),
+            })
+            .collect();
+
+        Ok(items)
     }
 }

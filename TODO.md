@@ -181,27 +181,24 @@
 * ✅ clean thumbnails folder task in task runner
 * ✅ Fix search zo dat je alle resultaten boven een bepaalde relevancy vind
     * ✅ Als ik zoek "food" moet ik iets van duizend plaatjes krijgen
-* password reset flow (email) (make mail optional)
-* Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
+* ✅ [SPECIAL CASE] WHEN SEARCH TERM = "", then return all photos that match the filters
+* ✅ search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
+  * ✅ hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
+* ✅ thumbnail hosting is niet veilig
+* ✅ retrieve person face thumb not safe (something like /thumbnails/people/1.webp)
+* ✅ also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
+  items (2e sort toevoegen? idk)
+* ✅ Make invite token functionality for registering new user. (Admin sets the folder, linked to the invite token in
   db, when invite token is used and user is created, delete invite token row and put media folder linked to the new
   user account)
+* ✅ make sure cache control on thumbnails are immutable/max age.
+* ✅ automatic onboarding
+* ✅ review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
+  * ✅ is auth wel goed implemented? met is_public enzo
+  * ✅ minder repeated code maken voor de auth check daar
+* password reset flow (email) (make mail optional)
+* nginx thumbnail hosting (optional maak setting voor Rust thumb hosting).
 * check of readme uitleg klopt met verse windows installatie & linux
-* make sure cache control on thumbnails are immutable/max age.
-* monitoring/alerting
-    * prometheus
-    * grafana
-    * alertmanager
-    * loki? denk t niet
-* at some point: delete all indices in migration files -> copy paste all sql queries into gemini en ask for proper
-  indices
-    * Ik denk dat ik veel overbodige indices heb
-* automatic onboarding
-* [weird bug] crates dont start when migration isnt in sync for some reason?
-* also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
-  items (2e sort toevoegen? idk)
-* review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
-    * is auth wel goed implemented? met is_public enzo
-    * minder repeated code maken voor de auth check daar
 * better error if exiftool isnt there (worker wont work then)
 * fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
 * make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
@@ -210,10 +207,6 @@
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
 * llm instelbaar maken in settings?
-* search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
-    * hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
-* thumbnail hosting is niet veilig
-* retrieve person face thumb not safe (something like /thumbnails/people/1.webp)
 * ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
     * misschien moet dit met een andere methode
 * when a second user registers, make sure to do a scan / sync
@@ -221,26 +214,24 @@
   there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
   sure how to handle this case.
 * mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
+* [BUG] Als je met filters naar persons zoek, zoekt ie op basis van FaceName om een of andere reden. Als je 2 personen
+  hebt met dezelfde naam, gaat dit fout.
 
 # Features
 
 * storage indicator bottom left, like googly photos
-* albums
 * front page -> 1 year ago, 4 years ago today, etc. in top balk
 * photo rubbish bin?
-* facial recognition
 * upload photos
     * robust! stable!
-* search photos
-    * hybrid search
-* photo map
-    * time range restriction
-* explore photos
+* explore page
+    * personal geoguessr (on user's own photos / videos)
     * cluster by photo embeddings
     * sort by all kinds of things (exposure, iso, hue, saturation, gps lat, lon, temperature, altitude, windyness (
-      is_outdoor = true & sort by wind speed or gust))
+      is_outdoor = true & sort by wind speed or gust)). UI similar to browsing a DB, but with photo previews and ability
+      to click photo. Columns with all interesting features a photo has, all sortable.
     * group by: {country (if there are enough countries, otherwise group by province, otherwise group by city), camera
-      model, main_subject, setting, animal type, pet type, food type, landmark, document type, photo_type, activity}
+      model}
     * sunset/sunrise photos
 * fun "albums" notifications & in UI frontpage
     * refresh daily (changes daily): "10 years ago today" → as long as there's enough photos on that day.
@@ -251,19 +242,3 @@
         * group by country?
         * group by animal type?
     * make sure each "fun album" is shown as notification only once. In UI it can be more often?
-
-## Kubernetes vs Docker compose (of beide? in eigen repos?)
-
-+ Met coole UI kan je dingen inzien
-+ Cronjobs geintegreerd
-+ Voelt professioneel
-+ als chatgpt te geloven is, makkelijke setup (installs k3s -> edit values.yaml -> run)
-+ service voor frontend, is ervoor gemaakt
-+ kan op een hosting service makkelijker
-
-- Schrikt selfhosters af
-- complexe templates & charts
-- gebruikt meer resources dan docker compose
-- meer omslachtige mounting van schijven
-- meer complicated troubleshooting, logs enzo
-- docker compose past beter in mn server setup

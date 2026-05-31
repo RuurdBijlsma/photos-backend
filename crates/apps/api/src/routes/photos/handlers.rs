@@ -1,15 +1,18 @@
 use app_state::IngestSettings;
 use axum::extract::{Path, Query, State};
 use axum::{Extension, Json};
+use axum_extra::protobuf::Protobuf;
+use common_services::api::album::interfaces::MediaItemWithAlbums;
 use common_services::api::photos::interfaces::{
-    ColorThemeParams, DownloadMediaParams, RandomPhotoResponse, UpdateMediaItemRequest,
+    ColorThemeParams, DownloadMediaParams, GeoPhotosParams, RandomPhotoResponse,
+    UpdateMediaItemRequest,
 };
 use common_services::api::photos::service::{
     download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
     update_media_item,
 };
+use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
-use common_services::database::media_item::media_item::FullMediaItem;
 
 use crate::api_state::ApiContext;
 use axum::http::header;
@@ -19,6 +22,7 @@ use axum_extra::headers::Range;
 use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::PhotoThumbnailParams;
 use common_services::database::media_item_store::MediaItemStore;
+use common_types::pb::api::MapPhotosResponse;
 use material_color_utils::utils::color_utils::Argb;
 use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
@@ -28,12 +32,15 @@ pub async fn get_full_item_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path(media_item_id): Path<String>,
-) -> Result<Json<FullMediaItem>, PhotosError> {
+) -> Result<Json<MediaItemWithAlbums>, PhotosError> {
     let item = MediaItemStore::find_by_id(&context.pool, &media_item_id).await?;
     if let Some(item) = item
         && item.user_id == user.id
     {
-        Ok(Json(item))
+        Ok(Json(MediaItemWithAlbums {
+            media_item: item,
+            albums: AlbumStore::list_for_media_item(&context.pool, user.id, &media_item_id).await?,
+        }))
     } else {
         Err(PhotosError::MediaNotFound(media_item_id))
     }
@@ -51,16 +58,6 @@ pub async fn update_media_item_handler(
     Ok(())
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/random",
-    tag = "Photos",
-    responses(
-        (status = 200, description = "Get random photo and associated themes.", body = RandomPhotoResponse),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn get_random_photo(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
@@ -69,19 +66,6 @@ pub async fn get_random_photo(
     Ok(Json(result))
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/theme",
-    tag = "Photos",
-    params(
-        ColorThemeParams
-    ),
-    responses(
-        (status = 200, description = "Get theme object from a color.", body = Value),
-        (status = 500, description = "A database or internal error occurred."),
-    ),
-    security(("bearer_auth" = []))
-)]
 pub async fn get_color_theme_handler(
     State(ingestion): State<IngestSettings>,
     Query(params): Query<ColorThemeParams>,
@@ -95,22 +79,6 @@ pub async fn get_color_theme_handler(
     Ok(Json(theme))
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/download",
-    tag = "Photos",
-    params(
-        ("path" = String, Query, description = "The path of the media file to download")
-    ),
-    responses(
-        (status = 200, description = "Media file streamed successfully.", body = Vec<u8>, content_type = "application/octet-stream"),
-        (status = 400, description = "Invalid path provided, such as a directory traversal attempt."),
-        (status = 403, description = "Permission denied when trying to access the file."),
-        (status = 404, description = "The requested media file could not be found."),
-        (status = 415, description = "The requested file is not a supported media type."),
-        (status = 500, description = "An internal server error occurred."),
-    )
-)]
 pub async fn download_full_file_by_rel_path(
     State(ingestion): State<IngestSettings>,
     Extension(user): Extension<User>,
@@ -162,12 +130,6 @@ pub async fn get_photo_thumbnail(
     ))
 }
 
-#[utoipa::path(
-    get,
-    path = "/photos/video/{media_item_id}",
-    tag = "Photos",
-    responses((status = 206, description = "Partial video content"))
-)]
 pub async fn stream_video_handler(
     State(context): State<ApiContext>,
     Path(media_item_id): Path<String>,
@@ -181,4 +143,20 @@ pub async fn stream_video_handler(
         range_inner,
     )
     .await
+}
+
+#[instrument(skip(context, user), err(Debug))]
+pub async fn get_geo_photos_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Query(params): Query<GeoPhotosParams>,
+) -> Result<Protobuf<MapPhotosResponse>, PhotosError> {
+    let items = MediaItemStore::find_all_geo_by_user_id(
+        &context.pool,
+        user.id,
+        params.start_date,
+        params.end_date,
+    )
+    .await?;
+    Ok(Protobuf(MapPhotosResponse { items }))
 }

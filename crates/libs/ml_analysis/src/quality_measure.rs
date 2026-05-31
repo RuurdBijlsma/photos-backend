@@ -68,7 +68,7 @@ fn calculate_texture(gray_img: &GrayImage) -> f64 {
         for x in 0..w {
             let val = f64::from(gray_img.get_pixel(x as u32, y as u32)[0]);
             row_sum += val;
-            row_sum_sq += val * val;
+            row_sum_sq = val.mul_add(val, row_sum_sq);
 
             sum[idx(x + 1, y + 1)] = sum[idx(x + 1, y)] + row_sum;
             sum_sq[idx(x + 1, y + 1)] = sum_sq[idx(x + 1, y)] + row_sum_sq;

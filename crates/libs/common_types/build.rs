@@ -11,95 +11,103 @@ fn main() -> std::io::Result<()> {
     // --- TIMELINE STRUCTS ---
     config.type_attribute(
         ".api.TimelineRatiosResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
 
     config.type_attribute(
         ".api.TimelineMonthRatios",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, sqlx::FromRow)]",
+        "#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow)]",
     );
 
     config.type_attribute(
         ".api.TimelineItemsResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
+        "#[derive(serde::Serialize, serde::Deserialize, Eq)]",
     );
 
     config.type_attribute(
         ".api.TimelineMonthItems",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
+        "#[derive(serde::Serialize, serde::Deserialize, Eq)]",
     );
 
     config.type_attribute(
         ".api.TimelineItem",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, sqlx::FromRow)]",
+        "#[derive(serde::Serialize, serde::Deserialize, sqlx::FromRow)]",
     );
 
     // --- ALBUM STRUCTS ---
     config.type_attribute(
         ".api.AlbumRatiosResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.AlbumRatioGroup",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.AlbumMediaResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
+        "#[derive(serde::Serialize, serde::Deserialize, Eq)]",
     );
     config.type_attribute(
         ".api.AlbumMediaGroup",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
+        "#[derive(serde::Serialize, serde::Deserialize, Eq)]",
     );
     config.type_attribute(
         ".api.AlbumInfo",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
+        "#[derive(serde::Serialize, serde::Deserialize, Eq)]",
     );
     config.type_attribute(
         ".api.FullAlbumMediaResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.CollaboratorSummary",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.SimpleTimelineItem",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.SearchResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.OrderedMediaResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.SearchSuggestionsResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema, Eq)]",
+        "#[derive(serde::Serialize, serde::Deserialize, Eq)]",
+    );
+    config.type_attribute(
+        ".api.MapPhotoItem",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.MapPhotosResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.SearchSuggestion",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.SuggestionType",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
 
     // --- PERSON STRUCTS ---
     config.type_attribute(
         ".api.PersonInfo",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.ListPeopleResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
         ".api.FullPersonMediaResponse",
-        "#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
     );
 
     config.type_attribute(".api", "#[serde(rename_all = \"camelCase\")]");

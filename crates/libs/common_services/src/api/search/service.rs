@@ -1,81 +1,35 @@
-use crate::api::search::cache::get_cached_text_embedding;
+use crate::api::search::cache::{get_cached_image_embedding, get_cached_text_embedding};
 use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::{
-    SearchFilterRanges, SearchMediaConfig, SearchMediaType, SearchSortBy,
+    SearchFilterRanges, SearchImage, SearchMediaConfig, SearchMediaType, SearchSortBy,
+};
+use crate::api::search::search_variants::{
+    advanced_search_media, basic_search_media, filter_only_search_media,
 };
 use crate::database::app_user::User;
 use common_types::pb::api::{
     SearchSuggestion, SearchSuggestionsResponse, SimpleTimelineItem, SuggestionType,
 };
-use open_clip_inference::TextEmbedder;
+use open_clip_inference::{TextEmbedder, VisionEmbedder};
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
-
-pub async fn search_filter_ranges(
-    user: &User,
-    pool: &PgPool,
-) -> Result<SearchFilterRanges, SearchError> {
-    let months_task = sqlx::query!(
-        r#"
-        SELECT DISTINCT month_id AS "months!"
-        FROM media_item
-        WHERE user_id = $1
-          AND deleted = false
-        ORDER BY month_id
-        "#,
-        user.id
-    )
-    .fetch_all(pool);
-    let countries_task = sqlx::query!(
-        r#"
-        SELECT DISTINCT l.country_code, l.country_name
-        FROM location l
-        JOIN gps g ON l.id = g.location_id
-        JOIN media_item mi ON g.media_item_id = mi.id
-        WHERE mi.user_id = $1 AND mi.deleted = false
-        ORDER BY l.country_name
-        "#,
-        user.id
-    )
-    .fetch_all(pool);
-    let people_task = sqlx::query!(
-        r#"
-        SELECT DISTINCT name, id
-        FROM person
-        WHERE user_id = $1 AND name IS NOT NULL AND name != ''
-        ORDER BY name
-        "#,
-        user.id
-    )
-    .fetch_all(pool);
-
-    let (available_month_records, countries_records, people_records) =
-        tokio::try_join!(months_task, countries_task, people_task)?;
-    let countries = countries_records
-        .into_iter()
-        .map(|c| (c.country_code, c.country_name))
-        .collect();
-    let people = people_records
-        .into_iter()
-        .filter_map(|c| c.name.map(|name| (name, c.id.clone())))
-        .collect();
-    let available_months = available_month_records.iter().map(|r| r.months).collect();
-
-    Ok(SearchFilterRanges {
-        available_months,
-        people,
-        countries,
-    })
-}
 
 pub async fn search_media(
     user: &User,
     pool: &PgPool,
     embedder: Arc<TextEmbedder>,
-    query: &str,
+    query: Option<String>,
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+    let query = query.unwrap_or_default();
+    if query.trim().is_empty() {
+        if has_active_filters(&config) {
+            return filter_only_search_media(user, pool, config).await;
+        }
+        return Ok(vec![]);
+    }
+
     if config.media_type == SearchMediaType::All
         && config.sort_by == SearchSortBy::Relevancy
         && config.start_date.is_none()
@@ -84,164 +38,90 @@ pub async fn search_media(
         && config.face_names.is_empty()
         && config.country_codes.is_empty()
     {
-        basic_search_media(user, pool, embedder, query, config).await
+        basic_search_media(user, pool, embedder, &query, config).await
     } else {
-        advanced_search_media(user, pool, embedder, query, config).await
+        advanced_search_media(user, pool, embedder, &query, config).await
     }
 }
 
-async fn basic_search_media(
-    user: &User,
-    pool: &PgPool,
-    embedder: Arc<TextEmbedder>,
-    query: &str,
-    config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
-    let query_str = query.to_string();
-    let query_embedding =
-        get_cached_text_embedding(&query_str, &config.embedder_model_id, pool, embedder).await?;
-    let vector_param = Vector::from(query_embedding);
-
-    let limit = config.limit.unwrap_or(100).min(1000);
-    let offset = config.offset.unwrap_or(0);
-    let candidate_limit = limit * 3 + 300;
-    let k = 60.0f64;
-    // Only use semantic score limit when sorting by relevancy
-    let semantic_score_threshold = if config.sort_by == SearchSortBy::Relevancy {
-        2.0
-    } else {
-        config.semantic_score_threshold
-    };
-
-    let items = sqlx::query_as!(
-        SimpleTimelineItem,
-        r#"
-        WITH
-        fts AS (
-            SELECT
-                id,
-                ts_rank_cd(search_vector, websearch_to_tsquery('english', $1)) as score,
-                ROW_NUMBER() OVER (ORDER BY ts_rank_cd(search_vector, websearch_to_tsquery('english', $1)) DESC) as rank
-            FROM media_item
-            WHERE user_id = $2
-              AND search_vector @@ websearch_to_tsquery('english', $1)
-              AND deleted = false
-            LIMIT $4
-        ),
-        vec AS (
-            SELECT
-                id,
-                1 - distance as score,
-                ROW_NUMBER() OVER (ORDER BY distance) as rank
-            FROM (
-                SELECT DISTINCT ON (media_item_id)
-                    media_item_id as id,
-                    distance
-                FROM (
-                    SELECT media_item_id, embedding <=> $3::vector as distance
-                    FROM visual_analysis
-                    WHERE user_id = $2
-                      AND deleted = false
-                      AND (embedding <=> $3::vector) < $9
-                    ORDER BY embedding <=> $3::vector
-                    LIMIT $4 * 4
-                ) sub_ordered
-                ORDER BY media_item_id, distance
-            ) sub_unique
-            ORDER BY distance
-            LIMIT $4
-        ),
-        merged AS (
-            SELECT id, rank, 1 as is_fts, 0 as is_vec FROM fts
-            UNION ALL
-            SELECT id, rank, 0 as is_fts, 1 as is_vec FROM vec
-        ),
-        scored_candidates AS (
-            SELECT
-                id,
-                SUM(
-                    CASE
-                        WHEN is_fts = 1 THEN $7::float8 / ($6::float8 + rank::float8)
-                        WHEN is_vec = 1 THEN $8::float8 / ($6::float8 + rank::float8)
-                        ELSE 0
-                    END
-                )::real as combined_score
-            FROM merged
-            GROUP BY id
-        )
-        SELECT
-            mi.id::text as "id!",
-            mi.is_video as "is_video!",
-            mi.has_thumbnails as "has_thumbnails!",
-            mi.duration_ms as "duration_ms: i32",
-            (mi.width::real / mi.height::real) as "ratio!"
-        FROM scored_candidates sc
-        JOIN media_item mi ON mi.id = sc.id
-        ORDER BY sc.combined_score DESC
-        LIMIT $5 OFFSET $10
-         "#,
-        query,                 // $1
-        user.id,               // $2
-        vector_param as _,     // $3
-        candidate_limit,       // $4
-        limit,                 // $5
-        k,                     // $6
-        config.text_weight,    // $7
-        config.semantic_weight, // $8
-        semantic_score_threshold, // $9
-        offset,                   // $10
-    )
-        .fetch_all(pool)
-        .await?;
-
-    Ok(items)
-}
-
 #[allow(clippy::too_many_lines)]
-async fn advanced_search_media(
+pub async fn search_by_image(
     user: &User,
     pool: &PgPool,
-    embedder: Arc<TextEmbedder>,
-    query: &str,
+    text_embedder: Arc<TextEmbedder>,
+    vision_embedder: Arc<VisionEmbedder>,
+    query: Option<String>,
+    img: SearchImage,
     config: SearchMediaConfig,
 ) -> Result<Vec<SimpleTimelineItem>, SearchError> {
-    let query_str = query.to_string();
-    let embedder_clone = embedder.clone();
+    // 1. Spawn vision embedding (CPU-bound / blocking task)
+    let pool_clone = pool.clone();
+    let model_id_clone = config.embedder_model_id.clone();
+    let image_task = tokio::spawn(async move {
+        get_cached_image_embedding(img, &model_id_clone, &pool_clone, vision_embedder).await
+    });
 
-    let q_emb_task = get_cached_text_embedding(
-        &query_str,
-        &config.embedder_model_id,
-        pool,
-        embedder_clone.clone(),
-    );
-
-    let (query_embedding, fts_query) = if let Some(negative_query) = &config.negative_query {
-        let neg_str = negative_query.clone();
-
-        let neg_emb_task =
-            get_cached_text_embedding(&neg_str, &config.embedder_model_id, pool, embedder_clone);
-        let (mut q_emb, neg_emb) = tokio::try_join!(q_emb_task, neg_emb_task)?;
-
-        for (pos, neg) in q_emb.iter_mut().zip(neg_emb.iter()) {
-            *pos -= 0.5 * *neg;
-        }
-        let norm = q_emb.iter().map(|x| x * x).sum::<f32>().sqrt();
-        if norm > 1e-6 {
-            for val in &mut q_emb {
-                *val /= norm;
-            }
-        }
-        let neg_terms: Vec<String> = negative_query
-            .split_whitespace()
-            .map(|s| format!("-{s}"))
-            .collect();
-        (q_emb, format!("{} {}", query, neg_terms.join(" ")))
+    // 2. Spawn optional text query embedding task
+    let text_task = if let Some(ref q) = query {
+        let q_clone = q.clone();
+        let text_embedder_clone = text_embedder.clone();
+        let pool_clone = pool.clone();
+        let model_id_clone = config.embedder_model_id.clone();
+        Some(tokio::spawn(async move {
+            get_cached_text_embedding(&q_clone, &model_id_clone, &pool_clone, text_embedder_clone)
+                .await
+        }))
     } else {
-        let q_emb = q_emb_task.await?;
-        (q_emb, query.to_string())
+        None
     };
 
-    let vector_param = Vector::from(query_embedding);
+    // 3. Spawn optional negative query embedding task
+    let negative_task = if let Some(ref neg_q) = config.negative_query {
+        let neg_q_clone = neg_q.clone();
+        let text_embedder_clone = text_embedder.clone();
+        let pool_clone = pool.clone();
+        let model_id_clone = config.embedder_model_id.clone();
+        Some(tokio::spawn(async move {
+            get_cached_text_embedding(
+                &neg_q_clone,
+                &model_id_clone,
+                &pool_clone,
+                text_embedder_clone,
+            )
+            .await
+        }))
+    } else {
+        None
+    };
+
+    // Await all embedding calculations
+    let mut final_embedding = image_task.await??;
+
+    if let Some(task) = text_task {
+        let text_emb = task.await??;
+        // Average text and image embedding
+        for (img_val, text_val) in final_embedding.iter_mut().zip(text_emb.iter()) {
+            *img_val = f32::midpoint(*img_val, *text_val);
+        }
+    }
+
+    if let Some(task) = negative_task {
+        let neg_emb = task.await??;
+        // Subtract negative text embedding
+        for (pos_val, neg_val) in final_embedding.iter_mut().zip(neg_emb.iter()) {
+            *pos_val = 0.5f32.mul_add(-*neg_val, *pos_val);
+        }
+    }
+
+    // Re-normalize the combined vector to unit length
+    let norm = final_embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+    if norm > 1e-6 {
+        for val in &mut final_embedding {
+            *val /= norm;
+        }
+    }
+
+    let vector_param = Vector::from(final_embedding);
     let limit = config.limit.unwrap_or(100).min(500);
     let offset = config.offset.unwrap_or(0);
     let candidate_limit = limit * 3 + 300;
@@ -254,7 +134,6 @@ async fn advanced_search_media(
     };
 
     let semantic_score_threshold = if config.sort_by == SearchSortBy::Relevancy {
-        // With relevancy sort, threshold doesn't matter much. Limit + relevancy sort handles it
         2.0
     } else {
         config.semantic_score_threshold
@@ -265,9 +144,21 @@ async fn advanced_search_media(
         SearchSortBy::Date => "date",
     };
 
-    let items = sqlx::query_as!(
-        SimpleTimelineItem,
-        r#"
+    if let Some(q) = query {
+        // --- PATHWAY A: Text + Image query ---
+        let fts_query = if let Some(ref negative_query) = config.negative_query {
+            let neg_terms: Vec<String> = negative_query
+                .split_whitespace()
+                .map(|s| format!("-{s}"))
+                .collect();
+            format!("{} {}", q, neg_terms.join(" "))
+        } else {
+            q
+        };
+
+        let items = sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
         WITH
         filtered_media AS MATERIALIZED (
             SELECT mi.id, mi.search_vector
@@ -356,29 +247,174 @@ async fn advanced_search_media(
             (CASE WHEN $14 = 'date' THEN NULL ELSE sc.combined_score END) DESC NULLS LAST,
             mi.sort_timestamp DESC
         LIMIT $5 OFFSET $17
-         "#,
-        fts_query,                // $1
-        user.id,                  // $2
-        vector_param as _,        // $3
-        candidate_limit,          // $4
-        limit,                    // $5
-        k,                        // $6
-        config.text_weight,       // $7
-        config.semantic_weight,   // $8
-        config.start_date,        // $9
-        config.end_date,          // $10
-        is_video_filter,          // $11
-        &config.country_codes,    // $12
-        &config.face_names,       // $13
-        sort_by_str,              // $14
-        semantic_score_threshold, // $15
-        config.all_faces_required, // $16
-        offset                     // $17
-    )
+             "#,
+            fts_query,                // $1
+            user.id,                  // $2
+            vector_param as _,        // $3
+            candidate_limit,          // $4
+            limit,                    // $5
+            k,                        // $6
+            config.text_weight,       // $7
+            config.semantic_weight,   // $8
+            config.start_date,        // $9
+            config.end_date,          // $10
+            is_video_filter,          // $11
+            &config.country_codes,    // $12
+            &config.face_names,       // $13
+            sort_by_str,              // $14
+            semantic_score_threshold, // $15
+            config.all_faces_required, // $16
+            offset                     // $17
+        )
+            .fetch_all(pool)
+            .await?;
+
+        Ok(items)
+    } else {
+        // --- PATHWAY B: Direct Vector Search (Image-only query) ---
+        let items = sqlx::query_as!(
+            SimpleTimelineItem,
+            r#"
+            WITH
+            filtered_media AS MATERIALIZED (
+                SELECT mi.id
+                FROM media_item mi
+                WHERE mi.user_id = $1
+                  AND mi.deleted = false
+                  AND ($5::timestamptz IS NULL OR mi.taken_at_utc >= $5)
+                  AND ($6::timestamptz IS NULL OR mi.taken_at_utc <= $6)
+                  AND ($7::bool IS NULL OR mi.is_video = $7)
+                  AND (cardinality($8::text[]) = 0 OR EXISTS (
+                      SELECT 1 FROM gps g JOIN location l ON g.location_id = l.id
+                      WHERE g.media_item_id = mi.id AND l.country_code = ANY($8)
+                  ))
+                  AND (cardinality($9::text[]) = 0 OR (
+                      SELECT COUNT(DISTINCT p.name)
+                      FROM visual_analysis va
+                      JOIN face f ON f.visual_analysis_id = va.id
+                      JOIN face_cluster fc ON f.face_cluster_id = fc.id
+                      JOIN person p ON fc.person_id = p.id
+                      WHERE va.media_item_id = mi.id AND p.name = ANY($9)
+                  ) >= (CASE WHEN $12 THEN cardinality($9) ELSE 1 END))
+            ),
+            vec AS (
+                SELECT DISTINCT ON (media_item_id)
+                    media_item_id as id,
+                    distance
+                FROM (
+                    SELECT va.media_item_id, va.embedding <=> $2::vector as distance
+                    FROM visual_analysis va
+                    WHERE va.user_id = $1
+                      AND va.deleted = false
+                      AND (va.embedding <=> $2::vector) < $11
+                      AND EXISTS (
+                          SELECT 1 FROM filtered_media fm
+                          WHERE fm.id = va.media_item_id
+                      )
+                    ORDER BY va.embedding <=> $2::vector
+                    LIMIT $3 * 5
+                ) sub_ordered
+                ORDER BY media_item_id, distance
+                LIMIT $3
+            )
+            SELECT
+                mi.id::text as "id!",
+                mi.is_video as "is_video!",
+                mi.has_thumbnails as "has_thumbnails!",
+                mi.duration_ms as "duration_ms: i32",
+                (mi.width::real / mi.height::real) as "ratio!"
+            FROM vec v
+            JOIN media_item mi ON mi.id = v.id
+            ORDER BY
+                (CASE WHEN $10 = 'date' THEN NULL ELSE v.distance END) ASC NULLS LAST,
+                mi.sort_timestamp DESC
+            LIMIT $4 OFFSET $13
+            "#,
+            user.id,                   // $1
+            vector_param as _,         // $2
+            candidate_limit as i32,    // $3
+            limit,                     // $4
+            config.start_date,         // $5
+            config.end_date,           // $6
+            is_video_filter,           // $7
+            &config.country_codes,     // $8
+            &config.face_names,        // $9
+            sort_by_str,               // $10
+            semantic_score_threshold,  // $11
+            config.all_faces_required, // $12
+            offset                     // $13
+        )
         .fetch_all(pool)
         .await?;
 
-    Ok(items)
+        Ok(items)
+    }
+}
+
+pub async fn search_filter_ranges(
+    user: &User,
+    pool: &PgPool,
+) -> Result<SearchFilterRanges, SearchError> {
+    let months_task = sqlx::query!(
+        r#"
+        SELECT DISTINCT month_id AS "months!"
+        FROM media_item
+        WHERE user_id = $1
+          AND deleted = false
+        ORDER BY month_id
+        "#,
+        user.id
+    )
+    .fetch_all(pool);
+    let countries_task = sqlx::query!(
+        r#"
+        SELECT DISTINCT l.country_code, l.country_name
+        FROM location l
+        JOIN gps g ON l.id = g.location_id
+        JOIN media_item mi ON g.media_item_id = mi.id
+        WHERE mi.user_id = $1 AND mi.deleted = false
+        ORDER BY l.country_name
+        "#,
+        user.id
+    )
+    .fetch_all(pool);
+    let people_task = sqlx::query!(
+        r#"
+        SELECT DISTINCT name, id
+        FROM person
+        WHERE user_id = $1 AND name IS NOT NULL AND name != ''
+        ORDER BY name
+        "#,
+        user.id
+    )
+    .fetch_all(pool);
+
+    let (available_month_records, countries_records, people_records) =
+        tokio::try_join!(months_task, countries_task, people_task)?;
+    let countries = countries_records
+        .into_iter()
+        .map(|c| (c.country_code, c.country_name))
+        .collect();
+    let people = people_records
+        .into_iter()
+        .filter_map(|c| c.name.map(|name| (name, c.id.clone())))
+        .collect();
+    let available_months = available_month_records.iter().map(|r| r.months).collect();
+
+    Ok(SearchFilterRanges {
+        available_months,
+        people,
+        countries,
+    })
+}
+
+fn has_active_filters(config: &SearchMediaConfig) -> bool {
+    config.media_type != SearchMediaType::All
+        || config.start_date.is_some()
+        || config.end_date.is_some()
+        || !config.country_codes.is_empty()
+        || !config.face_names.is_empty()
+        || config.negative_query.is_some()
 }
 
 pub async fn get_search_suggestions(
@@ -407,7 +443,7 @@ pub async fn get_search_suggestions(
 
             UNION ALL
 
-            (SELECT p.name as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count, 'SEARCH' as "type!", NULL as "id"
+            (SELECT p.name as suggestion, COUNT(DISTINCT va.media_item_id) as photo_count, 'PERSON' as "type!", p.id::text as "id"
             FROM person p
             JOIN face_cluster fc ON fc.person_id = p.id
             JOIN face f ON f.face_cluster_id = fc.id
@@ -415,7 +451,7 @@ pub async fn get_search_suggestions(
             WHERE p.user_id = $1
               AND p.name ILIKE $2
               AND p.name != ''
-            GROUP BY p.name
+            GROUP BY p.name, p.id
             LIMIT $3 * 2)
 
             UNION ALL
@@ -460,7 +496,7 @@ pub async fn get_search_suggestions(
         SELECT suggestion as "suggestion!", "type!" as "type!", "id" as "id?", SUM(photo_count)::int8 as "photo_count!"
         FROM matched_terms
         GROUP BY suggestion, "type!", "id"
-        ORDER BY (CASE WHEN "type!" = 'ALBUM' THEN 0 ELSE 1 END), "photo_count!" DESC, suggestion ASC
+        ORDER BY (CASE WHEN "type!" = 'ALBUM' THEN 0 ELSE (CASE WHEN "type!" = 'PERSON' THEN 1 ELSE 2 END) END), "photo_count!" DESC, suggestion ASC
         LIMIT $3
         "#,
         user.id,
@@ -477,6 +513,7 @@ pub async fn get_search_suggestions(
                 text: row.suggestion,
                 suggestion_type: match row.r#type.as_str() {
                     "ALBUM" => SuggestionType::Album as i32,
+                    "PERSON" => SuggestionType::Person as i32,
                     _ => SuggestionType::Search as i32,
                 },
                 id: row.id,

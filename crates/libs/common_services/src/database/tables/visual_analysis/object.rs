@@ -1,9 +1,8 @@
 use object_detector::DetectedObject;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Corresponds to the 'object' table.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Object {
     pub position_x: f32,
     pub position_y: f32,

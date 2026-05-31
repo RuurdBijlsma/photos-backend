@@ -2,9 +2,8 @@ use crate::database::UpdateField;
 use crate::database::app_user::User;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserStats {
     pub photo_count: i64,
@@ -13,7 +12,7 @@ pub struct UserStats {
     pub shared_album_count: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserProfile {
     pub id: i32,
@@ -24,14 +23,14 @@ pub struct UserProfile {
     pub stats: UserStats,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUserProfileRequest {
     pub name: Option<String>,
     pub avatar_id: UpdateField<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SmallUser {
     pub id: i32,

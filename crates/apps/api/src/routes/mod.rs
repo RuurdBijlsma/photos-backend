@@ -1,5 +1,4 @@
 pub mod album;
-mod api_doc;
 pub mod auth;
 pub mod onboarding;
 pub mod people;
@@ -24,9 +23,7 @@ use crate::auth::middlewares::websocket::WsUser;
 use crate::auth::router::{auth_admin_routes, auth_protected_router, auth_public_router};
 use crate::onboarding::router::onboarding_admin_routes;
 use crate::photos::router::{photos_protected_router, photos_public_router};
-use crate::root::handlers::root;
 use crate::root::router::root_public_router;
-use crate::routes::api_doc::ApiDoc;
 use crate::s2s::router::s2s_public_router;
 use crate::search::router::search_protected_router;
 use crate::system::router::system_protected_router;
@@ -35,13 +32,10 @@ use app_state::RateLimitingSettings;
 use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use common_services::database::app_user::UserRole;
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {
     Router::new()
-        .merge(SwaggerUi::new("/docs").url("/openapi.json", ApiDoc::openapi()))
         .merge(public_routes(&api_state.settings.api.rate_limiting))
         .merge(websocket_routes(api_state.clone()))
         .merge(protected_routes(api_state.clone()))

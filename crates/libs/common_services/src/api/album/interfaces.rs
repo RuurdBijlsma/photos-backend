@@ -11,10 +11,9 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use common_types::pb::api::{CollaboratorSummary, TimelineItem};
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
-use utoipa::{IntoParams, ToSchema};
 // --- Request Payloads ---
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[sqlx(type_name = "album_sort", rename_all = "snake_case")]
 pub enum AlbumSort {
     DateAsc,
@@ -24,13 +23,13 @@ pub enum AlbumSort {
     None,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetSortedAlbumItemsRequest {
     pub sort_mode: AlbumSort,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAlbumRequest {
     pub name: String,
@@ -39,27 +38,27 @@ pub struct CreateAlbumRequest {
     pub media_item_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ReorderMediaRequest {
     pub media_item_ids: Vec<String>,
     pub sort_mode: AlbumSort,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AddMediaToAlbumRequest {
     pub media_item_ids: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AddCollaboratorRequest {
     pub user_id: i32,
     pub role: AlbumRole,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateAlbumRequest {
     #[serde(default)]
@@ -74,14 +73,14 @@ pub struct UpdateAlbumRequest {
 
 // --- Request Payloads for Cross-Server Sharing ---
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckInviteRequest {
     /// The full invitation token string (e.g., "inv-...")
     pub token: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AcceptInviteRequest {
     /// The full invitation token string.
@@ -94,27 +93,27 @@ pub struct AcceptInviteRequest {
 
 // --- URL/Path Parameters ---
 
-#[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumIdParams {
     pub album_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoveMediaParams {
     pub album_id: String,
     pub media_item_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoveCollaboratorParams {
     pub album_id: String,
     pub collaborator_id: i64,
 }
 
-#[derive(Debug, Deserialize, IntoParams, ToSchema)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListAlbumsParam {
     #[serde(default)]
@@ -123,7 +122,7 @@ pub struct ListAlbumsParam {
     pub sort_field: AlbumSortField,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetAlbumMediaParams {
     /// Comma separated list of Rank IDs (Start Ranks of the groups).
@@ -133,7 +132,7 @@ pub struct GetAlbumMediaParams {
 // --- Response Payloads ---
 
 /// Full details of an album, including its media items and collaborators.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumDetailsResponse {
     pub id: String,
@@ -148,11 +147,27 @@ pub struct AlbumDetailsResponse {
 }
 
 /// A summary of a media item within an album.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlbumMediaItemSummary {
     pub media_item: TimelineItem,
     pub added_at: DateTime<Utc>,
+}
+
+/// Album reference for a media item detail response (info panel).
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MediaItemAlbumRef {
+    pub id: String,
+    pub name: String,
+    pub thumbnail_id: Option<String>,
+    pub media_count: i32,
+}
+
+/// Full media item detail with albums that contain it.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MediaItemWithAlbums {
+    pub media_item: FullMediaItem,
+    pub albums: Vec<MediaItemAlbumRef>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -163,7 +178,7 @@ pub struct AlbumShareClaims {
     pub sharer_username: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Default, ToSchema, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum AlbumSortField {
     #[default]
@@ -183,7 +198,7 @@ impl AlbumSortField {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SharedMediaFeatures {
     pub mime_type: String,
     pub size_bytes: i64,
@@ -198,7 +213,7 @@ pub struct SharedMediaFeatures {
     pub is_timelapse: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SharedMediaItem {
     pub id: String,
     pub filename: String,

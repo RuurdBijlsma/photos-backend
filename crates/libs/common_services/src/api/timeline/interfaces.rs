@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
-use utoipa::{IntoParams, ToSchema};
 
-#[derive(Serialize, Deserialize, ToSchema, Debug, Default, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum SortDirection {
     #[default]
@@ -19,14 +18,14 @@ impl SortDirection {
     }
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineParams {
     #[serde(default)]
     pub sort: SortDirection,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMediaByMonthParams {
     /// "YYYY-MM-DD" strings.

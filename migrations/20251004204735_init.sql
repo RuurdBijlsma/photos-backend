@@ -211,3 +211,7 @@ CREATE INDEX idx_media_item_user_month_order_partial
 -- Composite index for search filtering
 CREATE INDEX idx_media_item_search_filters
     ON media_item (user_id, deleted, is_video) INCLUDE (id, taken_at_utc, sort_timestamp);
+
+-- For /photos/geo (Map view)
+CREATE INDEX idx_media_item_geo_lookup
+    ON media_item (user_id, deleted, sort_timestamp DESC) INCLUDE (id, width, height, is_video, has_thumbnails, duration_ms);

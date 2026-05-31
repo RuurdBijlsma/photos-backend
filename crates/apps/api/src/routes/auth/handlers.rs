@@ -20,16 +20,6 @@ use tracing::instrument;
 ///
 /// Returns `AuthError` if the user credentials are invalid or if there's a
 /// problem creating or storing the tokens.
-#[utoipa::path(
-    post,
-    path = "/auth/login",
-    tag = "Auth",
-    request_body = LoginUser,
-    responses(
-        (status = 200, description = "Login successful", body = Tokens),
-        (status = 401, description = "Invalid credentials"),
-    )
-)]
 #[instrument(skip(context, payload), err(Debug))]
 pub async fn login(
     State(context): State<ApiContext>,
@@ -54,16 +44,6 @@ pub async fn login(
 ///
 /// Returns `AuthError` if a user with the provided email already exists or
 /// if a database error occurs during user creation.
-#[utoipa::path(
-    post,
-    path = "/auth/register",
-    tag = "Auth",
-    request_body = CreateUser,
-    responses(
-        (status = 200, description = "User created successfully", body = User),
-        (status = 409, description = "User with this email already exists"),
-    )
-)]
 #[instrument(skip(context, payload), err(Debug))]
 pub async fn register(
     State(context): State<ApiContext>,
@@ -78,16 +58,6 @@ pub async fn register(
 /// # Errors
 ///
 /// Returns `AuthError` if the refresh token is invalid, expired, or not found in the database.
-#[utoipa::path(
-    post,
-    path = "/auth/refresh",
-    tag = "Auth",
-    request_body = RefreshTokenPayload,
-    responses(
-        (status = 200, description = "Session refreshed successfully", body = Tokens),
-        (status = 401, description = "Invalid or expired refresh token"),
-    )
-)]
 #[instrument(skip(context, payload), err(Debug))]
 pub async fn refresh_session(
     State(context): State<ApiContext>,
@@ -106,16 +76,6 @@ pub async fn refresh_session(
 /// # Errors
 ///
 /// Returns `AuthError` if the refresh token is invalid or could not be found.
-#[utoipa::path(
-    post,
-    path = "/auth/logout",
-    tag = "Auth",
-    request_body = RefreshTokenPayload,
-    responses(
-        (status = 200, description = "Logout successful"),
-        (status = 401, description = "Invalid or expired refresh token"),
-    )
-)]
 pub async fn logout(
     State(context): State<ApiContext>,
     Json(payload): Json<RefreshTokenPayload>,
@@ -128,36 +88,11 @@ pub async fn logout(
 /// # Errors
 ///
 /// Returns `AuthError` if the refresh token is invalid or could not be found.
-#[utoipa::path(
-    get,
-    path = "/auth/me",
-    tag = "Auth",
-    responses(
-        (status = 200, description = "Current user data", body = User),
-        (status = 401, description = "Authentication required"),
-    ),
-    security(
-        ("bearer_auth" = [])
-    )
-)]
 pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<User>, StatusCode> {
     Ok(Json(user))
 }
 
 /// Generates a new user invite token.
-#[utoipa::path(
-    post,
-    path = "/auth/generate-invite",
-    tag = "Auth",
-    responses(
-        (status = 200, description = "Invite token generated successfully", body = UserInvite),
-        (status = 401, description = "Authentication required"),
-        (status = 403, description = "Permission denied"),
-    ),
-    security(
-        ("bearer_auth" = [])
-    )
-)]
 pub async fn generate_invite_handler(
     State(context): State<ApiContext>,
     Json(payload): Json<GenerateInvitePayload>,

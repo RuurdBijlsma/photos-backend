@@ -1,9 +1,8 @@
 use serde::Serialize;
-use utoipa::ToSchema;
 
 /// Represents a temporary record for a media item downloaded from another server,
 /// awaiting ingestion.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PendingAlbumMediaItem {
     pub relative_path: String,
