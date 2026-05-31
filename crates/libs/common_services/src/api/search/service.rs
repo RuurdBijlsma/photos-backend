@@ -109,7 +109,7 @@ pub async fn search_by_image(
         let neg_emb = task.await??;
         // Subtract negative text embedding
         for (pos_val, neg_val) in final_embedding.iter_mut().zip(neg_emb.iter()) {
-            *pos_val -= 0.5 * *neg_val;
+            *pos_val = 0.5f32.mul_add(-*neg_val, *pos_val);
         }
     }
 
