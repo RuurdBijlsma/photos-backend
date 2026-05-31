@@ -44,6 +44,7 @@ pub async fn search_media(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn search_by_image(
     user: &User,
     pool: &PgPool,

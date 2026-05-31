@@ -34,7 +34,7 @@ async fn main() -> color_eyre::Result<()> {
             &user,
             &pool,
             embedder.clone(),
-            "cat",
+            Some("cat".to_owned()),
             SearchMediaConfig {
                 embedder_model_id: settings.ingest.analyzer.search.embedder_model_id.clone(),
                 text_weight: 0.5,

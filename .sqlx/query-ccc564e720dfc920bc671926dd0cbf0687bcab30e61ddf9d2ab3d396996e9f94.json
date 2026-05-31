@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO vision_embedding_cache (model_id, uuid, embedding)\n        VALUES ($1, $2, $3::vector)\n        ON CONFLICT (model_id, uuid) DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ccc564e720dfc920bc671926dd0cbf0687bcab30e61ddf9d2ab3d396996e9f94"
+}
