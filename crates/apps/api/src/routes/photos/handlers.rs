@@ -23,6 +23,7 @@ use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::PhotoThumbnailParams;
 use common_services::database::media_item_store::MediaItemStore;
 use common_types::pb::api::MapPhotosResponse;
+use material_color_utils::dynamic::variant::Variant;
 use material_color_utils::utils::color_utils::Argb;
 use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
@@ -70,10 +71,11 @@ pub async fn get_color_theme_handler(
     State(ingestion): State<IngestSettings>,
     Query(params): Query<ColorThemeParams>,
 ) -> Result<Json<MaterializedTheme>, PhotosError> {
-    let variant = &ingestion.analyzer.theme_generation.variant;
+    let variant: Variant = serde_json::from_str(&format!("\"{}\"", params.variant))
+        .unwrap_or(ingestion.analyzer.theme_generation.variant);
     let contrast_level = ingestion.analyzer.theme_generation.contrast_level;
     let theme = theme_from_color(Argb::from_hex(&params.color)?)
-        .variant(*variant)
+        .variant(variant)
         .contrast_level(contrast_level)
         .call();
     Ok(Json(theme))

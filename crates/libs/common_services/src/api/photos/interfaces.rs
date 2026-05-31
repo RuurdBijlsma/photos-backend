@@ -21,6 +21,7 @@ pub struct RandomPhotoResponse {
 #[serde(rename_all = "camelCase")]
 pub struct ColorThemeParams {
     pub color: String,
+    pub variant: String,
 }
 
 #[derive(Serialize, Deserialize)]

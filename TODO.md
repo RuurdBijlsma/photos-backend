@@ -216,6 +216,11 @@
 * mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
 * [BUG] Als je met filters naar persons zoek, zoekt ie op basis van FaceName om een of andere reden. Als je 2 personen
   hebt met dezelfde naam, gaat dit fout.
+* REFACTOR TIME. Theme hoeft niet in DB. het zet de variant te vast en het kan meer dan snel genoeg zonder db access
+  * bij ingest, alleen de extracted kleuren van de item in db zetten
+  * bij get random theme endpoint, voeg variant parameter toe (wordt in settings gezet)
+  * haal theme json uit db
+  * in frontend, laat user variant kiezen voor random bg image
 
 # Features
 
