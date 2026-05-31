@@ -141,7 +141,7 @@ pub async fn advanced_search_media(
         let (mut q_emb, neg_emb) = tokio::try_join!(q_emb_task, neg_emb_task)?;
 
         for (pos, neg) in q_emb.iter_mut().zip(neg_emb.iter()) {
-            *pos -= 0.5 * *neg;
+            *pos = 0.5_f32.mul_add(-*neg, *pos);
         }
         let norm = q_emb.iter().map(|x| x * x).sum::<f32>().sqrt();
         if norm > 1e-6 {
