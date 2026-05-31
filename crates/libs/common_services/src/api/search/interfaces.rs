@@ -54,12 +54,6 @@ pub struct SearchSuggestionsParams {
     pub limit: Option<i64>,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct SearchByImageUuid {
-    pub session_id: Uuid,
-}
-
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchMediaType {
