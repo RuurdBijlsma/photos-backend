@@ -4,11 +4,11 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::album::interfaces::MediaItemWithAlbums;
 use common_services::api::photos::interfaces::{
-    ColorThemeParams, DownloadMediaParams, GeoPhotosParams, RandomPhotoResponse,
+    DownloadMediaParams, GeoPhotosParams,
     UpdateMediaItemRequest,
 };
 use common_services::api::photos::service::{
-    download_media_file, random_photo, stream_video_file, thumbnail_on_demand_cached,
+    download_media_file, stream_video_file, thumbnail_on_demand_cached,
     update_media_item,
 };
 use common_services::database::album_store::AlbumStore;
@@ -17,15 +17,12 @@ use common_services::database::app_user::User;
 use crate::api_state::ApiContext;
 use axum::http::header;
 use axum::response::IntoResponse;
-use axum_extra::TypedHeader;
 use axum_extra::headers::Range;
+use axum_extra::TypedHeader;
 use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::PhotoThumbnailParams;
 use common_services::database::media_item_store::MediaItemStore;
 use common_types::pb::api::MapPhotosResponse;
-use material_color_utils::dynamic::variant::Variant;
-use material_color_utils::utils::color_utils::Argb;
-use material_color_utils::{MaterializedTheme, theme_from_color};
 use tracing::instrument;
 
 #[instrument(skip(context, user), err(Debug))]
@@ -57,28 +54,6 @@ pub async fn update_media_item_handler(
     update_media_item(&context.pool, &media_item_id, user.id, &payload).await?;
 
     Ok(())
-}
-
-pub async fn get_random_photo(
-    State(context): State<ApiContext>,
-    Extension(user): Extension<User>,
-) -> Result<Json<Option<RandomPhotoResponse>>, PhotosError> {
-    let result = random_photo(&user, &context.pool).await?;
-    Ok(Json(result))
-}
-
-pub async fn get_color_theme_handler(
-    State(ingestion): State<IngestSettings>,
-    Query(params): Query<ColorThemeParams>,
-) -> Result<Json<MaterializedTheme>, PhotosError> {
-    let variant: Variant = serde_json::from_str(&format!("\"{}\"", params.variant))
-        .unwrap_or(ingestion.analyzer.theme_generation.variant);
-    let contrast_level = ingestion.analyzer.theme_generation.contrast_level;
-    let theme = theme_from_color(Argb::from_hex(&params.color)?)
-        .variant(variant)
-        .contrast_level(contrast_level)
-        .call();
-    Ok(Json(theme))
 }
 
 pub async fn download_full_file_by_rel_path(

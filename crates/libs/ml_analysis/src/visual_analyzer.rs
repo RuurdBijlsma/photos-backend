@@ -86,7 +86,7 @@ impl VisualAnalyzer {
         let now = Instant::now();
         let color_variant = config.theme_generation.variant;
         let contrast = config.theme_generation.contrast_level;
-        let color_data = get_color_data(&img, &color_variant, contrast)?;
+        let color_data = get_color_data(&img)?;
         println!("color_data {:?}", now.elapsed());
 
         let now = Instant::now();

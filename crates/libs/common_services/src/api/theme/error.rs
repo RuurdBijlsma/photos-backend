@@ -1,0 +1,92 @@
+use crate::database::DbError;
+use axum::Json;
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use color_eyre::eyre;
+use material_color_utils::utils::error::ColorParseError;
+use serde_json::json;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum ThemeError {
+    #[error("database error")]
+    Database(#[from] sqlx::Error),
+
+    #[error("internal error")]
+    Internal(#[from] eyre::Report),
+
+    #[error("Media item not found: {0}")]
+    MediaNotFound(String),
+
+    #[error("Invalid media path provided.")]
+    InvalidPath,
+
+    #[error("Permission denied while accessing media file.")]
+    AccessDenied,
+
+    #[error("The requested file is not a supported media type.")]
+    UnsupportedMediaType,
+
+    #[error("Cancelled.")]
+    Cancelled,
+
+    #[error("Invalid range requested")]
+    InvalidRange,
+
+    #[error("Error generating a material color theme.")]
+    ColorTheme(#[from] ColorParseError),
+
+    #[error("Invalid datetime format")]
+    InvalidDateTime(#[from] chrono::ParseError),
+
+    #[error("Invalid timezone offset: {0}")]
+    InvalidTimezoneOffset(i32),
+}
+
+impl IntoResponse for ThemeError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            Self::Database(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "A database error occurred.".to_string(),
+            ),
+            Self::Internal(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "An unexpected internal error occurred.".to_string(),
+            ),
+            Self::MediaNotFound(media_id) => (
+                StatusCode::NOT_FOUND,
+                format!("Media item not found: {media_id}"),
+            ),
+            Self::InvalidPath => (StatusCode::BAD_REQUEST, self.to_string()),
+            Self::AccessDenied => (StatusCode::FORBIDDEN, self.to_string()),
+            Self::UnsupportedMediaType => (StatusCode::UNSUPPORTED_MEDIA_TYPE, self.to_string()),
+            Self::Cancelled => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
+            Self::InvalidRange => (StatusCode::RANGE_NOT_SATISFIABLE, self.to_string()),
+            Self::ColorTheme(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
+            Self::InvalidDateTime(err) => (StatusCode::BAD_REQUEST, err.to_string()),
+            Self::InvalidTimezoneOffset(offset) => (
+                StatusCode::BAD_REQUEST,
+                format!("Invalid timezone offset: {offset}. Must be between -86400 and 86400."),
+            ),
+        };
+
+        let body = Json(json!({ "error": error_message }));
+        (status, body).into_response()
+    }
+}
+
+impl From<tokio::task::JoinError> for ThemeError {
+    fn from(err: tokio::task::JoinError) -> Self {
+        Self::Internal(eyre::Report::new(err))
+    }
+}
+
+impl From<DbError> for ThemeError {
+    fn from(err: DbError) -> Self {
+        match err {
+            DbError::UniqueViolation(err) | DbError::Sqlx(err) => Self::Database(err),
+            DbError::SerdeJson(err) => Self::Internal(eyre::Report::new(err)),
+        }
+    }
+}

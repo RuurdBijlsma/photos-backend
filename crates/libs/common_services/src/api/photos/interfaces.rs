@@ -10,20 +10,6 @@ pub struct GeoPhotosParams {
     pub end_date: Option<DateTime<Utc>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct RandomPhotoResponse {
-    pub media_id: String,
-    pub themes: Option<Vec<Value>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct ColorThemeParams {
-    pub color: String,
-    pub variant: String,
-}
-
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadMediaParams {

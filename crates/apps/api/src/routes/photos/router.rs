@@ -9,8 +9,6 @@ use axum::{Router, routing::get};
 
 pub fn photos_protected_router() -> Router<ApiContext> {
     Router::new()
-        .route("/photos/random", get(get_random_photo))
-        .route("/photos/theme", get(get_color_theme_handler))
         .route("/photos/geo", get(get_geo_photos_handler))
         .route(
             "/photos/{media_item_id}/item",
