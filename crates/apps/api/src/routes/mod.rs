@@ -28,12 +28,12 @@ use crate::root::router::root_public_router;
 use crate::s2s::router::s2s_public_router;
 use crate::search::router::search_protected_router;
 use crate::system::router::system_protected_router;
+use crate::theme::router::theme_protected_router;
 use crate::timeline::router::{timeline_protected_router, timeline_websocket_router};
 use app_state::RateLimitingSettings;
 use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use common_services::database::app_user::UserRole;
-use crate::theme::router::theme_protected_router;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {

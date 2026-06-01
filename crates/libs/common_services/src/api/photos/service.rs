@@ -1,5 +1,5 @@
 use crate::api::photos::error::PhotosError;
-use crate::api::photos::interfaces::{UpdateMediaItemRequest};
+use crate::api::photos::interfaces::UpdateMediaItemRequest;
 use crate::database::app_user::{User, UserRole};
 use crate::database::media_item_store::MediaItemStore;
 use crate::database::{UpdateField, UpdateMediaItemPayload, with_fallback_timezone};
@@ -15,7 +15,6 @@ use fast_image_resize as fr;
 use http::{Response, StatusCode, header};
 use image::ImageDecoder;
 use image::ImageReader;
-use rand::RngExt;
 use sqlx::{Executor, PgPool, Postgres};
 use std::io::Cursor;
 use std::ops::Bound;
@@ -26,7 +25,6 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
-
 
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///

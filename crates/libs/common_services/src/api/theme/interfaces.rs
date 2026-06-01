@@ -1,18 +1,22 @@
-use crate::database::UpdateField;
-use chrono::{DateTime, Utc};
+use material_color_utils::MaterializedTheme;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct RandomPhotoResponse {
     pub media_id: String,
-    pub themes: Option<Vec<Value>>,
+    pub theme: MaterializedTheme,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ColorThemeParams {
     pub color: String,
+    pub variant: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct RandomPhotoParams {
     pub variant: String,
 }

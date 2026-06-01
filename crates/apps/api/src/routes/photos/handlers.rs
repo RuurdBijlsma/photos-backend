@@ -4,12 +4,10 @@ use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use common_services::api::album::interfaces::MediaItemWithAlbums;
 use common_services::api::photos::interfaces::{
-    DownloadMediaParams, GeoPhotosParams,
-    UpdateMediaItemRequest,
+    DownloadMediaParams, GeoPhotosParams, UpdateMediaItemRequest,
 };
 use common_services::api::photos::service::{
-    download_media_file, stream_video_file, thumbnail_on_demand_cached,
-    update_media_item,
+    download_media_file, stream_video_file, thumbnail_on_demand_cached, update_media_item,
 };
 use common_services::database::album_store::AlbumStore;
 use common_services::database::app_user::User;
@@ -17,8 +15,8 @@ use common_services::database::app_user::User;
 use crate::api_state::ApiContext;
 use axum::http::header;
 use axum::response::IntoResponse;
-use axum_extra::headers::Range;
 use axum_extra::TypedHeader;
+use axum_extra::headers::Range;
 use common_services::api::photos::error::PhotosError;
 use common_services::api::photos::interfaces::PhotoThumbnailParams;
 use common_services::database::media_item_store::MediaItemStore;

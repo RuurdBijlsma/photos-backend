@@ -1,8 +1,11 @@
 use crate::api::theme::error::ThemeError;
 use crate::api::theme::interfaces::RandomPhotoResponse;
 use crate::database::app_user::User;
+use material_color_utils::dynamic::variant::Variant;
+use material_color_utils::theme_from_color;
+use material_color_utils::utils::color_utils::Argb;
 use rand::RngExt;
-use sqlx::{Executor, PgPool};
+use sqlx::PgPool;
 use tracing::warn;
 
 /// Fetches a random photo with its color theme data for a specific user.
@@ -13,6 +16,8 @@ use tracing::warn;
 pub async fn random_photo_theme(
     user: &User,
     pool: &PgPool,
+    variant: Variant,
+    contrast_level: f64,
 ) -> Result<Option<RandomPhotoResponse>, ThemeError> {
     // Count the total number of photos with associated colour data for the given user.
     let count: i64 = sqlx::query_scalar!(
@@ -21,7 +26,9 @@ pub async fn random_photo_theme(
         FROM color AS cd
         JOIN visual_analysis AS va ON cd.visual_analysis_id = va.id
         JOIN media_item AS mi ON va.media_item_id = mi.id
-        WHERE mi.user_id = $1 AND mi.deleted = false
+        WHERE mi.user_id = $1
+          AND mi.deleted = false
+          AND cardinality(cd.prominent_colors) > 0
         "#,
         user.id
     )
@@ -39,16 +46,17 @@ pub async fn random_photo_theme(
 
     // Fetch a single row from `color_data` using the random offset,
     // along with the associated `media_item_id`.
-    let random_data = sqlx::query_as!(
-        RandomPhotoResponse,
+    let random_data = sqlx::query!(
         r#"
         SELECT
-            cd.themes,
-            mi.id as media_id
+            cd.prominent_colors[1] as "source_color!",
+            mi.id as "media_id!"
         FROM color AS cd
         JOIN visual_analysis AS va ON cd.visual_analysis_id = va.id
         JOIN media_item AS mi ON va.media_item_id = mi.id
-        WHERE mi.user_id = $1 AND mi.deleted = false
+        WHERE mi.user_id = $1
+          AND mi.deleted = false
+          AND cardinality(cd.prominent_colors) > 0
         ORDER BY mi.id
         LIMIT 1
         OFFSET $2
@@ -59,13 +67,22 @@ pub async fn random_photo_theme(
     .fetch_optional(pool)
     .await?;
 
-    if random_data.is_none() {
+    let Some(random_data) = random_data else {
         // This can happen in a race condition if photos are deleted between the COUNT and this query.
         warn!(
             "No photo found at offset {} for user {}",
             random_offset, user.id
         );
-    }
+        return Ok(None);
+    };
 
-    Ok(random_data)
+    let theme = theme_from_color(Argb::from_hex(&random_data.source_color)?)
+        .variant(variant)
+        .contrast_level(contrast_level)
+        .call();
+
+    Ok(Some(RandomPhotoResponse {
+        media_id: random_data.media_id,
+        theme,
+    }))
 }

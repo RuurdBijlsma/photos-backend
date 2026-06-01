@@ -12,9 +12,7 @@ fn average_hue_from_sums(x_sum: f32, y_sum: f32) -> f32 {
 }
 
 /// Analyzes a `DynamicImage` to calculate its color properties.
-pub fn get_color_data(
-    img: &DynamicImage,
-) -> color_eyre::Result<MLColorData> {
+pub fn get_color_data(img: &DynamicImage) -> color_eyre::Result<MLColorData> {
     let rgb_image = img.to_rgb8();
     let (width, height) = rgb_image.dimensions();
     let pixel_count = (width * height) as f32;
