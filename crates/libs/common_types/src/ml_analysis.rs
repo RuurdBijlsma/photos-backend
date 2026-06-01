@@ -1,11 +1,9 @@
 use face_id::analyzer::FaceAnalysis;
-use material_color_utils::MaterializedTheme;
 use object_detector::DetectedObject;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct MLColorData {
-    pub themes: Vec<MaterializedTheme>,
     pub prominent_colors: Vec<String>,
     pub average_hue: f32,
     pub average_saturation: f32,

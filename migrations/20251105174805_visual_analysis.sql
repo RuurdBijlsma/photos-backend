@@ -80,7 +80,6 @@ CREATE TABLE quality
 CREATE TABLE color
 (
     visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    themes             JSONB[] NOT NULL,
     prominent_colors   TEXT[]  NOT NULL,
     average_hue        REAL    NOT NULL,
     average_saturation REAL    NOT NULL,

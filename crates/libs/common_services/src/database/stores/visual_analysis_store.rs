@@ -190,19 +190,17 @@ impl VisualAnalysisStore {
 
         // --- Color Data ---
         let color = &analysis.colors;
-        let themes_values: Vec<serde_json::Value> = color.themes.clone();
         let histogram_json = serde_json::to_value(&color.histogram)?;
 
         sqlx::query!(
             r#"
             INSERT INTO color (
-                visual_analysis_id, themes, prominent_colors,
+                visual_analysis_id, prominent_colors,
                 average_hue, average_saturation, average_lightness, histogram
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES ($1, $2, $3, $4, $5, $6)
             "#,
             visual_analysis_id,
-            &themes_values,
             &color.prominent_colors,
             color.average_hue,
             color.average_saturation,
