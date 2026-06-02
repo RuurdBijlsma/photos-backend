@@ -36,3 +36,9 @@ itertools = "0.14.0"
 
 [features]
 load-dynamic = ["common_services/load-dynamic", "ml_analysis/load-dynamic", "common_types/load-dynamic"] # -> Load ONNXRuntime dynamically instead of statically
+
+[dev-dependencies]
+umap-rs = "0.4.5"
+ndarray = "0.17.2"
+rayon = "1.10.0"
+plotters = "0.3.7"
