@@ -214,7 +214,7 @@
   there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
   sure how to handle this case.
 * mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
-* [BUG] Als je met filters naar persons zoek, zoekt ie op basis van FaceName om een of andere reden. Als je 2 personen
+* ✅ [BUG] Als je met filters naar persons zoek, zoekt ie op basis van FaceName om een of andere reden. Als je 2 personen
   hebt met dezelfde naam, gaat dit fout.
 * ✅ REFACTOR TIME. Theme hoeft niet in DB. het zet de variant te vast en het kan meer dan snel genoeg zonder db access
   * ✅ bij ingest, alleen de extracted kleuren van de item in db zetten
