@@ -25,8 +25,8 @@ pub fn to_search_config(
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect(),
-        face_names: search_params
-            .face_names
+        person_ids: search_params
+            .person_ids
             .unwrap_or_default()
             .split(',')
             .map(|s| s.trim().to_string())

@@ -45,7 +45,7 @@ async fn main() -> color_eyre::Result<()> {
                 media_type: SearchMediaType::All,
                 sort_by: SearchSortBy::Relevancy,
                 country_codes: vec![],
-                face_names: vec![],
+                person_ids: vec![],
                 all_faces_required: false,
                 negative_query: None,
                 start_date: None,
