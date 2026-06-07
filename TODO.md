@@ -221,6 +221,7 @@
   * ✅ bij get random theme endpoint, voeg variant parameter toe (wordt in settings gezet)
   * ✅ haal theme json uit db
   * ✅ in frontend, laat user variant kiezen voor random bg image
+* default sort for albums should be oldest first (currently newest first - WRONG)
 
 # Features
 
