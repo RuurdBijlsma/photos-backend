@@ -16,4 +16,8 @@ pub struct MediaFeatures {
     pub is_nightsight: bool,
     pub is_timelapse: bool,
     pub exif: Value,
+    pub compressor_id: Option<String>,
+    pub audio_format: Option<String>,
+    pub audio_channels: Option<u64>,
+    pub audio_sample_rate: Option<u64>,
 }

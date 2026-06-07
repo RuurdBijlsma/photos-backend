@@ -309,9 +309,10 @@ impl MediaItemStore {
                 INSERT INTO media_features (
                     media_item_id, mime_type, size_bytes, is_motion_photo,
                     motion_photo_presentation_timestamp, is_hdr, is_burst, burst_id,
-                    capture_fps, video_fps, is_nightsight, is_timelapse, exif
+                    capture_fps, video_fps, is_nightsight, is_timelapse, exif, audio_format,
+                    audio_channels, audio_sample_rate, compressor_id
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                 "#,
             id,
             media_item.media_features.mime_type,
@@ -328,6 +329,10 @@ impl MediaItemStore {
             media_item.media_features.is_nightsight,
             media_item.media_features.is_timelapse,
             media_item.media_features.exif,
+            media_item.media_features.audio_format,
+            media_item.media_features.audio_channels,
+            media_item.media_features.audio_sample_rate,
+            media_item.media_features.compressor_id,
         )
         .execute(&mut **tx)
         .await?;
@@ -335,9 +340,11 @@ impl MediaItemStore {
         sqlx::query!(
                 r#"
                 INSERT INTO camera_settings (
-                    media_item_id, iso, exposure_time, aperture, focal_length, camera_make, camera_model
+                    media_item_id, iso, exposure_time, aperture, focal_length, camera_make,
+                    camera_model, flash_fired, flash_mode, lens_make, lens_model,
+                    digital_zoom_ratio, subject_distance
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 "#,
                 id,
                 media_item.camera_settings.iso,
@@ -346,6 +353,12 @@ impl MediaItemStore {
                 media_item.camera_settings.focal_length,
                 media_item.camera_settings.camera_make,
                 media_item.camera_settings.camera_model,
+                media_item.camera_settings.flash_fired,
+                media_item.camera_settings.flash_mode,
+                media_item.camera_settings.lens_make,
+                media_item.camera_settings.lens_model,
+                media_item.camera_settings.digital_zoom_ratio,
+                media_item.camera_settings.subject_distance,
             )
                 .execute(&mut **tx)
                 .await?;
