@@ -330,15 +330,18 @@ impl MediaItemStore {
             media_item.media_features.is_timelapse,
             media_item.media_features.exif,
             media_item.media_features.audio_format,
-            media_item.media_features.audio_channels,
-            media_item.media_features.audio_sample_rate,
+            media_item.media_features.audio_channels.map(|i| i as i32),
+            media_item
+                .media_features
+                .audio_sample_rate
+                .map(|i| i as i32),
             media_item.media_features.compressor_id,
         )
         .execute(&mut **tx)
         .await?;
 
         sqlx::query!(
-                r#"
+            r#"
                 INSERT INTO camera_settings (
                     media_item_id, iso, exposure_time, aperture, focal_length, camera_make,
                     camera_model, flash_fired, flash_mode, lens_make, lens_model,
@@ -346,22 +349,28 @@ impl MediaItemStore {
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 "#,
-                id,
-                media_item.camera_settings.iso,
-                media_item.camera_settings.exposure_time,
-                media_item.camera_settings.aperture,
-                media_item.camera_settings.focal_length,
-                media_item.camera_settings.camera_make,
-                media_item.camera_settings.camera_model,
-                media_item.camera_settings.flash_fired,
-                media_item.camera_settings.flash_mode,
-                media_item.camera_settings.lens_make,
-                media_item.camera_settings.lens_model,
-                media_item.camera_settings.digital_zoom_ratio,
-                media_item.camera_settings.subject_distance,
-            )
-                .execute(&mut **tx)
-                .await?;
+            id,
+            media_item.camera_settings.iso,
+            media_item.camera_settings.exposure_time,
+            media_item.camera_settings.aperture,
+            media_item.camera_settings.focal_length,
+            media_item.camera_settings.camera_make,
+            media_item.camera_settings.camera_model,
+            media_item.camera_settings.flash_fired,
+            media_item.camera_settings.flash_mode,
+            media_item.camera_settings.lens_make,
+            media_item.camera_settings.lens_model,
+            media_item
+                .camera_settings
+                .digital_zoom_ratio
+                .map(|f| f as f32),
+            media_item
+                .camera_settings
+                .subject_distance
+                .map(|f| f as f32),
+        )
+        .execute(&mut **tx)
+        .await?;
 
         sqlx::query!(
             r#"

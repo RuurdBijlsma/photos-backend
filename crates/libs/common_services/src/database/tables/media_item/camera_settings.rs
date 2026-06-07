@@ -28,7 +28,7 @@ impl From<media_analyzer::CameraSettings> for CameraSettings {
             camera_make: details.camera_make,
             camera_model: details.camera_model,
             flash_fired: details.flash.clone().map(|f|f.fired),
-            flash_mode: details.flash.map(|f|f.mode.as_str()),
+            flash_mode: details.flash.map(|f|f.mode.as_str().to_owned()),
             lens_make: details.lens_make,
             lens_model: details.lens_model,
             digital_zoom_ratio: details.digital_zoom_ratio,
