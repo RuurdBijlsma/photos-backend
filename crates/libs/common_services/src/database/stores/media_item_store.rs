@@ -345,9 +345,10 @@ impl MediaItemStore {
                 INSERT INTO camera_settings (
                     media_item_id, iso, exposure_time, aperture, focal_length, camera_make,
                     camera_model, flash_fired, flash_mode, lens_make, lens_model,
-                    digital_zoom_ratio, subject_distance
+                    digital_zoom_ratio, subject_distance, focal_length_in_35mm,
+                    exposure_compensation
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 "#,
             id,
             media_item.camera_settings.iso,
@@ -360,14 +361,10 @@ impl MediaItemStore {
             media_item.camera_settings.flash_mode,
             media_item.camera_settings.lens_make,
             media_item.camera_settings.lens_model,
-            media_item
-                .camera_settings
-                .digital_zoom_ratio
-                .map(|f| f as f32),
-            media_item
-                .camera_settings
-                .subject_distance
-                .map(|f| f as f32),
+            media_item.camera_settings.digital_zoom_ratio,
+            media_item.camera_settings.subject_distance,
+            media_item.camera_settings.focal_length_in_35mm,
+            media_item.camera_settings.exposure_compensation,
         )
         .execute(&mut **tx)
         .await?;

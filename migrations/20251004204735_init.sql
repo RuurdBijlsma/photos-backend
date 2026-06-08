@@ -162,20 +162,21 @@ CREATE TABLE media_features
 
 CREATE TABLE camera_settings
 (
-    media_item_id        VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    iso                  INT,
-    exposure_time        REAL,
-    aperture             REAL,
-    focal_length         REAL,
-    focal_length_in_35mm REAL,
-    camera_make          TEXT,
-    camera_model         TEXT,
-    flash_fired          BOOLEAN,
-    flash_mode           TEXT,
-    lens_make            TEXT,
-    lens_model           TEXT,
-    digital_zoom_ratio   REAL,
-    subject_distance     REAL
+    media_item_id         VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
+    iso                   INT,
+    exposure_time         REAL,
+    aperture              REAL,
+    focal_length          REAL,
+    focal_length_in_35mm  REAL,
+    camera_make           TEXT,
+    camera_model          TEXT,
+    flash_fired           BOOLEAN,
+    flash_mode            TEXT,
+    lens_make             TEXT,
+    lens_model            TEXT,
+    digital_zoom_ratio    REAL,
+    subject_distance      REAL,
+    exposure_compensation REAL
 );
 
 CREATE TABLE panorama
