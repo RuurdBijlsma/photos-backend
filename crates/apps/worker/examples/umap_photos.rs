@@ -7,7 +7,7 @@
 )]
 
 use color_eyre::eyre::Result;
-use app_state::load_app_settings;
+use app_state::{database_url, load_app_settings};
 use common_services::database::get_db_pool;
 use sqlx::{FromRow, PgPool};
 use std::fs;
@@ -107,7 +107,7 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
+    let pool = get_db_pool(database_url(), true).await?;
 
     // --- Configuration ---
     let user_id = 1;

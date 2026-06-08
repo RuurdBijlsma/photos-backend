@@ -6,7 +6,7 @@
     clippy::cast_sign_loss
 )]
 
-use app_state::load_app_settings;
+use app_state::{database_url, load_app_settings};
 use color_eyre::eyre::Result;
 use common_services::database::get_db_pool;
 use ndarray::Array2;
@@ -133,7 +133,7 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
+    let pool = get_db_pool(database_url(), true).await?;
 
     info!(
         "Sampling up to {} random photo embeddings for user {}...",

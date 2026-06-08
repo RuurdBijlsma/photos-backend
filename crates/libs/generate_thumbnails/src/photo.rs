@@ -25,9 +25,58 @@ pub fn generate_native_photo_thumbnails(
         return Ok(());
     }
 
-    let mut img = ImageReader::open(input_path)?
-        .with_guessed_format()?
-        .decode()?;
+    let extension = input_path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase());
+
+    let is_heif = matches!(extension.as_deref(), Some("heic" | "heif" | "heics" | "heifs"));
+
+    let mut img = if is_heif {
+        let input_str = input_path.to_str().ok_or_else(|| {
+            color_eyre::eyre::eyre!("Input path is not valid UTF-8")
+        })?;
+        let lib_heif = libheif_rs::LibHeif::new();
+        let ctx = libheif_rs::HeifContext::read_from_file(input_str)?;
+        let handle = ctx.primary_image_handle()?;
+        let decoded = lib_heif.decode(
+            &handle,
+            libheif_rs::ColorSpace::Rgb(libheif_rs::RgbChroma::Rgb),
+            None,
+        )?;
+        let width = decoded.width();
+        let height = decoded.height();
+        if height == 0 {
+            return Err(color_eyre::eyre::eyre!("Image height cannot be zero"));
+        }
+        let planes = decoded.planes();
+        let interleaved_plane = planes
+            .interleaved
+            .ok_or_else(|| color_eyre::eyre::eyre!("Could not retrieve interleaved RGB plane from decoded image"))?;
+
+        let stride = interleaved_plane.stride;
+        let data = interleaved_plane.data;
+
+        // Re-pack stride padded rows into a tightly packed RGB vector for the image crate
+        let mut rgb_data = Vec::with_capacity((width * height * 3) as usize);
+        for y in 0..height {
+            let row_start = y as usize * stride;
+            let row_end = row_start + (width as usize * 3);
+            if row_end <= data.len() {
+                rgb_data.extend_from_slice(&data[row_start..row_end]);
+            } else {
+                return Err(color_eyre::eyre::eyre!("Interleaved plane data is smaller than expected"));
+            }
+        }
+
+        let rgb_img = image::RgbImage::from_raw(width, height, rgb_data)
+            .ok_or_else(|| color_eyre::eyre::eyre!("Failed to create RgbImage from decoded pixel data"))?;
+        image::DynamicImage::ImageRgb8(rgb_img)
+    } else {
+        ImageReader::open(input_path)?
+            .with_guessed_format()?
+            .decode()?
+    };
 
     // Correct the orientation based on the EXIF data.
     let image_orientation = match orientation {

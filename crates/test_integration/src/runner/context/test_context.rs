@@ -2,7 +2,8 @@ use crate::runner::context::context_utils::{
     copy_dir_recursive, create_test_database, create_test_settings, force_drop_db,
 };
 use app_state::{
-    AppConstants, AppSettings, CONSTANTS, load_constants_from_path, load_settings_from_path,
+    AppConstants, AppSettings, CONSTANTS, DATABASE_URL, load_constants_from_path,
+    load_settings_from_path,
 };
 use color_eyre::eyre::{Result, eyre};
 use reqwest::Client;
@@ -16,6 +17,10 @@ use tracing::{error, info, warn};
 
 pub fn init_test_constants(constants: AppConstants) {
     if CONSTANTS.set(constants).is_err() {
+        info!("AppConstants were already initialized by another test.");
+    }
+    let test_db_url = "postgres://photos_user:dev-password@localhost/photos";
+    if DATABASE_URL.set(test_db_url.to_owned()).is_err() {
         info!("AppConstants were already initialized by another test.");
     }
 }
@@ -52,11 +57,11 @@ impl TestContext {
 
         // 1. Set up the dedicated test database
         let db_name = "test_db".to_owned();
-        let (main_pool, management_pool) =
-            create_test_database(&base_settings.secrets.database_url, &db_name).await?;
 
         // 2. Generate the final settings for this test run
-        let (settings, media_dir, thumbnail_dir) = create_test_settings(&db_name, &base_settings)?;
+        let (settings, media_dir, thumbnail_dir, db_url) =
+            create_test_settings(&db_name, &base_settings)?;
+        let (main_pool, management_pool) = create_test_database(&db_url, &db_name).await?;
 
         // 2.5. Copy over test media
         let assets_source_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/media_dir");

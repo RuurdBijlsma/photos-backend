@@ -1,4 +1,4 @@
-use app_state::{CONSTANTS, load_constants_from_path, load_settings_from_path};
+use app_state::{CONSTANTS, load_constants_from_path, load_settings_from_path, database_url, DATABASE_URL};
 use color_eyre::eyre::Result;
 use common_services::api::timeline::interfaces::SortDirection;
 use common_services::api::timeline::service::{
@@ -18,9 +18,11 @@ async fn setup() -> Result<(sqlx::PgPool, User)> {
     if CONSTANTS.set(constants).is_err() {
         info!("AppConstants were already initialized by another test.");
     }
-    let settings = load_settings_from_path(&settings_file, Some(&project_root.join(".env")))
-        .expect("settings");
-    let pool = get_db_pool(&settings.secrets.database_url, false)
+    let test_db_url = "postgres://photos_user:dev-password@localhost/photos";
+    if DATABASE_URL.set(test_db_url.to_owned()).is_err() {
+        info!("AppConstants were already initialized by another test.");
+    }
+    let pool = get_db_pool(database_url(), false)
         .await
         .expect("db pool");
     let user = UserStore::list_users(&pool)

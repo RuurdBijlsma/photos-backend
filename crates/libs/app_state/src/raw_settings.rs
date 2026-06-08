@@ -128,7 +128,6 @@ pub struct RateLimitingSettings {
 #[derive(Debug, Deserialize, Clone)]
 pub struct SecretSettings {
     pub jwt: String,
-    pub database_url: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

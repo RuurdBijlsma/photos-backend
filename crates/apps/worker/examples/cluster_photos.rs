@@ -1,4 +1,4 @@
-use app_state::load_app_settings;
+use app_state::{database_url, load_app_settings};
 use color_eyre::Result;
 use color_eyre::eyre::{Context, eyre};
 use common_services::database::get_db_pool;
@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     // --- Setup ---
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
-    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
+    let pool = get_db_pool(database_url(), true).await?;
     let output_path = PathBuf::from(OUTPUT_DIR);
 
     // --- 1. Fetch User and Photo Data ---

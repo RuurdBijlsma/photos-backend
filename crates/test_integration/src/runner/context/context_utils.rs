@@ -1,4 +1,4 @@
-use app_state::AppSettings;
+use app_state::{database_url, AppSettings};
 use color_eyre::eyre::Result;
 use common_services::database::get_db_pool;
 use sqlx::{Executor, PgPool};
@@ -12,7 +12,7 @@ use url::Url;
 pub fn create_test_settings(
     database_name: &str,
     base_settings: &AppSettings,
-) -> Result<(AppSettings, TempDir, TempDir)> {
+) -> Result<(AppSettings, TempDir, TempDir, String)> {
     // 1. Load base settings from the test configuration file.
     let mut settings = base_settings.clone();
 
@@ -27,11 +27,10 @@ pub fn create_test_settings(
     settings.ingest.thumbnail_root = thumbnail_dir.path().to_path_buf();
 
     // 3. Update the database URL to point to our unique test database.
-    let mut db_url = Url::parse(&settings.secrets.database_url)?;
+    let mut db_url = Url::parse(database_url())?;
     db_url.set_path(&format!("/{database_name}"));
-    settings.secrets.database_url = db_url.to_string();
 
-    Ok((settings, media_dir, thumbnail_dir))
+    Ok((settings, media_dir, thumbnail_dir, db_url.to_string()))
 }
 
 pub async fn create_test_database(
