@@ -76,7 +76,7 @@ async fn upsert_and_link(
                 .execute(&mut **tx).await?;
             existing_id.to_owned()
         } else {
-            query_scalar("INSERT INTO photo_cluster (id, user_id, thumbnail_media_item_id, centroid) VALUES ($1, $2, $3) RETURNING id")
+            query_scalar("INSERT INTO photo_cluster (id, user_id, thumbnail_media_item_id, centroid) VALUES ($1, $2, $3, $4) RETURNING id")
                 .bind(nice_id(10))
                 .bind(user_id)
                 .bind(thumbnail_media_item_id)

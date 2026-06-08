@@ -80,7 +80,7 @@ pub async fn get_search_by_image_results(
     mut multipart: Multipart,
 ) -> Result<Protobuf<SearchResponse>, SearchError> {
     const MAX_IMAGE_SIZE: usize = 10 * 1024 * 1024; // 10MB
-    const ALLOWED_EXTENSIONS: [&str; 4] = ["jpg", "jpeg", "png", "webp"];
+    const ALLOWED_EXTENSIONS: [&str; 5] = ["jpg", "jpeg", "png", "webp", "heic"];
 
     let mut image_bytes: Option<Vec<u8>> = None;
 
