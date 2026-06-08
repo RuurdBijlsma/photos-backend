@@ -30,12 +30,15 @@ pub fn generate_native_photo_thumbnails(
         .and_then(|ext| ext.to_str())
         .map(|ext| ext.to_ascii_lowercase());
 
-    let is_heif = matches!(extension.as_deref(), Some("heic" | "heif" | "heics" | "heifs"));
+    let is_heif = matches!(
+        extension.as_deref(),
+        Some("heic" | "heif" | "heics" | "heifs")
+    );
 
     let mut img = if is_heif {
-        let input_str = input_path.to_str().ok_or_else(|| {
-            color_eyre::eyre::eyre!("Input path is not valid UTF-8")
-        })?;
+        let input_str = input_path
+            .to_str()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Input path is not valid UTF-8"))?;
         let lib_heif = libheif_rs::LibHeif::new();
         let ctx = libheif_rs::HeifContext::read_from_file(input_str)?;
         let handle = ctx.primary_image_handle()?;
@@ -50,9 +53,9 @@ pub fn generate_native_photo_thumbnails(
             return Err(color_eyre::eyre::eyre!("Image height cannot be zero"));
         }
         let planes = decoded.planes();
-        let interleaved_plane = planes
-            .interleaved
-            .ok_or_else(|| color_eyre::eyre::eyre!("Could not retrieve interleaved RGB plane from decoded image"))?;
+        let interleaved_plane = planes.interleaved.ok_or_else(|| {
+            color_eyre::eyre::eyre!("Could not retrieve interleaved RGB plane from decoded image")
+        })?;
 
         let stride = interleaved_plane.stride;
         let data = interleaved_plane.data;
@@ -65,12 +68,15 @@ pub fn generate_native_photo_thumbnails(
             if row_end <= data.len() {
                 rgb_data.extend_from_slice(&data[row_start..row_end]);
             } else {
-                return Err(color_eyre::eyre::eyre!("Interleaved plane data is smaller than expected"));
+                return Err(color_eyre::eyre::eyre!(
+                    "Interleaved plane data is smaller than expected"
+                ));
             }
         }
 
-        let rgb_img = image::RgbImage::from_raw(width, height, rgb_data)
-            .ok_or_else(|| color_eyre::eyre::eyre!("Failed to create RgbImage from decoded pixel data"))?;
+        let rgb_img = image::RgbImage::from_raw(width, height, rgb_data).ok_or_else(|| {
+            color_eyre::eyre::eyre!("Failed to create RgbImage from decoded pixel data")
+        })?;
         image::DynamicImage::ImageRgb8(rgb_img)
     } else {
         ImageReader::open(input_path)?
@@ -89,7 +95,9 @@ pub fn generate_native_photo_thumbnails(
         8 => Orientation::Rotate270,
         _ => Orientation::NoTransforms,
     };
-    img.apply_orientation(image_orientation);
+    if !is_heif {
+        img.apply_orientation(image_orientation);
+    }
 
     let src_img = img.into_rgba8();
     let (orig_w, orig_h) = src_img.dimensions();
