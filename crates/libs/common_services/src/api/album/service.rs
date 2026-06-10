@@ -20,7 +20,7 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;
 
-const DEFAULT_ALBUM_SORT: AlbumSort = AlbumSort::DateDesc;
+const DEFAULT_ALBUM_SORT: AlbumSort = AlbumSort::DateAsc;
 
 #[instrument(skip(executor))]
 async fn check_user_role(
