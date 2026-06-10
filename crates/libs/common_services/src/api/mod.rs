@@ -2,6 +2,7 @@ pub mod album;
 pub mod auth;
 pub mod onboarding;
 pub mod people;
+pub mod camera;
 pub mod photos;
 pub mod s2s;
 pub mod search;

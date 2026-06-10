@@ -110,6 +110,20 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize)]",
     );
 
+    // --- CAMERA STRUCTS ---
+    config.type_attribute(
+        ".api.CameraInfo",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.ListCameraResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.FullCameraPhotosResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+
     config.type_attribute(".api", "#[serde(rename_all = \"camelCase\")]");
     config.compile_fds(file_descriptors)?;
 

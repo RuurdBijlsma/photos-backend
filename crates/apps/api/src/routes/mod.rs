@@ -7,6 +7,7 @@ pub mod root;
 pub mod s2s;
 pub mod search;
 pub mod theme;
+pub mod camera;
 
 pub mod system;
 pub mod timeline;
@@ -34,6 +35,7 @@ use app_state::RateLimitingSettings;
 use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use common_services::database::app_user::UserRole;
+use crate::camera::router::camera_protected_router;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {
@@ -78,6 +80,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
         .merge(timeline_protected_router())
         .merge(search_protected_router())
         .merge(album_protected_router())
+        .merge(camera_protected_router())
         .merge(people_protected_router())
         .merge(user_protected_router())
         .merge(system_protected_router())

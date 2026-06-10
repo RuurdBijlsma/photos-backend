@@ -111,6 +111,22 @@ message FullPersonMediaResponse {
   repeated SimpleTimelineItem items = 2;
 }
 
+// --- Camera
+message CameraInfo {
+  string make = 1;
+  string model = 2;
+  int32 photo_count = 3;
+}
+
+message ListCameraResponse {
+  repeated CameraInfo cameras = 1;
+}
+
+message FullCameraPhotosResponse {
+  CameraInfo camera = 1;
+  repeated SimpleTimelineItem items = 2;
+}
+
 // --- Map specific ---
 message MapPhotoItem {
   double latitude = 1;
