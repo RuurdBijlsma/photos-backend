@@ -227,3 +227,10 @@ CREATE INDEX idx_media_item_search_filters
 -- For /photos/geo (Map view)
 CREATE INDEX idx_media_item_geo_lookup
     ON media_item (user_id, deleted, sort_timestamp DESC) INCLUDE (id, width, height, is_video, has_thumbnails, duration_ms);
+
+-- For /camera
+CREATE INDEX idx_camera_settings_normalized_make_model
+    ON camera_settings (
+                        LOWER(TRIM(camera_make)),
+                        LOWER(REGEXP_REPLACE(TRIM(camera_model), '\s*\(.*\)$', '', 'i'))
+        );

@@ -1,6 +1,8 @@
 use super::error::CameraError;
 use crate::api::camera::interfaces::CameraSummary;
-use common_types::pb::api::{CameraInfo, FullCameraPhotosResponse, ListCameraResponse};
+use common_types::pb::api::{
+    CameraInfo, FullCameraPhotosResponse, ListCameraResponse, SimpleTimelineItem,
+};
 use sqlx::PgPool;
 use tracing::instrument;
 
@@ -54,13 +56,37 @@ pub async fn get_camera_photos(
     camera_model: &str,
     user_id: i32,
 ) -> Result<FullCameraPhotosResponse, CameraError> {
-    let items = todo!();
+    let items = sqlx::query_as!(
+        SimpleTimelineItem,
+        r#"
+            SELECT
+                mi.id,
+                mi.is_video,
+                mi.has_thumbnails,
+                mi.duration_ms::INT AS "duration_ms",
+                (mi.width::real / mi.height::real) AS "ratio!"
+            FROM camera_settings c
+            INNER JOIN media_item mi ON c.media_item_id = mi.id
+            WHERE mi.user_id = $1
+              AND mi.deleted = false
+              AND LOWER(TRIM(c.camera_make)) = LOWER(TRIM($2))
+              AND LOWER(REGEXP_REPLACE(TRIM(c.camera_model), '\s*\(.*\)$', '', 'i')) = LOWER(TRIM($3))
+            ORDER BY mi.sort_timestamp DESC;
+        "#,
+        user_id,
+        camera_make,
+        camera_model
+    )
+        .fetch_all(pool)
+        .await?;
+
+    let photo_count = items.len() as i32;
 
     Ok(FullCameraPhotosResponse {
         camera: Some(CameraInfo {
-            photo_count: todo!(),
-            make: todo!(),
-            model: todo!(),
+            photo_count,
+            make: camera_make.to_string(),
+            model: camera_model.to_string(),
         }),
         items,
     })
