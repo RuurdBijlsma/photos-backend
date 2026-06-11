@@ -116,6 +116,7 @@ message CameraInfo {
   string make = 1;
   string model = 2;
   int32 photo_count = 3;
+  string thumbnail_id = 4;
 }
 
 message ListCameraResponse {

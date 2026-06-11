@@ -14,28 +14,61 @@ pub async fn get_all_cameras(
     let cameras = sqlx::query_as!(
         CameraSummary,
         r#"
+            WITH camera_groups AS (
+                SELECT
+                    c.media_item_id,
+                    TRIM(c.camera_make) AS raw_make,
+                    TRIM(c.camera_model) AS raw_model,
+                    LOWER(TRIM(c.camera_make)) AS norm_make,
+                    LOWER(REGEXP_REPLACE(TRIM(c.camera_model), '\s*\(.*\)$', '', 'i')) AS norm_model,
+                    m.sort_timestamp,
+                    m.has_thumbnails
+                FROM camera_settings c
+                INNER JOIN media_item m ON c.media_item_id = m.id
+                WHERE m.user_id = $1
+                  AND m.deleted = false
+                  AND c.camera_make IS NOT NULL
+                  AND c.camera_model IS NOT NULL
+                  AND c.camera_make != '--'
+                  AND c.camera_model != '--'
+                  AND LOWER(TRIM(c.camera_make)) != 'unknown'
+            ),
+            camera_stats AS (
+                SELECT
+                    norm_make,
+                    norm_model,
+                    MIN(raw_make) AS camera_make,
+                    REGEXP_REPLACE(MIN(raw_model), '\s*\(.*\)$', '', 'i') AS camera_model,
+                    COUNT(*)::INT AS count
+                FROM camera_groups
+                GROUP BY norm_make, norm_model
+            ),
+            ranked_photos AS (
+                SELECT
+                    norm_make,
+                    norm_model,
+                    media_item_id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY norm_make, norm_model
+                        ORDER BY has_thumbnails DESC, sort_timestamp DESC
+                    ) as rn
+                FROM camera_groups
+            )
             SELECT
-                MIN(TRIM(c.camera_make)) AS "camera_make!",
-                REGEXP_REPLACE(MIN(TRIM(c.camera_model)), '\s*\(.*\)$', '', 'i') AS "camera_model!",
-                COUNT(*)::INT AS "count!"
-            FROM camera_settings c
-                     INNER JOIN media_item m ON c.media_item_id = m.id
-            WHERE m.user_id = $1
-              AND m.deleted = false
-              AND c.camera_make IS NOT NULL
-              AND c.camera_model IS NOT NULL
-              AND c.camera_make != '--'
-              AND c.camera_model != '--'
-              AND LOWER(TRIM(c.camera_make)) != 'unknown'
-            GROUP BY
-                LOWER(TRIM(c.camera_make)),
-                LOWER(REGEXP_REPLACE(TRIM(c.camera_model), '\s*\(.*\)$', '', 'i'))
-            ORDER BY COUNT(*) DESC;
+                s.camera_make AS "camera_make!",
+                s.camera_model AS "camera_model!",
+                s.count AS "count!",
+                r.media_item_id AS "thumbnail_id!"
+            FROM camera_stats s
+            INNER JOIN ranked_photos r
+                ON s.norm_make = r.norm_make AND s.norm_model = r.norm_model
+            WHERE r.rn = 1
+            ORDER BY s.count DESC;
             "#,
         user_id
     )
-    .fetch_all(pool)
-    .await?;
+        .fetch_all(pool)
+        .await?;
 
     let camera_pb = cameras
         .into_iter()
@@ -43,6 +76,7 @@ pub async fn get_all_cameras(
             make: p.camera_make,
             model: p.camera_model,
             photo_count: p.count,
+            thumbnail_id: p.thumbnail_id,
         })
         .collect();
 
@@ -82,11 +116,16 @@ pub async fn get_camera_photos(
 
     let photo_count = items.len() as i32;
 
+    let Some(first_item) = items.first().map(|i| i.id.clone()) else {
+        return Err(CameraError::NotFound("No photos found for this camera".to_owned()))
+    };
+
     Ok(FullCameraPhotosResponse {
         camera: Some(CameraInfo {
             photo_count,
             make: camera_make.to_string(),
             model: camera_model.to_string(),
+            thumbnail_id: first_item,
         }),
         items,
     })

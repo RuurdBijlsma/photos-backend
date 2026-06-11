@@ -16,9 +16,10 @@ pub struct UpdatePersonRequest {
     pub face_thumb_id: UpdateField<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CameraSummary {
     pub camera_make: String,
     pub camera_model: String,
     pub count: i32,
+    pub thumbnail_id: String,
 }
