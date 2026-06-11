@@ -1,6 +1,6 @@
 -- Ensure the vector extension is available.
 CREATE
-EXTENSION IF NOT EXISTS vector;
+    EXTENSION IF NOT EXISTS vector;
 
 -- Represents a person, which is a collection of one or more face clusters.
 CREATE TABLE person
@@ -40,6 +40,7 @@ CREATE TABLE photo_cluster
     title                   TEXT,        -- Optional auto generated title
     thumbnail_media_item_id VARCHAR(10) REFERENCES media_item (id) ON DELETE SET NULL,
     centroid                VECTOR(768), -- The average photo embedding
+    friendly_label          TEXT,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -56,3 +57,16 @@ CREATE TABLE media_item_photo_cluster
 
 -- Index for finding all media items in a specific cluster.
 CREATE INDEX idx_media_item_photo_cluster_cluster_id ON media_item_photo_cluster (photo_cluster_id);
+
+CREATE TABLE cluster_tags
+(
+    id        SERIAL PRIMARY KEY,
+    user_id   INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    tag       TEXT        NOT NULL UNIQUE,
+    embedding VECTOR(768) NOT NULL
+);
+
+CREATE INDEX idx_cluster_tags_user_id ON photo_cluster (user_id);
+CREATE INDEX idx_cluster_tags_embedding_hnsw
+    ON cluster_tags
+        USING hnsw (embedding vector_cosine_ops);

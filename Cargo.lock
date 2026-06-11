@@ -9336,6 +9336,7 @@ dependencies = [
  "media_analyzer",
  "ml_analysis",
  "ndarray",
+ "open_clip_inference",
  "pgvector",
  "plotters",
  "rand 0.10.1",
