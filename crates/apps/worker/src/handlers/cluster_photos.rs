@@ -2,6 +2,7 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::clustering::{self, ClusterEntity};
 use color_eyre::Result;
+use common_services::api::album::service::get_representative_thumbnail;
 use common_services::database::jobs::Job;
 use common_services::database::photo_cluster::ExistingPhotoCluster;
 use common_services::database::visual_analysis::visual_analysis::MediaEmbedding;
@@ -10,6 +11,9 @@ use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::{PgPool, Transaction, query, query_as, query_scalar};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
+use std::time::Instant;
+use tokio::fs;
 use tracing::info;
 
 const ENTITY_NAME: &str = "photo";
@@ -27,24 +31,57 @@ impl ClusterEntity for ExistingPhotoCluster {
 }
 
 async fn load_vocab_labels() -> Result<Vec<String>> {
-    // load every line from assets/*.txt and put in a Vec<string>
-    todo!();
+    let mut labels = Vec::new();
+    let dir = Path::new("assets/tag-vocab");
+    if dir.exists() && dir.is_dir() {
+        let mut entries = fs::read_dir(dir).await?;
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            if path.is_file() {
+                let content = fs::read_to_string(&path).await?;
+                for line in content.lines() {
+                    labels.push(line.to_string());
+                }
+            }
+        }
+    }
+    Ok(labels)
 }
 
 async fn load_object_tags(pool: &PgPool, user_id: i32) -> Result<Vec<String>> {
-    // load every distinct object tag from the db for this user
-    todo!();
+    let tags = sqlx::query_scalar!(
+        r#"SELECT DISTINCT o.tag
+           FROM object o
+           JOIN visual_analysis va ON va.id = o.visual_analysis_id
+           WHERE va.user_id = $1 AND va.deleted = false"#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(tags)
 }
 
 async fn load_all_tags(pool: &PgPool, user_id: i32) -> Result<Vec<String>> {
     let vocab_labels = load_vocab_labels().await?;
-    let object_tags = load_object_tags(&pool, user_id).await?;
-    // combine vocab labels and object tags
-    // make first letter of every string capitalized
-    // trim all
-    // other normalization?
-    // make deduplicate full list
-    todo!();
+    let object_tags = load_object_tags(pool, user_id).await?;
+
+    let mut deduplicated_tags = HashSet::new();
+
+    // Combine, trim, and capitalize the first letter of each tag
+    for tag in vocab_labels.into_iter().chain(object_tags.into_iter()) {
+        let trimmed = tag.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        let mut chars = trimmed.chars();
+        if let Some(first_char) = chars.next() {
+            let capitalized = first_char.to_uppercase().to_string() + chars.as_str();
+            deduplicated_tags.insert(capitalized);
+        }
+    }
+
+    Ok(deduplicated_tags.into_iter().collect())
 }
 
 async fn load_tag_embeddings(
@@ -53,14 +90,63 @@ async fn load_tag_embeddings(
     text_embedder: &TextEmbedder,
 ) -> Result<()> {
     let tags = load_all_tags(pool, user_id).await?;
-    // check which tags are already in the db table `cluster_tags`
-    // make `tags_to_process: Vec<String>` that's all tags excluding ones already in db
-    // make mapping of every tag to process -> tag to embedding using text_embedder.embed_texts
-    // - this returns a Result<Array2<f32>, ClipError>
-    // - can't put m all in at once, batch by N items so it doesn't overload memory
-    // remove from db tags that aren't in the result of load all tags
-    // add to db the newly processed tags
-    todo!();
+
+    // Determine which tags are already loaded in the db table `cluster_tags`
+    let existing_tags: HashSet<String> =
+        sqlx::query_scalar!("SELECT tag FROM cluster_tags WHERE user_id = $1", user_id)
+            .fetch_all(pool)
+            .await?
+            .into_iter()
+            .collect();
+
+    let tags_to_process: Vec<String> = tags
+        .iter()
+        .filter(|t| !existing_tags.contains(*t))
+        .cloned()
+        .collect();
+
+    let mut new_embeddings = Vec::new();
+    let batch_size = 128; // Batched to prevent memory overload
+
+    for chunk in tags_to_process.chunks(batch_size) {
+        let chunk_vec: Vec<String> = chunk.to_vec();
+        let embeddings_array = text_embedder
+            .embed_texts(&chunk_vec)
+            .map_err(|e| color_eyre::eyre::eyre!("CLIP embedding generation failed: {:?}", e))?;
+
+        for (i, tag) in chunk.iter().enumerate() {
+            let row: Vec<f32> = embeddings_array.row(i).iter().cloned().collect();
+            new_embeddings.push((tag.clone(), Vector::from(row)));
+        }
+    }
+
+    let mut tx = pool.begin().await?;
+
+    // Remove obsolete tags that are not present in the current loaded tags list
+    sqlx::query!(
+        "DELETE FROM cluster_tags WHERE user_id = $1 AND NOT (tag = ANY($2))",
+        user_id,
+        &tags
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // Bulk insert or update newly processed tags
+    for (tag, embedding) in new_embeddings {
+        sqlx::query!(
+            "INSERT INTO cluster_tags (user_id, tag, embedding)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (tag) DO UPDATE SET embedding = EXCLUDED.embedding",
+            user_id,
+            tag,
+            embedding as _
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
+    Ok(())
 }
 
 async fn fetch_existing_clusters(pool: &PgPool, user_id: i32) -> Result<Vec<ExistingPhotoCluster>> {
@@ -91,9 +177,26 @@ async fn fetch_embeddings(pool: &PgPool, user_id: i32) -> Result<Vec<MediaEmbedd
     .map_err(Into::into)
 }
 
-async fn find_cluster_label(centroid: &Vec<f32>) -> Result<String> {
-    // find nearest row from cluster_tags to get a friendly label for the cluster
-    todo!()
+async fn find_cluster_label(
+    tx: &mut Transaction<'_, sqlx::Postgres>,
+    user_id: i32,
+    centroid: &Vec<f32>,
+) -> Result<String> {
+    let centroid_vector = Vector::from(centroid.clone());
+
+    // Nearest neighbor search via cosine distance
+    let label: Option<String> = sqlx::query_scalar!(
+        "SELECT tag FROM cluster_tags
+         WHERE user_id = $1
+         ORDER BY embedding <=> $2
+         LIMIT 1",
+        user_id,
+        centroid_vector as _
+    )
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    Ok(label.unwrap_or_else(|| "Unknown".to_string()))
 }
 
 async fn upsert_and_link(
@@ -110,13 +213,22 @@ async fn upsert_and_link(
             .collect();
         let new_centroid_vec = new_centroids.get(cluster_idx);
         let new_centroid = new_centroid_vec.map(|v| Vector::from(v.clone()));
-        let thumbnail_media_item_id = &photos_in_cluster[0].media_item_id;
+        let thumbnail_media_item_id = get_representative_thumbnail(
+            tx,
+            &photos_in_cluster
+                .iter()
+                .map(|f| f.media_item_id.clone())
+                .collect::<Vec<String>>(),
+        )
+        .await?;
 
+        let now = Instant::now();
         let user_friendly_label = if let Some(centroid) = new_centroid_vec {
-            Some(find_cluster_label(centroid).await?)
+            Some(find_cluster_label(tx, user_id, centroid).await?)
         } else {
             None
         };
+        println!("find_cluster_labels for cluster took {:?}", now.elapsed());
 
         let photo_cluster_id = if let Some(existing_id) = cluster_map.get(&cluster_idx) {
             query("UPDATE photo_cluster SET centroid = $1, thumbnail_media_item_id = $2, friendly_label = $3, updated_at = now() WHERE id = $4")
@@ -167,7 +279,9 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_ids = clustering::fetch_user_ids(&context.pool, job).await?;
 
     for user_id in user_ids {
+        let now = Instant::now();
         load_tag_embeddings(&context.pool, user_id, &context.text_embedder).await?;
+        println!("load_tag_embeddings took {:?}", now.elapsed());
 
         let existing_clusters = fetch_existing_clusters(&context.pool, user_id).await?;
         let items_to_cluster = fetch_embeddings(&context.pool, user_id).await?;

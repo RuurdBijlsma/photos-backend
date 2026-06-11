@@ -183,7 +183,7 @@
     * ✅ Als ik zoek "food" moet ik iets van duizend plaatjes krijgen
 * ✅ [SPECIAL CASE] WHEN SEARCH TERM = "", then return all photos that match the filters
 * ✅ search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
-  * ✅ hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
+    * ✅ hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
 * ✅ thumbnail hosting is niet veilig
 * ✅ retrieve person face thumb not safe (something like /thumbnails/people/1.webp)
 * ✅ also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
@@ -194,15 +194,15 @@
 * ✅ make sure cache control on thumbnails are immutable/max age.
 * ✅ automatic onboarding
 * ✅ review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
-  * ✅ is auth wel goed implemented? met is_public enzo
-  * ✅ minder repeated code maken voor de auth check daar
+    * ✅ is auth wel goed implemented? met is_public enzo
+    * ✅ minder repeated code maken voor de auth check daar
 * ✅ [BUG] Als je met filters naar persons zoek, zoekt ie op basis van FaceName om een of andere reden. Als je 2 personen
   hebt met dezelfde naam, gaat dit fout.
 * ✅ REFACTOR TIME. Theme hoeft niet in DB. het zet de variant te vast en het kan meer dan snel genoeg zonder db access
-  * ✅ bij ingest, alleen de extracted kleuren van de item in db zetten
-  * ✅ bij get random theme endpoint, voeg variant parameter toe (wordt in settings gezet)
-  * ✅ haal theme json uit db
-  * ✅ in frontend, laat user variant kiezen voor random bg image
+    * ✅ bij ingest, alleen de extracted kleuren van de item in db zetten
+    * ✅ bij get random theme endpoint, voeg variant parameter toe (wordt in settings gezet)
+    * ✅ haal theme json uit db
+    * ✅ in frontend, laat user variant kiezen voor random bg image
 * ✅ default sort for albums should be oldest first (currently newest first - WRONG)
 * ✅ mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
 * password reset flow (email) (make mail optional)
@@ -222,6 +222,7 @@
 * [BUG] when a second user registers with a subfolder of the first user as media folder, and there's already media in
   there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
   sure how to handle this case.
+* [check] als ik iets soft-delete, make sure dat visual_analysis.deleted ook op false gaat
 
 # Features
 

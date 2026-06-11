@@ -37,10 +37,9 @@ CREATE TABLE photo_cluster
 (
     id                      VARCHAR(10) PRIMARY KEY,
     user_id                 INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    title                   TEXT,        -- Optional auto generated title
+    friendly_label                   TEXT,        -- Optional auto generated title
     thumbnail_media_item_id VARCHAR(10) REFERENCES media_item (id) ON DELETE SET NULL,
     centroid                VECTOR(768), -- The average photo embedding
-    friendly_label          TEXT,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 );
