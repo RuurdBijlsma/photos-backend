@@ -37,7 +37,7 @@ CREATE TABLE photo_cluster
 (
     id                      VARCHAR(10) PRIMARY KEY,
     user_id                 INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    friendly_label                   TEXT,        -- Optional auto generated title
+    friendly_label          TEXT,        -- Optional auto generated title
     thumbnail_media_item_id VARCHAR(10) REFERENCES media_item (id) ON DELETE SET NULL,
     centroid                VECTOR(768), -- The average photo embedding
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -59,9 +59,7 @@ CREATE INDEX idx_media_item_photo_cluster_cluster_id ON media_item_photo_cluster
 
 CREATE TABLE cluster_tags
 (
-    id        SERIAL PRIMARY KEY,
-    user_id   INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    tag       TEXT        NOT NULL UNIQUE,
+    tag       TEXT        NOT NULL PRIMARY KEY,
     embedding VECTOR(768) NOT NULL
 );
 

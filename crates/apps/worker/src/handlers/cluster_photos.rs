@@ -94,9 +94,13 @@ async fn load_tag_embeddings(
 ) -> Result<()> {
     let tags = load_all_tags(pool, user_id).await?;
 
-    // Determine which tags are already loaded in the db table `cluster_tags`
+    if tags.is_empty() {
+        return Ok(());
+    }
+
+    // Query global `cluster_tags` to find which of the current user's tags are already embedded
     let existing_tags: HashSet<String> =
-        sqlx::query_scalar!("SELECT tag FROM cluster_tags WHERE user_id = $1", user_id)
+        sqlx::query_scalar!("SELECT tag FROM cluster_tags WHERE tag = ANY($1)", &tags)
             .fetch_all(pool)
             .await?
             .into_iter()
@@ -107,6 +111,10 @@ async fn load_tag_embeddings(
         .filter(|t| !existing_tags.contains(*t))
         .cloned()
         .collect();
+
+    if tags_to_process.is_empty() {
+        return Ok(());
+    }
 
     let mut new_embeddings = Vec::new();
     let batch_size = 128; // Batched to prevent memory overload
@@ -125,22 +133,12 @@ async fn load_tag_embeddings(
 
     let mut tx = pool.begin().await?;
 
-    // Remove obsolete tags that are not present in the current loaded tags list
-    sqlx::query!(
-        "DELETE FROM cluster_tags WHERE user_id = $1 AND NOT (tag = ANY($2))",
-        user_id,
-        &tags
-    )
-    .execute(&mut *tx)
-    .await?;
-
-    // Bulk insert or update newly processed tags
+    // Bulk insert or update newly processed tags globally
     for (tag, embedding) in new_embeddings {
         sqlx::query!(
-            "INSERT INTO cluster_tags (user_id, tag, embedding)
-             VALUES ($1, $2, $3)
+            "INSERT INTO cluster_tags (tag, embedding)
+             VALUES ($1, $2)
              ON CONFLICT (tag) DO UPDATE SET embedding = EXCLUDED.embedding",
-            user_id,
             tag,
             embedding as _
         )
@@ -182,18 +180,15 @@ async fn fetch_embeddings(pool: &PgPool, user_id: i32) -> Result<Vec<MediaEmbedd
 
 async fn find_cluster_label(
     tx: &mut Transaction<'_, sqlx::Postgres>,
-    user_id: i32,
     centroid: &Vec<f32>,
 ) -> Result<String> {
     let centroid_vector = Vector::from(centroid.clone());
 
-    // Nearest neighbor search via cosine distance
+    // Nearest neighbor search via cosine distance globally
     let label: Option<String> = sqlx::query_scalar!(
         "SELECT tag FROM cluster_tags
-         WHERE user_id = $1
-         ORDER BY embedding <=> $2
+         ORDER BY embedding <=> $1
          LIMIT 1",
-        user_id,
         centroid_vector as _
     )
     .fetch_optional(&mut **tx)
@@ -226,7 +221,7 @@ async fn upsert_and_link(
         .await?;
 
         let user_friendly_label = if let Some(centroid) = new_centroid_vec {
-            Some(find_cluster_label(tx, user_id, centroid).await?)
+            Some(find_cluster_label(tx, centroid).await?)
         } else {
             None
         };
