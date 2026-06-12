@@ -58,7 +58,6 @@ async fn load_object_tags(pool: &PgPool) -> Result<Vec<String>> {
     )
     .fetch_all(pool)
     .await?;
-    let tags = vec![];
     Ok(tags)
 }
 
