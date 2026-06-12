@@ -62,7 +62,7 @@ async fn load_object_tags(pool: &PgPool) -> Result<Vec<String>> {
     Ok(tags)
 }
 
-async fn load_all_tags(pool: &PgPool) -> Result<Vec<String>> {
+async fn load_all_tags(pool: &PgPool) -> Result<HashSet<String>> {
     let vocab_labels = load_vocab_labels().await?;
     let object_tags = load_object_tags(pool).await?;
 
@@ -83,67 +83,79 @@ async fn load_all_tags(pool: &PgPool) -> Result<Vec<String>> {
     }
 
     dbg!(&deduplicated_tags);
-    Ok(deduplicated_tags.into_iter().collect())
+    Ok(deduplicated_tags)
 }
 
 async fn load_tag_embeddings(pool: &PgPool, text_embedder: &TextEmbedder) -> Result<()> {
     let tags = load_all_tags(pool).await?;
 
-    if tags.is_empty() {
-        return Ok(());
-    }
+    // Retrieve all currently cached tags to compare against
+    let existing_tags: Vec<String> = sqlx::query_scalar!("SELECT tag FROM cluster_tags")
+        .fetch_all(pool)
+        .await?;
 
-    // Check which of the gathered tags already exist globally in the cache
-    let existing_tags: HashSet<String> = sqlx::query_scalar!(
-        "SELECT tag FROM cluster_tags WHERE tag = ANY($1::varchar[])",
-        &tags
-    )
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .collect();
+    let existing_tags_set: HashSet<String> = existing_tags.iter().cloned().collect();
 
+    // Tags in the database that are no longer in the active tags list should be deleted
+    let tags_to_delete: Vec<String> = existing_tags
+        .into_iter()
+        .filter(|t| !tags.contains(t))
+        .collect();
+
+    // Tags in the active list that are not yet in the database need to be embedded and added
     let tags_to_process: Vec<String> = tags
         .iter()
-        .filter(|t| !existing_tags.contains(*t))
+        .filter(|t| !existing_tags_set.contains(*t))
         .cloned()
         .collect();
 
-    if tags_to_process.is_empty() {
-        return Ok(());
-    }
-
+    // Generate embeddings for new tags
     let mut new_embeddings = Vec::new();
-    let batch_size = 64;
+    if !tags_to_process.is_empty() {
+        let batch_size = 64;
+        for chunk in tags_to_process.chunks(batch_size) {
+            let chunk_vec: Vec<String> = chunk.to_vec();
+            let embeddings_array = text_embedder.embed_texts(&chunk_vec).map_err(|e| {
+                color_eyre::eyre::eyre!("CLIP embedding generation failed: {:?}", e)
+            })?;
 
-    for chunk in tags_to_process.chunks(batch_size) {
-        let chunk_vec: Vec<String> = chunk.to_vec();
-        let embeddings_array = text_embedder
-            .embed_texts(&chunk_vec)
-            .map_err(|e| color_eyre::eyre::eyre!("CLIP embedding generation failed: {:?}", e))?;
-
-        for (i, tag) in chunk.iter().enumerate() {
-            let row: Vec<f32> = embeddings_array.row(i).iter().cloned().collect();
-            new_embeddings.push((tag.clone(), Vector::from(row)));
+            for (i, tag) in chunk.iter().enumerate() {
+                let row: Vec<f32> = embeddings_array.row(i).iter().cloned().collect();
+                new_embeddings.push((tag.clone(), Vector::from(row)));
+            }
         }
     }
 
-    let mut tx = pool.begin().await?;
+    // Apply database updates if there are changes to make
+    if !tags_to_delete.is_empty() || !new_embeddings.is_empty() {
+        let mut tx = pool.begin().await?;
 
-    // Bulk insert newly processed tags globally
-    for (tag, embedding) in new_embeddings {
-        sqlx::query!(
-            "INSERT INTO cluster_tags (tag, embedding)
-             VALUES ($1, $2)
-             ON CONFLICT (tag) DO UPDATE SET embedding = EXCLUDED.embedding",
-            tag,
-            embedding as _
-        )
-        .execute(&mut *tx)
-        .await?;
+        // Delete obsolete tags
+        if !tags_to_delete.is_empty() {
+            sqlx::query!(
+                "DELETE FROM cluster_tags WHERE tag = ANY($1::varchar[])",
+                &tags_to_delete
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        // Insert new tags
+        for (tag, embedding) in new_embeddings {
+            sqlx::query!(
+                "INSERT INTO cluster_tags (tag, embedding)
+                 VALUES ($1, $2)
+                 ON CONFLICT (tag) DO UPDATE SET embedding = EXCLUDED.embedding",
+                tag,
+                embedding as _
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
     }
 
-    tx.commit().await?;
     Ok(())
 }
 
@@ -274,10 +286,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     // Load, resolve, and generate embeddings for cluster labels
     let now = Instant::now();
     load_tag_embeddings(&context.pool, &context.text_embedder).await?;
-    info!(
-        "load_tag_embeddings took {:?}",
-        now.elapsed()
-    );
+    info!("load_tag_embeddings took {:?}", now.elapsed());
 
     for user_id in user_ids {
         let existing_clusters = fetch_existing_clusters(&context.pool, user_id).await?;
