@@ -45,6 +45,7 @@ async fn load_vocab_labels() -> Result<Vec<String>> {
             }
         }
     }
+    println!("VOCAB LABELS {}", labels.join(", "));
     Ok(labels)
 }
 
@@ -58,6 +59,7 @@ async fn load_object_tags(pool: &PgPool, user_id: i32) -> Result<Vec<String>> {
     )
     .fetch_all(pool)
     .await?;
+    let tags = vec![];
     Ok(tags)
 }
 
@@ -81,6 +83,7 @@ async fn load_all_tags(pool: &PgPool, user_id: i32) -> Result<Vec<String>> {
         }
     }
 
+    dbg!(&deduplicated_tags);
     Ok(deduplicated_tags.into_iter().collect())
 }
 
@@ -222,13 +225,11 @@ async fn upsert_and_link(
         )
         .await?;
 
-        let now = Instant::now();
         let user_friendly_label = if let Some(centroid) = new_centroid_vec {
             Some(find_cluster_label(tx, user_id, centroid).await?)
         } else {
             None
         };
-        println!("find_cluster_labels for cluster took {:?}", now.elapsed());
 
         let photo_cluster_id = if let Some(existing_id) = cluster_map.get(&cluster_idx) {
             query("UPDATE photo_cluster SET centroid = $1, thumbnail_media_item_id = $2, friendly_label = $3, updated_at = now() WHERE id = $4")
