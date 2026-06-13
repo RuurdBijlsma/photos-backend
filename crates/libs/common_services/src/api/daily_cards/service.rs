@@ -1,9 +1,9 @@
 use crate::api::daily_cards::error::DailyCardsError;
 use crate::api::daily_cards::interfaces::DailyCardResponse;
-use sqlx::PgPool;
-use chrono::NaiveDate;
 use app_state::AppSettings;
+use chrono::NaiveDate;
 use rand::RngExt;
+use sqlx::PgPool;
 
 pub async fn get_daily_cards(
     pool: &PgPool,
@@ -26,8 +26,8 @@ pub async fn get_daily_cards(
         user_id,
         target_date
     )
-    .fetch_all(&mut *tx)
-    .await?;
+        .fetch_all(&mut *tx)
+        .await?;
 
     returned_cards.extend(date_cards);
 
@@ -36,10 +36,8 @@ pub async fn get_daily_cards(
         "SELECT DISTINCT card_type FROM daily_card WHERE user_id = $1 AND card_date IS NULL AND shown = false",
         user_id
     )
-    .fetch_all(&mut *tx)
-    .await?;
-
-    let mut rng = rand::rng();
+        .fetch_all(&mut *tx)
+        .await?;
 
     for card_type in types {
         let (min, max) = match card_type.as_str() {
@@ -51,7 +49,7 @@ pub async fn get_daily_cards(
         let count = if min >= max {
             min
         } else {
-            rng.random_range(min..=max)
+            rand::rng().random_range(min..=max)
         };
 
         if count > 0 {
@@ -68,8 +66,8 @@ pub async fn get_daily_cards(
                 card_type,
                 count as i64
             )
-            .fetch_all(&mut *tx)
-            .await?;
+                .fetch_all(&mut *tx)
+                .await?; 
 
             returned_cards.extend(type_cards);
         }
@@ -82,8 +80,8 @@ pub async fn get_daily_cards(
             "UPDATE daily_card SET shown = true, updated_at = now() WHERE id = ANY($1)",
             &ids
         )
-        .execute(&mut *tx)
-        .await?;
+            .execute(&mut *tx)
+            .await?;
 
         for card in &mut returned_cards {
             card.shown = true;

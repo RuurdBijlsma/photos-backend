@@ -21,6 +21,7 @@ pub mod remove;
 pub mod scan;
 pub mod sync_thumbnails;
 pub mod update_global_centroid;
+mod daily_cards;
 
 /// The outcome of a job handler's execution.
 #[derive(Debug, PartialEq, Eq)]

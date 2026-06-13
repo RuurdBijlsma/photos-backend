@@ -10,7 +10,6 @@ use common_services::api::daily_cards::service::{get_daily_cards, validate_media
 use chrono::NaiveDate;
 use tracing::instrument;
 
-#[axum::debug_handler]
 #[instrument(skip(context, user), err(Debug))]
 pub async fn get_daily_cards_handler(
     State(context): State<ApiContext>,

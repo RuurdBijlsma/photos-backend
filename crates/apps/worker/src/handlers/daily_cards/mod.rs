@@ -1,0 +1,19 @@
+use async_trait::async_trait;
+use sqlx::PgTransaction;
+use app_state::AppSettings;
+
+pub mod on_this_day_card;
+pub mod cluster_card;
+pub mod estimatr_card;
+
+
+#[async_trait]
+pub trait DailyCardGenerator {
+    fn card_type(&self) -> &'static str;
+    async fn generate(
+        &self,
+        tx: &mut PgTransaction<'_>,
+        user_id: i32,
+        settings: &AppSettings,
+    ) -> color_eyre::Result<()>;
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Validate Media
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://localhost:9475/daily-cards/validate-media
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "media_item_ids": ["v09R7o7byp", "AqE9SWXLEU", "asdasdf"]
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
