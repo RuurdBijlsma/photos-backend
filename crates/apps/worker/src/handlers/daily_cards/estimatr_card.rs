@@ -4,12 +4,12 @@ use app_state::AppSettings;
 use common_services::api::album::service::get_representative_thumbnail;
 use crate::handlers::daily_cards::DailyCardGenerator;
 
-pub struct GeoguessrCardGenerator;
+pub struct LocationEstimatrCardGenerator;
 
 #[async_trait]
-impl DailyCardGenerator for GeoguessrCardGenerator {
+impl DailyCardGenerator for LocationEstimatrCardGenerator {
     fn card_type(&self) -> &'static str {
-        "geoguessr"
+        "estimatr"
     }
 
     async fn generate(
@@ -19,7 +19,7 @@ impl DailyCardGenerator for GeoguessrCardGenerator {
         _settings: &AppSettings,
     ) -> color_eyre::Result<()> {
         let count = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM daily_card WHERE user_id = $1 AND card_type = 'geoguessr' AND shown = false",
+            "SELECT COUNT(*) FROM daily_card WHERE user_id = $1 AND card_type = 'estimatr' AND shown = false",
             user_id
         )
             .fetch_one(&mut **tx)
@@ -85,7 +85,7 @@ impl DailyCardGenerator for GeoguessrCardGenerator {
             sqlx::query!(
                 r#"
                 INSERT INTO daily_card (user_id, card_type, title, thumbnail_media_item_id, payload)
-                VALUES ($1, 'geoguessr', 'Location Estimatr', $2, $3)
+                VALUES ($1, 'estimatr', 'Location Estimatr', $2, $3)
                 "#,
                 user_id,
                 thumbnail_id,

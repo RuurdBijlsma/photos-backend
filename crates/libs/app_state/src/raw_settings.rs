@@ -162,7 +162,7 @@ pub struct AuthConstants {
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct DailyCardsSettings {
     pub cluster: CardLimits,
-    pub geoguessr: CardLimits,
+    pub estimatr: CardLimits,
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]

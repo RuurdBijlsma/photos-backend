@@ -233,7 +233,7 @@
 * upload photos
     * robust! stable!
 * explore page
-    * personal geoguessr (on user's own photos / videos)
+    * personal estimatr (on user's own photos / videos)
     * cluster by photo embeddings
     * sort by all kinds of things (exposure, iso, hue, saturation, gps lat, lon, temperature, altitude, windyness (
       is_outdoor = true & sort by wind speed or gust)). UI similar to browsing a DB, but with photo previews and ability

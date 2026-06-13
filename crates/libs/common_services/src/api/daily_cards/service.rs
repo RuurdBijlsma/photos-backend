@@ -42,7 +42,7 @@ pub async fn get_daily_cards(
     for card_type in types {
         let (min, max) = match card_type.as_str() {
             "cluster" => (settings.daily_cards.cluster.min_cards, settings.daily_cards.cluster.max_cards),
-            "geoguessr" => (settings.daily_cards.geoguessr.min_cards, settings.daily_cards.geoguessr.max_cards),
+            "estimatr" => (settings.daily_cards.estimatr.min_cards, settings.daily_cards.estimatr.max_cards),
             _ => (1, 1),
         };
 

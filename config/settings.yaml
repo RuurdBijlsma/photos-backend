@@ -109,6 +109,6 @@ daily_cards:
   cluster:
     min_cards: 1
     max_cards: 3
-  geoguessr:
+  estimatr:
     min_cards: 1
     max_cards: 1
