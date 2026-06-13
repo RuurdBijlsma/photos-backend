@@ -11,6 +11,7 @@ pub mod clean_db;
 pub mod cluster_faces;
 pub mod cluster_photos;
 pub mod delayed_scan;
+pub mod generate_daily_cards;
 pub mod import_album_item;
 pub mod ingest_analysis;
 pub mod ingest_llm;
@@ -51,6 +52,7 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::SyncThumbnails => sync_thumbnails::handle(context, job).await,
         JobType::ImportAlbumItem => import_album_item::handle(context, job).await,
         JobType::UpdateGlobalCentroid => update_global_centroid::handle(context, job).await,
+        JobType::GenerateDailyCards => generate_daily_cards::handle(context, job).await,
     };
 
     heartbeat_handle.abort();

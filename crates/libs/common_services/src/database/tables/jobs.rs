@@ -31,6 +31,7 @@ pub enum JobType {
     SyncThumbnails,
     ImportAlbumItem,
     UpdateGlobalCentroid,
+    GenerateDailyCards,
 }
 
 impl JobType {
@@ -69,6 +70,7 @@ impl JobType {
             Self::ClusterPhotos => 101,
             Self::SyncThumbnails => 102,
             Self::DelayedScan => 103,
+            Self::GenerateDailyCards => 104,
         }
     }
 }

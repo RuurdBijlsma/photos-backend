@@ -223,6 +223,7 @@
   there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
   sure how to handle this case.
 * [check] als ik iets soft-delete, make sure dat visual_analysis.deleted ook op false gaat
+* only re-run photo/face cluster if photos have changed since last clustering
 
 # Features
 

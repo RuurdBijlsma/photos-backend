@@ -1,4 +1,4 @@
-use app_state::{CONSTANTS, load_constants_from_path, load_settings_from_path, database_url, DATABASE_URL};
+use app_state::{CONSTANTS, load_constants_from_path, database_url, DATABASE_URL};
 use color_eyre::eyre::Result;
 use common_services::api::timeline::interfaces::SortDirection;
 use common_services::api::timeline::service::{

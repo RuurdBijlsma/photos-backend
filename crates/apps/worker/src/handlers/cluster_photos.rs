@@ -68,7 +68,7 @@ async fn load_all_tags(pool: &PgPool) -> Result<HashSet<String>> {
     let mut deduplicated_tags = HashSet::new();
 
     // Combine, trim, and capitalize the first letter of each tag
-    for tag in vocab_labels.into_iter().chain(object_tags.into_iter()) {
+    for tag in vocab_labels.into_iter().chain(object_tags) {
         let trimmed = tag.trim();
         if trimmed.is_empty() {
             continue;
@@ -119,7 +119,7 @@ async fn load_tag_embeddings(pool: &PgPool, text_embedder: &TextEmbedder) -> Res
             })?;
 
             for (i, tag) in chunk.iter().enumerate() {
-                let row: Vec<f32> = embeddings_array.row(i).iter().cloned().collect();
+                let row: Vec<f32> = embeddings_array.row(i).iter().copied().collect();
                 new_embeddings.push((tag.clone(), Vector::from(row)));
             }
         }
@@ -188,9 +188,9 @@ async fn fetch_embeddings(pool: &PgPool, user_id: i32) -> Result<Vec<MediaEmbedd
 
 async fn find_cluster_label(
     tx: &mut Transaction<'_, sqlx::Postgres>,
-    centroid: &Vec<f32>,
+    centroid: &[f32],
 ) -> Result<String> {
-    let centroid_vector = Vector::from(centroid.clone());
+    let centroid_vector = Vector::from(centroid.to_owned());
 
     // Nearest neighbor search via cosine distance globally
     let label: Option<String> = sqlx::query_scalar!(

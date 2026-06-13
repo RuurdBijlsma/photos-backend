@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use std::time::Duration;
 use tracing::{error, info};
 
-pub fn schedule_tasks(pool: &PgPool, settings: &AppSettings) -> Result<()> {
+pub fn init_task_scheduler(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     let schedules = vec![
         TaskSchedule {
             interval: Duration::from_hours(24),

@@ -7,7 +7,7 @@
 )]
 
 use color_eyre::eyre::Result;
-use app_state::{database_url, load_app_settings};
+use app_state::{database_url};
 use common_services::database::get_db_pool;
 use sqlx::{FromRow, PgPool};
 use std::fs;
@@ -21,8 +21,6 @@ use umap_rs::{GraphParams, Umap, UmapConfig};
 
 #[derive(FromRow, Debug)]
 struct PhotoEmbeddingRow {
-    id: i64,
-    media_item_id: String,
     embedding: pgvector::Vector,
 }
 
@@ -62,7 +60,7 @@ fn compute_exact_knn(data: &Array2<f32>, k: usize) -> (Array2<u32>, Array2<f32>)
                 .enumerate()
                 .map(|(j, row_j)| {
                     let diff = row_i - row_j;
-                    let dist_sq = diff.fold(0.0, |acc, &x| acc + x * x);
+                    let dist_sq = diff.fold(0.0, |acc, &x| x.mul_add(x, acc));
                     (j, dist_sq.sqrt())
                 })
                 .collect();
@@ -74,12 +72,12 @@ fn compute_exact_knn(data: &Array2<f32>, k: usize) -> (Array2<u32>, Array2<f32>)
             let k_neighbors = dists.into_iter().take(k).collect::<Vec<_>>();
 
             let mut idxs = Vec::with_capacity(k);
-            let mut dsts = Vec::with_capacity(k);
+            let mut distances = Vec::with_capacity(k);
             for (idx, dist) in k_neighbors {
                 idxs.push(idx as u32);
-                dsts.push(dist);
+                distances.push(dist);
             }
-            (idxs, dsts)
+            (idxs, distances)
         })
         .collect();
 
@@ -106,7 +104,6 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
 
-    let settings = load_app_settings()?;
     let pool = get_db_pool(database_url(), true).await?;
 
     // --- Configuration ---
@@ -163,8 +160,8 @@ async fn main() -> Result<()> {
     // Extract raw 2D coordinate points
     let mut points = Vec::with_capacity(n_samples);
     for idx in 0..n_samples {
-        let x = embedding_2d[[idx, 0]] as f64;
-        let y = embedding_2d[[idx, 1]] as f64;
+        let x = f64::from(embedding_2d[[idx, 0]]);
+        let y = f64::from(embedding_2d[[idx, 1]]);
         points.push((x, y));
     }
 

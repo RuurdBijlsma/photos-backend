@@ -1,3 +1,4 @@
+#[allow(clippy::too_many_lines)]
 fn main() -> std::io::Result<()> {
     println!("cargo:rerun-if-changed=proto/timeline.proto");
 

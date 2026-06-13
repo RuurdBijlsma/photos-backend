@@ -3,6 +3,8 @@
     clippy::missing_errors_doc,
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
+    clippy::too_many_lines,
+    clippy::cast_possible_wrap,
     clippy::cast_sign_loss
 )]
 
@@ -90,7 +92,7 @@ fn compute_exact_knn(data: &Array2<f32>, k: usize) -> (Array2<u32>, Array2<f32>)
                 .enumerate()
                 .map(|(j, row_j)| {
                     let diff = row_i - row_j;
-                    let dist_sq = diff.fold(0.0, |acc, &x| acc + x * x);
+                    let dist_sq = diff.fold(0.0, |acc, &x| x.mul_add(x, acc));
                     (j, dist_sq.sqrt())
                 })
                 .collect();
@@ -100,12 +102,12 @@ fn compute_exact_knn(data: &Array2<f32>, k: usize) -> (Array2<u32>, Array2<f32>)
             let k_neighbors = dists.into_iter().take(k).collect::<Vec<_>>();
 
             let mut idxs = Vec::with_capacity(k);
-            let mut dsts = Vec::with_capacity(k);
+            let mut distances = Vec::with_capacity(k);
             for (idx, dist) in k_neighbors {
                 idxs.push(idx as u32);
-                dsts.push(dist);
+                distances.push(dist);
             }
-            (idxs, dsts)
+            (idxs, distances)
         })
         .collect();
 
@@ -221,8 +223,8 @@ async fn main() -> Result<()> {
     let mut max_y = f64::NEG_INFINITY;
 
     for &(idx, _) in &thumbnails {
-        let x = embedding_2d[[idx, 0]] as f64;
-        let y = embedding_2d[[idx, 1]] as f64;
+        let x = f64::from(embedding_2d[[idx, 0]]);
+        let y = f64::from(embedding_2d[[idx, 1]]);
 
         if x < min_x { min_x = x; }
         if x > max_x { max_x = x; }
@@ -245,7 +247,7 @@ async fn main() -> Result<()> {
     );
 
     // Keep images within bounds by adding margin
-    let margin = THUMB_SIZE as f64;
+    let margin = f64::from(THUMB_SIZE);
 
     for (idx, thumb) in thumbnails {
         if let Some(&(_, x, y)) = points.iter().find(|&&(p_idx, _, _)| p_idx == idx) {
@@ -253,13 +255,13 @@ async fn main() -> Result<()> {
             let norm_y = (y - min_y) / range_y;
 
             // Project coordinates onto canvas pixel coordinates
-            let pixel_x = margin + norm_x * (CANVAS_WIDTH as f64 - 2.0 * margin);
+            let pixel_x = margin + norm_x * 2.0f64.mul_add(-margin, f64::from(CANVAS_WIDTH));
             // Flip y so that higher UMAP values point higher up in standard graph form
-            let pixel_y = CANVAS_HEIGHT as f64 - margin - norm_y * (CANVAS_HEIGHT as f64 - 2.0 * margin);
+            let pixel_y = f64::from(CANVAS_HEIGHT) - margin - norm_y * 2.0f64.mul_add(-margin, f64::from(CANVAS_HEIGHT));
 
             // Calculate top-left placement coordinates for centering
-            let px = (pixel_x - (thumb.width() as f64 / 2.0)) as i64;
-            let py = (pixel_y - (thumb.height() as f64 / 2.0)) as i64;
+            let px = (pixel_x - (f64::from(thumb.width()) / 2.0)) as i64;
+            let py = (pixel_y - (f64::from(thumb.height()) / 2.0)) as i64;
 
             // Paint the image on top of the canvas
             image::imageops::overlay(&mut canvas, &thumb, px, py);
