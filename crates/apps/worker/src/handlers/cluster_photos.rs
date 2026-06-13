@@ -162,9 +162,9 @@ async fn fetch_existing_clusters(pool: &PgPool, user_id: i32) -> Result<Vec<Exis
         r#"SELECT id, friendly_label, centroid as "centroid: _" FROM photo_cluster WHERE user_id = $1"#,
         user_id
     )
-    .fetch_all(pool)
-    .await
-    .map_err(Into::into)
+        .fetch_all(pool)
+        .await
+        .map_err(Into::into)
 }
 
 async fn fetch_embeddings(pool: &PgPool, user_id: i32) -> Result<Vec<MediaEmbedding>> {
@@ -277,6 +277,14 @@ async fn cleanup_obsolete(
     Ok(())
 }
 
+/// Checks if there have been any updates to media items since the last
+/// successful photo cluster generation for the user.
+async fn needs_clustering(pool: &PgPool, user_id: i32) -> Result<bool> {
+    todo!("use media item last changed field");
+
+    Ok(true)
+}
+
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_ids = clustering::fetch_user_ids(&context.pool, job).await?;
 
@@ -286,6 +294,15 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     info!("load_tag_embeddings took {:?}", now.elapsed());
 
     for user_id in user_ids {
+        // Skip user if there are no new updates or changes since the last run
+        if !needs_clustering(&context.pool, user_id).await? {
+            info!(
+                "Skipping photo clustering for user {} - no updates detected",
+                user_id
+            );
+            continue;
+        }
+
         let existing_clusters = fetch_existing_clusters(&context.pool, user_id).await?;
         let items_to_cluster = fetch_embeddings(&context.pool, user_id).await?;
 
