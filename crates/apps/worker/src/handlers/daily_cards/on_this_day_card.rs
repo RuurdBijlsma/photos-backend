@@ -53,7 +53,7 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
                   AND EXTRACT(DAY FROM taken_at_local)::integer = $3
                   AND EXTRACT(YEAR FROM taken_at_local)::integer < $4
                 GROUP BY 1
-                HAVING COUNT(*) >= 4
+                HAVING COUNT(*) >= 3
                 "#,
                 user_id,
                 month,
