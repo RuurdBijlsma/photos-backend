@@ -15,7 +15,7 @@ pub async fn get_daily_cards(
 
     let mut returned_cards = Vec::new();
 
-    // 1. Fetch date-bound cards for the given date (always 1 per type if present)
+    // Fetch date-bound cards for the given date
     let date_cards = sqlx::query_as!(
         DailyCardResponse,
         r#"
@@ -31,7 +31,7 @@ pub async fn get_daily_cards(
 
     returned_cards.extend(date_cards);
 
-    // 2. Fetch non-date cards where shown = false
+    // Fetch non-date cards where shown = false
     let types: Vec<String> = sqlx::query_scalar!(
         "SELECT DISTINCT card_type FROM daily_card WHERE user_id = $1 AND card_date IS NULL AND shown = false",
         user_id
@@ -67,13 +67,13 @@ pub async fn get_daily_cards(
                 count as i64
             )
                 .fetch_all(&mut *tx)
-                .await?; 
+                .await?;
 
             returned_cards.extend(type_cards);
         }
     }
 
-    // 3. Mark all returned cards as shown = true
+    // Mark all returned cards as shown = true
     if !returned_cards.is_empty() {
         let ids: Vec<i32> = returned_cards.iter().map(|c| c.id).collect();
         sqlx::query!(

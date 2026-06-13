@@ -1,7 +1,7 @@
-use chrono::Datelike;
 use crate::handlers::daily_cards::DailyCardGenerator;
 use app_state::AppSettings;
 use async_trait::async_trait;
+use chrono::Datelike;
 use chrono::Utc;
 use common_services::api::album::service::get_representative_thumbnail;
 use rand::prelude::IndexedRandom;
@@ -44,7 +44,7 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
             let day = target_date.day() as i32;
             let current_year = target_date.year() as i32;
 
-            let years_records = sqlx::query!(
+            let available_years = sqlx::query_scalar!(
                 r#"
                 SELECT EXTRACT(YEAR FROM taken_at_local)::integer as "year!"
                 FROM media_item
@@ -63,13 +63,13 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
             .fetch_all(&mut **tx)
             .await?;
 
-            if years_records.is_empty() {
+            if available_years.is_empty() {
                 continue;
             }
 
             let selected_year = {
                 let mut rng = rand::rng();
-                years_records.choose(&mut rng).map(|y| y.year)
+                available_years.choose(&mut rng)
             };
 
             let Some(year) = selected_year else {

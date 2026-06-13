@@ -45,7 +45,6 @@ async fn load_vocab_labels() -> Result<Vec<String>> {
             }
         }
     }
-    println!("VOCAB LABELS {}", labels.join(", "));
     Ok(labels)
 }
 
@@ -81,7 +80,6 @@ async fn load_all_tags(pool: &PgPool) -> Result<HashSet<String>> {
         }
     }
 
-    dbg!(&deduplicated_tags);
     Ok(deduplicated_tags)
 }
 
