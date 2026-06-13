@@ -10,3 +10,4 @@ pub mod system;
 pub mod theme;
 pub mod timeline;
 pub mod user;
+pub mod daily_cards;

@@ -104,3 +104,11 @@ constants:
     access_token_expiry_minutes: 30
     refresh_token_expiry_days: 7
     album_invitation_expiry_minutes: 1440 # 24 hours
+
+daily_cards:
+  cluster:
+    min_cards: 1
+    max_cards: 3
+  geoguessr:
+    min_cards: 1
+    max_cards: 1

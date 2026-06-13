@@ -21,6 +21,10 @@ pub fn init_task_scheduler(pool: &PgPool, settings: &AppSettings) -> Result<()> 
                 JobType::UpdateGlobalCentroid,
             ],
         },
+        TaskSchedule {
+            interval: Duration::from_hours(72),
+            jobs: vec![JobType::GenerateDailyCards],
+        },
     ];
     run_tasks(pool, settings, schedules)?;
 

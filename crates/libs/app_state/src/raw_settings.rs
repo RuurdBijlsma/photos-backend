@@ -10,6 +10,7 @@ pub struct RawSettings {
     pub api: ApiSettings,
     pub secrets: SecretSettings,
     pub constants: RawConstants,
+    pub daily_cards: DailyCardsSettings,
 }
 
 /// Defines paths for media and thumbnail storage.
@@ -156,4 +157,16 @@ pub struct AuthConstants {
     pub access_token_expiry_minutes: i64,
     pub refresh_token_expiry_days: i64,
     pub album_invitation_expiry_minutes: i64,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct DailyCardsSettings {
+    pub cluster: CardLimits,
+    pub geoguessr: CardLimits,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct CardLimits {
+    pub min_cards: usize,
+    pub max_cards: usize,
 }
