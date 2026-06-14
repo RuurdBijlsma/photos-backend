@@ -32,6 +32,10 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
 
         let cards_to_generate = 7 - count;
 
+        // todo: add areaKm2 calculation
+        // and different sources for location estmiatr fotos
+        // Perhaps all in one country, or all in one year
+
         for _ in 0..cards_to_generate {
             // Select random media items with valid GPS
             let limit = settings.daily_cards.estimatr.rounds_per_day;
@@ -86,6 +90,7 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
 
             let payload = serde_json::json!({
                 "rounds": rounds,
+                "areaKm2": 10530000, // todo actually calculate
             });
 
             sqlx::query!(
