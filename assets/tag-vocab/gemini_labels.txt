@@ -610,11 +610,10 @@ Scanning transit card
 Riding escalator in subway
 Waiting elevator doors
 Checking airport screen
-Rolling suitcase in airport
+Rolling in the airport
 Loading car trunk
-Buying train ticket
-Sitting in subway car
-Walking city sidewalk
+Sitting in the subway
+City sidewalk walking
 Crossing suspension bridge
 Reading tourist map
 Photographing monument statue
@@ -657,8 +656,6 @@ Checking bus schedule
 Sitting in train seat
 Holding handrail in train
 Looking out window
-Approaching toll booth
-Riding in passenger seat
 Cleaning car windshield
 Wiping car dashboard
 Checking side mirror

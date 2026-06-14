@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use chrono::NaiveDate;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DailyCardResponse {
     pub id: i32,
     pub card_date: Option<NaiveDate>,
@@ -13,11 +14,13 @@ pub struct DailyCardResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DailyCardsQueryParams {
     pub date: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ValidateMediaRequest {
     pub media_item_ids: Vec<String>,
 }

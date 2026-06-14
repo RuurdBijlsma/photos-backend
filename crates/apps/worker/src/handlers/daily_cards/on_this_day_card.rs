@@ -78,12 +78,13 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
 
             let items = sqlx::query!(
                 r#"
-                SELECT id, width, height, is_video, use_panorama_viewer as "is_panorama!"
+                SELECT id, width, height, is_video, duration_ms, has_thumbnails, use_panorama_viewer as "is_panorama!"
                 FROM media_item
                 WHERE user_id = $1 AND deleted = false
                   AND EXTRACT(MONTH FROM taken_at_local)::integer = $2
                   AND EXTRACT(DAY FROM taken_at_local)::integer = $3
                   AND EXTRACT(YEAR FROM taken_at_local)::integer = $4
+                ORDER BY sort_timestamp
                 "#,
                 user_id,
                 month,
@@ -106,23 +107,26 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
 
             let diff_years = current_year - year;
             let title = "On This Day";
-            let subtitle = format!("{} years ago ({})", diff_years, year);
+            let subtitle = format!("{} years ago", diff_years);
 
             let payload_items: Vec<serde_json::Value> = items
                 .iter()
                 .map(|i| {
                     serde_json::json!({
                         "id": i.id,
+                        "ratio": f64::from(i.width) / f64::from(i.height),
+                        "durationMs": i.duration_ms,
+                        "hasThumbnails": i.has_thumbnails,
+                        "isVideo": i.is_video,
                         "width": i.width,
                         "height": i.height,
-                        "is_video": i.is_video,
-                        "is_panorama": i.is_panorama
+                        "isPanorama": i.is_panorama
                     })
                 })
                 .collect();
 
             let payload = serde_json::json!({
-                "media_items": payload_items
+                "mediaItems": payload_items
             });
 
             sqlx::query!(

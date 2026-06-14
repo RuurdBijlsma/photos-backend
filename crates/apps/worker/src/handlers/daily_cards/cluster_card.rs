@@ -62,10 +62,11 @@ impl DailyCardGenerator for ClusterCardGenerator {
             // Fetch media items in this cluster
             let items = sqlx::query!(
                 r#"
-                SELECT m.id, m.width, m.height, m.is_video, m.use_panorama_viewer as "is_panorama!"
+                SELECT m.id, m.width, m.height, m.is_video, m.use_panorama_viewer as "is_panorama!", m.duration_ms, m.has_thumbnails
                 FROM media_item_photo_cluster pc
                 JOIN media_item m ON pc.media_item_id = m.id
                 WHERE pc.photo_cluster_id = $1 AND m.deleted = false
+                ORDER BY m.sort_timestamp
                 "#,
                 cluster.id
             )
@@ -86,16 +87,19 @@ impl DailyCardGenerator for ClusterCardGenerator {
                 .map(|i| {
                     serde_json::json!({
                         "id": i.id,
+                        "ratio": f64::from(i.width) / f64::from(i.height),
+                        "durationMs": i.duration_ms,
+                        "hasThumbnails": i.has_thumbnails,
+                        "isVideo": i.is_video,
                         "width": i.width,
                         "height": i.height,
-                        "is_video": i.is_video,
-                        "is_panorama": i.is_panorama
+                        "isPanorama": i.is_panorama
                     })
                 })
                 .collect();
 
             let payload = serde_json::json!({
-                "media_items": payload_items
+                "mediaItems": payload_items
             });
 
             sqlx::query!(

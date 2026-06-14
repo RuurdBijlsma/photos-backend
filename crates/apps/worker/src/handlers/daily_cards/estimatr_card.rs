@@ -84,8 +84,8 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
 
             sqlx::query!(
                 r#"
-                INSERT INTO daily_card (user_id, card_type, title, thumbnail_media_item_id, payload)
-                VALUES ($1, 'estimatr', 'Location Estimatr', $2, $3)
+                INSERT INTO daily_card (user_id, card_type, title, subtitle, thumbnail_media_item_id, payload)
+                VALUES ($1, 'estimatr', 'Location Estimatr', 'Where was this taken?', $2, $3)
                 "#,
                 user_id,
                 thumbnail_id,

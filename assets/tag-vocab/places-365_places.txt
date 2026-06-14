@@ -323,8 +323,8 @@ supermarket
 sushi bar
 swamp
 swimming hole
-swimming pool indoor
-swimming pool outdoor
+indoor swimming pool
+outdoor swimming pool
 synagogue outdoor
 television room
 television studio
