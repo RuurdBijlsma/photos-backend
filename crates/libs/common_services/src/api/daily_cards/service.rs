@@ -19,7 +19,7 @@ pub async fn get_daily_cards(
     let date_cards = sqlx::query_as!(
         DailyCardResponse,
         r#"
-        SELECT id, user_id, card_date, card_type, title, subtitle, thumbnail_media_item_id, payload, created_at, updated_at, shown
+        SELECT id, card_date, card_type, title, subtitle, thumbnail_media_item_id, payload
         FROM daily_card
         WHERE user_id = $1 AND card_date = $2
         "#,
@@ -56,10 +56,10 @@ pub async fn get_daily_cards(
             let type_cards = sqlx::query_as!(
                 DailyCardResponse,
                 r#"
-                SELECT id, user_id, card_date, card_type, title, subtitle, thumbnail_media_item_id, payload, created_at, updated_at, shown
+                SELECT id, card_date, card_type, title, subtitle, thumbnail_media_item_id, payload
                 FROM daily_card
                 WHERE user_id = $1 AND card_type = $2 AND card_date IS NULL AND shown = false
-                ORDER BY created_at ASC
+                ORDER BY created_at
                 LIMIT $3
                 "#,
                 user_id,
@@ -82,10 +82,6 @@ pub async fn get_daily_cards(
         )
             .execute(&mut *tx)
             .await?;
-
-        for card in &mut returned_cards {
-            card.shown = true;
-        }
     }
 
     tx.commit().await?;
