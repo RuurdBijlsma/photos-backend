@@ -53,15 +53,15 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
                   AND EXTRACT(DAY FROM taken_at_local)::integer = $3
                   AND EXTRACT(YEAR FROM taken_at_local)::integer < $4
                 GROUP BY 1
-                HAVING COUNT(*) >= 3
+                HAVING COUNT(*) >= 2
                 "#,
                 user_id,
                 month,
                 day,
                 current_year
             )
-            .fetch_all(&mut **tx)
-            .await?;
+                .fetch_all(&mut **tx)
+                .await?;
 
             if available_years.is_empty() {
                 continue;
@@ -71,14 +71,14 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
                 let mut rng = rand::rng();
                 available_years.choose(&mut rng)
             };
-
+            
             let Some(year) = selected_year else {
-                continue;
+                continue
             };
 
             let items = sqlx::query!(
                 r#"
-                SELECT id, width, height, is_video, duration_ms, has_thumbnails, use_panorama_viewer as "is_panorama!"
+                SELECT id, width, height, is_video, duration_ms, has_thumbnails, use_panorama_viewer as "is_panorama!", taken_at_local
                 FROM media_item
                 WHERE user_id = $1 AND deleted = false
                   AND EXTRACT(MONTH FROM taken_at_local)::integer = $2
@@ -91,8 +91,8 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
                 day,
                 year
             )
-            .fetch_all(&mut **tx)
-            .await?;
+                .fetch_all(&mut **tx)
+                .await?;
 
             if items.is_empty() {
                 continue;
@@ -120,7 +120,8 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
                         "isVideo": i.is_video,
                         "width": i.width,
                         "height": i.height,
-                        "isPanorama": i.is_panorama
+                        "isPanorama": i.is_panorama,
+                        "takenAtLocal": i.taken_at_local,
                     })
                 })
                 .collect();

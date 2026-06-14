@@ -110,5 +110,4 @@ daily_cards:
     min_cards: 1
     max_cards: 3
   estimatr:
-    min_cards: 1
-    max_cards: 1
+    rounds_per_day: 3

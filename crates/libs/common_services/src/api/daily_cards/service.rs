@@ -26,8 +26,8 @@ pub async fn get_daily_cards(
         user_id,
         target_date
     )
-        .fetch_all(&mut *tx)
-        .await?;
+    .fetch_all(&mut *tx)
+    .await?;
 
     returned_cards.extend(date_cards);
 
@@ -41,8 +41,10 @@ pub async fn get_daily_cards(
 
     for card_type in types {
         let (min, max) = match card_type.as_str() {
-            "cluster" => (settings.daily_cards.cluster.min_cards, settings.daily_cards.cluster.max_cards),
-            "estimatr" => (settings.daily_cards.estimatr.min_cards, settings.daily_cards.estimatr.max_cards),
+            "cluster" => (
+                settings.daily_cards.cluster.min_cards,
+                settings.daily_cards.cluster.max_cards,
+            ),
             _ => (1, 1),
         };
 
@@ -66,8 +68,8 @@ pub async fn get_daily_cards(
                 card_type,
                 count as i64
             )
-                .fetch_all(&mut *tx)
-                .await?;
+            .fetch_all(&mut *tx)
+            .await?;
 
             returned_cards.extend(type_cards);
         }
@@ -80,8 +82,8 @@ pub async fn get_daily_cards(
             "UPDATE daily_card SET shown = true, updated_at = now() WHERE id = ANY($1)",
             &ids
         )
-            .execute(&mut *tx)
-            .await?;
+        .execute(&mut *tx)
+        .await?;
     }
 
     tx.commit().await?;

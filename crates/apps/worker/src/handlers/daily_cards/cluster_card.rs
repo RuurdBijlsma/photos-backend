@@ -93,7 +93,7 @@ impl DailyCardGenerator for ClusterCardGenerator {
                         "isVideo": i.is_video,
                         "width": i.width,
                         "height": i.height,
-                        "isPanorama": i.is_panorama
+                        "isPanorama": i.is_panorama,
                     })
                 })
                 .collect();

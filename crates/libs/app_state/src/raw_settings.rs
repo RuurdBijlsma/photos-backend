@@ -162,11 +162,16 @@ pub struct AuthConstants {
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct DailyCardsSettings {
     pub cluster: CardLimits,
-    pub estimatr: CardLimits,
+    pub estimatr: EstimatrSettings,
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct CardLimits {
     pub min_cards: usize,
     pub max_cards: usize,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct EstimatrSettings {
+    pub rounds_per_day: i64,
 }
