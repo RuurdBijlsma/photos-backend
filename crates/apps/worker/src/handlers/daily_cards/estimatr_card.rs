@@ -35,6 +35,7 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
         // todo: add areaKm2 calculation
         // and different sources for location estmiatr fotos
         // Perhaps all in one country, or all in one year
+        // Misschien kan t ook met cluster term? (wel even checken of t verschillende locaties zijn anders is t niet leuk)
 
         for _ in 0..cards_to_generate {
             // Select random media items with valid GPS
@@ -56,17 +57,22 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
             .fetch_all(&mut **tx)
             .await?;
 
-            if items.len() == 0 {
+            if items.is_empty() {
                 break;
             }
 
-            let item_ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
+            let mut item_ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
             let thumbnail_id = get_representative_thumbnail(tx, &item_ids)
                 .await
                 .map_err(|e| {
                     color_eyre::eyre::eyre!("Failed to get representative thumbnail: {:?}", e)
                 })?;
-
+            // Make sure thumbnail is first round
+            if let Some(ref thumb_id) = thumbnail_id
+                && let Some(pos) = item_ids.iter().position(|id| id == thumb_id) {
+                    let id = item_ids.remove(pos);
+                    item_ids.insert(0, id);
+                }
             let rounds: Vec<serde_json::Value> = items
                 .iter()
                 .map(|i| {
@@ -90,7 +96,7 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
 
             let payload = serde_json::json!({
                 "rounds": rounds,
-                "areaKm2": 10530000, // todo actually calculate
+                "areaKm2": 10_530_000, // todo actually calculate
             });
 
             sqlx::query!(

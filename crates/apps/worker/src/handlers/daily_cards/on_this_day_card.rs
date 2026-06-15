@@ -10,6 +10,7 @@ use sqlx::PgTransaction;
 pub struct OnThisDayCardGenerator;
 
 #[async_trait]
+#[allow(clippy::too_many_lines)]
 impl DailyCardGenerator for OnThisDayCardGenerator {
     fn card_type(&self) -> &'static str {
         "on_this_day"
@@ -42,7 +43,7 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
 
             let month = target_date.month() as i32;
             let day = target_date.day() as i32;
-            let current_year = target_date.year() as i32;
+            let current_year = target_date.year();
 
             let available_years = sqlx::query_scalar!(
                 r#"
@@ -60,8 +61,8 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
                 day,
                 current_year
             )
-                .fetch_all(&mut **tx)
-                .await?;
+            .fetch_all(&mut **tx)
+            .await?;
 
             if available_years.is_empty() {
                 continue;
@@ -71,10 +72,8 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
                 let mut rng = rand::rng();
                 available_years.choose(&mut rng)
             };
-            
-            let Some(year) = selected_year else {
-                continue
-            };
+
+            let Some(year) = selected_year else { continue };
 
             let items = sqlx::query!(
                 r#"
@@ -107,7 +106,7 @@ impl DailyCardGenerator for OnThisDayCardGenerator {
 
             let diff_years = current_year - year;
             let title = "On This Day";
-            let subtitle = format!("{} years ago", diff_years);
+            let subtitle = format!("{diff_years} years ago");
 
             let payload_items: Vec<serde_json::Value> = items
                 .iter()

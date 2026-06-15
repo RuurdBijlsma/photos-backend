@@ -64,6 +64,7 @@ A path through the woods
 A historic bridge
 A scenic overlook
 A quiet sandy beach
+A quiet rocky beach
 Walking on cobblestones
 A colorful street
 A cozy living room
@@ -524,7 +525,7 @@ Fishing lake dock
 Casting fishing rod
 Rowing wooden boat
 Playing beach volleyball
-Running sandy beach
+Running on the beach
 Swinging golf club
 Walking forest path
 Jumping jump rope
@@ -603,7 +604,7 @@ Riding city bus
 Boarding commercial airplane
 Walking pedestrian crosswalk
 Driving highway road
-Parking compact car
+Car parking
 Pumping gasoline nozzle
 Paying parking meter
 Scanning transit card
