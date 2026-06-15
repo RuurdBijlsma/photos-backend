@@ -62,7 +62,6 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
 
     let to_delete: Vec<_> = thumb_ids.difference(&db_ids).cloned().collect();
     for id in to_delete {
-        info!("Deleting thumbnail folder {}", id);
         fs::remove_dir_all(thumbnails_root.join(id)).await?;
     }
 

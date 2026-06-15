@@ -1,8 +1,15 @@
--- Create a table to store system-wide metrics and cached values.
-CREATE TABLE system_metrics
+-- For storing key-vector pairs
+CREATE TABLE key_vector_store
 (
     key        TEXT PRIMARY KEY,
     vector     VECTOR(768),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- Persistent key-json pairs
+CREATE TABLE key_json_store
+(
+    key        TEXT PRIMARY KEY,
+    value      JSONB,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

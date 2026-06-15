@@ -7,9 +7,11 @@ use common_services::database::jobs::{Job, JobType};
 pub mod common;
 
 // Jobs
+pub mod calc_system_stats;
 pub mod clean_db;
 pub mod cluster_faces;
 pub mod cluster_photos;
+pub mod daily_cards;
 pub mod delayed_scan;
 pub mod generate_daily_cards;
 pub mod import_album_item;
@@ -21,7 +23,6 @@ pub mod remove;
 pub mod scan;
 pub mod sync_thumbnails;
 pub mod update_global_centroid;
-pub mod daily_cards;
 
 /// The outcome of a job handler's execution.
 #[derive(Debug, PartialEq, Eq)]
@@ -51,9 +52,10 @@ pub async fn handle_job(context: &WorkerContext, job: &Job) -> Result<JobResult>
         JobType::ClusterFaces => cluster_faces::handle(context, job).await,
         JobType::ClusterPhotos => cluster_photos::handle(context, job).await,
         JobType::SyncThumbnails => sync_thumbnails::handle(context, job).await,
+        JobType::CalcSystemStats => calc_system_stats::handle(context, job).await,
         JobType::ImportAlbumItem => import_album_item::handle(context, job).await,
-        JobType::UpdateGlobalCentroid => update_global_centroid::handle(context, job).await,
         JobType::GenerateDailyCards => generate_daily_cards::handle(context, job).await,
+        JobType::UpdateGlobalCentroid => update_global_centroid::handle(context, job).await,
     };
 
     heartbeat_handle.abort();

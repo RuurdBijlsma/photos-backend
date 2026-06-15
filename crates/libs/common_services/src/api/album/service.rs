@@ -5,7 +5,7 @@ use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
 use crate::database::media_item_store::MediaItemStore;
-use crate::database::system_metrics_store::SystemMetricsStore;
+use crate::database::key_vector_store::KeyVectorStore;
 use crate::database::user_store::UserStore;
 use crate::database::{CreateAlbumPayload, UpdateField};
 use crate::job_queue::enqueue_job;
@@ -91,7 +91,7 @@ pub async fn get_representative_thumbnail(
 
     // Try contrastive logic if more than 50% have embeddings
     let cached_global_centroid =
-        SystemMetricsStore::get_vector(&mut **tx, "global_centroid").await?;
+        KeyVectorStore::get_vector(&mut **tx, "global_centroid").await?;
 
     let result = sqlx::query!(
         r#"

@@ -2,7 +2,7 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use color_eyre::Result;
 use common_services::database::jobs::Job;
-use common_services::database::system_metrics_store::SystemMetricsStore;
+use common_services::database::key_vector_store::KeyVectorStore;
 use pgvector::Vector;
 use sqlx::PgPool;
 use tracing::info;
@@ -16,8 +16,8 @@ pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
     let centroid = calculate_global_centroid(pool).await?;
 
     if let Some(vector) = centroid {
-        // 2. Save to system_metrics
-        SystemMetricsStore::set_vector(pool, "global_centroid", &vector).await?;
+        // 2. Save to key_vector_store
+        KeyVectorStore::set_vector(pool, "global_centroid", &vector).await?;
         info!("✅ Global centroid updated successfully.");
     } else {
         info!("⚠️ No embeddings found, skipping global centroid update.");

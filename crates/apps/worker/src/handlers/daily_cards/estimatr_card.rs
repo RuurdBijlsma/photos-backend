@@ -31,6 +31,7 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
         }
 
         let cards_to_generate = 7 - count;
+        let limit = settings.daily_cards.estimatr.rounds_per_day;
 
         // todo: add areaKm2 calculation
         // and different sources for location estmiatr fotos
@@ -39,8 +40,7 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
 
         for _ in 0..cards_to_generate {
             // Select random media items with valid GPS
-            let limit = settings.daily_cards.estimatr.rounds_per_day;
-            let items = sqlx::query!(
+            let mut items = sqlx::query!(
                 r#"
                 SELECT m.id, m.width, m.height, m.is_video, m.use_panorama_viewer as "is_panorama!",
                        g.latitude, g.longitude, m.duration_ms, m.taken_at_local, m.has_thumbnails
@@ -61,18 +61,21 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
                 break;
             }
 
-            let mut item_ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
+            let item_ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
             let thumbnail_id = get_representative_thumbnail(tx, &item_ids)
                 .await
                 .map_err(|e| {
                     color_eyre::eyre::eyre!("Failed to get representative thumbnail: {:?}", e)
                 })?;
-            // Make sure thumbnail is first round
+
+            // Rearrange `items` so the thumbnail item is at index 0
             if let Some(ref thumb_id) = thumbnail_id
-                && let Some(pos) = item_ids.iter().position(|id| id == thumb_id) {
-                    let id = item_ids.remove(pos);
-                    item_ids.insert(0, id);
-                }
+                && let Some(pos) = items.iter().position(|i| &i.id == thumb_id)
+            {
+                let item = items.remove(pos);
+                items.insert(0, item);
+            }
+
             let rounds: Vec<serde_json::Value> = items
                 .iter()
                 .map(|i| {
