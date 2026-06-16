@@ -37,6 +37,8 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
         // and different sources for location estmiatr fotos
         // Perhaps all in one country, or all in one year
         // Misschien kan t ook met cluster term? (wel even checken of t verschillende locaties zijn anders is t niet leuk)
+        // make the chance to pick a mediaitem near "home" smaller
+        // change CalcSystemStats to calc per user, change key_json_store to a user-based table
 
         for _ in 0..cards_to_generate {
             // Select random media items with valid GPS

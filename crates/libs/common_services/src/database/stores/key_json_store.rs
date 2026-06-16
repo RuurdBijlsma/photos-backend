@@ -7,10 +7,15 @@ impl KeyJsonStore {
     pub async fn get_value(
         executor: impl PgExecutor<'_>,
         key: &str,
+        user_id: Option<i32>,
     ) -> Result<Option<serde_json::Value>> {
-        let row = sqlx::query!("SELECT value FROM key_json_store WHERE key = $1", key)
-            .fetch_optional(executor)
-            .await?;
+        let row = sqlx::query!(
+            "SELECT value FROM key_json_store WHERE key = $1 AND user_id IS NOT DISTINCT FROM $2",
+            key,
+            user_id
+        )
+        .fetch_optional(executor)
+        .await?;
 
         Ok(row.and_then(|r| r.value))
     }
@@ -19,17 +24,19 @@ impl KeyJsonStore {
         executor: impl PgExecutor<'_>,
         key: &str,
         value: &serde_json::Value,
+        user_id: Option<i32>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO key_json_store (key, value, updated_at)
-            VALUES ($1, $2, now())
-            ON CONFLICT (key) DO UPDATE SET
+            INSERT INTO key_json_store (key, value, user_id, updated_at)
+            VALUES ($1, $2, $3, now())
+            ON CONFLICT (key, user_id) DO UPDATE SET
                 value = EXCLUDED.value,
                 updated_at = now()
             "#,
             key,
-            value
+            value,
+            user_id,
         )
         .execute(executor)
         .await?;

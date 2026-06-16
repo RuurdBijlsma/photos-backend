@@ -8,9 +8,12 @@ CREATE TABLE key_vector_store
 -- Persistent key-json pairs
 CREATE TABLE key_json_store
 (
-    key        TEXT PRIMARY KEY,
+    id         SERIAL PRIMARY KEY,
+    key        TEXT NOT NULL,
     value      JSONB,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    user_id    INT REFERENCES app_user (id) ON DELETE CASCADE, -- if user_id is NULL, then it's a global key/value pair
+    CONSTRAINT uq_key_json_store UNIQUE NULLS NOT DISTINCT (user_id, key)
 );
 
 -- Text embedding cache to speed up search
