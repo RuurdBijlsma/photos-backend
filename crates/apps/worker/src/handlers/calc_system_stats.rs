@@ -2,6 +2,8 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use color_eyre::Result;
 use common_services::database::jobs::Job;
+use common_services::database::key_json_store::KeyJsonStore;
+use common_services::database::user_store::UserStore;
 use sqlx::PgPool;
 use std::collections::HashMap;
 use tracing::{info, warn};
@@ -13,33 +15,23 @@ struct ItemCoord {
 }
 
 async fn store_empty_vars(pool: &PgPool) -> Result<()> {
-    sqlx::query!(
-        r#"
-            INSERT INTO key_json_store (key, value, updated_at)
-            VALUES ($1, $2, now())
-            ON CONFLICT (key) DO UPDATE SET
-                value = EXCLUDED.value,
-                updated_at = now()
-            "#,
-        "total_area_sq_km",
-        &serde_json::json!(0.0)
-    )
-    .execute(pool)
-    .await?;
-
-    sqlx::query!(
-        r#"
-            INSERT INTO key_json_store (key, value, updated_at)
-            VALUES ($1, $2, now())
-            ON CONFLICT (key) DO UPDATE SET
-                value = EXCLUDED.value,
-                updated_at = now()
-            "#,
-        "most_frequent_location",
-        &serde_json::Value::Null
-    )
-    .execute(pool)
-    .await?;
+    let users = UserStore::list_user_ids(pool).await?;
+    for user_id in users {
+        KeyJsonStore::set_value(
+            pool,
+            "total_area_sq_km",
+            &serde_json::json!(0.0),
+            Some(user_id),
+        )
+        .await?;
+        KeyJsonStore::set_value(
+            pool,
+            "most_frequent_location",
+            &serde_json::Value::Null,
+            Some(user_id),
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -159,67 +151,47 @@ fn calculate_coordinates_area(coordinates: &Vec<ItemCoord>) -> f64 {
 pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
     info!("📊 calc system stats...");
 
-    // Query all latitudes and longitudes from non-deleted media items
-    let coordinates = sqlx::query_as!(
-        ItemCoord,
-        r#"
-        SELECT gps.latitude, gps.longitude
-        FROM gps
-        JOIN media_item ON media_item.id = gps.media_item_id
-        WHERE media_item.deleted = false
-        "#
-    )
-    .fetch_all(&context.pool)
-    .await?;
+    let users = UserStore::list_user_ids(&context.pool).await?;
+    for user_id in users {
+        // Query all latitudes and longitudes from non-deleted media items
+        let coordinates = sqlx::query_as!(
+            ItemCoord,
+            r#"
+                SELECT gps.latitude, gps.longitude
+                FROM gps
+                JOIN media_item ON media_item.id = gps.media_item_id
+                WHERE media_item.deleted = false AND user_id = $1
+            "#,
+            user_id
+        )
+        .fetch_all(&context.pool)
+        .await?;
 
-    if coordinates.is_empty() {
-        info!("No geotagged media items found. Storing default empty stats.");
-        store_empty_vars(&context.pool).await?;
-        return Ok(JobResult::Done);
+        if coordinates.is_empty() {
+            info!("No geotagged media items found. Storing default empty stats.");
+            store_empty_vars(&context.pool).await?;
+            return Ok(JobResult::Done);
+        }
+
+        // Calc & store area
+        let total_area_val = serde_json::json!(calculate_coordinates_area(&coordinates));
+        KeyJsonStore::set_value(&context.pool, "total_area_sq_km", &total_area_val, Some(user_id)).await?;
+
+        // Calc and store most frequent location
+        let location_val =
+            find_most_frequent_location(&coordinates).map_or(serde_json::Value::Null, |centroid| {
+                serde_json::json!({
+                    "latitude": centroid.latitude,
+                    "longitude": centroid.longitude,
+                })
+            });
+        KeyJsonStore::set_value(&context.pool, "most_frequent_location", &location_val, Some(user_id)).await?;
+
+        info!(
+            "Saved system stats separately - total_area_sq_km: {}, most_frequent_location: {:?}",
+            total_area_val, location_val
+        );
     }
-
-    // Calc & store area
-    let total_area_val = serde_json::json!(calculate_coordinates_area(&coordinates));
-    sqlx::query!(
-        r#"
-        INSERT INTO key_json_store (key, value, updated_at)
-        VALUES ($1, $2, now())
-        ON CONFLICT (key) DO UPDATE SET
-            value = EXCLUDED.value,
-            updated_at = now()
-        "#,
-        "total_area_sq_km",
-        &total_area_val
-    )
-    .execute(&context.pool)
-    .await?;
-
-    // Calc and store most frequent location
-    let location_val =
-        find_most_frequent_location(&coordinates).map_or(serde_json::Value::Null, |centroid| {
-            serde_json::json!({
-                "latitude": centroid.latitude,
-                "longitude": centroid.longitude,
-            })
-        });
-    sqlx::query!(
-        r#"
-        INSERT INTO key_json_store (key, value, updated_at)
-        VALUES ($1, $2, now())
-        ON CONFLICT (key) DO UPDATE SET
-            value = EXCLUDED.value,
-            updated_at = now()
-        "#,
-        "most_frequent_location",
-        &location_val
-    )
-    .execute(&context.pool)
-    .await?;
-
-    info!(
-        "Saved system stats separately - total_area_sq_km: {}, most_frequent_location: {:?}",
-        total_area_val, location_val
-    );
 
     Ok(JobResult::Done)
 }

@@ -2,6 +2,7 @@ use crate::handlers::daily_cards::DailyCardGenerator;
 use app_state::AppSettings;
 use async_trait::async_trait;
 use common_services::api::album::service::get_representative_thumbnail;
+use common_services::database::key_json_store::KeyJsonStore;
 use sqlx::PgTransaction;
 
 pub struct LocationEstimatrCardGenerator;
@@ -33,15 +34,31 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
         let cards_to_generate = 7 - count;
         let limit = settings.daily_cards.estimatr.rounds_per_day;
 
-        // todo: add areaKm2 calculation
-        // and different sources for location estmiatr fotos
-        // Perhaps all in one country, or all in one year
-        // Misschien kan t ook met cluster term? (wel even checken of t verschillende locaties zijn anders is t niet leuk)
-        // make the chance to pick a mediaitem near "home" smaller
-        // change CalcSystemStats to calc per user, change key_json_store to a user-based table
+        // Fetch user most frequent location and calculated total area
+        let most_frequent_location = KeyJsonStore::get_value(&mut **tx, "most_frequent_location", Some(user_id)).await?;
+        let total_area_sq_km = KeyJsonStore::get_value(&mut **tx, "total_area_sq_km", Some(user_id)).await?;
+
+        let mut home_lat = 0.0;
+        let mut home_lon = 0.0;
+        let mut exclusion_radius = 0.0;
+
+        if let Some(loc_val) = most_frequent_location {
+            if let Some(lat) = loc_val.get("latitude").and_then(|v| v.as_f64()) {
+                if let Some(lon) = loc_val.get("longitude").and_then(|v| v.as_f64()) {
+                    home_lat = lat;
+                    home_lon = lon;
+                    exclusion_radius = 10.0; // 10 km exclusion zone
+                }
+            }
+        }
+
+        let area_km2 = total_area_sq_km
+            .and_then(|v| v.as_f64())
+            .filter(|&v| v > 0.0)
+            .unwrap_or(10_530_000.0); // Fallback to a default size if not calculated
 
         for _ in 0..cards_to_generate {
-            // Select random media items with valid GPS
+            // Select random media items with valid GPS, prioritizing those outside the exclusion zone.
             let mut items = sqlx::query!(
                 r#"
                 SELECT m.id, m.width, m.height, m.is_video, m.use_panorama_viewer as "is_panorama!",
@@ -50,14 +67,23 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
                 JOIN gps g ON m.id = g.media_item_id
                 WHERE m.user_id = $1 AND m.deleted = false
                   AND g.latitude != 0.0 AND g.longitude != 0.0
-                ORDER BY random()
-                LIMIT $2
+                ORDER BY
+                  (CASE
+                    WHEN $4::double precision = 0.0 THEN 1
+                    WHEN (sqrt(power((g.longitude - $3::double precision) * cos(radians($2::double precision)), 2) + power(g.latitude - $2::double precision, 2)) * 111.32) > $4::double precision THEN 1
+                    ELSE 0
+                  END) DESC,
+                  random()
+                LIMIT $5
                 "#,
                 user_id,
+                home_lat,
+                home_lon,
+                exclusion_radius,
                 limit
             )
-            .fetch_all(&mut **tx)
-            .await?;
+                .fetch_all(&mut **tx)
+                .await?;
 
             if items.is_empty() {
                 break;
@@ -101,7 +127,7 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
 
             let payload = serde_json::json!({
                 "rounds": rounds,
-                "areaKm2": 10_530_000, // todo actually calculate
+                "areaKm2": area_km2,
             });
 
             sqlx::query!(
