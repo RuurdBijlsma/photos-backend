@@ -3,7 +3,7 @@
 use crate::api::admin::error::AdminError;
 use crate::api::admin::helpers::{check_drive_info, list_folders};
 use crate::api::admin::interfaces::{
-    DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
+    AdminUserInfo, DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
 use crate::database::app_user::User;
 use crate::database::jobs::JobType;
@@ -20,10 +20,6 @@ use tracing::{debug, warn};
 use walkdir::WalkDir;
 
 /// Gathers information about the media and thumbnail directories.
-///
-/// # Errors
-///
-/// Returns `OnboardingError` if the configured media or thumbnail paths are not valid directories.
 pub fn get_disk_info(
     media_root: &Path,
     thumbnails_root: &Path,
@@ -48,10 +44,6 @@ pub fn get_disk_info(
 }
 
 /// Creates a new folder within a specified base directory.
-///
-/// # Errors
-///
-/// Returns `OnboardingError` if the folder name contains invalid characters or if an I/O error occurs.
 pub async fn create_folder(
     media_root: &Path,
     base_folder: &str,
@@ -70,10 +62,6 @@ pub async fn create_folder(
 }
 
 /// Lists subfolders within a given user-provided folder, returning only the folder names.
-///
-/// # Errors
-///
-/// Returns `OnboardingError` if path validation or canonicalization fails.
 pub async fn get_subfolders(
     ingestion: &IngestSettings,
     folder: &str,
@@ -97,10 +85,6 @@ pub async fn get_subfolders(
 }
 
 /// Provides a sample of media files from a given folder.
-///
-/// # Errors
-///
-/// Returns `OnboardingError` if there's an I/O error reading the directory or its files.
 pub fn get_media_sample(
     ingestion: &IngestSettings,
     user_folder: &Path,
@@ -151,10 +135,6 @@ pub fn get_media_sample(
 }
 
 /// Finds all unsupported files in a given folder.
-///
-/// # Errors
-///
-/// Returns `OnboardingError` if there is an issue reading the directory or canonicalizing file paths.
 pub fn get_folder_unsupported_files(
     ingestion: &IngestSettings,
     user_folder: &Path,
@@ -211,10 +191,6 @@ pub fn get_folder_unsupported_files(
 }
 
 /// Validates that a user-provided folder path is a valid, existing directory.
-///
-/// # Errors
-///
-/// Returns `OnboardingError` if the path is invalid, not a directory, or outside the media root.
 pub async fn validate_user_folder(
     media_root: &Path,
     user_folder: &str,
@@ -246,27 +222,87 @@ pub async fn validate_user_folder(
     Ok(canon_user_path)
 }
 
-/// Updates the user's media folder and triggers a system-wide media scan.
-///
-/// # Errors
-///
-/// Returns `OnboardingError` if folder validation fails, the database update fails, or the scan job cannot be enqueued.
-pub async fn start_processing(
+/// Measures the recursive folder size of files on disk.
+fn get_folder_size(path: &Path) -> u64 {
+    if !path.exists() || !path.is_dir() {
+        return 0;
+    }
+    WalkDir::new(path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .map(|entry| entry.metadata().map(|m| m.len()).unwrap_or(0))
+        .sum()
+}
+
+/// Identifies if the media folder and the thumbnail folder reside on the same drive.
+fn are_on_same_drive(p1: &Path, p2: &Path) -> bool {
+    let p1_canon = std::fs::canonicalize(p1).unwrap_or_else(|_| p1.to_path_buf());
+    let p2_canon = std::fs::canonicalize(p2).unwrap_or_else(|_| p2.to_path_buf());
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if let (Ok(m1), Ok(m2)) = (std::fs::metadata(&p1_canon), std::fs::metadata(&p2_canon)) {
+            return m1.dev() == m2.dev();
+        }
+    }
+
+    p1_canon.components().next() == p2_canon.components().next()
+}
+
+/// Retrieves a list of all users along with their parsed disk space statistics.
+pub async fn list_admin_users(
     pool: &PgPool,
     settings: &AppSettings,
-    user_id: i32,
-    user_folder: String,
+) -> Result<Vec<AdminUserInfo>, AdminError> {
+    let db_users = UserStore::list_users(pool).await?;
+    let mut admin_users = Vec::with_capacity(db_users.len());
+
+    let media_root = &settings.ingest.media_root;
+
+    for user in db_users {
+        let mut main_drive_used = 0;
+
+        if let Some(ref relative_folder) = user.media_folder {
+            let full_user_path = media_root.join(relative_folder);
+            let path_to_walk = full_user_path.clone();
+
+            let size = tokio::task::spawn_blocking(move || {
+                get_folder_size(&path_to_walk)
+            })
+                .await?;
+
+            main_drive_used = size;
+        }
+
+        admin_users.push(AdminUserInfo {
+            id: user.id,
+            username: user.name,
+            email: user.email,
+            avatar_id: user.avatar_id,
+            media_folder: user.media_folder,
+            main_drive_used
+        });
+    }
+
+    Ok(admin_users)
+}
+
+/// Updates the media folder for a specific user and starts scanning jobs.
+pub async fn admin_update_user_media_folder(
+    pool: &PgPool,
+    settings: &AppSettings,
+    target_user_id: i32,
+    user_folder: &str,
 ) -> Result<User, AdminError> {
     let media_root = &settings.ingest.media_root;
-    let existing_folder = UserStore::get_user_media_folder(pool, user_id).await?;
-    if existing_folder.is_some() {
-        return Err(AdminError::MediaFolderAlreadySet);
-    }
-    let user_folder = validate_user_folder(media_root, &user_folder).await?;
-    let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
+    let user_folder_path = validate_user_folder(media_root, user_folder).await?;
+    let relative = user_folder_path.make_relative_canon(&settings.ingest.media_root_canon)?;
+
     let updated_user = UserStore::update(
         pool,
-        user_id,
+        target_user_id,
         UpdateUserPayload {
             name: None,
             email: None,
@@ -276,22 +312,36 @@ pub async fn start_processing(
             avatar_id: UpdateField::Ignore,
         },
     )
-    .await?;
+        .await?;
 
     enqueue_job::<()>(pool, settings, JobType::Scan)
-        .user_id(user_id)
+        .user_id(target_user_id)
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::DelayedScan)
-        .user_id(user_id)
+        .user_id(target_user_id)
         .scheduled_at(Utc::now() + Duration::seconds(30))
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::SyncThumbnails)
-        .user_id(user_id)
+        .user_id(target_user_id)
         .scheduled_at(Utc::now() + Duration::minutes(1))
         .call()
         .await?;
 
     Ok(updated_user)
+}
+
+/// Deletes a specific user account. Prevents an administrator from deleting themselves.
+pub async fn admin_delete_user(
+    pool: &PgPool,
+    target_user_id: i32,
+    current_user_id: i32,
+) -> Result<(), AdminError> {
+    if target_user_id == current_user_id {
+        return Err(AdminError::CannotDeleteSelf);
+    }
+
+    UserStore::delete(pool, target_user_id).await?;
+    Ok(())
 }

@@ -2,17 +2,18 @@
 
 use crate::api_state::ApiContext;
 use app_state::IngestSettings;
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use common_services::api::admin::error::AdminError;
 use common_services::api::admin::interfaces::{
-    DiskResponse, FolderParams, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
-    UnsupportedFilesResponse,
+    AdminUserInfo, DiskResponse, FolderParams, MakeFolderBody, MediaSampleResponse,
+    UnsupportedFilesResponse, UpdateUserMediaFolderBody,
 };
 use common_services::api::admin::service::{
-    create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
-    start_processing, validate_user_folder,
+    admin_delete_user, admin_update_user_media_folder, create_folder, get_disk_info,
+    get_folder_unsupported_files, get_media_sample, get_subfolders, list_admin_users,
+    validate_user_folder,
 };
 use common_services::database::app_user::User;
 
@@ -62,22 +63,36 @@ pub async fn make_folder(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Start scanning the user folder and process the photos and videos.
-///
-/// # Errors
-///
-/// Returns a `OnboardingError` if a database connection cannot be established or the query fails.
-pub async fn post_start_processing(
+/// Retrieves a list of all users along with their statistics.
+pub async fn get_users(
     State(context): State<ApiContext>,
-    Extension(user): Extension<User>,
-    Json(payload): Json<StartProcessingBody>,
-) -> Result<Json<bool>, AdminError> {
-    start_processing(
+) -> Result<Json<Vec<AdminUserInfo>>, AdminError> {
+    let users = list_admin_users(&context.pool, &context.settings).await?;
+    Ok(Json(users))
+}
+
+/// Updates the media folder for a specific user and schedules processing.
+pub async fn update_user_media_folder_handler(
+    State(context): State<ApiContext>,
+    Path(target_user_id): Path<i32>,
+    Json(payload): Json<UpdateUserMediaFolderBody>,
+) -> Result<StatusCode, AdminError> {
+    admin_update_user_media_folder(
         &context.pool,
         &context.settings,
-        user.id,
-        payload.user_folder,
+        target_user_id,
+        &payload.user_folder,
     )
-    .await?;
-    Ok(Json(true))
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Deletes a user account.
+pub async fn delete_user_handler(
+    State(context): State<ApiContext>,
+    Extension(current_user): Extension<User>,
+    Path(target_user_id): Path<i32>,
+) -> Result<StatusCode, AdminError> {
+    admin_delete_user(&context.pool, target_user_id, current_user.id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }

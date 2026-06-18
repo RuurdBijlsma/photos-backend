@@ -78,8 +78,19 @@ pub struct MakeFolderBody {
     pub new_name: String,
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdminUserInfo {
+    pub id: i32,
+    pub username: String,
+    pub email: String,
+    pub avatar_id: Option<String>,
+    pub media_folder: Option<String>,
+    pub main_drive_used: u64,
+}
+
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StartProcessingBody {
+pub struct UpdateUserMediaFolderBody {
     pub user_folder: String,
 }

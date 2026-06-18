@@ -21,7 +21,7 @@
 * ✅ 👎 look into not using generated code, just add the prost annotations on the real structs
 * ✅ response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms,
   but on frontend end is 100-125 ms.
-* ✅ de frontend blijft maar in een loop requests maken als de backend errort (/onboarding/folders/?folder= ten minste)
+* ✅ de frontend blijft maar in een loop requests maken als de backend errort (/admin/folders/?folder= ten minste)
 * ✅ make ratios endpoint more of a timeline endpoint, with count per month.
 * ✅ thumbnails zijn gedraait (orientation tag exif)
 * ✅ by-month and timeline dont return in sync media items. timeline ratios is wrong, it's not in order of
@@ -225,28 +225,33 @@
 * [check] als ik iets soft-delete, make sure dat visual_analysis.deleted ook op false gaat
 * only re-run photo/face cluster if photos have changed since last clustering
 
-# Features
+# High level TODO:
 
-* storage indicator bottom left, like googly photos
-* front page -> 1 year ago, 4 years ago today, etc. in top balk
-* photo rubbish bin?
-* upload photos
-    * robust! stable!
+* trash can (deleted=true) (in trash UI kan je echte delete doen)
+* storage overview in bottom left van navbar.
+  * als thumb storage zelfde drive is als main storage, show 1 balk
+  * anders 2 balkjes, een voor thumb storage, een voor main storage
+* admin page
+  * overview of users: remove user, storage used per user
+  * server settings?
+  * restart server?
+  * uptime
+  * jobs overview, inclusief schedule and manual job run
+  * backup (met export jsons / import?)
+* ingest overview page
+  * show status of ingest per media item, all 3 stages
+  * button to do a scan
+  * import albums from google photos
+* settings page
+  * contrast setting in theme
 * explore page
-    * personal estimatr (on user's own photos / videos)
-    * cluster by photo embeddings
-    * sort by all kinds of things (exposure, iso, hue, saturation, gps lat, lon, temperature, altitude, windyness (
-      is_outdoor = true & sort by wind speed or gust)). UI similar to browsing a DB, but with photo previews and ability
-      to click photo. Columns with all interesting features a photo has, all sortable.
-    * group by: {country (if there are enough countries, otherwise group by province, otherwise group by city), camera
-      model}
-    * sunset/sunrise photos
-* fun "albums" notifications & in UI frontpage
-    * refresh daily (changes daily): "10 years ago today" → as long as there's enough photos on that day.
-    * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at
-      the lake", "Cat pics")
-    * group by  (only changes with significantly more photos)
-        * caption columns ("setting", "main subject", "is_outside & sunset & ...")
-        * group by country?
-        * group by animal type?
-    * make sure each "fun album" is shown as notification only once. In UI it can be more often?
+  * stats over je fotos?
+  * most visited places
+  * sort by all kinds of fields (temp, altitude, lat/lon extremes, wind, shutter speed)
+  * photo distribution/histogram by day of  year, grouped by month/week?
+  * zelfde voor time of day?
+* photo viewer page
+  * implement different viewers
+  * find similar fotos view, misschien  een expandable ding in de info panel?
+* photo upload feature
+* disallow having root as user media folder if going with multiple users

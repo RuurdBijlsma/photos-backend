@@ -1,12 +1,12 @@
-use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use color_eyre::eyre;
 use serde_json::json;
 use std::path::StripPrefixError;
+use color_eyre::eyre;
 use thiserror::Error;
 use tracing::{error, warn};
+use crate::database::DbError;
 
 #[derive(Debug, Error)]
 pub enum AdminError {
@@ -28,8 +28,11 @@ pub enum AdminError {
     #[error("media folder already set")]
     MediaFolderAlreadySet,
 
+    #[error("cannot delete your own administrator account")]
+    CannotDeleteSelf,
+
     #[error("internal error")]
-    Internal(#[from] eyre::Report),
+    Internal(#[from] color_eyre::Report),
 }
 
 fn log_failure(error: &AdminError) {
@@ -42,6 +45,9 @@ fn log_failure(error: &AdminError) {
         AdminError::Internal(e) => println!("Error in /onboarding: {e:?}"),
         AdminError::MediaFolderAlreadySet => {
             warn!("Tried to set media folder on user that already had it. /onboarding");
+        }
+        AdminError::CannotDeleteSelf => {
+            warn!("An administrator tried to delete their own account.");
         }
     }
 }
@@ -70,6 +76,10 @@ impl IntoResponse for AdminError {
             Self::MediaFolderAlreadySet => (
                 StatusCode::FORBIDDEN,
                 "Media folder is already configured for this user.".into(),
+            ),
+            Self::CannotDeleteSelf => (
+                StatusCode::BAD_REQUEST,
+                "An administrator cannot delete their own account.".into(),
             ),
         };
 
