@@ -4,7 +4,7 @@ use crate::api::auth::interfaces::{AuthClaims, CreateUser, Tokens};
 use crate::api::auth::token::{
     RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
-use crate::api::onboarding::service::validate_user_folder;
+use crate::api::admin::service::validate_user_folder;
 use crate::database::app_user::{User, UserInvite, UserRole, UserWithPassword};
 use crate::database::user_store::UserStore;
 use crate::utils::nice_id;

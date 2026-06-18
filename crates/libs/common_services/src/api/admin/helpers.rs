@@ -1,5 +1,5 @@
-use crate::api::onboarding::error::OnboardingError;
-use crate::api::onboarding::interfaces::PathInfoResponse;
+use crate::api::admin::error::AdminError;
+use crate::api::admin::interfaces::PathInfoResponse;
 use app_state::to_posix_string;
 use fs2::{available_space, total_space};
 use std::path::{Path, PathBuf};
@@ -7,7 +7,7 @@ use std::{fs, io};
 use tempfile::NamedTempFile;
 use tokio::task;
 
-pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, OnboardingError> {
+pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, AdminError> {
     let total = total_space(folder)?;
     let available = available_space(folder)?;
     let (read, write) = check_read_write_access(folder);
@@ -29,7 +29,7 @@ pub fn check_read_write_access(path: &Path) -> (bool, bool) {
     (can_read, can_write)
 }
 
-pub async fn list_folders(user_folder: &Path) -> Result<Vec<PathBuf>, OnboardingError> {
+pub async fn list_folders(user_folder: &Path) -> Result<Vec<PathBuf>, AdminError> {
     let path_buf = user_folder.to_path_buf();
     task::spawn_blocking(move || {
         fs::read_dir(path_buf)?
@@ -39,5 +39,5 @@ pub async fn list_folders(user_folder: &Path) -> Result<Vec<PathBuf>, Onboarding
             .collect::<Result<Vec<_>, io::Error>>()
     })
     .await?
-    .map_err(OnboardingError::from)
+    .map_err(AdminError::from)
 }

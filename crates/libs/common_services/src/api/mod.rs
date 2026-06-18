@@ -1,6 +1,6 @@
 pub mod album;
 pub mod auth;
-pub mod onboarding;
+pub mod admin;
 pub mod people;
 pub mod camera;
 pub mod photos;

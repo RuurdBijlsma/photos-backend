@@ -1,6 +1,6 @@
 pub mod album;
 pub mod auth;
-pub mod onboarding;
+pub mod admin;
 pub mod people;
 pub mod photos;
 pub mod root;
@@ -24,7 +24,6 @@ use crate::auth::middlewares::require_role::require_role;
 use crate::auth::middlewares::user::ApiUser;
 use crate::auth::middlewares::websocket::WsUser;
 use crate::auth::router::{auth_admin_routes, auth_protected_router, auth_public_router};
-use crate::onboarding::router::onboarding_admin_routes;
 use crate::photos::router::{photos_protected_router, photos_public_router};
 use crate::root::router::root_public_router;
 use crate::s2s::router::s2s_public_router;
@@ -36,6 +35,7 @@ use app_state::RateLimitingSettings;
 use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use common_services::database::app_user::UserRole;
+use crate::admin::router::admin_admin_routes;
 use crate::camera::router::camera_protected_router;
 use crate::daily_cards::router::daily_cards_protected_router;
 
@@ -92,7 +92,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
 
 fn admin_routes(api_state: ApiContext) -> Router<ApiContext> {
     Router::new()
-        .merge(onboarding_admin_routes())
+        .merge(admin_admin_routes())
         .merge(auth_admin_routes())
         .route_layer(from_fn_with_state(UserRole::Admin, require_role))
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))

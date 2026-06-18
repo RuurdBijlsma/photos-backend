@@ -5,12 +5,12 @@ use app_state::IngestSettings;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
-use common_services::api::onboarding::error::OnboardingError;
-use common_services::api::onboarding::interfaces::{
+use common_services::api::admin::error::AdminError;
+use common_services::api::admin::interfaces::{
     DiskResponse, FolderParams, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
     UnsupportedFilesResponse,
 };
-use common_services::api::onboarding::service::{
+use common_services::api::admin::service::{
     create_folder, get_disk_info, get_folder_unsupported_files, get_media_sample, get_subfolders,
     start_processing, validate_user_folder,
 };
@@ -19,7 +19,7 @@ use common_services::database::app_user::User;
 /// Retrieves information about the configured media and thumbnail disks.
 pub async fn get_disk_response(
     State(ingestion): State<IngestSettings>,
-) -> Result<Json<DiskResponse>, OnboardingError> {
+) -> Result<Json<DiskResponse>, AdminError> {
     let disk_info = get_disk_info(&ingestion.media_root, &ingestion.thumbnail_root)?;
     Ok(Json(disk_info))
 }
@@ -28,7 +28,7 @@ pub async fn get_disk_response(
 pub async fn get_folder_media_sample(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
-) -> Result<Json<MediaSampleResponse>, OnboardingError> {
+) -> Result<Json<MediaSampleResponse>, AdminError> {
     let user_path = validate_user_folder(&ingestion.media_root, &query.folder).await?;
     let response = get_media_sample(&ingestion, &user_path)?;
     Ok(Json(response))
@@ -38,7 +38,7 @@ pub async fn get_folder_media_sample(
 pub async fn get_folder_unsupported(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
-) -> Result<Json<UnsupportedFilesResponse>, OnboardingError> {
+) -> Result<Json<UnsupportedFilesResponse>, AdminError> {
     let user_path = validate_user_folder(&ingestion.media_root, &query.folder).await?;
     let response = get_folder_unsupported_files(&ingestion, &user_path)?;
     Ok(Json(response))
@@ -48,7 +48,7 @@ pub async fn get_folder_unsupported(
 pub async fn get_folders(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
-) -> Result<Json<Vec<String>>, OnboardingError> {
+) -> Result<Json<Vec<String>>, AdminError> {
     let folders = get_subfolders(&ingestion, &query.folder).await?;
     Ok(Json(folders))
 }
@@ -57,7 +57,7 @@ pub async fn get_folders(
 pub async fn make_folder(
     State(ingestion): State<IngestSettings>,
     Json(params): Json<MakeFolderBody>,
-) -> Result<StatusCode, OnboardingError> {
+) -> Result<StatusCode, AdminError> {
     create_folder(&ingestion.media_root, &params.base_folder, &params.new_name).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -71,7 +71,7 @@ pub async fn post_start_processing(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Json(payload): Json<StartProcessingBody>,
-) -> Result<Json<bool>, OnboardingError> {
+) -> Result<Json<bool>, AdminError> {
     start_processing(
         &context.pool,
         &context.settings,

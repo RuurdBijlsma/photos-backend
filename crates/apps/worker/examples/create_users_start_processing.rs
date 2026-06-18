@@ -7,7 +7,7 @@
 use app_state::{database_url, load_app_settings};
 use common_services::api::auth::interfaces::CreateUser;
 use common_services::api::auth::service::{create_user, generate_invite};
-use common_services::api::onboarding::service::start_processing;
+use common_services::api::admin::service::start_processing;
 use common_services::database::get_db_pool;
 use common_services::database::user_store::UserStore;
 use common_types::dev_constants::{EMAIL, PASSWORD, USERNAME};

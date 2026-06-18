@@ -3,7 +3,7 @@ use crate::test_helpers::{login, media_dir_contents};
 use app_state::MakeRelativePath;
 use color_eyre::Result;
 use color_eyre::eyre::bail;
-use common_services::api::onboarding::interfaces::{
+use common_services::api::admin::interfaces::{
     DiskResponse, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
     UnsupportedFilesResponse,
 };

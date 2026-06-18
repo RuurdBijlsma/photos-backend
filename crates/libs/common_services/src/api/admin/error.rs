@@ -9,7 +9,7 @@ use thiserror::Error;
 use tracing::{error, warn};
 
 #[derive(Debug, Error)]
-pub enum OnboardingError {
+pub enum AdminError {
     #[error("invalid path: {0}")]
     InvalidPath(String),
 
@@ -32,21 +32,21 @@ pub enum OnboardingError {
     Internal(#[from] eyre::Report),
 }
 
-fn log_failure(error: &OnboardingError) {
+fn log_failure(error: &AdminError) {
     match error {
-        OnboardingError::InvalidPath(path) => warn!("Invalid path provided: {}", path),
-        OnboardingError::PathNotInMediaDir(e) => error!("Path hierarchy error: {}", e),
-        OnboardingError::Io(e) => error!("I/O error: {}", e),
-        OnboardingError::DirectoryCreation(path) => error!("Failed to create directory: {}", path),
-        OnboardingError::Database(e) => error!("Database query failed: {}", e),
-        OnboardingError::Internal(e) => println!("Error in /onboarding: {e:?}"),
-        OnboardingError::MediaFolderAlreadySet => {
+        AdminError::InvalidPath(path) => warn!("Invalid path provided: {}", path),
+        AdminError::PathNotInMediaDir(e) => error!("Path hierarchy error: {}", e),
+        AdminError::Io(e) => error!("I/O error: {}", e),
+        AdminError::DirectoryCreation(path) => error!("Failed to create directory: {}", path),
+        AdminError::Database(e) => error!("Database query failed: {}", e),
+        AdminError::Internal(e) => println!("Error in /onboarding: {e:?}"),
+        AdminError::MediaFolderAlreadySet => {
             warn!("Tried to set media folder on user that already had it. /onboarding");
         }
     }
 }
 
-impl IntoResponse for OnboardingError {
+impl IntoResponse for AdminError {
     fn into_response(self) -> Response {
         log_failure(&self);
 
@@ -78,13 +78,13 @@ impl IntoResponse for OnboardingError {
     }
 }
 
-impl From<tokio::task::JoinError> for OnboardingError {
+impl From<tokio::task::JoinError> for AdminError {
     fn from(err: tokio::task::JoinError) -> Self {
         Self::Internal(eyre::Report::new(err))
     }
 }
 
-impl From<DbError> for OnboardingError {
+impl From<DbError> for AdminError {
     fn from(err: DbError) -> Self {
         match err {
             DbError::UniqueViolation(sql_err) => Self::Database(sql_err),

@@ -1,4 +1,4 @@
-use crate::api::onboarding::error::OnboardingError;
+use crate::api::admin::error::AdminError;
 use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
@@ -111,8 +111,8 @@ impl From<DbError> for AuthError {
     }
 }
 
-impl From<OnboardingError> for AuthError {
-    fn from(err: OnboardingError) -> Self {
+impl From<AdminError> for AuthError {
+    fn from(err: AdminError) -> Self {
         Self::Internal(eyre::Report::new(err))
     }
 }

@@ -1,8 +1,8 @@
 //! This module provides the core service logic for the setup process.
 
-use crate::api::onboarding::error::OnboardingError;
-use crate::api::onboarding::helpers::{check_drive_info, list_folders};
-use crate::api::onboarding::interfaces::{
+use crate::api::admin::error::AdminError;
+use crate::api::admin::helpers::{check_drive_info, list_folders};
+use crate::api::admin::interfaces::{
     DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
 use crate::database::app_user::User;
@@ -27,13 +27,13 @@ use walkdir::WalkDir;
 pub fn get_disk_info(
     media_root: &Path,
     thumbnails_root: &Path,
-) -> Result<DiskResponse, OnboardingError> {
+) -> Result<DiskResponse, AdminError> {
     if !media_root.is_dir() {
-        return Err(OnboardingError::InvalidPath(to_posix_string(media_root)));
+        return Err(AdminError::InvalidPath(to_posix_string(media_root)));
     }
 
     if !thumbnails_root.is_dir() {
-        return Err(OnboardingError::InvalidPath(to_posix_string(
+        return Err(AdminError::InvalidPath(to_posix_string(
             thumbnails_root,
         )));
     }
@@ -56,12 +56,12 @@ pub async fn create_folder(
     media_root: &Path,
     base_folder: &str,
     new_name: &str,
-) -> Result<(), OnboardingError> {
+) -> Result<(), AdminError> {
     if !new_name
         .chars()
         .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     {
-        return Err(OnboardingError::DirectoryCreation(new_name.to_string()));
+        return Err(AdminError::DirectoryCreation(new_name.to_string()));
     }
 
     let user_path = validate_user_folder(media_root, base_folder).await?;
@@ -77,7 +77,7 @@ pub async fn create_folder(
 pub async fn get_subfolders(
     ingestion: &IngestSettings,
     folder: &str,
-) -> Result<Vec<String>, OnboardingError> {
+) -> Result<Vec<String>, AdminError> {
     let user_path = validate_user_folder(&ingestion.media_root, folder).await?;
     let folders = list_folders(&user_path).await?;
 
@@ -91,7 +91,7 @@ pub async fn get_subfolders(
                 .file_name()
                 .and_then(|name| name.to_str())
                 .map(ToOwned::to_owned)
-                .ok_or_else(|| OnboardingError::InvalidPath(path))
+                .ok_or_else(|| AdminError::InvalidPath(path))
         })
         .collect()
 }
@@ -104,7 +104,7 @@ pub async fn get_subfolders(
 pub fn get_media_sample(
     ingestion: &IngestSettings,
     user_folder: &Path,
-) -> Result<MediaSampleResponse, OnboardingError> {
+) -> Result<MediaSampleResponse, AdminError> {
     let media_folder_info = check_drive_info(user_folder)?;
     let folder_relative = user_folder.make_relative_canon(&ingestion.media_root_canon)?;
 
@@ -158,7 +158,7 @@ pub fn get_media_sample(
 pub fn get_folder_unsupported_files(
     ingestion: &IngestSettings,
     user_folder: &Path,
-) -> Result<UnsupportedFilesResponse, OnboardingError> {
+) -> Result<UnsupportedFilesResponse, AdminError> {
     let media_folder_info = check_drive_info(user_folder)?;
     let folder_relative = user_folder.make_relative_canon(&ingestion.media_root_canon)?;
 
@@ -218,7 +218,7 @@ pub fn get_folder_unsupported_files(
 pub async fn validate_user_folder(
     media_root: &Path,
     user_folder: &str,
-) -> Result<PathBuf, OnboardingError> {
+) -> Result<PathBuf, AdminError> {
     let user_path = media_root.join(user_folder);
 
     let canon_user_path = tokio_fs::canonicalize(&user_path).await?;
@@ -227,7 +227,7 @@ pub async fn validate_user_folder(
     let metadata = tokio_fs::metadata(&canon_user_path).await?;
     if !metadata.is_dir() {
         warn!("User path {} is not a directory", canon_user_path.display());
-        return Err(OnboardingError::InvalidPath(to_posix_string(
+        return Err(AdminError::InvalidPath(to_posix_string(
             &canon_user_path,
         )));
     }
@@ -238,7 +238,7 @@ pub async fn validate_user_folder(
             canon_user_path.display(),
             canon_media_root.display()
         );
-        return Err(OnboardingError::InvalidPath(to_posix_string(
+        return Err(AdminError::InvalidPath(to_posix_string(
             &canon_user_path,
         )));
     }
@@ -256,11 +256,11 @@ pub async fn start_processing(
     settings: &AppSettings,
     user_id: i32,
     user_folder: String,
-) -> Result<User, OnboardingError> {
+) -> Result<User, AdminError> {
     let media_root = &settings.ingest.media_root;
     let existing_folder = UserStore::get_user_media_folder(pool, user_id).await?;
     if existing_folder.is_some() {
-        return Err(OnboardingError::MediaFolderAlreadySet);
+        return Err(AdminError::MediaFolderAlreadySet);
     }
     let user_folder = validate_user_folder(media_root, &user_folder).await?;
     let relative = user_folder.make_relative_canon(&settings.ingest.media_root_canon)?;
