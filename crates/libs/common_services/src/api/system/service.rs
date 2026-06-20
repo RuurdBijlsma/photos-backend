@@ -4,6 +4,7 @@ use app_state::IngestSettings;
 use fs2::statvfs;
 use sqlx::PgPool;
 use std::path::Path;
+use std::time::Instant;
 
 /// Identifies if the media folder and the thumbnail folder reside on the same drive.
 #[must_use]
@@ -39,6 +40,7 @@ pub async fn get_system_stats(
     settings: &IngestSettings,
     user_id: i32,
 ) -> Result<SystemStats, UserError> {
+    let now = Instant::now();
     let stats = sqlx::query!(
         r#"
         SELECT
@@ -53,6 +55,7 @@ pub async fn get_system_stats(
     let media_folder = &settings.media_root;
     let thumb_folder = &settings.thumbnail_root;
 
+    // println!("get_system_stats, elapsed: {:?}", now.elapsed());
     Ok(SystemStats {
         has_clustered_people: stats.has_people,
         has_clustered_photos: stats.has_photo_clusters,

@@ -10,6 +10,6 @@ pub async fn get_system_stats_handler(
     State(ctx): State<ApiContext>,
     Extension(user): Extension<User>,
 ) -> Result<Json<SystemStats>, UserError> {
-    let stats = get_system_stats(&ctx.pool, user.id).await?;
+    let stats = get_system_stats(&ctx.pool, &ctx.settings.ingest, user.id).await?;
     Ok(Json(stats))
 }

@@ -52,6 +52,10 @@ criterion = { version = "0.8.0", features = ["async_tokio", "html_reports"] }
 name = "timeline_benchmark"
 harness = false
 
+[[bench]]
+name = "system_bench"
+harness = false
+
 [features]
 load-dynamic = [
     "open_clip_inference/load-dynamic",
