@@ -43,7 +43,7 @@ pub fn run_tasks(
 ) -> Result<()> {
     for schedule in schedules {
         let pool = pool.clone();
-        let settings = settings.clone();
+        let ingest_settings = settings.ingest.clone();
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(schedule.interval);
@@ -56,7 +56,7 @@ pub fn run_tasks(
                 );
 
                 for job_type in &schedule.jobs {
-                    let res = enqueue_job::<()>(&pool, &settings, *job_type).call().await;
+                    let res = enqueue_job::<()>(&pool, &ingest_settings, *job_type).call().await;
 
                     if let Err(e) = res {
                         error!("Failed to enqueue scheduled job {:?}: {}", job_type, e);

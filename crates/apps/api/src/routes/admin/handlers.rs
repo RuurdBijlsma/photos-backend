@@ -79,7 +79,7 @@ pub async fn update_user_media_folder_handler(
 ) -> Result<StatusCode, AdminError> {
     admin_update_user_media_folder(
         &context.pool,
-        &context.settings,
+        &context.settings.ingest,
         target_user_id,
         &payload.user_folder,
     )

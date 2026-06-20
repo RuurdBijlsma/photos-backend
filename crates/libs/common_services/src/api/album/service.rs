@@ -11,7 +11,7 @@ use crate::database::{CreateAlbumPayload, UpdateField};
 use crate::job_queue::enqueue_job;
 use crate::s2s_client::{S2SClient, insecure_extract_token_claims};
 use crate::utils::nice_id;
-use app_state::{AppSettings, constants};
+use app_state::{constants, IngestSettings};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
@@ -467,7 +467,7 @@ pub async fn generate_invite(
 /// Accepts an album invitation and enqueues a background job to start the import.
 pub async fn accept_invite(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     s2s_client: &S2SClient,
     user_id: i32,
     payload: AcceptInviteRequest,

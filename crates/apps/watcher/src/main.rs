@@ -18,7 +18,7 @@ async fn main() -> Result<()> {
 
     let settings = load_app_settings()?;
     let pool = get_db_pool(database_url(), true).await?;
-    start_watching(pool, settings).await?;
+    start_watching(&pool, &settings.ingest).await?;
 
     Ok(())
 }

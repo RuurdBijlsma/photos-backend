@@ -112,10 +112,10 @@ impl TestContext {
 
         // Spawn Worker
         let worker_pool = pool.clone();
-        let worker_setting = settings.clone();
+        let worker_settings = settings.clone();
         let worker_handle = tokio::spawn(async move {
             if let Err(e) =
-                worker::worker::create_worker(worker_pool, worker_setting, false, false).await
+                worker::worker::create_worker(worker_pool, worker_settings, false, false).await
             {
                 error!("Worker failed: {}", e);
             }
@@ -123,10 +123,10 @@ impl TestContext {
 
         // Spawn Worker 2
         let ml_worker_pool = pool.clone();
-        let ml_worker_setting = settings.clone();
+        let ml_worker_settings = settings.clone();
         let ml_worker_handle = tokio::spawn(async move {
             if let Err(e) =
-                worker::worker::create_worker(ml_worker_pool, ml_worker_setting, true, false).await
+                worker::worker::create_worker(ml_worker_pool, ml_worker_settings, true, false).await
             {
                 error!("Worker failed: {}", e);
             }
@@ -134,9 +134,9 @@ impl TestContext {
 
         // Spawn Watcher
         let watcher_pool = pool.clone();
-        let watcher_setting = settings.clone();
+        let watcher_settings = settings.ingest.clone();
         let watcher_handle = tokio::spawn(async move {
-            if let Err(e) = watcher::watcher::start_watching(watcher_pool, watcher_setting).await {
+            if let Err(e) = watcher::watcher::start_watching(&watcher_pool, &watcher_settings).await {
                 error!("Watcher failed: {}", e);
             }
         });

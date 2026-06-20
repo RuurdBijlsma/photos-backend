@@ -228,7 +228,7 @@ pub async fn accept_invite_handler(
 ) -> Result<Json<Album>, AlbumError> {
     let album = accept_invite(
         &context.pool,
-        &context.settings,
+        &context.settings.ingest,
         &context.s2s_client,
         user.id,
         payload,

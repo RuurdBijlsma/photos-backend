@@ -1,12 +1,13 @@
+use crate::api::admin::service::{check_folder_in_use, validate_user_folder};
 use crate::api::auth::error::AuthError;
 use crate::api::auth::hashing::{hash_password, verify_password};
 use crate::api::auth::interfaces::{AuthClaims, CreateUser, Tokens};
 use crate::api::auth::token::{
     RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
-use crate::api::admin::service::{check_folder_in_use, validate_user_folder};
 use crate::database::app_user::{User, UserInvite, UserRole, UserWithPassword};
 use crate::database::user_store::UserStore;
+use crate::job_queue::enqueue_full_scan;
 use crate::utils::nice_id;
 use app_state::{IngestSettings, MakeRelativePath, constants};
 use axum::Json;
@@ -47,7 +48,11 @@ pub async fn authenticate_user(
 /// * `sqlx::Error` for other database-related issues.
 /// * `AuthError::Internal` for hashing errors.
 /// * `AuthError::InvalidUsername` when the username contains illegal characters.
-pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, AuthError> {
+pub async fn create_user(
+    pool: &PgPool,
+    settings: &IngestSettings,
+    payload: &CreateUser,
+) -> Result<User, AuthError> {
     let username = &payload.name;
     if !username
         .chars()
@@ -92,6 +97,7 @@ pub async fn create_user(pool: &PgPool, payload: &CreateUser) -> Result<User, Au
         )
         .await?;
         UserStore::delete_invite(pool, token).await?;
+        enqueue_full_scan(pool, settings, user.id).await?;
         Ok(user)
     } else {
         Err(AuthError::InvalidInvite)

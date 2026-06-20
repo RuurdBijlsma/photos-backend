@@ -5,6 +5,7 @@
 )]
 
 use app_state::{database_url, load_app_settings};
+use common_services::api::admin::service::admin_update_user_media_folder;
 use common_services::api::auth::interfaces::CreateUser;
 use common_services::api::auth::service::{create_user, generate_invite};
 use common_services::database::get_db_pool;
@@ -12,7 +13,6 @@ use common_services::database::user_store::UserStore;
 use common_types::dev_constants::{EMAIL, PASSWORD, USERNAME};
 use tracing::Level;
 use tracing_subscriber::{EnvFilter, fmt};
-use common_services::api::admin::service::admin_update_user_media_folder;
 use worker::worker::create_worker;
 
 #[tokio::main]
@@ -34,7 +34,7 @@ async fn main() -> color_eyre::Result<()> {
         password: PASSWORD.to_owned(),
         token: None,
     };
-    let user_result = create_user(&pool, &create_user_payload).await;
+    let user_result = create_user(&pool, &settings.ingest, &create_user_payload).await;
     let user = if let Ok(u) = user_result {
         u
     } else {
@@ -48,6 +48,7 @@ async fn main() -> color_eyre::Result<()> {
     let user_invite = generate_invite(&pool, &settings.ingest, "otheruser").await?;
     create_user(
         &pool,
+        &settings.ingest,
         &CreateUser {
             name: "other_user".to_owned(),
             email: "other@example.com".to_owned(),
@@ -56,7 +57,7 @@ async fn main() -> color_eyre::Result<()> {
         },
     )
     .await?;
-    let user = admin_update_user_media_folder(&pool, &settings, user.id, "Ruurd").await?;
+    let user = admin_update_user_media_folder(&pool, &settings.ingest, user.id, "Ruurd").await?;
     println!("Started processing, media folder: {:?}", user.media_folder);
     create_worker(pool, settings, false, true).await?;
 

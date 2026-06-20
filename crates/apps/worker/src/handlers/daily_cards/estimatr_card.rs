@@ -8,6 +8,7 @@ use sqlx::PgTransaction;
 pub struct LocationEstimatrCardGenerator;
 
 #[async_trait]
+#[allow(clippy::too_many_lines)]
 impl DailyCardGenerator for LocationEstimatrCardGenerator {
     fn card_type(&self) -> &'static str {
         "estimatr"
@@ -35,22 +36,19 @@ impl DailyCardGenerator for LocationEstimatrCardGenerator {
         let limit = settings.daily_cards.estimatr.rounds_per_day;
 
         // Fetch user most frequent location and calculated total area
-        let most_frequent_location = KeyJsonStore::get_value(&mut **tx, "most_frequent_location", Some(user_id)).await?;
-        let total_area_sq_km = KeyJsonStore::get_value(&mut **tx, "total_area_sq_km", Some(user_id)).await?;
+        let most_frequent_location =
+            KeyJsonStore::get_value(&mut **tx, "most_frequent_location", Some(user_id)).await?;
+        let total_area_sq_km =
+            KeyJsonStore::get_value(&mut **tx, "total_area_sq_km", Some(user_id)).await?;
 
-        let mut home_lat = 0.0;
-        let mut home_lon = 0.0;
-        let mut exclusion_radius = 0.0;
-
-        if let Some(loc_val) = most_frequent_location {
-            if let Some(lat) = loc_val.get("latitude").and_then(|v| v.as_f64()) {
-                if let Some(lon) = loc_val.get("longitude").and_then(|v| v.as_f64()) {
-                    home_lat = lat;
-                    home_lon = lon;
-                    exclusion_radius = 10.0; // 10 km exclusion zone
-                }
-            }
-        }
+        let (home_lat, home_lon, exclusion_radius) = if let Some(loc_val) = most_frequent_location
+            && let Some(lat) = loc_val.get("latitude").and_then(serde_json::Value::as_f64)
+            && let Some(lon) = loc_val.get("longitude").and_then(serde_json::Value::as_f64)
+        {
+            (lat, lon, 10.0) // 10 km exclusion zone
+        } else {
+            (0.0, 0.0, 0.0)
+        };
 
         let area_km2 = total_area_sq_km
             .and_then(|v| v.as_f64())

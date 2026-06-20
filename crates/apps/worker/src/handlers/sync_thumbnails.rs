@@ -1,6 +1,6 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use app_state::AppSettings;
+use app_state::{IngestSettings};
 use color_eyre::Result;
 use color_eyre::eyre::eyre;
 use common_services::alert;
@@ -37,7 +37,7 @@ async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String
 }
 
 /// Synchronises thumbnail folders with the database, deleting orphans and re-ingesting items with missing thumbnails.
-async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
+async fn sync_thumbnails(pool: &PgPool, settings: &IngestSettings) -> Result<()> {
     let Some(job_count) = sqlx::query_scalar!(
         "SELECT count(id) FROM jobs WHERE status IN ('running', 'queued') AND job_type in ('ingest_thumbnails', 'remove')"
     )
@@ -50,8 +50,8 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
         return Ok(()); // skip if ingest jobs are pending
     }
 
-    let thumbnails_root = &settings.ingest.thumbnail_root;
-    let media_root = &settings.ingest.media_root;
+    let thumbnails_root = &settings.thumbnail_root;
+    let media_root = &settings.media_root;
 
     let (thumb_ids, db_ids) = tokio::try_join!(get_thumbnail_folders(thumbnails_root), async {
         let rows: Vec<String> = sqlx::query_scalar!("SELECT id FROM media_item")
@@ -88,6 +88,6 @@ async fn sync_thumbnails(pool: &PgPool, settings: &AppSettings) -> Result<()> {
 }
 
 pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
-    sync_thumbnails(&context.pool, &context.settings).await?;
+    sync_thumbnails(&context.pool, &context.settings.ingest).await?;
     Ok(JobResult::Done)
 }

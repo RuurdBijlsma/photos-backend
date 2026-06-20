@@ -49,7 +49,7 @@ pub async fn register(
     State(context): State<ApiContext>,
     Json(payload): Json<CreateUser>,
 ) -> Result<Json<User>, AuthError> {
-    let user = create_user(&context.pool, &payload).await?;
+    let user = create_user(&context.pool, &context.settings.ingest, &payload).await?;
     Ok(Json(user))
 }
 

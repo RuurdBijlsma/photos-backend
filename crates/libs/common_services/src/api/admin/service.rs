@@ -6,12 +6,10 @@ use crate::api::admin::interfaces::{
     AdminUserInfo, DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
 use crate::database::app_user::User;
-use crate::database::jobs::JobType;
 use crate::database::user_store::UserStore;
 use crate::database::{UpdateField, UpdateUserPayload};
-use crate::job_queue::enqueue_job;
+use crate::job_queue::enqueue_full_scan;
 use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_posix_string};
-use chrono::{Duration, Utc};
 use sqlx::{PgPool, query_scalar};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -253,11 +251,12 @@ fn get_folder_size(path: &Path) -> u64 {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.file_type().is_file())
-        .map(|entry| entry.metadata().map(|m| m.len()).unwrap_or(0))
+        .map(|entry| entry.metadata().map_or(0, |m| m.len()))
         .sum()
 }
 
 /// Identifies if the media folder and the thumbnail folder reside on the same drive.
+#[must_use]
 pub fn are_on_same_drive(p1: &Path, p2: &Path) -> bool {
     let p1_canon = std::fs::canonicalize(p1).unwrap_or_else(|_| p1.to_path_buf());
     let p2_canon = std::fs::canonicalize(p2).unwrap_or_else(|_| p2.to_path_buf());
@@ -284,16 +283,13 @@ pub async fn list_admin_users(
     let media_root = &settings.ingest.media_root;
 
     for user in db_users {
-        let mut main_drive_used = 0;
-
-        if let Some(ref relative_folder) = user.media_folder {
+        let main_drive_used = if let Some(ref relative_folder) = user.media_folder {
             let full_user_path = media_root.join(relative_folder);
             let path_to_walk = full_user_path.clone();
-
-            let size = tokio::task::spawn_blocking(move || get_folder_size(&path_to_walk)).await?;
-
-            main_drive_used = size;
-        }
+            tokio::task::spawn_blocking(move || get_folder_size(&path_to_walk)).await?
+        } else {
+            0
+        };
 
         admin_users.push(AdminUserInfo {
             id: user.id,
@@ -311,13 +307,13 @@ pub async fn list_admin_users(
 /// Updates the media folder for a specific user and starts scanning jobs.
 pub async fn admin_update_user_media_folder(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     target_user_id: i32,
     user_folder: &str,
 ) -> Result<User, AdminError> {
-    let media_root = &settings.ingest.media_root;
+    let media_root = &settings.media_root;
     let user_folder_path = validate_user_folder(media_root, user_folder).await?;
-    let relative = user_folder_path.make_relative_canon(&settings.ingest.media_root_canon)?;
+    let relative = user_folder_path.make_relative_canon(&settings.media_root_canon)?;
     if check_folder_in_use(pool, &relative, Some(target_user_id)).await? {
         return Err(AdminError::FolderInUse);
     }
@@ -336,20 +332,7 @@ pub async fn admin_update_user_media_folder(
     )
     .await?;
 
-    enqueue_job::<()>(pool, settings, JobType::Scan)
-        .user_id(target_user_id)
-        .call()
-        .await?;
-    enqueue_job::<()>(pool, settings, JobType::DelayedScan)
-        .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::seconds(30))
-        .call()
-        .await?;
-    enqueue_job::<()>(pool, settings, JobType::SyncThumbnails)
-        .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::minutes(1))
-        .call()
-        .await?;
+    enqueue_full_scan(pool, settings, target_user_id).await?;
 
     Ok(updated_user)
 }
