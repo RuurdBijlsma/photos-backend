@@ -14,7 +14,7 @@ use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_pos
 use chrono::{Duration, Utc};
 use sqlx::{PgPool, query_scalar};
 use std::collections::HashMap;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;

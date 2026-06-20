@@ -15,7 +15,6 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
-use crate::api::admin::error::AdminError;
 
 /// Authenticates a user based on email and password.
 ///
