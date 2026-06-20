@@ -2,6 +2,7 @@ use crate::database::DbError;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
+use tokio::task::JoinError;
 
 #[derive(Debug, Error)]
 pub enum UserError {
@@ -17,6 +18,9 @@ pub enum UserError {
     #[error("Internal error: {0}")]
     Internal(String),
 
+    #[error("Join error: {0}")]
+    Join(#[from] JoinError),
+
     #[error("i/o error")]
     Io(#[from] std::io::Error),
 }
@@ -27,6 +31,7 @@ impl IntoResponse for UserError {
             Self::UserNotFound => (StatusCode::NOT_FOUND, self.to_string()),
             Self::InvalidAvatar => (StatusCode::BAD_REQUEST, self.to_string()),
             Self::Io(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            Self::Join(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             Self::Db(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),

@@ -1,10 +1,11 @@
-use crate::api::system::interfaces::{DiskInfo, SystemStats};
+use crate::api::system::interfaces::{DiskInfo, DiskStats, SystemStats};
 use crate::api::user::error::UserError;
 use app_state::IngestSettings;
 use fs2::statvfs;
 use sqlx::PgPool;
 use std::path::Path;
-use std::time::Instant;
+use std::sync::OnceLock;
+use tokio::task;
 
 /// Identifies if the media folder and the thumbnail folder reside on the same drive.
 #[must_use]
@@ -35,13 +36,14 @@ pub fn get_single_disk_info(folder: &Path) -> Result<DiskInfo, UserError> {
     })
 }
 
+static ARE_SAME_DRIVE: OnceLock<bool> = OnceLock::new();
+
 pub async fn get_system_stats(
     pool: &PgPool,
     settings: &IngestSettings,
     user_id: i32,
 ) -> Result<SystemStats, UserError> {
-    let now = Instant::now();
-    let stats = sqlx::query!(
+    let db_task = sqlx::query!(
         r#"
         SELECT
             EXISTS(SELECT 1 FROM person WHERE user_id = $1) AS "has_people!",
@@ -49,18 +51,38 @@ pub async fn get_system_stats(
         "#,
         user_id
     )
-    .fetch_one(pool)
-    .await?;
+        .fetch_one(pool);
 
-    let media_folder = &settings.media_root;
-    let thumb_folder = &settings.thumbnail_root;
+    let thumb_folder = settings.thumbnail_root.clone();
+    let media_folder = settings.media_root.clone();
 
-    // println!("get_system_stats, elapsed: {:?}", now.elapsed());
+    let fs_task = task::spawn_blocking(move || {
+        let are_same_drive = *ARE_SAME_DRIVE.get_or_init(|| {
+            are_on_same_drive(&thumb_folder, &media_folder)
+        });
+
+        let thumbnail_drive = get_single_disk_info(&thumb_folder)?;
+        let media_drive = if are_same_drive {
+            thumbnail_drive.clone()
+        } else {
+            get_single_disk_info(&media_folder)?
+        };
+
+        Ok::<_, UserError>(DiskStats {
+            thumbnail_drive,
+            media_drive,
+            are_same_drive,
+        })
+    });
+
+    let (db_res, fs_res) = tokio::try_join!(
+        async { db_task.await.map_err(UserError::from) },
+        async { fs_task.await.map_err(UserError::from)? }
+    )?;
+
     Ok(SystemStats {
-        has_clustered_people: stats.has_people,
-        has_clustered_photos: stats.has_photo_clusters,
-        thumbnail_drive: get_single_disk_info(thumb_folder)?,
-        media_drive: get_single_disk_info(media_folder)?,
-        are_same_drive: are_on_same_drive(thumb_folder, media_folder),
+        has_clustered_people: db_res.has_people,
+        has_clustered_photos: db_res.has_photo_clusters,
+        disk: fs_res,
     })
 }
