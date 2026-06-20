@@ -228,23 +228,15 @@ pub async fn check_folder_in_use(
         .await?
         .into_iter()
         .filter(|user| Some(user.id) != ignore_user)
-        .filter_map(|user| user.media_folder)
-        .collect::<Vec<_>>();
+        .filter_map(|user| user.media_folder);
 
     let pending_user_folders = query_scalar!("SELECT media_folder FROM user_invite")
         .fetch_all(pool)
         .await?;
 
-    for other_folder in existing_user_folders
-        .into_iter()
-        .chain(pending_user_folders)
-    {
+    for other_folder in existing_user_folders.chain(pending_user_folders) {
         let other = Path::new(&other_folder);
-
-        if requested == other
-            || requested.starts_with(other)
-            || other.starts_with(requested)
-        {
+        if requested.starts_with(other) || other.starts_with(requested) {
             return Ok(true);
         }
     }
