@@ -216,44 +216,39 @@ pub async fn validate_user_folder(
     Ok(canon_user_path)
 }
 
-fn normalize_relative_path(value: &str) -> Result<PathBuf, AdminError> {
-    let path = Path::new(value);
-
-    if path.is_absolute()
-        || path.components().any(|component| {
-        matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_))
-    })
-    {
-        return Err(AdminError::InvalidPath(to_posix_string(path)));
-    }
-
-    Ok(path.components().collect())
-}
-
 /// Check if folder is already in use by another user
 pub async fn check_folder_in_use(
     pool: &PgPool,
     folder_relative_path: &str,
     ignore_user: Option<i32>,
 ) -> Result<bool, AdminError> {
+    let requested = Path::new(folder_relative_path);
+
     let existing_user_folders = UserStore::list_users(pool)
         .await?
         .into_iter()
-        .filter(|f| Some(f.id) != ignore_user)
-        .map(|f| f.media_folder)
-        .filter_map(|f| f)
+        .filter(|user| Some(user.id) != ignore_user)
+        .filter_map(|user| user.media_folder)
         .collect::<Vec<_>>();
+
     let pending_user_folders = query_scalar!("SELECT media_folder FROM user_invite")
         .fetch_all(pool)
         .await?;
-    for other_user_media_folder in existing_user_folders.into_iter().chain(pending_user_folders) {
-        // If newly picked user folder is either same as other user's folder, or subfolder of other user's folder, then disallow the change
-        if folder_relative_path.starts_with(&other_user_media_folder)
-            || other_user_media_folder.starts_with(&folder_relative_path)
+
+    for other_folder in existing_user_folders
+        .into_iter()
+        .chain(pending_user_folders)
+    {
+        let other = Path::new(&other_folder);
+
+        if requested == other
+            || requested.starts_with(other)
+            || other.starts_with(requested)
         {
             return Ok(true);
         }
     }
+
     Ok(false)
 }
 
