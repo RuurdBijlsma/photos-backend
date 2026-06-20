@@ -1,7 +1,6 @@
 use color_eyre::Result;
 use color_eyre::eyre::bail;
 use common_types::ml_analysis::{MLChatAnalysis, MLFastAnalysis};
-use directories::ProjectDirs;
 use generate_thumbnails::copy_dir_contents;
 use media_analyzer::MediaMetadata;
 use serde::{Deserialize, Serialize};

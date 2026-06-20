@@ -8,6 +8,7 @@ pub fn hash_file(path: &Path) -> color_eyre::Result<String> {
     Ok(hash.to_hex().to_string())
 }
 
+#[must_use]
 pub fn cache_root() -> PathBuf {
     ProjectDirs::from("dev", "ruurd", "photos").map_or_else(
         || Path::new(".cache").to_path_buf(),

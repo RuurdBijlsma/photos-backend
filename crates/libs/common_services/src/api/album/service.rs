@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use super::interfaces::{AcceptInviteRequest, AlbumItemBackup, AlbumShareClaims, AlbumSort, SharedMediaItem};
+use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort, SharedMediaItem};
 use crate::api::album::error::AlbumError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
@@ -20,8 +19,6 @@ use common_types::pb::api::{AlbumInfo, FullAlbumMediaResponse, SimpleTimelineIte
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;
-use crate::api::admin::error::AdminError;
-use crate::caching::cache_root;
 
 const DEFAULT_ALBUM_SORT: AlbumSort = AlbumSort::DateAsc;
 
@@ -111,30 +108,30 @@ pub async fn get_representative_thumbnail(
             SELECT avg(embedding)::vector as center FROM target_embeddings
         ),
         global_centroid_val AS (
-            SELECT 
-                CASE 
+            SELECT
+                CASE
                     WHEN $2::vector IS NOT NULL THEN $2::vector
                     ELSE (
-                        SELECT avg(embedding)::vector 
+                        SELECT avg(embedding)::vector
                         FROM (
-                            SELECT embedding 
-                            FROM visual_analysis 
-                            WHERE deleted = false 
-                            ORDER BY random() 
+                            SELECT embedding
+                            FROM visual_analysis
+                            WHERE deleted = false
+                            ORDER BY random()
                             LIMIT 1000
                         ) as sample
                     )
                 END as center
         ),
         scored_items AS (
-            SELECT 
+            SELECT
                 t.media_item_id,
                 -- Score = (Distance to Global) - (Distance to Album)
                 (t.embedding <=> gc.center) - (t.embedding <=> ac.center) as score
             FROM target_embeddings t, album_centroid ac, global_centroid_val gc
             WHERE (SELECT count FROM stats) > (array_length($1, 1) / 2)
         )
-        SELECT 
+        SELECT
             (SELECT count FROM stats)::bigint as "embedded_count!",
             (SELECT media_item_id FROM scored_items ORDER BY score DESC LIMIT 1)::text as "closest_id?"
         "#,
@@ -668,29 +665,5 @@ pub async fn reorder_media_items(
     .await?;
 
     tx.commit().await?;
-    Ok(())
-}
-
-
-
-pub async fn backup_albums(pool: &PgPool, user_id: i32) -> Result<(), AdminError> {
-    let albums = AlbumStore::list_by_user_id(pool, user_id).await?;
-    let mut full_albums = HashMap::new();
-    for album in albums {
-        let hashes = sqlx::query_as!(AlbumItemBackup,r#"
-            SELECT media_item.hash, album_media_item.album_id, album_media_item.rank, album_media_item.added_at, album_media_item.added_by_user
-            FROM album_media_item
-            INNER JOIN media_item ON album_media_item.media_item_id = media_item.id
-        "#).fetch_all(pool).await?;
-        full_albums.insert(album.id, hashes);
-    }
-    let backup_root = cache_root().join("albums").join(user_id.to_string());
-    tokio::fs::create_dir_all(&backup_root).await?;
-    let timestamp = Utc::now().format("%Y-%m-%d_%H-%M-%S").to_string();
-    let backup_path = backup_root.join(format!("{}.json", timestamp));
-    let json = serde_json::to_string(&full_albums)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-    tokio::fs::write(backup_path, json).await?;
-
     Ok(())
 }

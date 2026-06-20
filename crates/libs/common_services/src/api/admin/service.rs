@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
-use crate::api::album::service::backup_albums;
+use crate::api::album::backup_restore::backup_albums;
 
 /// Gathers information about the media and thumbnail directories.
 pub fn get_disk_info(

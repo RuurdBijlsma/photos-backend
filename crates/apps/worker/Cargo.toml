@@ -28,8 +28,6 @@ imageproc = "0.26.0"
 ab_glyph = "0.2.32"
 reqwest = "0.13.2"
 sanitize-filename = "0.6.0"
-directories = "6.0.0"
-blake3 = "1.8.2"
 serde = { version = "1.0.228", features = ["derive"] }
 tempfile = "3.23.0"
 itertools = "0.14.0"
