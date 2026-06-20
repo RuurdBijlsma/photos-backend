@@ -21,13 +21,7 @@ pub async fn get_random_photo_theme(
 ) -> Result<Json<Option<RandomPhotoResponse>>, ThemeError> {
     let variant: Variant = serde_json::from_str(&format!("\"{}\"", params.variant))
         .unwrap_or(context.settings.ingest.analyzer.theme_generation.variant);
-    let contrast_level = context
-        .settings
-        .ingest
-        .analyzer
-        .theme_generation
-        .contrast_level;
-    let result = random_photo_theme(&user, &context.pool, variant, contrast_level).await?;
+    let result = random_photo_theme(&user, &context.pool, variant, params.contrast).await?;
     Ok(Json(result))
 }
 
@@ -37,10 +31,9 @@ pub async fn get_color_theme_handler(
 ) -> Result<Json<MaterializedTheme>, ThemeError> {
     let variant: Variant = serde_json::from_str(&format!("\"{}\"", params.variant))
         .unwrap_or(ingestion.analyzer.theme_generation.variant);
-    let contrast_level = ingestion.analyzer.theme_generation.contrast_level;
     let theme = theme_from_color(Argb::from_hex(&params.color)?)
         .variant(variant)
-        .contrast_level(contrast_level)
+        .contrast_level(params.contrast)
         .call();
     Ok(Json(theme))
 }

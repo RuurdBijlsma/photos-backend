@@ -43,7 +43,6 @@ pub struct SearchSettings {
 #[derive(Debug, Deserialize, Clone)]
 pub struct ThemeSettings {
     pub variant: Variant,
-    pub contrast_level: f64,
 }
 
 /// Configuration for thumbnail generation settings.
