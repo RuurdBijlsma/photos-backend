@@ -5,7 +5,7 @@ use axum::response::{IntoResponse, Response};
 use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
-use tracing::warn;
+use tracing::{error, warn};
 use url::ParseError;
 
 #[derive(Debug, Error)]
@@ -18,6 +18,9 @@ pub enum AlbumError {
 
     #[error("Not found: {0}")]
     NotFound(String),
+
+    #[error("i/o error")]
+    Io(#[from] std::io::Error),
 
     #[error("Forbidden: {0}")]
     Forbidden(String),
@@ -37,6 +40,7 @@ fn log_error(error: &AlbumError) {
     match error {
         AlbumError::Database(e) => warn!("Database query failed: {}", e),
         AlbumError::Internal(e) => warn!("Internal error: {:?}", e),
+        AlbumError::Io(e) => error!("I/O error: {}", e),
         AlbumError::NotFound(id) => {
             warn!("Album -> Media item not found: {}", id);
         }
@@ -64,7 +68,7 @@ impl IntoResponse for AlbumError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "A database error occurred.".to_string(),
             ),
-            Self::Internal(_) => (
+            Self::Internal(_) | Self::Io(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "An unexpected internal error occurred.".to_string(),
             ),

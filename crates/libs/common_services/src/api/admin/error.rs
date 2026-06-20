@@ -1,3 +1,4 @@
+use crate::api::album::error::AlbumError;
 use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
@@ -36,6 +37,9 @@ pub enum AdminError {
 
     #[error("internal error")]
     Internal(#[from] color_eyre::Report),
+
+    #[error("album error")]
+    AlbumError(#[from] AlbumError),
 }
 
 fn log_failure(error: &AdminError) {
@@ -46,6 +50,7 @@ fn log_failure(error: &AdminError) {
         AdminError::DirectoryCreation(path) => error!("Failed to create directory: {}", path),
         AdminError::Database(e) => error!("Database query failed: {}", e),
         AdminError::Internal(e) => println!("Error in /admin: {e:?}"),
+        AdminError::AlbumError(e) => error!("Album query failed: {}", e),
         AdminError::FolderInUse => {
             println!("Folder already in use by another user");
         }
@@ -91,6 +96,7 @@ impl IntoResponse for AdminError {
                 StatusCode::BAD_REQUEST,
                 "Folder already in use by another user.".into(),
             ),
+            Self::AlbumError(e) => (StatusCode::BAD_REQUEST, e.to_string()),
         };
 
         let body = Json(json!({ "error": error_message }));

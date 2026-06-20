@@ -1,4 +1,4 @@
-use crate::api::admin::error::AdminError;
+use crate::api::album::error::AlbumError;
 use crate::api::album::interfaces::{AlbumBackup, AlbumItemBackup, AlbumSort, BackupInfo};
 use crate::api::album::service::get_representative_thumbnail;
 use crate::caching::cache_root;
@@ -10,7 +10,7 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 use std::path::Path;
 
-pub async fn list_backups(user_id: i32) -> Result<Vec<BackupInfo>, AdminError> {
+pub async fn list_backups(user_id: i32) -> Result<Vec<BackupInfo>, AlbumError> {
     let backup_root = cache_root().join("albums").join(user_id.to_string());
     let mut backups = Vec::new();
     if !backup_root.exists() {
@@ -40,7 +40,7 @@ pub async fn list_backups(user_id: i32) -> Result<Vec<BackupInfo>, AdminError> {
     Ok(backups)
 }
 
-pub async fn backup_albums(pool: &PgPool, user_id: i32) -> Result<(), AdminError> {
+pub async fn backup_albums(pool: &PgPool, user_id: i32) -> Result<(), AlbumError> {
     let albums = AlbumStore::list_by_user_id(pool, user_id).await?;
     let mut backups = Vec::new();
 
@@ -70,8 +70,7 @@ pub async fn backup_albums(pool: &PgPool, user_id: i32) -> Result<(), AdminError
     tokio::fs::create_dir_all(&backup_root).await?;
     let timestamp = Utc::now().format("%Y-%m-%d_%H-%M-%S").to_string();
     let backup_path = backup_root.join(format!("{timestamp}.json"));
-    let json = serde_json::to_string(&backups)
-        .map_err(std::io::Error::other)?;
+    let json = serde_json::to_string(&backups).map_err(std::io::Error::other)?;
     tokio::fs::write(backup_path, json).await?;
 
     Ok(())
@@ -82,38 +81,21 @@ pub async fn restore_albums(
     pool: &PgPool,
     user_id: i32,
     backup_path: &Path,
-) -> Result<(), AdminError> {
-    let user_backup_dir = cache_root().join("albums").join(user_id.to_string());
-
-    // 1. Verify path correctness and ownership
-    let canonical_user_dir = tokio::fs::canonicalize(&user_backup_dir)
-        .await
-        .map_err(|e| {
-            std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("User backup directory not found: {e}"),
-            )
-        })?;
-    let canonical_backup_path = tokio::fs::canonicalize(backup_path).await.map_err(|e| {
-        std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("Backup file not found or invalid: {e}"),
-        )
-    })?;
-    if !canonical_backup_path.starts_with(&canonical_user_dir) {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            "Backup file does not belong to this user",
-        )
-        .into());
+) -> Result<(), AlbumError> {
+    if !backup_path.exists() {
+        return Err(AlbumError::NotFound(
+            backup_path
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or_default(),
+        ));
     }
-
-    // 2. Load the backup contents
-    let json_data = tokio::fs::read_to_string(&canonical_backup_path).await?;
+    // Load the backup contents
+    let json_data = tokio::fs::read_to_string(&backup_path).await?;
     let backups: Vec<AlbumBackup> = serde_json::from_str(&json_data)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
 
-    // 3. Map hashes to active database IDs for the user
+    // Map hashes to active database IDs for the user
     let mut tx = pool.begin().await?;
     let media_items = sqlx::query!(
         "SELECT id, hash FROM media_item WHERE user_id = $1 AND deleted = false",
@@ -124,7 +106,7 @@ pub async fn restore_albums(
     let hash_to_id: HashMap<String, String> =
         media_items.into_iter().map(|r| (r.hash, r.id)).collect();
 
-    // 4. Restore each album
+    // Restore each album
     for backup in backups {
         let album_exists = AlbumStore::find_by_id(&mut *tx, &backup.id)
             .await?
@@ -194,23 +176,24 @@ pub async fn restore_albums(
                 .await?;
         }
 
-        // 5. Apply a representative thumbnail if none is selected
+        // Apply a representative thumbnail if none is selected
         let album = AlbumStore::find_by_id(&mut *tx, &backup.id).await?;
         if let Some(album) = album
-            && album.thumbnail_id.is_none() && !batch_media_item_ids.is_empty()
-                && let Ok(Some(thumb_id)) =
-                    get_representative_thumbnail(&mut tx, &batch_media_item_ids).await
-                {
-                    AlbumStore::update(
-                        &mut *tx,
-                        &backup.id,
-                        None,
-                        UpdateField::Ignore,
-                        UpdateField::Value(thumb_id),
-                        None,
-                    )
-                    .await?;
-                }
+            && album.thumbnail_id.is_none()
+            && !batch_media_item_ids.is_empty()
+            && let Ok(Some(thumb_id)) =
+                get_representative_thumbnail(&mut tx, &batch_media_item_ids).await
+        {
+            AlbumStore::update(
+                &mut *tx,
+                &backup.id,
+                None,
+                UpdateField::Ignore,
+                UpdateField::Value(thumb_id),
+                None,
+            )
+            .await?;
+        }
     }
 
     tx.commit().await?;

@@ -4,17 +4,19 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
+use common_services::api::album::backup_restore::{list_backups, restore_albums};
 use common_services::api::album::error::AlbumError;
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
-    CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam, ReorderMediaRequest,
-    SharedMediaItem, UpdateAlbumRequest,
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, BackupInfo,
+    CheckInviteRequest, CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam,
+    ReorderMediaRequest, SharedMediaItem, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, delete_album,
     generate_invite, get_album_media, get_album_media_item, get_sorted_album_media,
     remove_collaborator, remove_media_from_album, reorder_media_items, update_album,
 };
+use common_services::caching::cache_root;
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
@@ -257,4 +259,28 @@ pub async fn get_album_media_item_handler(
 ) -> Result<Json<SharedMediaItem>, AlbumError> {
     let response = get_album_media_item(&context.pool, &album_id, &media_item_id).await?;
     Ok(Json(response))
+}
+
+// ====================================== //
+// === --- === BACKUP RESTORE === --- === //
+// ====================================== //
+
+pub async fn list_backups_handler(
+    Extension(user): Extension<User>,
+) -> Result<Json<Vec<BackupInfo>>, AlbumError> {
+    let backups = list_backups(user.id).await?;
+    Ok(Json(backups))
+}
+
+pub async fn restore_backup_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(backup_filename): Path<String>,
+) -> Result<(), AlbumError> {
+    let backup_path = cache_root()
+        .join("albums")
+        .join(user.id.to_string())
+        .join(backup_filename);
+    restore_albums(&context.pool, user.id, &backup_path).await?;
+    Ok(())
 }

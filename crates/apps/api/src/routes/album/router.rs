@@ -1,7 +1,4 @@
-use crate::album::handlers::{
-    delete_album_handler, get_album_media_handler, get_album_media_item_handler,
-    get_sorted_album_items_handler,
-};
+use crate::album::handlers::{delete_album_handler, get_album_media_handler, get_album_media_item_handler, get_sorted_album_items_handler, list_backups_handler, restore_backup_handler};
 use crate::api_state::ApiContext;
 use crate::routes::album::handlers::{
     accept_invite_handler, add_collaborator_handler, add_media_to_album_handler,
@@ -58,4 +55,6 @@ pub fn album_protected_router() -> Router<ApiContext> {
         .route("/album/{album_id}/invite", get(generate_invite_handler))
         .route("/album/invite/check", post(check_invite_handler))
         .route("/album/invite/accept", post(accept_invite_handler))
+        .route("/album/backup/list", get(list_backups_handler))
+        .route("/album/restore/{backup_file}", post(restore_backup_handler))
 }
