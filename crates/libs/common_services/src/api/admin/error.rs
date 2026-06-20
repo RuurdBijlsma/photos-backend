@@ -1,4 +1,5 @@
 use crate::api::album::error::AlbumError;
+use crate::api::user::error::UserError;
 use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
@@ -19,6 +20,9 @@ pub enum AdminError {
 
     #[error("i/o error")]
     Io(#[from] std::io::Error),
+
+    #[error("Get disk info error")]
+    GetDiskInfoError(#[from] UserError),
 
     #[error("failed to create directory with invalid name: {0}")]
     DirectoryCreation(String),
@@ -51,6 +55,7 @@ fn log_failure(error: &AdminError) {
         AdminError::Database(e) => error!("Database query failed: {}", e),
         AdminError::Internal(e) => println!("Error in /admin: {e:?}"),
         AdminError::AlbumError(e) => error!("Album query failed: {}", e),
+        AdminError::GetDiskInfoError(e) => error!("Get disk info failed: {}", e),
         AdminError::FolderInUse => {
             println!("Folder already in use by another user");
         }
@@ -96,6 +101,7 @@ impl IntoResponse for AdminError {
                 StatusCode::BAD_REQUEST,
                 "Folder already in use by another user.".into(),
             ),
+            Self::GetDiskInfoError(_) => (StatusCode::BAD_REQUEST, "Couldn't get disk info".into()),
             Self::AlbumError(e) => (StatusCode::BAD_REQUEST, e.to_string()),
         };
 

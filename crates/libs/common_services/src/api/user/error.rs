@@ -16,6 +16,9 @@ pub enum UserError {
 
     #[error("Internal error: {0}")]
     Internal(String),
+
+    #[error("i/o error")]
+    Io(#[from] std::io::Error),
 }
 
 impl IntoResponse for UserError {
@@ -23,6 +26,7 @@ impl IntoResponse for UserError {
         let (status, message) = match self {
             Self::UserNotFound => (StatusCode::NOT_FOUND, self.to_string()),
             Self::InvalidAvatar => (StatusCode::BAD_REQUEST, self.to_string()),
+            Self::Io(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             Self::Db(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),

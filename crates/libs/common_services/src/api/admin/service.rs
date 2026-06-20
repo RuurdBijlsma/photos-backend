@@ -19,7 +19,7 @@ use walkdir::WalkDir;
 use crate::api::album::backup_restore::backup_albums;
 
 /// Gathers information about the media and thumbnail directories.
-pub fn get_disk_info(
+pub fn get_disks_info(
     media_root: &Path,
     thumbnails_root: &Path,
 ) -> Result<DiskResponse, AdminError> {
@@ -254,23 +254,6 @@ fn get_folder_size(path: &Path) -> u64 {
         .filter(|entry| entry.file_type().is_file())
         .map(|entry| entry.metadata().map_or(0, |m| m.len()))
         .sum()
-}
-
-/// Identifies if the media folder and the thumbnail folder reside on the same drive.
-#[must_use]
-pub fn are_on_same_drive(p1: &Path, p2: &Path) -> bool {
-    let p1_canon = std::fs::canonicalize(p1).unwrap_or_else(|_| p1.to_path_buf());
-    let p2_canon = std::fs::canonicalize(p2).unwrap_or_else(|_| p2.to_path_buf());
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        if let (Ok(m1), Ok(m2)) = (std::fs::metadata(&p1_canon), std::fs::metadata(&p2_canon)) {
-            return m1.dev() == m2.dev();
-        }
-    }
-
-    p1_canon.components().next() == p2_canon.components().next()
 }
 
 /// Retrieves a list of all users along with their parsed disk space statistics.

@@ -1,22 +1,21 @@
 use crate::api::admin::error::AdminError;
 use crate::api::admin::interfaces::PathInfoResponse;
+use crate::api::system::service::get_single_disk_info;
 use app_state::to_posix_string;
-use fs2::{available_space, total_space};
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 use tempfile::NamedTempFile;
 use tokio::task;
 
 pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, AdminError> {
-    let total = total_space(folder)?;
-    let available = available_space(folder)?;
     let (read, write) = check_read_write_access(folder);
+    let disk_info = get_single_disk_info(folder)?;
 
     Ok(PathInfoResponse {
         folder: to_posix_string(folder),
-        disk_available: available,
-        disk_used: total.saturating_sub(available),
-        disk_total: total,
+        disk_available: disk_info.disk_available,
+        disk_used: disk_info.disk_used,
+        disk_total: disk_info.disk_total,
         read_access: read,
         write_access: write,
     })

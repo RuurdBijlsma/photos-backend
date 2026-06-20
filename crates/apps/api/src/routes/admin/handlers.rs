@@ -11,7 +11,7 @@ use common_services::api::admin::interfaces::{
     UnsupportedFilesResponse, UpdateUserMediaFolderBody,
 };
 use common_services::api::admin::service::{
-    admin_delete_user, admin_update_user_media_folder, create_folder, get_disk_info,
+    admin_delete_user, admin_update_user_media_folder, create_folder, get_disks_info,
     get_folder_unsupported_files, get_media_sample, get_subfolders, list_admin_users,
     validate_user_folder,
 };
@@ -21,7 +21,7 @@ use common_services::database::app_user::User;
 pub async fn get_disk_response(
     State(ingestion): State<IngestSettings>,
 ) -> Result<Json<DiskResponse>, AdminError> {
-    let disk_info = get_disk_info(&ingestion.media_root, &ingestion.thumbnail_root)?;
+    let disk_info = get_disks_info(&ingestion.media_root, &ingestion.thumbnail_root)?;
     Ok(Json(disk_info))
 }
 
