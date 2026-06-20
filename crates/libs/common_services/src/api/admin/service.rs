@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
+use crate::api::album::service::backup_albums;
 
 /// Gathers information about the media and thumbnail directories.
 pub fn get_disk_info(
@@ -332,6 +333,10 @@ pub async fn admin_update_user_media_folder(
     )
     .await?;
 
+    sqlx::query!("DELETE FROM daily_card WHERE user_id = $1", target_user_id)
+        .execute(pool)
+        .await?;
+    backup_albums(pool, target_user_id).await?;
     enqueue_full_scan(pool, settings, target_user_id).await?;
 
     Ok(updated_user)

@@ -1,6 +1,6 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{get_ingest_cache, hash_file, write_ingest_cache};
+use crate::handlers::common::cache::{get_ingest_cache, write_ingest_cache};
 use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::jobs::management::is_job_cancelled;
 use app_state::constants;
@@ -18,6 +18,7 @@ use serde_json::from_value;
 use sqlx::PgPool;
 use std::path::Path;
 use tracing::debug;
+use common_services::caching::hash_file;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let relative_path = job

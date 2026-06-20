@@ -119,9 +119,17 @@ CREATE TRIGGER trg_album_media_item_count_delete
     REFERENCING OLD TABLE AS old_table
     FOR EACH STATEMENT EXECUTE FUNCTION update_album_media_count_stmt();
 
+
+-- Combined hard-delete synchronization function
 CREATE OR REPLACE FUNCTION fn_trigger_media_item_hard_delete_sync()
     RETURNS TRIGGER AS $$
 BEGIN
+    -- 1. Clear thumbnail references in the 'album' table to prevent foreign key errors during cascaded updates.
+    UPDATE album
+    SET thumbnail_id = NULL
+    WHERE thumbnail_id = OLD.id;
+
+    -- 2. Adjust the media counts if the deleted item was not soft-deleted.
     IF (OLD.deleted = false) THEN
         UPDATE album
         SET media_count = media_count - 1

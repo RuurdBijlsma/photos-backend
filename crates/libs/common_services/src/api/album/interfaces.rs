@@ -275,3 +275,14 @@ impl From<FullMediaItem> for SharedMediaItem {
         }
     }
 }
+
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AlbumItemBackup {
+    pub hash: String,
+    pub album_id: String,
+    pub rank: f64,
+    pub added_at: DateTime<Utc>,
+    pub added_by_user: Option<i32>,
+}

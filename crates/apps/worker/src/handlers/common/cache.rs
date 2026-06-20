@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::warn;
+use common_services::caching::cache_root;
 
 // Category folder names
 const THUMBNAILS_DIR: &str = "thumbnails";
@@ -36,20 +37,6 @@ pub struct CachedAnalysisResult {
 pub struct CachedLlmResult {
     pub llm_analyses: Vec<MLChatAnalysis>,
     pub version: u32,
-}
-
-pub fn hash_file(path: &Path) -> Result<String> {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update_mmap_rayon(path)?;
-    let hash = hasher.finalize();
-    Ok(hash.to_hex().to_string())
-}
-
-fn cache_root() -> PathBuf {
-    ProjectDirs::from("dev", "ruurd", "photos").map_or_else(
-        || Path::new(".cache").to_path_buf(),
-        |proj| proj.cache_dir().to_path_buf(),
-    )
 }
 
 /// Helper to get the path for a JSON cache file: cache/{category}/{hash}.json

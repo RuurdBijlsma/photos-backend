@@ -1,6 +1,6 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{get_analysis_cache, hash_file, write_analysis_cache};
+use crate::handlers::common::cache::{get_analysis_cache, write_analysis_cache};
 use crate::handlers::common::utils::get_images_to_analyze;
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::eyre::{Result, eyre};
@@ -10,6 +10,7 @@ use common_services::database::visual_analysis_store::VisualAnalysisStore;
 use common_types::ml_analysis::MLFastAnalysis;
 use std::path::Path;
 use tracing::{debug, info};
+use common_services::caching::hash_file;
 
 /// Handles the analysis of a given job.
 ///
