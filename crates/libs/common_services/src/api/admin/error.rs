@@ -1,12 +1,12 @@
+use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use color_eyre::eyre;
 use serde_json::json;
 use std::path::StripPrefixError;
-use color_eyre::eyre;
 use thiserror::Error;
 use tracing::{error, warn};
-use crate::database::DbError;
 
 #[derive(Debug, Error)]
 pub enum AdminError {
@@ -31,6 +31,9 @@ pub enum AdminError {
     #[error("cannot delete your own administrator account")]
     CannotDeleteSelf,
 
+    #[error("folder is already in use by another user")]
+    FolderInUse,
+
     #[error("internal error")]
     Internal(#[from] color_eyre::Report),
 }
@@ -42,9 +45,12 @@ fn log_failure(error: &AdminError) {
         AdminError::Io(e) => error!("I/O error: {}", e),
         AdminError::DirectoryCreation(path) => error!("Failed to create directory: {}", path),
         AdminError::Database(e) => error!("Database query failed: {}", e),
-        AdminError::Internal(e) => println!("Error in /onboarding: {e:?}"),
+        AdminError::Internal(e) => println!("Error in /admin: {e:?}"),
+        AdminError::FolderInUse => {
+            println!("Folder already in use by another user");
+        }
         AdminError::MediaFolderAlreadySet => {
-            warn!("Tried to set media folder on user that already had it. /onboarding");
+            warn!("Tried to set media folder on user that already had it. /admin");
         }
         AdminError::CannotDeleteSelf => {
             warn!("An administrator tried to delete their own account.");
@@ -80,6 +86,10 @@ impl IntoResponse for AdminError {
             Self::CannotDeleteSelf => (
                 StatusCode::BAD_REQUEST,
                 "An administrator cannot delete their own account.".into(),
+            ),
+            Self::FolderInUse => (
+                StatusCode::BAD_REQUEST,
+                "Folder already in use by another user.".into(),
             ),
         };
 

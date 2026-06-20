@@ -24,6 +24,8 @@ pub enum AuthError {
     UserAlreadyExists,
     #[error("user not found")]
     UserNotFound,
+    #[error("folder is already in use by another user")]
+    FolderInUse,
     #[error("permission denied for {user_email} on {path}")]
     PermissionDenied { user_email: String, path: String },
     #[error("invalid or expired invite token")]
@@ -50,6 +52,7 @@ fn log_auth_failure(error: &AuthError) {
                 user_email, path
             );
         }
+        AuthError::FolderInUse => info!("Folder already in use in /auth"),
         AuthError::InvalidInvite => info!("Registration failed: Invalid or expired invite token."),
         AuthError::Internal(e) => println!("Error in /auth: {e:?}"),
     }
@@ -77,6 +80,7 @@ impl IntoResponse for AuthError {
                 "A user with this email already exists",
             ),
             Self::PermissionDenied { .. } => (StatusCode::FORBIDDEN, "Permission denied"),
+            Self::FolderInUse => (StatusCode::BAD_REQUEST, "Folder already in use" ),
             Self::InvalidInvite => (StatusCode::FORBIDDEN, "Invalid or expired invite token"),
             Self::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,

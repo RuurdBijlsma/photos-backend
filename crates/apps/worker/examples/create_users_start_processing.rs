@@ -56,7 +56,7 @@ async fn main() -> color_eyre::Result<()> {
         },
     )
     .await?;
-    let user = admin_update_user_media_folder(&pool, &settings, user.id, "rutenl").await?;
+    let user = admin_update_user_media_folder(&pool, &settings, user.id, "Ruurd").await?;
     println!("Started processing, media folder: {:?}", user.media_folder);
     create_worker(pool, settings, false, true).await?;
 

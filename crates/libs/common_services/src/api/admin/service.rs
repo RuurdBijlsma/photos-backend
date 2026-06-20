@@ -12,9 +12,9 @@ use crate::database::{UpdateField, UpdateUserPayload};
 use crate::job_queue::enqueue_job;
 use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_posix_string};
 use chrono::{Duration, Utc};
-use sqlx::PgPool;
+use sqlx::{PgPool, query_scalar};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
@@ -29,9 +29,7 @@ pub fn get_disk_info(
     }
 
     if !thumbnails_root.is_dir() {
-        return Err(AdminError::InvalidPath(to_posix_string(
-            thumbnails_root,
-        )));
+        return Err(AdminError::InvalidPath(to_posix_string(thumbnails_root)));
     }
 
     let media_folder_info = check_drive_info(media_root)?;
@@ -203,9 +201,7 @@ pub async fn validate_user_folder(
     let metadata = tokio_fs::metadata(&canon_user_path).await?;
     if !metadata.is_dir() {
         warn!("User path {} is not a directory", canon_user_path.display());
-        return Err(AdminError::InvalidPath(to_posix_string(
-            &canon_user_path,
-        )));
+        return Err(AdminError::InvalidPath(to_posix_string(&canon_user_path)));
     }
 
     if !canon_user_path.starts_with(&canon_media_root) {
@@ -214,12 +210,51 @@ pub async fn validate_user_folder(
             canon_user_path.display(),
             canon_media_root.display()
         );
-        return Err(AdminError::InvalidPath(to_posix_string(
-            &canon_user_path,
-        )));
+        return Err(AdminError::InvalidPath(to_posix_string(&canon_user_path)));
     }
 
     Ok(canon_user_path)
+}
+
+fn normalize_relative_path(value: &str) -> Result<PathBuf, AdminError> {
+    let path = Path::new(value);
+
+    if path.is_absolute()
+        || path.components().any(|component| {
+        matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_))
+    })
+    {
+        return Err(AdminError::InvalidPath(to_posix_string(path)));
+    }
+
+    Ok(path.components().collect())
+}
+
+/// Check if folder is already in use by another user
+pub async fn check_folder_in_use(
+    pool: &PgPool,
+    folder_relative_path: &str,
+    ignore_user: Option<i32>,
+) -> Result<bool, AdminError> {
+    let existing_user_folders = UserStore::list_users(pool)
+        .await?
+        .into_iter()
+        .filter(|f| Some(f.id) != ignore_user)
+        .map(|f| f.media_folder)
+        .filter_map(|f| f)
+        .collect::<Vec<_>>();
+    let pending_user_folders = query_scalar!("SELECT media_folder FROM user_invite")
+        .fetch_all(pool)
+        .await?;
+    for other_user_media_folder in existing_user_folders.into_iter().chain(pending_user_folders) {
+        // If newly picked user folder is either same as other user's folder, or subfolder of other user's folder, then disallow the change
+        if folder_relative_path.starts_with(&other_user_media_folder)
+            || other_user_media_folder.starts_with(&folder_relative_path)
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// Measures the recursive folder size of files on disk.
@@ -236,7 +271,7 @@ fn get_folder_size(path: &Path) -> u64 {
 }
 
 /// Identifies if the media folder and the thumbnail folder reside on the same drive.
-fn are_on_same_drive(p1: &Path, p2: &Path) -> bool {
+pub fn are_on_same_drive(p1: &Path, p2: &Path) -> bool {
     let p1_canon = std::fs::canonicalize(p1).unwrap_or_else(|_| p1.to_path_buf());
     let p2_canon = std::fs::canonicalize(p2).unwrap_or_else(|_| p2.to_path_buf());
 
@@ -268,10 +303,7 @@ pub async fn list_admin_users(
             let full_user_path = media_root.join(relative_folder);
             let path_to_walk = full_user_path.clone();
 
-            let size = tokio::task::spawn_blocking(move || {
-                get_folder_size(&path_to_walk)
-            })
-                .await?;
+            let size = tokio::task::spawn_blocking(move || get_folder_size(&path_to_walk)).await?;
 
             main_drive_used = size;
         }
@@ -282,7 +314,7 @@ pub async fn list_admin_users(
             email: user.email,
             avatar_id: user.avatar_id,
             media_folder: user.media_folder,
-            main_drive_used
+            main_drive_used,
         });
     }
 
@@ -299,6 +331,9 @@ pub async fn admin_update_user_media_folder(
     let media_root = &settings.ingest.media_root;
     let user_folder_path = validate_user_folder(media_root, user_folder).await?;
     let relative = user_folder_path.make_relative_canon(&settings.ingest.media_root_canon)?;
+    if check_folder_in_use(pool, &relative, Some(target_user_id)).await? {
+        return Err(AdminError::FolderInUse);
+    }
 
     let updated_user = UserStore::update(
         pool,
@@ -312,7 +347,7 @@ pub async fn admin_update_user_media_folder(
             avatar_id: UpdateField::Ignore,
         },
     )
-        .await?;
+    .await?;
 
     enqueue_job::<()>(pool, settings, JobType::Scan)
         .user_id(target_user_id)

@@ -4,7 +4,7 @@ use crate::api::auth::interfaces::{AuthClaims, CreateUser, Tokens};
 use crate::api::auth::token::{
     RefreshTokenParts, generate_refresh_token_parts, split_refresh_token, verify_token,
 };
-use crate::api::admin::service::validate_user_folder;
+use crate::api::admin::service::{check_folder_in_use, validate_user_folder};
 use crate::database::app_user::{User, UserInvite, UserRole, UserWithPassword};
 use crate::database::user_store::UserStore;
 use crate::utils::nice_id;
@@ -15,6 +15,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, Postgres};
 use tracing::info;
+use crate::api::admin::error::AdminError;
 
 /// Authenticates a user based on email and password.
 ///
@@ -107,6 +108,9 @@ pub async fn generate_invite(
     let expires_at = Utc::now() + Duration::days(7);
     let user_folder = validate_user_folder(&ingest_settings.media_root, user_folder).await?;
     let relative = user_folder.make_relative_canon(&ingest_settings.media_root_canon)?;
+    if check_folder_in_use(pool, &relative, None).await? {
+        return Err(AuthError::FolderInUse);
+    }
     Ok(UserStore::create_invite(pool, &token, &relative, expires_at).await?)
 }
 
