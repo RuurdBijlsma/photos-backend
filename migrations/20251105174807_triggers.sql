@@ -25,29 +25,25 @@ BEGIN
     -- Handle INSERTS
     IF (TG_OP = 'INSERT') THEN
         UPDATE album a
-        SET latest_media_item_timestamp = sub.max_ts,
+        SET latest_media_item_timestamp   = sub.max_ts,
             earliest_media_item_timestamp = sub.min_ts
-        FROM (
-                 SELECT nt.album_id, MAX(mi.sort_timestamp) as max_ts, MIN(mi.sort_timestamp) as min_ts
-                 FROM (SELECT DISTINCT album_id FROM new_table) nt
-                          LEFT JOIN album_media_item ami ON ami.album_id = nt.album_id
-                          LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
-                 GROUP BY nt.album_id
-             ) sub
+        FROM (SELECT nt.album_id, MAX(mi.sort_timestamp) as max_ts, MIN(mi.sort_timestamp) as min_ts
+              FROM (SELECT DISTINCT album_id FROM new_table) nt
+                       LEFT JOIN album_media_item ami ON ami.album_id = nt.album_id
+                       LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
+              GROUP BY nt.album_id) sub
         WHERE a.id = sub.album_id;
 
         -- Handle DELETES
     ELSIF (TG_OP = 'DELETE') THEN
         UPDATE album a
-        SET latest_media_item_timestamp = sub.max_ts,
+        SET latest_media_item_timestamp   = sub.max_ts,
             earliest_media_item_timestamp = sub.min_ts
-        FROM (
-                 SELECT ot.album_id, MAX(mi.sort_timestamp) as max_ts, MIN(mi.sort_timestamp) as min_ts
-                 FROM (SELECT DISTINCT album_id FROM old_table) ot
-                          LEFT JOIN album_media_item ami ON ami.album_id = ot.album_id
-                          LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
-                 GROUP BY ot.album_id
-             ) sub
+        FROM (SELECT ot.album_id, MAX(mi.sort_timestamp) as max_ts, MIN(mi.sort_timestamp) as min_ts
+              FROM (SELECT DISTINCT album_id FROM old_table) ot
+                       LEFT JOIN album_media_item ami ON ami.album_id = ot.album_id
+                       LEFT JOIN media_item mi ON ami.media_item_id = mi.id AND mi.deleted = false
+              GROUP BY ot.album_id) sub
         WHERE a.id = sub.album_id;
     END IF;
 
@@ -75,7 +71,8 @@ EXECUTE FUNCTION update_album_timestamps_stmt();
 -- Trigger for album.media_count
 
 CREATE OR REPLACE FUNCTION update_album_media_count_stmt()
-    RETURNS TRIGGER AS $$
+    RETURNS TRIGGER AS
+$$
 BEGIN
     IF (TG_OP = 'INSERT') THEN
         UPDATE album a
@@ -86,8 +83,7 @@ BEGIN
                  FROM new_table nt
                           JOIN media_item mi ON nt.media_item_id = mi.id
                  WHERE mi.deleted = false
-                 GROUP BY nt.album_id
-             ) sub
+                 GROUP BY nt.album_id) sub
         WHERE a.id = sub.album_id;
 
     ELSIF (TG_OP = 'DELETE') THEN
@@ -99,8 +95,7 @@ BEGIN
                  FROM old_table ot
                           JOIN media_item mi ON ot.media_item_id = mi.id
                  WHERE mi.deleted = false
-                 GROUP BY ot.album_id
-             ) sub
+                 GROUP BY ot.album_id) sub
         WHERE a.id = sub.album_id;
     END IF;
     RETURN NULL;
@@ -110,19 +105,24 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_album_media_item_count ON album_media_item;
 
 CREATE TRIGGER trg_album_media_item_count_insert
-    AFTER INSERT ON album_media_item
+    AFTER INSERT
+    ON album_media_item
     REFERENCING NEW TABLE AS new_table
-    FOR EACH STATEMENT EXECUTE FUNCTION update_album_media_count_stmt();
+    FOR EACH STATEMENT
+EXECUTE FUNCTION update_album_media_count_stmt();
 
 CREATE TRIGGER trg_album_media_item_count_delete
-    AFTER DELETE ON album_media_item
+    AFTER DELETE
+    ON album_media_item
     REFERENCING OLD TABLE AS old_table
-    FOR EACH STATEMENT EXECUTE FUNCTION update_album_media_count_stmt();
+    FOR EACH STATEMENT
+EXECUTE FUNCTION update_album_media_count_stmt();
 
 
 -- Combined hard-delete synchronization function
 CREATE OR REPLACE FUNCTION fn_trigger_media_item_hard_delete_sync()
-    RETURNS TRIGGER AS $$
+    RETURNS TRIGGER AS
+$$
 BEGIN
     -- 1. Clear thumbnail references in the 'album' table to prevent foreign key errors during cascaded updates.
     UPDATE album
@@ -133,11 +133,9 @@ BEGIN
     IF (OLD.deleted = false) THEN
         UPDATE album
         SET media_count = media_count - 1
-        WHERE id IN (
-            SELECT album_id
-            FROM album_media_item
-            WHERE media_item_id = OLD.id
-        );
+        WHERE id IN (SELECT album_id
+                     FROM album_media_item
+                     WHERE media_item_id = OLD.id);
     END IF;
 
     RETURN OLD;
@@ -145,6 +143,30 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_media_item_hard_delete
-    BEFORE DELETE ON media_item
+    BEFORE DELETE
+    ON media_item
     FOR EACH ROW
 EXECUTE FUNCTION fn_trigger_media_item_hard_delete_sync();
+
+
+-- Create a trigger function to synchronize the soft-delete status to visual_analysis
+CREATE OR REPLACE FUNCTION fn_trigger_media_item_soft_delete_sync()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- Only run the update if the deleted flag has actually changed
+    IF OLD.deleted IS DISTINCT FROM NEW.deleted THEN
+        UPDATE visual_analysis
+        SET deleted = NEW.deleted
+        WHERE media_item_id = NEW.id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Bind the trigger to run after the deleted column is updated on media_item
+CREATE TRIGGER trg_media_item_soft_delete
+    AFTER UPDATE OF deleted
+    ON media_item
+    FOR EACH ROW
+EXECUTE FUNCTION fn_trigger_media_item_soft_delete_sync();

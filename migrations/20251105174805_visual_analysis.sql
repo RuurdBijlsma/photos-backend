@@ -6,7 +6,7 @@ CREATE TABLE visual_analysis
 (
     id            BIGSERIAL PRIMARY KEY,
     user_id       INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    deleted       BOOLEAN     NOT NULL DEFAULT false,
+    deleted       BOOLEAN     NOT NULL DEFAULT false, -- Trigger keeps this in sync with media_item.deleted
     media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     embedding     VECTOR(768) NOT NULL,

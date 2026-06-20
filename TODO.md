@@ -205,6 +205,13 @@
     * ✅ in frontend, laat user variant kiezen voor random bg image
 * ✅ default sort for albums should be oldest first (currently newest first - WRONG)
 * ✅ mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
+* 👎 ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
+* ✅ when a second user registers, make sure to do a scan / sync
+* ✅ [BUG] when a second user registers with a subfolder of the first user as media folder, and there's already media in
+  there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
+  sure how to handle this case.
+* ✅ [check] als ik iets soft-delete, make sure dat visual_analysis.deleted ook op false gaat
+* ✅ only re-run photo/face cluster if photos have changed since last clustering
 * password reset flow (email) (make mail optional)
 * nginx thumbnail hosting (optional maak setting voor Rust thumb hosting).
 * check of readme uitleg klopt met verse windows installatie & linux
@@ -216,14 +223,6 @@
 * als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
   embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
 * llm instelbaar maken in settings?
-* ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
-    * misschien moet dit met een andere methode
-* when a second user registers, make sure to do a scan / sync
-* [BUG] when a second user registers with a subfolder of the first user as media folder, and there's already media in
-  there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
-  sure how to handle this case.
-* [check] als ik iets soft-delete, make sure dat visual_analysis.deleted ook op false gaat
-* only re-run photo/face cluster if photos have changed since last clustering
 
 # High level TODO:
 
@@ -255,3 +254,4 @@
   * find similar fotos view, misschien  een expandable ding in de info panel?
 * photo upload feature
 * disallow having root as user media folder if going with multiple users
+* email password reset?
