@@ -32,9 +32,10 @@ pub async fn claim_next_job(context: &WorkerContext) -> Result<Option<Job>> {
             owner = $1,
             started_at = now(),
             last_heartbeat = now(),
-            attempts = CASE WHEN status = 'running' THEN attempts + 1 ELSE attempts END
-        WHERE id = (SELECT id FROM candidate)
-        RETURNING id, payload, relative_path, job_type AS "job_type!: JobType", priority, user_id, attempts, max_attempts, dependency_attempts
+            attempts = CASE WHEN jobs.status = 'running' THEN jobs.attempts + 1 ELSE jobs.attempts END
+        FROM candidate
+        WHERE jobs.id = candidate.id
+        RETURNING jobs.id, jobs.payload, jobs.relative_path, jobs.job_type AS "job_type!: JobType", jobs.priority, jobs.user_id, jobs.attempts, jobs.max_attempts, jobs.dependency_attempts
         "#,
         context.worker_id,
         heartbeat_timeout_seconds,
@@ -68,7 +69,6 @@ pub async fn update_job_on_completion(pool: &PgPool, job: &Job, result: JobResul
 /// Updates a job's status on failure, either marking it as failed or rescheduling it.
 pub async fn update_job_on_failure(pool: &PgPool, job: &Job, error: &Report) -> Result<()> {
     let error_string = &format!("{error:?}");
-    dbg!(&error_string);
     if job.attempts + 1 >= job.max_attempts {
         mark_job_failed(pool, job.id, error_string).await
     } else {

@@ -89,7 +89,9 @@ pub async fn sync_user_files_to_db(
     tokio::try_join!(
         enqueue_job::<()>(pool, settings, JobType::UpdateGlobalCentroid).call(),
         enqueue_job::<()>(pool, settings, JobType::ClusterFaces).call(),
-        enqueue_job::<()>(pool, settings, JobType::ClusterPhotos).call()
+        enqueue_job::<()>(pool, settings, JobType::ClusterPhotos).call(),
+        enqueue_job::<()>(pool, settings, JobType::GenerateDailyCards).call(),
+        enqueue_job::<()>(pool, settings, JobType::CalcSystemStats).call(),
     )?;
 
     if !to_remove.is_empty() {

@@ -96,26 +96,6 @@ pub async fn enqueue_full_scan(
         .user_id(target_user_id)
         .call()
         .await?;
-    enqueue_job::<()>(pool, settings, JobType::CalcSystemStats)
-        .user_id(target_user_id)
-        .call()
-        .await?;
-    enqueue_job::<()>(pool, settings, JobType::UpdateGlobalCentroid)
-        .user_id(target_user_id)
-        .call()
-        .await?;
-    enqueue_job::<()>(pool, settings, JobType::ClusterFaces)
-        .user_id(target_user_id)
-        .call()
-        .await?;
-    enqueue_job::<()>(pool, settings, JobType::ClusterPhotos)
-        .user_id(target_user_id)
-        .call()
-        .await?;
-    enqueue_job::<()>(pool, settings, JobType::GenerateDailyCards)
-        .user_id(target_user_id)
-        .call()
-        .await?;
     Ok(())
 }
 
