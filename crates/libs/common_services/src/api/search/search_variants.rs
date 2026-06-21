@@ -1,5 +1,4 @@
 use crate::api::search::cache::get_cached_text_embedding;
-use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::{SearchMediaConfig, SearchMediaType, SearchSortBy};
 use crate::database::app_user::User;
 use common_types::pb::api::SimpleTimelineItem;
@@ -7,6 +6,7 @@ use open_clip_inference::TextEmbedder;
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
+use crate::api::app_error::AppError;
 
 pub async fn basic_search_media(
     user: &User,
@@ -14,7 +14,7 @@ pub async fn basic_search_media(
     embedder: Arc<TextEmbedder>,
     query: &str,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     let query_str = query.to_string();
     let query_embedding =
         get_cached_text_embedding(&query_str, &config.embedder_model_id, pool, embedder).await?;
@@ -122,7 +122,7 @@ pub async fn advanced_search_media(
     embedder: Arc<TextEmbedder>,
     query: &str,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     let query_str = query.to_string();
     let embedder_clone = embedder.clone();
 
@@ -303,7 +303,7 @@ pub async fn filter_only_search_media(
     user: &User,
     pool: &PgPool,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     let limit = config.limit.unwrap_or(100).min(500);
     let offset = config.offset.unwrap_or(0);
 

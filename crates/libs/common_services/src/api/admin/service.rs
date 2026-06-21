@@ -1,10 +1,9 @@
-//! This module provides the core service logic for the setup process.
-
-use crate::api::admin::error::AdminError;
 use crate::api::admin::helpers::{check_drive_info, list_folders};
 use crate::api::admin::interfaces::{
     AdminUserInfo, DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
+use crate::api::album::backup_restore::backup_albums;
+use crate::api::app_error::AppError;
 use crate::database::app_user::User;
 use crate::database::user_store::UserStore;
 use crate::database::{UpdateField, UpdateUserPayload};
@@ -16,19 +15,21 @@ use std::path::{Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
-use crate::api::album::backup_restore::backup_albums;
 
 /// Gathers information about the media and thumbnail directories.
-pub fn get_disks_info(
-    media_root: &Path,
-    thumbnails_root: &Path,
-) -> Result<DiskResponse, AdminError> {
+pub fn get_disks_info(media_root: &Path, thumbnails_root: &Path) -> Result<DiskResponse, AppError> {
     if !media_root.is_dir() {
-        return Err(AdminError::InvalidPath(to_posix_string(media_root)));
+        return Err(AppError::BadRequest(format!(
+            "Invalid path: {}",
+            to_posix_string(media_root)
+        )));
     }
 
     if !thumbnails_root.is_dir() {
-        return Err(AdminError::InvalidPath(to_posix_string(thumbnails_root)));
+        return Err(AppError::BadRequest(format!(
+            "Invalid path: {}",
+            to_posix_string(thumbnails_root)
+        )));
     }
 
     let media_folder_info = check_drive_info(media_root)?;
@@ -45,12 +46,15 @@ pub async fn create_folder(
     media_root: &Path,
     base_folder: &str,
     new_name: &str,
-) -> Result<(), AdminError> {
+) -> Result<(), AppError> {
     if !new_name
         .chars()
         .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     {
-        return Err(AdminError::DirectoryCreation(new_name.to_string()));
+        return Err(AppError::BadRequest(format!(
+            "Can't create folder with this name: {}",
+            new_name.to_string()
+        )));
     }
 
     let user_path = validate_user_folder(media_root, base_folder).await?;
@@ -62,7 +66,7 @@ pub async fn create_folder(
 pub async fn get_subfolders(
     ingestion: &IngestSettings,
     folder: &str,
-) -> Result<Vec<String>, AdminError> {
+) -> Result<Vec<String>, AppError> {
     let user_path = validate_user_folder(&ingestion.media_root, folder).await?;
     let folders = list_folders(&user_path).await?;
 
@@ -76,7 +80,7 @@ pub async fn get_subfolders(
                 .file_name()
                 .and_then(|name| name.to_str())
                 .map(ToOwned::to_owned)
-                .ok_or_else(|| AdminError::InvalidPath(path))
+                .ok_or_else(|| AppError::BadRequest(format!("Invalid path: {}", path)))
         })
         .collect()
 }
@@ -85,7 +89,7 @@ pub async fn get_subfolders(
 pub fn get_media_sample(
     ingestion: &IngestSettings,
     user_folder: &Path,
-) -> Result<MediaSampleResponse, AdminError> {
+) -> Result<MediaSampleResponse, AppError> {
     let media_folder_info = check_drive_info(user_folder)?;
     let folder_relative = user_folder.make_relative_canon(&ingestion.media_root_canon)?;
 
@@ -135,7 +139,7 @@ pub fn get_media_sample(
 pub fn get_folder_unsupported_files(
     ingestion: &IngestSettings,
     user_folder: &Path,
-) -> Result<UnsupportedFilesResponse, AdminError> {
+) -> Result<UnsupportedFilesResponse, AppError> {
     let media_folder_info = check_drive_info(user_folder)?;
     let folder_relative = user_folder.make_relative_canon(&ingestion.media_root_canon)?;
 
@@ -191,7 +195,7 @@ pub fn get_folder_unsupported_files(
 pub async fn validate_user_folder(
     media_root: &Path,
     user_folder: &str,
-) -> Result<PathBuf, AdminError> {
+) -> Result<PathBuf, AppError> {
     let user_path = media_root.join(user_folder);
 
     let canon_user_path = tokio_fs::canonicalize(&user_path).await?;
@@ -200,7 +204,10 @@ pub async fn validate_user_folder(
     let metadata = tokio_fs::metadata(&canon_user_path).await?;
     if !metadata.is_dir() {
         warn!("User path {} is not a directory", canon_user_path.display());
-        return Err(AdminError::InvalidPath(to_posix_string(&canon_user_path)));
+        return Err(AppError::BadRequest(format!(
+            "Invalid path: {}",
+            to_posix_string(&canon_user_path)
+        )));
     }
 
     if !canon_user_path.starts_with(&canon_media_root) {
@@ -209,7 +216,10 @@ pub async fn validate_user_folder(
             canon_user_path.display(),
             canon_media_root.display()
         );
-        return Err(AdminError::InvalidPath(to_posix_string(&canon_user_path)));
+        return Err(AppError::BadRequest(format!(
+            "Invalid path: {}",
+            to_posix_string(&canon_user_path)
+        )));
     }
 
     Ok(canon_user_path)
@@ -220,7 +230,7 @@ pub async fn check_folder_in_use(
     pool: &PgPool,
     folder_relative_path: &str,
     ignore_user: Option<i32>,
-) -> Result<bool, AdminError> {
+) -> Result<bool, AppError> {
     let requested = Path::new(folder_relative_path);
 
     let existing_user_folders = UserStore::list_users(pool)
@@ -260,7 +270,7 @@ fn get_folder_size(path: &Path) -> u64 {
 pub async fn list_admin_users(
     pool: &PgPool,
     settings: &AppSettings,
-) -> Result<Vec<AdminUserInfo>, AdminError> {
+) -> Result<Vec<AdminUserInfo>, AppError> {
     let db_users = UserStore::list_users(pool).await?;
     let mut admin_users = Vec::with_capacity(db_users.len());
 
@@ -294,12 +304,14 @@ pub async fn admin_update_user_media_folder(
     settings: &IngestSettings,
     target_user_id: i32,
     user_folder: &str,
-) -> Result<User, AdminError> {
+) -> Result<User, AppError> {
     let media_root = &settings.media_root;
     let user_folder_path = validate_user_folder(media_root, user_folder).await?;
     let relative = user_folder_path.make_relative_canon(&settings.media_root_canon)?;
     if check_folder_in_use(pool, &relative, Some(target_user_id)).await? {
-        return Err(AdminError::FolderInUse);
+        return Err(AppError::BadRequest(
+            "Folder is already in use by another user".to_owned(),
+        ));
     }
 
     let updated_user = UserStore::update(
@@ -330,9 +342,9 @@ pub async fn admin_delete_user(
     pool: &PgPool,
     target_user_id: i32,
     current_user_id: i32,
-) -> Result<(), AdminError> {
+) -> Result<(), AppError> {
     if target_user_id == current_user_id {
-        return Err(AdminError::CannotDeleteSelf);
+        return Err(AppError::Forbidden("Can't delete self".to_owned()));
     }
 
     UserStore::delete(pool, target_user_id).await?;

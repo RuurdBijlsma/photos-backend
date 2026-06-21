@@ -1,5 +1,4 @@
 use crate::api::search::cache::{get_cached_image_embedding, get_cached_text_embedding};
-use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::{
     SearchFilterRanges, SearchImage, SearchMediaConfig, SearchMediaType, SearchSortBy,
 };
@@ -14,6 +13,7 @@ use open_clip_inference::{TextEmbedder, VisionEmbedder};
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
+use crate::api::app_error::AppError;
 
 pub async fn search_media(
     user: &User,
@@ -21,7 +21,7 @@ pub async fn search_media(
     embedder: Arc<TextEmbedder>,
     query: Option<String>,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     let query = query.unwrap_or_default();
     if query.trim().is_empty() {
         if has_active_filters(&config) {
@@ -53,7 +53,7 @@ pub async fn search_by_image(
     query: Option<String>,
     img: SearchImage,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     // 1. Spawn vision embedding (CPU-bound / blocking task)
     let pool_clone = pool.clone();
     let model_id_clone = config.embedder_model_id.clone();
@@ -354,7 +354,7 @@ pub async fn search_by_image(
 pub async fn search_filter_ranges(
     user: &User,
     pool: &PgPool,
-) -> Result<SearchFilterRanges, SearchError> {
+) -> Result<SearchFilterRanges, AppError> {
     let months_task = sqlx::query!(
         r#"
         SELECT DISTINCT month_id AS "months!"
@@ -422,7 +422,7 @@ pub async fn get_search_suggestions(
     pool: &PgPool,
     query: &str,
     limit: Option<i64>,
-) -> Result<SearchSuggestionsResponse, SearchError> {
+) -> Result<SearchSuggestionsResponse, AppError> {
     if query.trim().is_empty() {
         return Ok(SearchSuggestionsResponse::default());
     }
@@ -525,7 +525,7 @@ pub async fn get_search_suggestions(
 pub async fn get_random_search_suggestion(
     user: &User,
     pool: &PgPool,
-) -> Result<Option<String>, SearchError> {
+) -> Result<Option<String>, AppError> {
     let rows = sqlx::query!(
         r#"
         WITH matched_terms AS (

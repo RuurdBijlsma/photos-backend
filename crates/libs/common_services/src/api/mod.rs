@@ -1,8 +1,10 @@
-pub mod album;
-pub mod auth;
 pub mod admin;
-pub mod people;
+pub mod album;
+pub mod app_error;
+pub mod auth;
 pub mod camera;
+pub mod daily_cards;
+pub mod people;
 pub mod photos;
 pub mod s2s;
 pub mod search;
@@ -10,4 +12,3 @@ pub mod system;
 pub mod theme;
 pub mod timeline;
 pub mod user;
-pub mod daily_cards;

@@ -1,7 +1,7 @@
 use crate::database::jobs::{JobStatus, JobType};
 use app_state::IngestSettings;
 use bon::builder;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use color_eyre::eyre::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::to_value;
@@ -90,37 +90,30 @@ pub async fn enqueue_full_scan(
         .await?;
     enqueue_job::<()>(pool, settings, JobType::DelayedScan)
         .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::seconds(30))
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::SyncThumbnails)
         .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::minutes(1))
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::CalcSystemStats)
         .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::minutes(1))
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::UpdateGlobalCentroid)
         .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::minutes(1))
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::ClusterFaces)
         .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::minutes(1))
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::ClusterPhotos)
         .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::minutes(1))
         .call()
         .await?;
     enqueue_job::<()>(pool, settings, JobType::GenerateDailyCards)
         .user_id(target_user_id)
-        .scheduled_at(Utc::now() + Duration::minutes(1))
         .call()
         .await?;
     Ok(())

@@ -1,4 +1,3 @@
-use crate::api::theme::error::ThemeError;
 use crate::api::theme::interfaces::RandomPhotoResponse;
 use crate::database::app_user::User;
 use material_color_utils::dynamic::variant::Variant;
@@ -7,6 +6,7 @@ use material_color_utils::utils::color_utils::Argb;
 use rand::RngExt;
 use sqlx::PgPool;
 use tracing::warn;
+use crate::api::app_error::AppError;
 
 /// Fetches a random photo with its color theme data for a specific user.
 ///
@@ -18,7 +18,7 @@ pub async fn random_photo_theme(
     pool: &PgPool,
     variant: Variant,
     contrast_level: f64,
-) -> Result<Option<RandomPhotoResponse>, ThemeError> {
+) -> Result<Option<RandomPhotoResponse>, AppError> {
     // Count the total number of photos with associated colour data for the given user.
     let count: i64 = sqlx::query_scalar!(
         r#"

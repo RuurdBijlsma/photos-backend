@@ -68,6 +68,7 @@ pub async fn update_job_on_completion(pool: &PgPool, job: &Job, result: JobResul
 /// Updates a job's status on failure, either marking it as failed or rescheduling it.
 pub async fn update_job_on_failure(pool: &PgPool, job: &Job, error: &Report) -> Result<()> {
     let error_string = &format!("{error:?}");
+    dbg!(&error_string);
     if job.attempts + 1 >= job.max_attempts {
         mark_job_failed(pool, job.id, error_string).await
     } else {

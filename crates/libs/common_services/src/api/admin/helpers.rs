@@ -1,4 +1,3 @@
-use crate::api::admin::error::AdminError;
 use crate::api::admin::interfaces::PathInfoResponse;
 use crate::api::system::service::get_single_disk_info;
 use app_state::to_posix_string;
@@ -6,8 +5,9 @@ use std::path::{Path, PathBuf};
 use std::{fs, io};
 use tempfile::NamedTempFile;
 use tokio::task;
+use crate::api::app_error::AppError;
 
-pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, AdminError> {
+pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, AppError> {
     let (read, write) = check_read_write_access(folder);
     let disk_info = get_single_disk_info(folder)?;
 
@@ -28,7 +28,7 @@ pub fn check_read_write_access(path: &Path) -> (bool, bool) {
     (can_read, can_write)
 }
 
-pub async fn list_folders(user_folder: &Path) -> Result<Vec<PathBuf>, AdminError> {
+pub async fn list_folders(user_folder: &Path) -> Result<Vec<PathBuf>, AppError> {
     let path_buf = user_folder.to_path_buf();
     task::spawn_blocking(move || {
         fs::read_dir(path_buf)?
@@ -38,5 +38,5 @@ pub async fn list_folders(user_folder: &Path) -> Result<Vec<PathBuf>, AdminError
             .collect::<Result<Vec<_>, io::Error>>()
     })
     .await?
-    .map_err(AdminError::from)
+    .map_err(AppError::from)
 }

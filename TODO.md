@@ -212,6 +212,9 @@
   sure how to handle this case.
 * ✅ [check] als ik iets soft-delete, make sure dat visual_analysis.deleted ook op false gaat
 * ✅ only re-run photo/face cluster if photos have changed since last clustering
+* ✅ storage overview in bottom left van navbar.
+  * ✅ als thumb storage zelfde drive is als main storage, show 1 balk
+  * ✅ anders 2 balkjes, een voor thumb storage, een voor main storage
 * password reset flow (email) (make mail optional)
 * nginx thumbnail hosting (optional maak setting voor Rust thumb hosting).
 * check of readme uitleg klopt met verse windows installatie & linux
@@ -227,9 +230,6 @@
 # High level TODO:
 
 * trash can (deleted=true) (in trash UI kan je echte delete doen)
-* storage overview in bottom left van navbar.
-  * als thumb storage zelfde drive is als main storage, show 1 balk
-  * anders 2 balkjes, een voor thumb storage, een voor main storage
 * admin page
   * overview of users: remove user, storage used per user
   * server settings?

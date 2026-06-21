@@ -1,16 +1,16 @@
-use crate::api::daily_cards::error::DailyCardsError;
 use crate::api::daily_cards::interfaces::DailyCardResponse;
 use app_state::AppSettings;
 use chrono::NaiveDate;
 use rand::RngExt;
 use sqlx::PgPool;
+use crate::api::app_error::AppError;
 
 pub async fn get_daily_cards(
     pool: &PgPool,
     user_id: i32,
     target_date: NaiveDate,
     settings: &AppSettings,
-) -> Result<Vec<DailyCardResponse>, DailyCardsError> {
+) -> Result<Vec<DailyCardResponse>, AppError> {
     let mut tx = pool.begin().await?;
 
     let mut returned_cards = Vec::new();
@@ -95,7 +95,7 @@ pub async fn validate_media_items(
     pool: &PgPool,
     user_id: i32,
     media_item_ids: &[String],
-) -> Result<Vec<String>, DailyCardsError> {
+) -> Result<Vec<String>, AppError> {
     let active_ids = sqlx::query_scalar!(
         "SELECT id FROM media_item WHERE user_id = $1 AND id = ANY($2) AND deleted = false",
         user_id,

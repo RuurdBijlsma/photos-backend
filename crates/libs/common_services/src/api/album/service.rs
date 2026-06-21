@@ -1,5 +1,4 @@
 use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort, SharedMediaItem};
-use crate::api::album::error::AlbumError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
@@ -19,6 +18,7 @@ use common_types::pb::api::{AlbumInfo, FullAlbumMediaResponse, SimpleTimelineIte
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;
+use crate::api::app_error::AppError;
 
 const DEFAULT_ALBUM_SORT: AlbumSort = AlbumSort::DateAsc;
 
@@ -28,7 +28,7 @@ async fn check_user_role(
     user_id: i32,
     album_id: &str,
     required_roles: &[AlbumRole],
-) -> Result<bool, AlbumError> {
+) -> Result<bool, AppError> {
     let role = AlbumStore::find_user_role(executor, album_id, user_id).await?;
 
     match role {
@@ -41,7 +41,7 @@ async fn can_edit_album(
     executor: impl Executor<'_, Database = Postgres>,
     user_id: i32,
     album_id: &str,
-) -> Result<bool, AlbumError> {
+) -> Result<bool, AppError> {
     check_user_role(
         executor,
         user_id,
@@ -55,7 +55,7 @@ async fn can_view_album(
     executor: impl Executor<'_, Database = Postgres>,
     user_id: i32,
     album_id: &str,
-) -> Result<bool, AlbumError> {
+) -> Result<bool, AppError> {
     check_user_role(
         executor,
         user_id,
@@ -70,7 +70,7 @@ async fn is_album_owner<'c, E>(
     executor: E,
     user_id: i32,
     album_id: &str,
-) -> Result<bool, AlbumError>
+) -> Result<bool, AppError>
 where
     E: Executor<'c, Database = Postgres>,
 {
@@ -84,7 +84,7 @@ where
 pub async fn get_representative_thumbnail(
     tx: &mut PgTransaction<'_>,
     media_item_ids: &[String],
-) -> Result<Option<String>, AlbumError> {
+) -> Result<Option<String>, AppError> {
     if media_item_ids.is_empty() {
         return Ok(None);
     }
@@ -169,7 +169,7 @@ pub async fn create_album(
     description: Option<String>,
     is_public: bool,
     media_item_ids: &[String],
-) -> Result<Album, AlbumError> {
+) -> Result<Album, AppError> {
     let mut tx = pool.begin().await?;
     let album_id = nice_id(constants().database.media_item_id_length);
 
@@ -217,16 +217,16 @@ pub async fn add_media_to_album(
     album_id: &str,
     media_item_ids: &[String],
     user_id: i32,
-) -> Result<(), AlbumError> {
+) -> Result<(), AppError> {
     if !can_edit_album(pool, user_id, album_id).await? {
-        return Err(AlbumError::NotFound("Album not found.".to_string()));
+        return Err(AppError::NotFound("Album not found.".to_string()));
     }
 
     let mut tx = pool.begin().await?;
 
     // Get current album state
     let Some(album) = AlbumStore::find_by_id(&mut *tx, album_id).await? else {
-        return Err(AlbumError::NotFound("Album not found.".to_string()));
+        return Err(AppError::NotFound("Album not found.".to_string()));
     };
 
     // Add the items
@@ -263,9 +263,9 @@ pub async fn remove_media_from_album(
     album_id: &str,
     media_item_ids: &[String],
     user_id: i32,
-) -> Result<(), AlbumError> {
+) -> Result<(), AppError> {
     if !can_edit_album(pool, user_id, album_id).await? {
-        return Err(AlbumError::NotFound(
+        return Err(AppError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -314,10 +314,10 @@ pub async fn add_collaborator(
     new_user_id: i32,
     role: AlbumRole,
     inviting_user_id: i32,
-) -> Result<AlbumCollaborator, AlbumError> {
+) -> Result<AlbumCollaborator, AppError> {
     // The owner is the only one who can add collaborators.
     if !is_album_owner(pool, inviting_user_id, album_id).await? {
-        return Err(AlbumError::NotFound(
+        return Err(AppError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -325,11 +325,11 @@ pub async fn add_collaborator(
     // Find the user to add by their email.
     let user_to_add = UserStore::find_by_id(pool, new_user_id)
         .await?
-        .ok_or_else(|| AlbumError::NotFound(format!("User with id {new_user_id} not found.")))?;
+        .ok_or_else(|| AppError::NotFound(format!("User with id {new_user_id} not found.")))?;
 
     // An owner cannot be added or demoted via this function.
     if role == AlbumRole::Owner {
-        return Err(AlbumError::Internal(color_eyre::eyre::eyre!(
+        return Err(AppError::Internal(color_eyre::eyre::eyre!(
             "Cannot assign the owner role."
         )));
     }
@@ -349,23 +349,23 @@ pub async fn remove_collaborator(
     album_id: &str,
     collaborator_id_to_remove: i64,
     requesting_user_id: i32,
-) -> Result<(), AlbumError> {
+) -> Result<(), AppError> {
     let Some(collaborator_to_remove) =
         AlbumStore::find_collaborator_by_id(pool, collaborator_id_to_remove).await?
     else {
-        return Err(AlbumError::NotFound("Collaborator not found.".to_string()));
+        return Err(AppError::NotFound("Collaborator not found.".to_string()));
     };
     let is_self_removal = collaborator_to_remove.user_id == requesting_user_id;
     let is_owner = is_album_owner(pool, requesting_user_id, album_id).await?;
     if !is_owner && !is_self_removal {
-        return Err(AlbumError::NotFound(
+        return Err(AppError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
 
     // The owner cannot be removed.
     if matches!(collaborator_to_remove.role, AlbumRole::Owner) {
-        return Err(AlbumError::Internal(color_eyre::eyre::eyre!(
+        return Err(AppError::Internal(color_eyre::eyre::eyre!(
             "The album owner cannot be removed."
         )));
     }
@@ -375,10 +375,10 @@ pub async fn remove_collaborator(
     Ok(())
 }
 
-pub async fn delete_album(pool: &PgPool, album_id: &str, user_id: i32) -> Result<(), AlbumError> {
+pub async fn delete_album(pool: &PgPool, album_id: &str, user_id: i32) -> Result<(), AppError> {
     // Permission Check: Only the owner can update album details.
     if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumError::NotFound(
+        return Err(AppError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -397,10 +397,10 @@ pub async fn update_album(
     description: UpdateField<String>,
     thumbnail_id: UpdateField<String>,
     is_public: Option<bool>,
-) -> Result<Album, AlbumError> {
+) -> Result<Album, AppError> {
     // Permission Check: Only the owner can update album details.
     if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumError::NotFound(
+        return Err(AppError::NotFound(
             "Album not found or permission denied.".to_string(),
         ));
     }
@@ -410,14 +410,14 @@ pub async fn update_album(
     {
         let album = AlbumStore::find_by_id(pool, album_id)
             .await?
-            .ok_or_else(|| AlbumError::NotFound(album_id.to_owned()))?;
+            .ok_or_else(|| AppError::NotFound(album_id.to_owned()))?;
         return Ok(album);
     }
 
     if let UpdateField::Value(thumbnail_id) = &thumbnail_id {
         let exists = AlbumStore::has_media_item(pool, album_id, thumbnail_id).await?;
         if !exists {
-            return Err(AlbumError::BadRequest(
+            return Err(AppError::BadRequest(
                 "thumbnail_id is not in the album".to_owned(),
             ));
         }
@@ -436,10 +436,10 @@ pub async fn generate_invite(
     album_id: &str,
     user_id: i32,
     user_name: &str,
-) -> Result<String, AlbumError> {
+) -> Result<String, AppError> {
     // Permission Check: Only the owner can generate an invite.
     if !is_album_owner(pool, user_id, album_id).await? {
-        return Err(AlbumError::Forbidden(
+        return Err(AppError::Forbidden(
             "Only the album owner can generate an invitation.".to_string(),
         ));
     }
@@ -471,9 +471,9 @@ pub async fn accept_invite(
     s2s_client: &S2SClient,
     user_id: i32,
     payload: AcceptInviteRequest,
-) -> Result<Album, AlbumError> {
+) -> Result<Album, AppError> {
     let claims = insecure_extract_token_claims(&payload.token)
-        .map_err(|_| AlbumError::Forbidden("Invalid token.".to_string()))?;
+        .map_err(|_| AppError::Forbidden("Invalid token.".to_string()))?;
 
     let summary: AlbumSummary = s2s_client
         .get_album_invite_summary(&payload.token)
@@ -532,16 +532,16 @@ pub async fn get_album_media(
     pool: &PgPool,
     album_id: &str,
     user_id: Option<i32>,
-) -> Result<FullAlbumMediaResponse, AlbumError> {
+) -> Result<FullAlbumMediaResponse, AppError> {
     let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
-        return Err(AlbumError::NotFound(album_id.to_owned()));
+        return Err(AppError::NotFound(album_id.to_owned()));
     };
     if !album.is_public {
         let Some(uid) = user_id else {
-            return Err(AlbumError::NotFound(album_id.to_string()));
+            return Err(AppError::NotFound(album_id.to_string()));
         };
         if !can_view_album(pool, uid, album_id).await? {
-            return Err(AlbumError::NotFound(album_id.to_string()));
+            return Err(AppError::NotFound(album_id.to_string()));
         }
     }
     let items_future = AlbumStore::list_sorted_media_items(pool, album_id, AlbumSort::None);
@@ -570,19 +570,19 @@ pub async fn get_album_media_item(
     pool: &PgPool,
     album_id: &str,
     media_item_id: &str,
-) -> Result<SharedMediaItem, AlbumError> {
+) -> Result<SharedMediaItem, AppError> {
     let Some(album) = AlbumStore::find_by_id(pool, album_id).await? else {
-        return Err(AlbumError::NotFound(album_id.to_owned()));
+        return Err(AppError::NotFound(album_id.to_owned()));
     };
     if !album.is_public {
-        return Err(AlbumError::NotFound(album_id.to_string()));
+        return Err(AppError::NotFound(album_id.to_string()));
     }
     let has = AlbumStore::has_media_item(pool, album_id, media_item_id).await?;
     if !has {
-        return Err(AlbumError::NotFound(album_id.to_string()));
+        return Err(AppError::NotFound(album_id.to_string()));
     }
     let Some(item) = MediaItemStore::find_by_id(pool, media_item_id).await? else {
-        return Err(AlbumError::NotFound(album_id.to_string()));
+        return Err(AppError::NotFound(album_id.to_string()));
     };
     Ok(item.into())
 }
@@ -595,9 +595,9 @@ pub async fn get_sorted_album_media(
     album_id: &str,
     user_id: i32,
     sort_mode: AlbumSort,
-) -> Result<Vec<SimpleTimelineItem>, AlbumError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     if !can_view_album(pool, user_id, album_id).await? {
-        return Err(AlbumError::Forbidden("Permission denied".into()));
+        return Err(AppError::Forbidden("Permission denied".into()));
     }
 
     Ok(AlbumStore::list_sorted_media_items(pool, album_id, sort_mode).await?)
@@ -610,9 +610,9 @@ pub async fn move_album_item(
     user_id: i32,
     media_item_id: &str,
     new_rank: f64,
-) -> Result<(), AlbumError> {
+) -> Result<(), AppError> {
     if !can_edit_album(pool, user_id, album_id).await? {
-        return Err(AlbumError::Forbidden("Permission denied".into()));
+        return Err(AppError::Forbidden("Permission denied".into()));
     }
 
     let mut tx = pool.begin().await?;
@@ -646,9 +646,9 @@ pub async fn reorder_media_items(
     user_id: i32,
     media_item_ids: &[String],
     sort_mode: AlbumSort,
-) -> Result<(), AlbumError> {
+) -> Result<(), AppError> {
     if !can_edit_album(pool, user_id, album_id).await? {
-        return Err(AlbumError::Forbidden("Permission denied".into()));
+        return Err(AppError::Forbidden("Permission denied".into()));
     }
 
     let mut tx = pool.begin().await?;

@@ -2,7 +2,7 @@
 
 use crate::api_state::ApiContext;
 use axum::{Extension, Json, extract::State, http::StatusCode};
-use common_services::api::auth::error::AuthError;
+
 use common_services::api::auth::interfaces::{
     CreateUser, GenerateInvitePayload, LoginUser, RefreshTokenPayload, Tokens,
 };
@@ -13,18 +13,19 @@ use common_services::api::auth::service::{
 use common_services::api::auth::token::generate_refresh_token_parts;
 use common_services::database::app_user::{User, UserInvite};
 use tracing::instrument;
+use common_services::api::app_error::AppError;
 
 /// Handles user login and returns a new set of tokens.
 ///
 /// # Errors
 ///
-/// Returns `AuthError` if the user credentials are invalid or if there's a
+/// Returns `AppError` if the user credentials are invalid or if there's a
 /// problem creating or storing the tokens.
 #[instrument(skip(context, payload), err(Debug))]
 pub async fn login(
     State(context): State<ApiContext>,
     Json(payload): Json<LoginUser>,
-) -> Result<Json<Tokens>, AuthError> {
+) -> Result<Json<Tokens>, AppError> {
     let user = authenticate_user(&context.pool, &payload.email, &payload.password).await?;
     let (access_token, expiry) =
         create_access_token(&context.settings.secrets.jwt, user.id, user.role)?;
@@ -42,13 +43,13 @@ pub async fn login(
 ///
 /// # Errors
 ///
-/// Returns `AuthError` if a user with the provided email already exists or
+/// Returns `AppError` if a user with the provided email already exists or
 /// if a database error occurs during user creation.
 #[instrument(skip(context, payload), err(Debug))]
 pub async fn register(
     State(context): State<ApiContext>,
     Json(payload): Json<CreateUser>,
-) -> Result<Json<User>, AuthError> {
+) -> Result<Json<User>, AppError> {
     let user = create_user(&context.pool, &context.settings.ingest, &payload).await?;
     Ok(Json(user))
 }
@@ -57,12 +58,12 @@ pub async fn register(
 ///
 /// # Errors
 ///
-/// Returns `AuthError` if the refresh token is invalid, expired, or not found in the database.
+/// Returns `AppError` if the refresh token is invalid, expired, or not found in the database.
 #[instrument(skip(context, payload), err(Debug))]
 pub async fn refresh_session(
     State(context): State<ApiContext>,
     Json(payload): Json<RefreshTokenPayload>,
-) -> Result<Json<Tokens>, AuthError> {
+) -> Result<Json<Tokens>, AppError> {
     refresh_tokens(
         &context.pool,
         &context.settings.secrets.jwt,
@@ -75,11 +76,11 @@ pub async fn refresh_session(
 ///
 /// # Errors
 ///
-/// Returns `AuthError` if the refresh token is invalid or could not be found.
+/// Returns `AppError` if the refresh token is invalid or could not be found.
 pub async fn logout(
     State(context): State<ApiContext>,
     Json(payload): Json<RefreshTokenPayload>,
-) -> Result<StatusCode, AuthError> {
+) -> Result<StatusCode, AppError> {
     logout_user(&context.pool, &payload.refresh_token).await
 }
 
@@ -87,7 +88,7 @@ pub async fn logout(
 ///
 /// # Errors
 ///
-/// Returns `AuthError` if the refresh token is invalid or could not be found.
+/// Returns `AppError` if the refresh token is invalid or could not be found.
 pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<User>, StatusCode> {
     Ok(Json(user))
 }
@@ -96,7 +97,7 @@ pub async fn get_me(Extension(user): Extension<User>) -> Result<Json<User>, Stat
 pub async fn generate_invite_handler(
     State(context): State<ApiContext>,
     Json(payload): Json<GenerateInvitePayload>,
-) -> Result<Json<UserInvite>, AuthError> {
+) -> Result<Json<UserInvite>, AppError> {
     let invite = generate_invite(
         &context.pool,
         &context.settings.ingest,

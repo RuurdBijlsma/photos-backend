@@ -1,11 +1,11 @@
 use crate::api::system::interfaces::{DiskInfo, DiskStats, SystemStats};
-use crate::api::user::error::UserError;
 use app_state::IngestSettings;
 use fs2::statvfs;
 use sqlx::PgPool;
 use std::path::Path;
 use std::sync::OnceLock;
 use tokio::task;
+use crate::api::app_error::AppError;
 
 /// Identifies if the media folder and the thumbnail folder reside on the same drive.
 #[must_use]
@@ -24,7 +24,7 @@ fn are_on_same_drive(p1: &Path, p2: &Path) -> bool {
     p1_canon.components().next() == p2_canon.components().next()
 }
 
-pub fn get_single_disk_info(folder: &Path) -> Result<DiskInfo, UserError> {
+pub fn get_single_disk_info(folder: &Path) -> Result<DiskInfo, AppError> {
     let fs_stats = statvfs(folder)?;
     let available = fs_stats.available_space();
     let total = fs_stats.total_space();
@@ -42,7 +42,7 @@ pub async fn get_system_stats(
     pool: &PgPool,
     settings: &IngestSettings,
     user_id: i32,
-) -> Result<SystemStats, UserError> {
+) -> Result<SystemStats, AppError> {
     let db_task = sqlx::query!(
         r#"
         SELECT
@@ -68,7 +68,7 @@ pub async fn get_system_stats(
             get_single_disk_info(&media_folder)?
         };
 
-        Ok::<_, UserError>(DiskStats {
+        Ok::<_, AppError>(DiskStats {
             thumbnail_drive,
             media_drive,
             are_same_drive,
@@ -76,8 +76,8 @@ pub async fn get_system_stats(
     });
 
     let (db_res, fs_res) = tokio::try_join!(
-        async { db_task.await.map_err(UserError::from) },
-        async { fs_task.await.map_err(UserError::from)? }
+        async { db_task.await.map_err(AppError::from) },
+        async { fs_task.await.map_err(AppError::from)? }
     )?;
 
     Ok(SystemStats {

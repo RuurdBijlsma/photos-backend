@@ -1,4 +1,3 @@
-use crate::api::timeline::error::TimelineError;
 use crate::api::timeline::interfaces::SortDirection;
 use crate::database::app_user::User;
 use chrono::NaiveDate;
@@ -8,13 +7,14 @@ use common_types::pb::api::{
 };
 use sqlx::PgPool;
 use std::collections::HashMap;
+use crate::api::app_error::AppError;
 
 /// Fetches a timeline of media item ratios, grouped by month.
 pub async fn get_timeline_ratios(
     user: &User,
     pool: &PgPool,
     sort_direction: SortDirection,
-) -> Result<TimelineRatiosResponse, TimelineError> {
+) -> Result<TimelineRatiosResponse, AppError> {
     let sql = format!(
         r"
         SELECT
@@ -43,7 +43,7 @@ pub async fn get_timeline_ids(
     user: &User,
     pool: &PgPool,
     sort_direction: SortDirection,
-) -> Result<Vec<String>, TimelineError> {
+) -> Result<Vec<String>, AppError> {
     let sql = format!(
         r"
         SELECT COALESCE(array_agg(id ORDER BY sort_timestamp {}), '{{}}')
@@ -67,7 +67,7 @@ pub async fn get_photos_by_month(
     pool: &PgPool,
     month_ids: &[NaiveDate],
     sort_direction: SortDirection,
-) -> Result<TimelineItemsResponse, TimelineError> {
+) -> Result<TimelineItemsResponse, AppError> {
     let sql = format!(
         r"
         SELECT
