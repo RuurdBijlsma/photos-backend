@@ -17,5 +17,7 @@ pub use classify::get_llm_classification;
 pub use color_data::get_color_data;
 pub use quality_judge::get_quality_judgement;
 pub use quality_measure::get_quality_measurement;
+pub use quality_measure::get_quality_measurement_from_image;
+pub use quality_measure::get_quality_measurement_from_luma;
 pub use utils::*;
 pub use visual_analyzer::VisualAnalyzer;

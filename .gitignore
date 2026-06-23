@@ -9,3 +9,4 @@ photo_clusters_output
 __pycache__
 test_out
 umap_output
+quality_test_output

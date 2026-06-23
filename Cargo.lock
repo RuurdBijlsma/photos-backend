@@ -4165,6 +4165,7 @@ dependencies = [
  "object_detector",
  "open_clip_inference",
  "palette",
+ "rayon",
  "serde",
  "serde_json",
  "tempfile",

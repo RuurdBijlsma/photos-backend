@@ -9,28 +9,40 @@ use std::path::Path;
 /// # Errors
 ///
 /// This function will return an error if the image path is invalid or the image cannot be decoded.
+/// Analyzes an image to determine its overall quality score based on blurriness, noisiness, exposure, and accidentalness.
 pub fn get_quality_measurement(image_path: &Path) -> Result<QualityMeasurement> {
     let img = image::ImageReader::open(image_path)?.decode()?;
-    let gray_img = img.to_luma8();
+    Ok(get_quality_measurement_from_image(&img))
+}
 
-    let accidentalness = calculate_accidentalness(&gray_img);
-    let texture = calculate_texture(&gray_img);
-    let blurriness = calculate_blurriness(&gray_img, texture);
-    let noisiness = calculate_noise(&gray_img, texture);
-    let exposure = calculate_exposure(&gray_img);
+/// Measures quality from an already decoded image to avoid duplicate decoding.
+pub fn get_quality_measurement_from_image(img: &image::DynamicImage) -> QualityMeasurement {
+    let gray_img = img.to_luma8();
+    get_quality_measurement_from_luma(&gray_img)
+}
+
+/// Measures quality directly from a grayscale image.
+pub fn get_quality_measurement_from_luma(gray_img: &GrayImage) -> QualityMeasurement {
+    let accidentalness = calculate_accidentalness(gray_img);
+    let texture = calculate_texture(gray_img);
+    let blurriness = calculate_blurriness(gray_img, texture);
+    let noisiness = calculate_noise(gray_img, texture);
+    let exposure = calculate_exposure(gray_img);
 
     // Scaling down the weighted score based on how confidently bad the photo is.
-    let weighted_score =
-        (blurriness * 0.4 + noisiness * 0.1 + exposure * 0.2 + (1.0 - accidentalness * 0.3))
-            * 100.0;
+    let weighted_score = (blurriness * 0.4
+        + noisiness * 0.1
+        + exposure * 0.2
+        + (1.0 - accidentalness) * 0.3)
+        * 100.0;
 
-    Ok(QualityMeasurement {
+    QualityMeasurement {
         weighted_score,
         blurriness,
         noisiness,
         exposure,
         accidentalness,
-    })
+    }
 }
 
 fn calculate_contrast(gray_img: &GrayImage) -> f64 {
@@ -103,7 +115,7 @@ fn calculate_blurriness(gray_img: &GrayImage, texture: f64) -> f64 {
     let lap = laplacian_filter(gray_img);
     let (width, height) = (lap.width(), lap.height());
 
-    let grid_size = 8; // 8x8 grid of blocks
+    let grid_size = 16; // 16x16 grid of blocks
     let block_w = width / grid_size;
     let block_h = height / grid_size;
 
@@ -150,7 +162,10 @@ fn calculate_blurriness(gray_img: &GrayImage, texture: f64) -> f64 {
     let contrast = calculate_contrast(gray_img);
     let adjusted_var = representative_variance * contrast * 0.5f64.mul_add(-texture, 1.0);
 
-    ((adjusted_var - 50.0) / 1200.0).clamp(0.0, 1.0)
+    let raw_score = ((adjusted_var - 50.0) / 1200.0).clamp(0.0, 1.0);
+
+    // Apply a square root to soften the penalty for slightly out-of-focus images.
+    raw_score.sqrt()
 }
 
 fn calculate_global_blurriness(
@@ -175,7 +190,9 @@ fn calculate_global_blurriness(
 
     let adjusted_var = variance * calculate_contrast(gray_img) * 0.5f64.mul_add(-texture, 1.0);
 
-    ((adjusted_var - 50.0) / 950.0).clamp(0.0, 1.0)
+    let raw_score = ((adjusted_var - 50.0) / 950.0).clamp(0.0, 1.0);
+
+    raw_score.powf(0.4)
 }
 
 fn calculate_noise(gray_img: &GrayImage, texture: f64) -> f64 {
