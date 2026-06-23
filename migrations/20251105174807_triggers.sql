@@ -218,7 +218,7 @@ $$ LANGUAGE plpgsql;
 
 -- Bind the statement-level trigger to media_item to ensure performance during bulk deletes
 CREATE TRIGGER trg_media_item_album_sync_update
-    AFTER UPDATE OF deleted
+    AFTER UPDATE
     ON media_item
     REFERENCING NEW TABLE AS new_table OLD TABLE AS old_table
     FOR EACH STATEMENT
