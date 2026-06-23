@@ -56,11 +56,12 @@ CREATE INDEX idx_object_visual_analysis_id ON object (visual_analysis_id);
 -- Stores image quality metrics.
 CREATE TABLE measured_quality
 (
-    visual_analysis_id      BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    measured_blurriness     DOUBLE PRECISION NOT NULL,
-    measured_noisiness      DOUBLE PRECISION NOT NULL,
-    measured_exposure       DOUBLE PRECISION NOT NULL,
-    measured_weighted_score DOUBLE PRECISION NOT NULL
+    visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
+    blurriness         DOUBLE PRECISION NOT NULL,
+    noisiness          DOUBLE PRECISION NOT NULL,
+    exposure           DOUBLE PRECISION NOT NULL,
+    accidentalness     DOUBLE PRECISION NOT NULL,
+    weighted_score     DOUBLE PRECISION NOT NULL
 );
 
 CREATE TABLE quality_judge

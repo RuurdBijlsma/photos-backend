@@ -115,7 +115,7 @@ fn calculate_blurriness(gray_img: &GrayImage, texture: f64) -> f64 {
     let lap = laplacian_filter(gray_img);
     let (width, height) = (lap.width(), lap.height());
 
-    let grid_size = 16; // 16x16 grid of blocks
+    let grid_size = 10; // 10x10 grid of blocks
     let block_w = width / grid_size;
     let block_h = height / grid_size;
 
@@ -239,7 +239,6 @@ fn calculate_exposure(gray_img: &GrayImage) -> f64 {
         }
         if !p95_found && running_sum >= target_p95 {
             p95 = i;
-            p95_found = true;
             break;
         }
     }

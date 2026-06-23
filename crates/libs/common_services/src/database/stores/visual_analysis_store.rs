@@ -210,16 +210,17 @@ impl VisualAnalysisStore {
         sqlx::query!(
             r#"
             INSERT INTO measured_quality (
-                visual_analysis_id, measured_blurriness, measured_noisiness, measured_exposure,
-                measured_weighted_score
+                visual_analysis_id, blurriness, noisiness, exposure, accidentalness,
+                weighted_score
             )
-            VALUES ($1, $2, $3, $4, $5)
+            VALUES ($1, $2, $3, $4, $5, $6)
             "#,
             visual_analysis_id,
-            quality.measured_blurriness,
-            quality.measured_noisiness,
-            quality.measured_exposure,
-            quality.measured_weighted_score,
+            quality.blurriness,
+            quality.noisiness,
+            quality.exposure,
+            quality.accidentalness,
+            quality.weighted_score,
         )
         .execute(&mut **tx)
         .await?;
