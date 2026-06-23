@@ -95,6 +95,8 @@ pub async fn restore_items(pool: &PgPool, user_id: i32, ids: &[String]) -> Resul
 }
 
 /// Permanently deletes media items from the database and filesystem.
+///
+/// Item must be soft-deleted before hard-deleting, otherwise it will error.
 pub async fn perma_delete_items(
     pool: &PgPool,
     user_id: i32,
@@ -102,28 +104,40 @@ pub async fn perma_delete_items(
     media_root: &Path,
     thumbnail_root: &Path,
 ) -> Result<(), AppError> {
-    // 1. Fetch relative paths of items belonging to the user
+    // Fetch relative paths of items belonging to the user that are already soft-deleted
     let items = sqlx::query!(
         r#"
-        SELECT relative_path
+        SELECT id, relative_path
         FROM media_item
-        WHERE id = ANY($1) AND user_id = $2
+        WHERE id = ANY($1) AND user_id = $2 AND deleted = true
         "#,
         ids,
         user_id
     )
-    .fetch_all(pool)
-    .await?;
+        .fetch_all(pool)
+        .await?;
 
-    // 2. Delete original files from disk and then clean up DB and thumbnails
+    // Deduplicate the input IDs list to ensure an accurate count comparison
+    let mut unique_ids = ids.to_vec();
+    unique_ids.sort();
+    unique_ids.dedup();
+
+    // Guard check: Ensure all requested items exist, belong to the user, and are soft-deleted
+    if items.len() < unique_ids.len() {
+        return Err(AppError::BadRequest(
+            "One or more requested media items are not soft-deleted, do not exist, or do not belong to you."
+                .to_string(),
+        ));
+    }
+
+    // Delete original files from disk and then clean up DB and thumbnails
     for item in items {
         let file_path = media_root.join(&item.relative_path);
         if file_path.exists() {
             info!("Removing original media file: {}", file_path.display());
             if let Err(e) = fs::remove_file(&file_path).await {
-                // Log and continue or return error? Let's return error if we fail to remove,
-                // but if the file is already missing, delete_item_and_thumbnails will still clean up the DB.
-                // We check exists() first, so if it's there and we fail to delete, it's a real error.
+                // Return an error if we fail to remove an existing file.
+                // If the file is already missing, delete_item_and_thumbnails will still clean up the DB.
                 return Err(AppError::Internal(color_eyre::eyre::eyre!(
                     "Failed to delete original file {}: {}",
                     item.relative_path,
@@ -131,7 +145,7 @@ pub async fn perma_delete_items(
                 )));
             }
         }
-        // Clean up database records and thumbnails folder.
+        // Clean up database records and thumbnails folder
         delete_item_and_thumbnails(pool, thumbnail_root, &item.relative_path).await?;
     }
 
