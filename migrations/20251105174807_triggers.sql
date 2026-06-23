@@ -159,28 +159,31 @@ EXECUTE FUNCTION fn_trigger_media_item_hard_delete_sync();
 -- Soft-delete synchronization functions (Row and Statement levels)
 -- =========================================================================================
 
--- Create a trigger function to synchronize the soft-delete status to visual_analysis
-CREATE OR REPLACE FUNCTION fn_trigger_media_item_soft_delete_sync()
+-- Batch update visual_analysis's deleted status
+CREATE OR REPLACE FUNCTION fn_trigger_media_item_soft_delete_sync_stmt()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    -- Only run the update if the deleted flag has actually changed
-    IF OLD.deleted IS DISTINCT FROM NEW.deleted THEN
-        UPDATE visual_analysis
-        SET deleted = NEW.deleted
-        WHERE media_item_id = NEW.id;
-    END IF;
-    RETURN NEW;
+    UPDATE visual_analysis va
+    SET deleted = nt.deleted
+    FROM new_table nt
+             JOIN old_table ot ON nt.id = ot.id
+    WHERE va.media_item_id = nt.id
+      AND nt.deleted IS DISTINCT FROM ot.deleted;
+
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
--- Bind the trigger to run after the deleted column is updated on media_item
-CREATE TRIGGER trg_media_item_soft_delete
-    AFTER UPDATE OF deleted
-    ON media_item
-    FOR EACH ROW
-EXECUTE FUNCTION fn_trigger_media_item_soft_delete_sync();
+DROP TRIGGER IF EXISTS trg_media_item_soft_delete ON media_item;
 
+-- Bind the statement-level trigger to media_item
+CREATE TRIGGER trg_media_item_soft_delete
+    AFTER UPDATE
+    ON media_item
+    REFERENCING NEW TABLE AS new_table OLD TABLE AS old_table
+    FOR EACH STATEMENT
+EXECUTE FUNCTION fn_trigger_media_item_soft_delete_sync_stmt();
 
 -- Statement-level trigger function to batch update album statistics on media_item soft-delete
 CREATE OR REPLACE FUNCTION update_album_stats_on_media_item_soft_delete_stmt()

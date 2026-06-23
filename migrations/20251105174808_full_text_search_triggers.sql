@@ -55,33 +55,35 @@ $$
     LANGUAGE plpgsql;
 
 -- 2. Trigger function to call the rebuilder
-CREATE
-    OR REPLACE FUNCTION tg_rebuild_search_vector()
+CREATE OR REPLACE FUNCTION tg_rebuild_search_vector()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    IF
-        TG_TABLE_NAME = 'media_item' THEN
+    -- Performance optimization: If we are only syncing the 'deleted' flag,
+    -- skip rebuilding the search vector entirely as the text content remains unchanged.
+    IF TG_OP = 'UPDATE' THEN
+        IF TG_TABLE_NAME = 'visual_analysis' AND OLD.deleted IS DISTINCT FROM NEW.deleted THEN
+            RETURN NEW;
+        END IF;
+    END IF;
+
+    IF TG_TABLE_NAME = 'media_item' THEN
         PERFORM rebuild_media_item_search_vector(NEW.id);
-    ELSIF
-        TG_TABLE_NAME = 'gps' OR TG_TABLE_NAME = 'weather' OR TG_TABLE_NAME = 'visual_analysis' THEN
+    ELSIF TG_TABLE_NAME = 'gps' OR TG_TABLE_NAME = 'weather' OR TG_TABLE_NAME = 'visual_analysis' THEN
         PERFORM rebuild_media_item_search_vector(NEW.media_item_id);
-    ELSIF
-        TG_TABLE_NAME = 'classification' THEN
+    ELSIF TG_TABLE_NAME = 'classification' THEN
         -- Link back via visual_analysis
         PERFORM rebuild_media_item_search_vector((SELECT media_item_id
                                                   FROM visual_analysis
                                                   WHERE id = NEW.visual_analysis_id));
-    ELSIF
-        TG_TABLE_NAME = 'face' THEN
+    ELSIF TG_TABLE_NAME = 'face' THEN
         PERFORM rebuild_media_item_search_vector((SELECT media_item_id
                                                   FROM visual_analysis
                                                   WHERE id = NEW.visual_analysis_id));
     END IF;
     RETURN NEW;
 END;
-$$
-    LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- 3. Apply triggers to tables
 CREATE TRIGGER trg_mi_search_update
