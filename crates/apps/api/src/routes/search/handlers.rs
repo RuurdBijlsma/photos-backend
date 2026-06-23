@@ -3,6 +3,7 @@ use axum::extract::{Multipart, Path, Query, State};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use color_eyre::eyre;
+use common_services::api::app_error::AppError;
 use common_services::api::search::handler_utils::to_search_config;
 use common_services::api::search::interfaces::{
     SearchFilterRanges, SearchImage, SearchParams, SearchSuggestionsParams,
@@ -17,7 +18,6 @@ use image::ImageReader;
 use std::io::Cursor;
 use tracing::instrument;
 use uuid::Uuid;
-use common_services::api::app_error::AppError;
 
 /// Get a timeline of all media ratios, grouped by month.
 ///
@@ -118,9 +118,8 @@ pub async fn get_search_by_image_results(
         }
     }
 
-    let image_bytes = image_bytes.ok_or_else(|| {
-        AppError::Internal(eyre::eyre!("No image file provided in the request"))
-    })?;
+    let image_bytes = image_bytes
+        .ok_or_else(|| AppError::Internal(eyre::eyre!("No image file provided in the request")))?;
     let img = ImageReader::new(Cursor::new(image_bytes))
         .with_guessed_format()?
         .decode()?;

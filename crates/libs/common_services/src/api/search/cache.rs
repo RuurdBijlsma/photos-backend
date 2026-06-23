@@ -1,3 +1,4 @@
+use crate::api::app_error::AppError;
 use crate::api::search::interfaces::SearchImage;
 use color_eyre::eyre::eyre;
 use moka::future::Cache;
@@ -6,7 +7,6 @@ use pgvector::Vector;
 use sqlx::PgPool;
 use sqlx::types::Uuid;
 use std::sync::{Arc, OnceLock};
-use crate::api::app_error::AppError;
 
 static TEXT_EMBEDDING_CACHE: OnceLock<Cache<(String, String), Vec<f32>>> = OnceLock::new();
 

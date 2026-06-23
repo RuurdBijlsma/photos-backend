@@ -1,9 +1,9 @@
+use crate::api::app_error::AppError;
 use crate::api::daily_cards::interfaces::DailyCardResponse;
 use app_state::AppSettings;
 use chrono::NaiveDate;
 use rand::RngExt;
 use sqlx::PgPool;
-use crate::api::app_error::AppError;
 
 pub async fn get_daily_cards(
     pool: &PgPool,

@@ -83,7 +83,7 @@ pub async fn update_user_media_folder_handler(
         target_user_id,
         &payload.user_folder,
     )
-        .await?;
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

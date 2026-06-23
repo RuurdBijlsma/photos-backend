@@ -11,8 +11,8 @@
 )]
 
 pub mod api;
+pub mod caching;
 pub mod database;
 pub mod job_queue;
 pub mod s2s_client;
 pub mod utils;
-pub mod caching;

@@ -1,3 +1,4 @@
+use crate::api::app_error::AppError;
 use crate::database::DbError;
 use axum::Json;
 use axum::http::StatusCode;
@@ -6,7 +7,6 @@ use color_eyre::eyre;
 use serde_json::json;
 use thiserror::Error;
 use tracing::{info, warn};
-use crate::api::app_error::AppError;
 
 #[derive(Debug, Error)]
 pub enum AuthError {

@@ -1,15 +1,12 @@
+use crate::api::app_error::AppError;
 use crate::api::people::interfaces::{MergePersonRequest, UpdatePersonRequest};
 use crate::database::person_store::PersonStore;
 use common_types::pb::api::{FullPersonMediaResponse, ListPeopleResponse, PersonInfo};
 use sqlx::PgPool;
 use tracing::instrument;
-use crate::api::app_error::AppError;
 
 #[instrument(skip(pool))]
-pub async fn get_all_people(
-    pool: &PgPool,
-    user_id: i32,
-) -> Result<ListPeopleResponse, AppError> {
+pub async fn get_all_people(pool: &PgPool, user_id: i32) -> Result<ListPeopleResponse, AppError> {
     let people = PersonStore::list_by_user_id(pool, user_id).await?;
     let people_pb = people
         .into_iter()
@@ -65,11 +62,7 @@ pub async fn merge_person(
 }
 
 #[instrument(skip(pool))]
-pub async fn unmerge_person(
-    pool: &PgPool,
-    person_id: &str,
-    user_id: i32,
-) -> Result<(), AppError> {
+pub async fn unmerge_person(pool: &PgPool, person_id: &str, user_id: i32) -> Result<(), AppError> {
     let person = PersonStore::find_by_id(pool, person_id, user_id)
         .await?
         .ok_or_else(|| AppError::NotFound(person_id.to_string()))?;

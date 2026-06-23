@@ -1,9 +1,11 @@
-use std::path::Path;
-use app_state::{database_url, load_constants_from_path, load_settings_from_path, AppSettings, CONSTANTS};
+use app_state::{
+    AppSettings, CONSTANTS, database_url, load_constants_from_path, load_settings_from_path,
+};
 use color_eyre::eyre::Result;
 use common_services::api::system::service::get_system_stats;
 use common_services::database::get_db_pool;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::path::Path;
 use tracing::info;
 
 async fn setup() -> Result<(sqlx::PgPool, AppSettings)> {

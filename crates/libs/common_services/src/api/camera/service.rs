@@ -1,16 +1,13 @@
+use crate::api::app_error::AppError;
 use crate::api::camera::interfaces::CameraSummary;
 use common_types::pb::api::{
     CameraInfo, FullCameraPhotosResponse, ListCameraResponse, SimpleTimelineItem,
 };
 use sqlx::PgPool;
 use tracing::instrument;
-use crate::api::app_error::AppError;
 
 #[instrument(skip(pool))]
-pub async fn get_all_cameras(
-    pool: &PgPool,
-    user_id: i32,
-) -> Result<ListCameraResponse, AppError> {
+pub async fn get_all_cameras(pool: &PgPool, user_id: i32) -> Result<ListCameraResponse, AppError> {
     let cameras = sqlx::query_as!(
         CameraSummary,
         r#"
@@ -117,7 +114,9 @@ pub async fn get_camera_photos(
     let photo_count = items.len() as i32;
 
     let Some(first_item) = items.first().map(|i| i.id.clone()) else {
-        return Err(AppError::NotFound("No photos found for this camera".to_owned()))
+        return Err(AppError::NotFound(
+            "No photos found for this camera".to_owned(),
+        ));
     };
 
     Ok(FullCameraPhotosResponse {

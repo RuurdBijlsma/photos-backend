@@ -5,6 +5,7 @@ use axum::{Extension, Json};
 use common_services::database::app_user::User;
 
 use crate::api_state::ApiContext;
+use common_services::api::app_error::AppError;
 use common_services::api::theme::interfaces::{
     ColorThemeParams, RandomPhotoParams, RandomPhotoResponse,
 };
@@ -12,7 +13,6 @@ use common_services::api::theme::service::random_photo_theme;
 use material_color_utils::dynamic::variant::Variant;
 use material_color_utils::utils::color_utils::Argb;
 use material_color_utils::{MaterializedTheme, theme_from_color};
-use common_services::api::app_error::AppError;
 
 pub async fn get_random_photo_theme(
     State(context): State<ApiContext>,

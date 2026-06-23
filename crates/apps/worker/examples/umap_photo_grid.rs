@@ -145,7 +145,10 @@ async fn main() -> Result<()> {
 
     let n_samples = photo_data.len();
     if n_samples < 2 {
-        info!("Not enough photos found (found {}). Need at least 2 to run dimensionality reduction.", n_samples);
+        info!(
+            "Not enough photos found (found {}). Need at least 2 to run dimensionality reduction.",
+            n_samples
+        );
         return Ok(());
     }
     info!("Successfully fetched {} photos.", n_samples);
@@ -226,25 +229,38 @@ async fn main() -> Result<()> {
         let x = f64::from(embedding_2d[[idx, 0]]);
         let y = f64::from(embedding_2d[[idx, 1]]);
 
-        if x < min_x { min_x = x; }
-        if x > max_x { max_x = x; }
-        if y < min_y { min_y = y; }
-        if y > max_y { max_y = y; }
+        if x < min_x {
+            min_x = x;
+        }
+        if x > max_x {
+            max_x = x;
+        }
+        if y < min_y {
+            min_y = y;
+        }
+        if y > max_y {
+            max_y = y;
+        }
 
         points.push((idx, x, y));
     }
 
     // Handle divisions by zero if coordinates are identical
-    let range_x = if (max_x - min_x).abs() < f64::EPSILON { 1.0 } else { max_x - min_x };
-    let range_y = if (max_y - min_y).abs() < f64::EPSILON { 1.0 } else { max_y - min_y };
+    let range_x = if (max_x - min_x).abs() < f64::EPSILON {
+        1.0
+    } else {
+        max_x - min_x
+    };
+    let range_y = if (max_y - min_y).abs() < f64::EPSILON {
+        1.0
+    } else {
+        max_y - min_y
+    };
 
     info!("Generating visual 2D layout canvas...");
     // Initialize empty neutral gray background
-    let mut canvas = image::RgbImage::from_pixel(
-        CANVAS_WIDTH,
-        CANVAS_HEIGHT,
-        image::Rgb([240, 240, 240]),
-    );
+    let mut canvas =
+        image::RgbImage::from_pixel(CANVAS_WIDTH, CANVAS_HEIGHT, image::Rgb([240, 240, 240]));
 
     // Keep images within bounds by adding margin
     let margin = f64::from(THUMB_SIZE);
@@ -257,7 +273,9 @@ async fn main() -> Result<()> {
             // Project coordinates onto canvas pixel coordinates
             let pixel_x = margin + norm_x * 2.0f64.mul_add(-margin, f64::from(CANVAS_WIDTH));
             // Flip y so that higher UMAP values point higher up in standard graph form
-            let pixel_y = f64::from(CANVAS_HEIGHT) - margin - norm_y * 2.0f64.mul_add(-margin, f64::from(CANVAS_HEIGHT));
+            let pixel_y = f64::from(CANVAS_HEIGHT)
+                - margin
+                - norm_y * 2.0f64.mul_add(-margin, f64::from(CANVAS_HEIGHT));
 
             // Calculate top-left placement coordinates for centering
             let px = (pixel_x - (f64::from(thumb.width()) / 2.0)) as i64;

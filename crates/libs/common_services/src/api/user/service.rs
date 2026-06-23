@@ -1,10 +1,10 @@
+use crate::api::app_error::AppError;
 use crate::api::user::interfaces::{UserProfile, UserStats};
 use crate::database::UpdateField::Value;
 use crate::database::app_user::UserRole;
 use crate::database::user_store::UserStore;
 use crate::database::{UpdateField, UpdateUserPayload};
 use sqlx::PgPool;
-use crate::api::app_error::AppError;
 
 pub async fn get_user_profile(
     pool: &PgPool,

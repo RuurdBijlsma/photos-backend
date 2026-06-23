@@ -136,7 +136,8 @@ impl TestContext {
         let watcher_pool = pool.clone();
         let watcher_settings = settings.ingest.clone();
         let watcher_handle = tokio::spawn(async move {
-            if let Err(e) = watcher::watcher::start_watching(&watcher_pool, &watcher_settings).await {
+            if let Err(e) = watcher::watcher::start_watching(&watcher_pool, &watcher_settings).await
+            {
                 error!("Watcher failed: {}", e);
             }
         });

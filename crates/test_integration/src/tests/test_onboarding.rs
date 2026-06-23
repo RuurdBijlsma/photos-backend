@@ -3,7 +3,10 @@ use crate::test_helpers::{login, media_dir_contents};
 use app_state::MakeRelativePath;
 use color_eyre::Result;
 use color_eyre::eyre::bail;
-use common_services::api::admin::interfaces::{DiskResponse, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse, UpdateUserMediaFolderBody};
+use common_services::api::admin::interfaces::{
+    DiskResponse, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse,
+    UpdateUserMediaFolderBody,
+};
 use futures_util::StreamExt;
 use reqwest::StatusCode;
 use std::collections::HashSet;

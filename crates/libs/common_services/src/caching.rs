@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use directories::ProjectDirs;
+use std::path::{Path, PathBuf};
 
 pub fn hash_file(path: &Path) -> color_eyre::Result<String> {
     let mut hasher = blake3::Hasher::new();

@@ -1,7 +1,7 @@
 use crate::api_state::ApiContext;
-use axum::routing::get;
-use axum::Router;
 use crate::camera::handlers::{get_camera_photos_handler, list_cameras_handler};
+use axum::Router;
+use axum::routing::get;
 
 pub fn camera_protected_router() -> Router<ApiContext> {
     Router::new()

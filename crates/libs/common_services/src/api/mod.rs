@@ -11,5 +11,5 @@ pub mod search;
 pub mod system;
 pub mod theme;
 pub mod timeline;
-pub mod user;
 pub mod trash;
+pub mod user;

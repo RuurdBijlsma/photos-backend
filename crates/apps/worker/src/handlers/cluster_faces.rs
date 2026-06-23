@@ -370,7 +370,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
             &new_centroids,
             &cluster_map,
         )
-            .await?;
+        .await?;
 
         // Cleanup
         let matched_old_ids: HashSet<String> = cluster_map.values().cloned().collect();

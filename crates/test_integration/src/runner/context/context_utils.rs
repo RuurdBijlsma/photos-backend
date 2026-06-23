@@ -1,4 +1,4 @@
-use app_state::{database_url, AppSettings};
+use app_state::{AppSettings, database_url};
 use color_eyre::eyre::Result;
 use common_services::database::get_db_pool;
 use sqlx::{Executor, PgPool};

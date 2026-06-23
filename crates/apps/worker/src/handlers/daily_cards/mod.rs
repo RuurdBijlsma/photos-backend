@@ -1,11 +1,10 @@
+use app_state::AppSettings;
 use async_trait::async_trait;
 use sqlx::PgTransaction;
-use app_state::AppSettings;
 
-pub mod on_this_day_card;
 pub mod cluster_card;
 pub mod estimatr_card;
-
+pub mod on_this_day_card;
 
 #[async_trait]
 pub trait DailyCardGenerator {

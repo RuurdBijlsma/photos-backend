@@ -1,5 +1,6 @@
 use color_eyre::Result;
 use color_eyre::eyre::bail;
+use common_services::caching::cache_root;
 use common_types::ml_analysis::{MLChatAnalysis, MLFastAnalysis};
 use generate_thumbnails::copy_dir_contents;
 use media_analyzer::MediaMetadata;
@@ -7,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::warn;
-use common_services::caching::cache_root;
 
 // Category folder names
 const THUMBNAILS_DIR: &str = "thumbnails";

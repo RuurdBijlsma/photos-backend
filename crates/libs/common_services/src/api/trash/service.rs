@@ -7,7 +7,10 @@ use tokio::fs;
 use tracing::info;
 
 /// Fetches all soft-deleted media items for the user, sorted by sort_timestamp descending.
-pub async fn get_trash_items(pool: &PgPool, user_id: i32) -> Result<OrderedMediaResponse, AppError> {
+pub async fn get_trash_items(
+    pool: &PgPool,
+    user_id: i32,
+) -> Result<OrderedMediaResponse, AppError> {
     let rows = sqlx::query!(
         r#"
         SELECT
@@ -47,9 +50,16 @@ pub async fn soft_delete_items(
 ) -> Result<(), AppError> {
     sqlx::query!(
         r#"
-        UPDATE media_item
+        WITH updated_items AS (
+            UPDATE media_item
+            SET deleted = true
+            WHERE id = ANY($1) AND user_id = $2
+            RETURNING id
+        )
+        UPDATE visual_analysis
         SET deleted = true
-        WHERE id = ANY($1) AND user_id = $2
+        FROM updated_items
+        WHERE visual_analysis.media_item_id = updated_items.id
         "#,
         ids,
         user_id
@@ -61,16 +71,19 @@ pub async fn soft_delete_items(
 }
 
 /// Restores a list of soft-deleted media items.
-pub async fn restore_items(
-    pool: &PgPool,
-    user_id: i32,
-    ids: &[String],
-) -> Result<(), AppError> {
+pub async fn restore_items(pool: &PgPool, user_id: i32, ids: &[String]) -> Result<(), AppError> {
     sqlx::query!(
         r#"
-        UPDATE media_item
+        WITH updated_items AS (
+            UPDATE media_item
+            SET deleted = false
+            WHERE id = ANY($1) AND user_id = $2
+            RETURNING id
+        )
+        UPDATE visual_analysis
         SET deleted = false
-        WHERE id = ANY($1) AND user_id = $2
+        FROM updated_items
+        WHERE visual_analysis.media_item_id = updated_items.id
         "#,
         ids,
         user_id
@@ -118,7 +131,7 @@ pub async fn perma_delete_items(
                 )));
             }
         }
-        // Clean up database records and thumbnails folder
+        // Clean up database records and thumbnails folder.
         delete_item_and_thumbnails(pool, thumbnail_root, &item.relative_path).await?;
     }
 

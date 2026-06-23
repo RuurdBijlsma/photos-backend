@@ -175,7 +175,13 @@ pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
 
         // Calc & store area
         let total_area_val = serde_json::json!(calculate_coordinates_area(&coordinates));
-        KeyJsonStore::set_value(&context.pool, "total_area_sq_km", &total_area_val, Some(user_id)).await?;
+        KeyJsonStore::set_value(
+            &context.pool,
+            "total_area_sq_km",
+            &total_area_val,
+            Some(user_id),
+        )
+        .await?;
 
         // Calc and store most frequent location
         let location_val =
@@ -185,7 +191,13 @@ pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
                     "longitude": centroid.longitude,
                 })
             });
-        KeyJsonStore::set_value(&context.pool, "most_frequent_location", &location_val, Some(user_id)).await?;
+        KeyJsonStore::set_value(
+            &context.pool,
+            "most_frequent_location",
+            &location_val,
+            Some(user_id),
+        )
+        .await?;
 
         info!(
             "Saved system stats separately - total_area_sq_km: {}, most_frequent_location: {:?}",

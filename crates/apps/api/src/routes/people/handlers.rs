@@ -3,6 +3,7 @@ use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Redirect};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
+use common_services::api::app_error::AppError;
 use common_services::api::people::interfaces::{MergePersonRequest, UpdatePersonRequest};
 use common_services::api::people::service::{
     get_all_people, get_person_photos, merge_person, unmerge_person, update_person,
@@ -12,7 +13,6 @@ use common_types::constants::FACE_CLUSTERS_FOLDER;
 use common_types::pb::api::{FullPersonMediaResponse, ListPeopleResponse};
 use http::header::CACHE_CONTROL;
 use tracing::instrument;
-use common_services::api::app_error::AppError;
 
 #[instrument(skip(context, user), err(Debug))]
 pub async fn list_people_handler(

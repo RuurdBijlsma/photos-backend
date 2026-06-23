@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use sqlx::PgTransaction;
-use app_state::AppSettings;
-use common_services::api::album::service::get_representative_thumbnail;
 use crate::handlers::daily_cards::DailyCardGenerator;
+use app_state::AppSettings;
+use async_trait::async_trait;
+use common_services::api::album::service::get_representative_thumbnail;
+use sqlx::PgTransaction;
 
 pub struct ClusterCardGenerator;
 
@@ -22,15 +22,15 @@ impl DailyCardGenerator for ClusterCardGenerator {
             "SELECT MAX(updated_at) FROM photo_cluster WHERE user_id = $1",
             user_id
         )
-            .fetch_one(&mut **tx)
-            .await?;
+        .fetch_one(&mut **tx)
+        .await?;
 
         let latest_card_creation: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar!(
             "SELECT MAX(created_at) FROM daily_card WHERE user_id = $1 AND card_type = 'cluster'",
             user_id
         )
-            .fetch_one(&mut **tx)
-            .await?;
+        .fetch_one(&mut **tx)
+        .await?;
 
         let needs_regeneration = match (latest_cluster_update, latest_card_creation) {
             (Some(upd), Some(cre)) => upd > cre,
@@ -47,16 +47,16 @@ impl DailyCardGenerator for ClusterCardGenerator {
             "DELETE FROM daily_card WHERE user_id = $1 AND card_type = 'cluster'",
             user_id
         )
-            .execute(&mut **tx)
-            .await?;
+        .execute(&mut **tx)
+        .await?;
 
         // Fetch all clusters for the user
         let clusters = sqlx::query!(
             "SELECT id, friendly_label FROM photo_cluster WHERE user_id = $1",
             user_id
         )
-            .fetch_all(&mut **tx)
-            .await?;
+        .fetch_all(&mut **tx)
+        .await?;
 
         for cluster in clusters {
             // Fetch media items in this cluster
@@ -80,7 +80,9 @@ impl DailyCardGenerator for ClusterCardGenerator {
             let item_ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
             let thumbnail_id = get_representative_thumbnail(tx, &item_ids)
                 .await
-                .map_err(|e| color_eyre::eyre::eyre!("Failed to get representative thumbnail: {:?}", e))?;
+                .map_err(|e| {
+                    color_eyre::eyre::eyre!("Failed to get representative thumbnail: {:?}", e)
+                })?;
 
             let payload_items: Vec<serde_json::Value> = items
                 .iter()
@@ -108,12 +110,14 @@ impl DailyCardGenerator for ClusterCardGenerator {
                 VALUES ($1, 'cluster', $2, $3, $4)
                 "#,
                 user_id,
-                cluster.friendly_label.unwrap_or_else(|| "Cluster".to_string()),
+                cluster
+                    .friendly_label
+                    .unwrap_or_else(|| "Cluster".to_string()),
                 thumbnail_id,
                 payload
             )
-                .execute(&mut **tx)
-                .await?;
+            .execute(&mut **tx)
+            .await?;
         }
 
         Ok(())

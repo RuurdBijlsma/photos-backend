@@ -167,7 +167,9 @@ pub async fn refresh_tokens(
     )
     .fetch_optional(pool)
     .await?
-    .ok_or(AppError::Unauthorized("Refresh token expired or not found".to_owned()))?;
+    .ok_or(AppError::Unauthorized(
+        "Refresh token expired or not found".to_owned(),
+    ))?;
 
     if !verify_token(&verifier_bytes, &record.verifier_hash)? {
         // If the verifier is wrong, assume token theft and delete all refresh tokens for that user.

@@ -1,3 +1,4 @@
+use crate::api::app_error::AppError;
 use crate::api::theme::interfaces::RandomPhotoResponse;
 use crate::database::app_user::User;
 use material_color_utils::dynamic::variant::Variant;
@@ -6,7 +7,6 @@ use material_color_utils::utils::color_utils::Argb;
 use rand::RngExt;
 use sqlx::PgPool;
 use tracing::warn;
-use crate::api::app_error::AppError;
 
 /// Fetches a random photo with its color theme data for a specific user.
 ///

@@ -6,17 +6,17 @@
     clippy::cast_sign_loss
 )]
 
+use app_state::database_url;
 use color_eyre::eyre::Result;
-use app_state::{database_url};
 use common_services::database::get_db_pool;
+use ndarray::Array2;
+use plotters::prelude::*;
+use rand::RngExt;
+use rayon::prelude::*;
 use sqlx::{FromRow, PgPool};
 use std::fs;
 use std::path::Path;
 use tracing::info;
-use ndarray::Array2;
-use rayon::prelude::*;
-use plotters::prelude::*;
-use rand::RngExt;
 use umap_rs::{GraphParams, Umap, UmapConfig};
 
 #[derive(FromRow, Debug)]
@@ -36,9 +36,9 @@ async fn fetch_photo_embeddings(pool: &PgPool, user_id: i32) -> Result<Vec<Photo
         WHERE user_id = $1 AND deleted = false
         ",
     )
-        .bind(user_id)
-        .fetch_all(pool)
-        .await?;
+    .bind(user_id)
+    .fetch_all(pool)
+    .await?;
 
     Ok(rows)
 }
@@ -112,10 +112,16 @@ async fn main() -> Result<()> {
     let output_dir = Path::new("umap_output");
     let output_file = output_dir.join("photo_projection_cpu.png");
 
-    info!("Fetching photo embeddings from database for user {}...", user_id);
+    info!(
+        "Fetching photo embeddings from database for user {}...",
+        user_id
+    );
     let photo_data = fetch_photo_embeddings(&pool, user_id).await?;
     if photo_data.is_empty() {
-        info!("No photo embeddings found for user_id = {}. Ensure you have run analysis.", user_id);
+        info!(
+            "No photo embeddings found for user_id = {}. Ensure you have run analysis.",
+            user_id
+        );
         return Ok(());
     }
     let n_samples = photo_data.len();
@@ -175,10 +181,18 @@ async fn main() -> Result<()> {
     let mut max_y = f64::NEG_INFINITY;
 
     for &(x, y) in &points {
-        if x < min_x { min_x = x; }
-        if x > max_x { max_x = x; }
-        if y < min_y { min_y = y; }
-        if y > max_y { max_y = y; }
+        if x < min_x {
+            min_x = x;
+        }
+        if x > max_x {
+            max_x = x;
+        }
+        if y < min_y {
+            min_y = y;
+        }
+        if y > max_y {
+            max_y = y;
+        }
     }
 
     // Apply 5% padding around coordinates
@@ -190,7 +204,10 @@ async fn main() -> Result<()> {
     let max_y = max_y + pad_y;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("Photo Embeddings 2D UMAP Projection (umap-rs)", ("sans-serif", 32).into_font())
+        .caption(
+            "Photo Embeddings 2D UMAP Projection (umap-rs)",
+            ("sans-serif", 32).into_font(),
+        )
         .margin(20)
         .x_label_area_size(40)
         .y_label_area_size(40)
@@ -201,13 +218,16 @@ async fn main() -> Result<()> {
     // Draw all points with a single uniform color style
     let point_style = RGBColor(31, 119, 180); // Classic blue tone
     chart.draw_series(
-        points.iter().map(|&(x, y)| {
-            Circle::new((x, y), 5, ShapeStyle::from(&point_style).filled())
-        })
+        points
+            .iter()
+            .map(|&(x, y)| Circle::new((x, y), 5, ShapeStyle::from(&point_style).filled())),
     )?;
 
     root.present()?;
-    info!("Successfully generated 2D UMAP projection and saved it to: {:?}", output_file);
+    info!(
+        "Successfully generated 2D UMAP projection and saved it to: {:?}",
+        output_file
+    );
 
     Ok(())
 }

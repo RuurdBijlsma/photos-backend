@@ -168,7 +168,6 @@ impl From<AuthError> for AppError {
     }
 }
 
-
 impl From<ImageError> for AppError {
     fn from(err: ImageError) -> Self {
         AppError::Internal(eyre!(err))

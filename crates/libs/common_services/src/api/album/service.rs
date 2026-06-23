@@ -1,16 +1,17 @@
 use super::interfaces::{AcceptInviteRequest, AlbumShareClaims, AlbumSort, SharedMediaItem};
+use crate::api::app_error::AppError;
 use crate::database::album::album::{Album, AlbumRole, AlbumSummary};
 use crate::database::album::album_collaborator::AlbumCollaborator;
 use crate::database::album_store::AlbumStore;
 use crate::database::jobs::JobType;
-use crate::database::media_item_store::MediaItemStore;
 use crate::database::key_vector_store::KeyVectorStore;
+use crate::database::media_item_store::MediaItemStore;
 use crate::database::user_store::UserStore;
 use crate::database::{CreateAlbumPayload, UpdateField};
 use crate::job_queue::enqueue_job;
 use crate::s2s_client::{S2SClient, insecure_extract_token_claims};
 use crate::utils::nice_id;
-use app_state::{constants, IngestSettings};
+use app_state::{IngestSettings, constants};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;
@@ -18,7 +19,6 @@ use common_types::pb::api::{AlbumInfo, FullAlbumMediaResponse, SimpleTimelineIte
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sqlx::{Executor, PgPool, PgTransaction, Postgres};
 use tracing::instrument;
-use crate::api::app_error::AppError;
 
 const DEFAULT_ALBUM_SORT: AlbumSort = AlbumSort::DateAsc;
 
@@ -66,11 +66,7 @@ async fn can_view_album(
 }
 
 #[instrument(skip(executor))]
-async fn is_album_owner<'c, E>(
-    executor: E,
-    user_id: i32,
-    album_id: &str,
-) -> Result<bool, AppError>
+async fn is_album_owner<'c, E>(executor: E, user_id: i32, album_id: &str) -> Result<bool, AppError>
 where
     E: Executor<'c, Database = Postgres>,
 {
@@ -90,8 +86,7 @@ pub async fn get_representative_thumbnail(
     }
 
     // Try contrastive logic if more than 50% have embeddings
-    let cached_global_centroid =
-        KeyVectorStore::get_vector(&mut **tx, "global_centroid").await?;
+    let cached_global_centroid = KeyVectorStore::get_vector(&mut **tx, "global_centroid").await?;
 
     let result = sqlx::query!(
         r#"

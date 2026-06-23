@@ -1,4 +1,4 @@
-use app_state::{CONSTANTS, load_constants_from_path, database_url, DATABASE_URL};
+use app_state::{CONSTANTS, DATABASE_URL, database_url, load_constants_from_path};
 use color_eyre::eyre::Result;
 use common_services::api::timeline::interfaces::SortDirection;
 use common_services::api::timeline::service::{
@@ -22,9 +22,7 @@ async fn setup() -> Result<(sqlx::PgPool, User)> {
     if DATABASE_URL.set(test_db_url.to_owned()).is_err() {
         info!("AppConstants were already initialized by another test.");
     }
-    let pool = get_db_pool(database_url(), false)
-        .await
-        .expect("db pool");
+    let pool = get_db_pool(database_url(), false).await.expect("db pool");
     let user = UserStore::list_users(&pool)
         .await
         .expect("user")

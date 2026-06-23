@@ -1,3 +1,4 @@
+use crate::api::app_error::AppError;
 use crate::api::search::cache::{get_cached_image_embedding, get_cached_text_embedding};
 use crate::api::search::interfaces::{
     SearchFilterRanges, SearchImage, SearchMediaConfig, SearchMediaType, SearchSortBy,
@@ -13,7 +14,6 @@ use open_clip_inference::{TextEmbedder, VisionEmbedder};
 use pgvector::Vector;
 use sqlx::PgPool;
 use std::sync::Arc;
-use crate::api::app_error::AppError;
 
 pub async fn search_media(
     user: &User,

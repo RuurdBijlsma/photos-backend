@@ -1,6 +1,6 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use app_state::{IngestSettings};
+use app_state::IngestSettings;
 use color_eyre::Result;
 use color_eyre::eyre::eyre;
 use common_services::alert;

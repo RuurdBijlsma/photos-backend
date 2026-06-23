@@ -302,8 +302,8 @@ async fn needs_clustering(pool: &PgPool, user_id: i32) -> Result<bool> {
         "#,
         user_id
     )
-        .fetch_one(pool)
-        .await?;
+    .fetch_one(pool)
+    .await?;
 
     Ok(needs_run)
 }

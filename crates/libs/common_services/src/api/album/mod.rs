@@ -1,3 +1,3 @@
+pub mod backup_restore;
 pub mod interfaces;
 pub mod service;
-pub mod backup_restore;

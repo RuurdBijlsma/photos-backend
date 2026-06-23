@@ -6,6 +6,7 @@ use axum::response::IntoResponse;
 use axum_extra::TypedHeader;
 use axum_extra::headers::Authorization;
 use axum_extra::headers::authorization::Bearer;
+use common_services::api::app_error::AppError;
 use common_services::api::s2s::interfaces::DownloadParams;
 use common_services::api::s2s::service::{
     get_invite_summary, get_media_item_path, validate_token_for_media_item,
@@ -14,7 +15,6 @@ use common_services::database::album::album::AlbumSummary;
 use common_services::database::media_item_store::MediaItemStore;
 use tokio_util::io::ReaderStream;
 use tracing::instrument;
-use common_services::api::app_error::AppError;
 
 #[instrument(skip(context), err(Debug))]
 pub async fn invite_summary_handler(

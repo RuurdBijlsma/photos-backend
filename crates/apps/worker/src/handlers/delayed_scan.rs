@@ -1,6 +1,6 @@
-use chrono::Utc;
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
+use chrono::Utc;
 use color_eyre::Result;
 use common_services::database::jobs::{Job, JobType};
 use common_services::job_queue::enqueue_job;
