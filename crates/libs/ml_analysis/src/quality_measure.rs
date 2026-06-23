@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 use common_types::ml_analysis::QualityMeasurement;
-use image::GrayImage;
+use image::{GrayImage, ImageBuffer, Luma};
 use imageproc::filter::{laplacian_filter, median_filter};
 use std::path::Path;
 
@@ -21,7 +21,8 @@ pub fn get_quality_measurement(image_path: &Path) -> Result<QualityMeasurement> 
 
     // Scaling down the weighted score based on how confidently bad the photo is.
     let weighted_score =
-        (blurriness * 0.4 + noisiness * 0.1 + exposure * 0.2 + accidentalness * 0.3) * 100.0;
+        (blurriness * 0.4 + noisiness * 0.1 + exposure * 0.2 + (1.0 - accidentalness * 0.3))
+            * 100.0;
 
     Ok(QualityMeasurement {
         weighted_score,
@@ -152,7 +153,11 @@ fn calculate_blurriness(gray_img: &GrayImage, texture: f64) -> f64 {
     ((adjusted_var - 50.0) / 1200.0).clamp(0.0, 1.0)
 }
 
-fn calculate_global_blurriness(lap: &GrayImage, gray_img: &GrayImage, texture: f64) -> f64 {
+fn calculate_global_blurriness(
+    lap: &ImageBuffer<Luma<i16>, Vec<i16>>,
+    gray_img: &GrayImage,
+    texture: f64,
+) -> f64 {
     let n = f64::from(lap.width() * lap.height());
     if n < 2.0 {
         return 0.0;
@@ -226,14 +231,14 @@ fn calculate_exposure(gray_img: &GrayImage) -> f64 {
     let spread_score = (spread / 110.0).clamp(0.0, 1.0);
 
     let overexposure_penalty = if p5 > 180 {
-        let factor = f64::from(p5 - 180) / 60.0;
+        let factor = ((p5 - 180) as f64) / 60.0;
         (1.0 - factor).clamp(0.0, 1.0)
     } else {
         1.0
     };
 
     let underexposure_penalty = if p95 < 45 {
-        let factor = f64::from(45 - p95) / 30.0;
+        let factor = ((45 - p95) as f64) / 30.0;
         (1.0 - factor).clamp(0.0, 1.0)
     } else {
         1.0
