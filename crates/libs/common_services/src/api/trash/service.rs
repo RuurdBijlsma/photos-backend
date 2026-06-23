@@ -16,14 +16,16 @@ pub async fn get_trash_items(
     let rows = sqlx::query!(
         r#"
         SELECT
-            id,
-            is_video,
-            has_thumbnails,
-            duration_ms::INT AS duration_ms,
-            (width::real / height::real) AS "ratio!"
+            media_item.id,
+            media_item.is_video,
+            media_item.has_thumbnails,
+            media_item.duration_ms::INT,
+            (media_item.width::REAL / media_item.height::REAL) AS "ratio!"
         FROM media_item
-        WHERE user_id = $1 AND deleted = true
-        ORDER BY sort_timestamp DESC
+                 INNER JOIN visual_analysis ON media_item.id = visual_analysis.media_item_id
+                 INNER JOIN measured_quality ON measured_quality.visual_analysis_id = visual_analysis.id
+        WHERE media_item.user_id = $1
+        ORDER BY measured_quality.measured_blurriness ASC
         "#,
         user_id
     )
