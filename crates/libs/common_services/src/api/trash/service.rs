@@ -1,7 +1,9 @@
 use crate::api::app_error::AppError;
 use crate::api::photos::removal::delete_item_and_thumbnails;
+use app_state::constants;
 use common_types::pb::api::{OrderedMediaResponse, SimpleTimelineItem};
 use sqlx::PgPool;
+use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
 use tracing::info;
@@ -50,16 +52,9 @@ pub async fn soft_delete_items(
 ) -> Result<(), AppError> {
     sqlx::query!(
         r#"
-        WITH updated_items AS (
             UPDATE media_item
             SET deleted = true
             WHERE id = ANY($1) AND user_id = $2
-            RETURNING id
-        )
-        UPDATE visual_analysis
-        SET deleted = true
-        FROM updated_items
-        WHERE visual_analysis.media_item_id = updated_items.id
         "#,
         ids,
         user_id
@@ -74,16 +69,9 @@ pub async fn soft_delete_items(
 pub async fn restore_items(pool: &PgPool, user_id: i32, ids: &[String]) -> Result<(), AppError> {
     sqlx::query!(
         r#"
-        WITH updated_items AS (
             UPDATE media_item
             SET deleted = false
             WHERE id = ANY($1) AND user_id = $2
-            RETURNING id
-        )
-        UPDATE visual_analysis
-        SET deleted = false
-        FROM updated_items
-        WHERE visual_analysis.media_item_id = updated_items.id
         "#,
         ids,
         user_id
@@ -104,7 +92,11 @@ pub async fn perma_delete_items(
     media_root: &Path,
     thumbnail_root: &Path,
 ) -> Result<(), AppError> {
-    // Fetch relative paths of items belonging to the user that are already soft-deleted
+    if !constants().allow_file_deletion {
+        return Err(AppError::Forbidden(
+            "File deletion not permitted.".to_owned(),
+        ));
+    }
     let items = sqlx::query!(
         r#"
         SELECT id, relative_path
@@ -114,16 +106,12 @@ pub async fn perma_delete_items(
         ids,
         user_id
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
-    // Deduplicate the input IDs list to ensure an accurate count comparison
-    let mut unique_ids = ids.to_vec();
-    unique_ids.sort();
-    unique_ids.dedup();
-
-    // Guard check: Ensure all requested items exist, belong to the user, and are soft-deleted
-    if items.len() < unique_ids.len() {
+    // Check if all requested ids are soft-deleted already
+    let unique_requested_count = ids.iter().collect::<HashSet<_>>().len();
+    if items.len() < unique_requested_count {
         return Err(AppError::BadRequest(
             "One or more requested media items are not soft-deleted, do not exist, or do not belong to you."
                 .to_string(),

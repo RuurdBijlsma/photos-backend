@@ -87,6 +87,8 @@ secrets:
   jwt: "overwrite-me-with-env"
 
 constants:
+  allow_file_modifications: true
+  allow_file_deletion: true
   fallback_timezone: Europe/Amsterdam
   onboarding_n_media_samples: 8
   

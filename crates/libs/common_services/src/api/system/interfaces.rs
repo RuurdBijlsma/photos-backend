@@ -21,5 +21,7 @@ pub struct DiskStats {
 pub struct SystemStats {
     pub has_clustered_people: bool,
     pub has_clustered_photos: bool,
+    pub allow_file_modifications: bool,
+    pub allow_file_deletion: bool,
     pub disk: DiskStats,
 }

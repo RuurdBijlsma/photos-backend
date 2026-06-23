@@ -1,6 +1,6 @@
 use crate::api::app_error::AppError;
 use crate::api::system::interfaces::{DiskInfo, DiskStats, SystemStats};
-use app_state::IngestSettings;
+use app_state::{constants, IngestSettings};
 use fs2::statvfs;
 use sqlx::PgPool;
 use std::path::Path;
@@ -82,6 +82,8 @@ pub async fn get_system_stats(
     Ok(SystemStats {
         has_clustered_people: db_res.has_people,
         has_clustered_photos: db_res.has_photo_clusters,
+        allow_file_deletion: constants().allow_file_deletion,
+        allow_file_modifications: constants().allow_file_modifications,
         disk: fs_res,
     })
 }

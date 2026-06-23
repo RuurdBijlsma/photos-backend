@@ -8,6 +8,8 @@ pub struct AppConstants {
     pub onboarding_n_media_samples: usize,
     pub database: DatabaseConstants,
     pub auth: AuthConstants,
+    pub allow_file_modifications: bool,
+    pub allow_file_deletion: bool,
 }
 
 impl From<RawSettings> for AppConstants {
@@ -19,6 +21,8 @@ impl From<RawSettings> for AppConstants {
             onboarding_n_media_samples: raw.constants.onboarding_n_media_samples,
             database: raw.constants.database,
             auth: raw.constants.auth,
+            allow_file_modifications: raw.constants.allow_file_modifications,
+            allow_file_deletion: raw.constants.allow_file_deletion,
         }
     }
 }

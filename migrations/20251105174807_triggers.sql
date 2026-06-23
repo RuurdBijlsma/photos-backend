@@ -68,7 +68,9 @@ CREATE TRIGGER trigger_update_album_timestamp_delete
 EXECUTE FUNCTION update_album_timestamps_stmt();
 
 
--- Trigger for album.media_count
+-- =========================================================================================
+-- Album Media Count Triggers (Statement Level)
+-- =========================================================================================
 
 CREATE OR REPLACE FUNCTION update_album_media_count_stmt()
     RETURNS TRIGGER AS
@@ -119,6 +121,10 @@ CREATE TRIGGER trg_album_media_item_count_delete
 EXECUTE FUNCTION update_album_media_count_stmt();
 
 
+-- =========================================================================================
+-- Hard-delete synchronization functions
+-- =========================================================================================
+
 -- Combined hard-delete synchronization function
 CREATE OR REPLACE FUNCTION fn_trigger_media_item_hard_delete_sync()
     RETURNS TRIGGER AS
@@ -149,6 +155,10 @@ CREATE TRIGGER trg_media_item_hard_delete
 EXECUTE FUNCTION fn_trigger_media_item_hard_delete_sync();
 
 
+-- =========================================================================================
+-- Soft-delete synchronization functions (Row and Statement levels)
+-- =========================================================================================
+
 -- Create a trigger function to synchronize the soft-delete status to visual_analysis
 CREATE OR REPLACE FUNCTION fn_trigger_media_item_soft_delete_sync()
     RETURNS TRIGGER AS
@@ -170,3 +180,46 @@ CREATE TRIGGER trg_media_item_soft_delete
     ON media_item
     FOR EACH ROW
 EXECUTE FUNCTION fn_trigger_media_item_soft_delete_sync();
+
+
+-- Statement-level trigger function to batch update album statistics on media_item soft-delete
+CREATE OR REPLACE FUNCTION update_album_stats_on_media_item_soft_delete_stmt()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- Identify the distinct albums containing any changed media items,
+    -- and recalculate their statistics in a single batch operation.
+    UPDATE album a
+    SET latest_media_item_timestamp   = sub.max_ts,
+        earliest_media_item_timestamp = sub.min_ts,
+        media_count                   = sub.cnt
+    FROM (
+             SELECT
+                 ami_all.album_id,
+                 MAX(mi.sort_timestamp) as max_ts,
+                 MIN(mi.sort_timestamp) as min_ts,
+                 COUNT(mi.id) as cnt
+             FROM album_media_item ami_all
+                      LEFT JOIN media_item mi ON ami_all.media_item_id = mi.id AND mi.deleted = false
+             WHERE ami_all.album_id IN (
+                 SELECT DISTINCT ami.album_id
+                 FROM album_media_item ami
+                          JOIN new_table nt ON ami.media_item_id = nt.id
+                          JOIN old_table ot ON nt.id = ot.id
+                 WHERE nt.deleted IS DISTINCT FROM ot.deleted
+             )
+             GROUP BY ami_all.album_id
+         ) sub
+    WHERE a.id = sub.album_id;
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Bind the statement-level trigger to media_item to ensure performance during bulk deletes
+CREATE TRIGGER trg_media_item_album_sync_update
+    AFTER UPDATE OF deleted
+    ON media_item
+    REFERENCING NEW TABLE AS new_table OLD TABLE AS old_table
+    FOR EACH STATEMENT
+EXECUTE FUNCTION update_album_stats_on_media_item_soft_delete_stmt();

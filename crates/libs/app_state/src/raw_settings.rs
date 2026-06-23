@@ -136,6 +136,8 @@ pub struct RawConstants {
     pub onboarding_n_media_samples: usize,
     pub database: DatabaseConstants,
     pub auth: AuthConstants,
+    pub allow_file_modifications: bool,
+    pub allow_file_deletion: bool,
 }
 
 /// Database connection and related configuration.
