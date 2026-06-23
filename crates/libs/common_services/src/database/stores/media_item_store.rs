@@ -92,9 +92,13 @@ impl MediaItemStore {
                         'id', va.id,
                         'created_at', va.created_at,
                         'percentage', va.percentage,
-                        'quality', (
+                        'measured_quality', (
                             SELECT to_jsonb(qd)
-                            FROM quality qd WHERE qd.visual_analysis_id = va.id
+                            FROM measured_quality qd WHERE qd.visual_analysis_id = va.id
+                        ),
+                        'quality_judge', (
+                            SELECT to_jsonb(qj)
+                            FROM quality_judge qj WHERE qj.visual_analysis_id = va.id
                         ),
                         'colors', (
                             SELECT to_jsonb(cld)

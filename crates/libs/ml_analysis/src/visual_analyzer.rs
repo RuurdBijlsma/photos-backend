@@ -5,7 +5,7 @@ use crate::quality_measure::get_quality_measurement;
 use crate::utils::convert_media_file;
 use app_state::AnalyzerSettings;
 use color_eyre::eyre::eyre;
-use common_types::ml_analysis::{MLChatAnalysis, MLCombinedQuality, MLFastAnalysis};
+use common_types::ml_analysis::{MLChatAnalysis, MLFastAnalysis};
 use face_id::analyzer::FaceAnalyzer;
 use language_model::{ChatSession, LlamaClient};
 use object_detector::{DetectorType, ModelScale, ObjectDetector};
@@ -103,6 +103,10 @@ impl VisualAnalyzer {
             .call()?;
         println!("objects {:?}", now.elapsed());
 
+        let now = Instant::now();
+        let measured_quality = get_quality_measurement(&analysis_file)?;
+        println!("get_quality_measurement {:?}", now.elapsed());
+
         let _ = tokio::fs::remove_file(&analysis_file).await;
 
         println!("-- Fast ml analysis {:?}", start.elapsed());
@@ -113,6 +117,7 @@ impl VisualAnalyzer {
             embedding,
             faces,
             objects,
+            measured_quality
         })
     }
 
@@ -137,25 +142,16 @@ impl VisualAnalyzer {
         println!("get_caption_data {:?}", now.elapsed());
 
         let now = Instant::now();
-        let quality_measurement = get_quality_measurement(&analysis_file)?;
-        println!("get_quality_measurement {:?}", now.elapsed());
-
-        let now = Instant::now();
-        let quality_judgement = get_quality_judgement(&self.llm_client, &analysis_file).await?;
+        let quality_judge = get_quality_judgement(&self.llm_client, &analysis_file).await?;
         println!("get_quality_judgement {:?}", now.elapsed());
-
-        let quality = MLCombinedQuality {
-            measured: quality_measurement,
-            judged: quality_judgement,
-        };
-
+        
         tokio::fs::remove_file(&analysis_file).await?;
 
         println!("total ml analysis {:?}", start.elapsed());
 
         Ok(MLChatAnalysis {
             percentage,
-            quality,
+            quality_judge,
             llm_classification,
         })
     }

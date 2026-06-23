@@ -3,29 +3,29 @@ use object_detector::DetectedObject;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct MLColorData {
+pub struct ColorData {
     pub prominent_colors: Vec<String>,
     pub average_hue: f32,
     pub average_saturation: f32,
     pub average_lightness: f32,
-    pub histogram: MLColorHistogram,
+    pub histogram: ColorHistogram,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct MLColorHistogram {
+pub struct ColorHistogram {
     pub bins: i32,
-    pub channels: MLRGBChannels,
+    pub channels: RGBChannels,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
-pub struct MLRGBChannels {
+pub struct RGBChannels {
     pub red: Vec<i32>,
     pub green: Vec<i32>,
     pub blue: Vec<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct MLQualityMeasurement {
+pub struct QualityMeasurement {
     pub blurriness: f64,
     pub noisiness: f64,
     pub exposure: f64,
@@ -87,12 +87,6 @@ impl MLLlmQualityJudgement {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-pub struct MLCombinedQuality {
-    pub judged: Option<MLLlmQualityJudgement>,
-    pub measured: MLQualityMeasurement,
-}
-
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct MLLlmClassification {
@@ -131,15 +125,16 @@ pub struct MLLlmClassification {
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct MLFastAnalysis {
     pub percentage: i32,
-    pub color_data: MLColorData,
+    pub color_data: ColorData,
     pub embedding: Vec<f32>,
     pub faces: Vec<FaceAnalysis>,
     pub objects: Vec<DetectedObject>,
+    pub measured_quality: QualityMeasurement
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct MLChatAnalysis {
     pub percentage: i32,
-    pub quality: MLCombinedQuality,
+    pub quality_judge: Option<MLLlmQualityJudgement>,
     pub llm_classification: MLLlmClassification,
 }

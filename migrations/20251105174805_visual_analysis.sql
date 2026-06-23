@@ -54,25 +54,30 @@ CREATE TABLE object
 CREATE INDEX idx_object_visual_analysis_id ON object (visual_analysis_id);
 
 -- Stores image quality metrics.
-CREATE TABLE quality
+CREATE TABLE measured_quality
 (
     visual_analysis_id      BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    exposure                SMALLINT         NOT NULL,
-    contrast                SMALLINT         NOT NULL,
-    sharpness               SMALLINT         NOT NULL,
-    color_accuracy          SMALLINT         NOT NULL,
-    composition             SMALLINT         NOT NULL,
-    subject_clarity         SMALLINT         NOT NULL,
-    visual_impact           SMALLINT         NOT NULL,
-    creativity              SMALLINT         NOT NULL,
-    color_harmony           SMALLINT         NOT NULL,
-    storytelling            SMALLINT         NOT NULL,
-    style_suitability       SMALLINT         NOT NULL,
-    weighted_score          DOUBLE PRECISION NOT NULL,
     measured_blurriness     DOUBLE PRECISION NOT NULL,
     measured_noisiness      DOUBLE PRECISION NOT NULL,
     measured_exposure       DOUBLE PRECISION NOT NULL,
     measured_weighted_score DOUBLE PRECISION NOT NULL
+);
+
+CREATE TABLE quality_judge
+(
+    visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
+    exposure           SMALLINT         NOT NULL,
+    contrast           SMALLINT         NOT NULL,
+    sharpness          SMALLINT         NOT NULL,
+    color_accuracy     SMALLINT         NOT NULL,
+    composition        SMALLINT         NOT NULL,
+    subject_clarity    SMALLINT         NOT NULL,
+    visual_impact      SMALLINT         NOT NULL,
+    creativity         SMALLINT         NOT NULL,
+    color_harmony      SMALLINT         NOT NULL,
+    storytelling       SMALLINT         NOT NULL,
+    style_suitability  SMALLINT         NOT NULL,
+    weighted_score     DOUBLE PRECISION NOT NULL
 );
 
 
@@ -80,11 +85,11 @@ CREATE TABLE quality
 CREATE TABLE color
 (
     visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    prominent_colors   TEXT[]  NOT NULL,
-    average_hue        REAL    NOT NULL,
-    average_saturation REAL    NOT NULL,
-    average_lightness  REAL    NOT NULL,
-    histogram          JSONB   NOT NULL
+    prominent_colors   TEXT[] NOT NULL,
+    average_hue        REAL   NOT NULL,
+    average_saturation REAL   NOT NULL,
+    average_lightness  REAL   NOT NULL,
+    histogram          JSONB  NOT NULL
 );
 
 

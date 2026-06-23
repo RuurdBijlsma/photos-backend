@@ -131,7 +131,7 @@ async fn save_llm_results(
             &mut tx,
             visual_analysis_id,
             &ml_chat_analysis.llm_classification.clone().into(),
-            &ml_chat_analysis.quality.clone().into(),
+            ml_chat_analysis.quality_judge.clone().map(|f| f.into()),
         )
         .await?;
     }

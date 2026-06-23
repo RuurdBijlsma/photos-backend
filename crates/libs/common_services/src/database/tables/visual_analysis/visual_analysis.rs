@@ -1,8 +1,9 @@
 use crate::database::visual_analysis::caption_data::ClassificationData;
 use crate::database::visual_analysis::color_data::ColorData;
 use crate::database::visual_analysis::face::{CreateFace, Face};
+use crate::database::visual_analysis::measured_quality::MeasuredQuality;
 use crate::database::visual_analysis::object::Object;
-use crate::database::visual_analysis::quality::QualityScore;
+use crate::database::visual_analysis::quality_judge::QualityJudge;
 use chrono::{DateTime, Utc};
 use common_types::ml_analysis::MLFastAnalysis;
 use pgvector::Vector;
@@ -23,6 +24,7 @@ pub struct CreateVisualAnalysis {
     pub faces: Vec<CreateFace>,
     pub colors: ColorData,
     pub objects: Vec<Object>,
+    pub quality: MeasuredQuality,
 }
 
 impl From<MLFastAnalysis> for CreateVisualAnalysis {
@@ -33,6 +35,7 @@ impl From<MLFastAnalysis> for CreateVisualAnalysis {
             faces: data.faces.into_iter().map(Into::into).collect(),
             colors: data.color_data.into(),
             objects: data.objects.into_iter().map(Into::into).collect(),
+            quality: data.measured_quality.into(),
         }
     }
 }
@@ -45,6 +48,7 @@ pub struct ReadVisualAnalysis {
     pub faces: Vec<Face>,
     pub objects: Vec<Object>,
     pub colors: ColorData,
-    pub quality: Option<QualityScore>,
+    pub measured_quality: MeasuredQuality,
+    pub quality_judge: Option<QualityJudge>,
     pub classification: Option<ClassificationData>,
 }
