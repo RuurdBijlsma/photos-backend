@@ -229,9 +229,9 @@
 
 # High level TODO:
 
-* trash can (deleted=true) (in trash UI kan je echte delete doen)
+* ✅ trash can (deleted=true) (in trash UI kan je echte delete doen)
 * admin page
-  * overview of users: remove user, storage used per user
+  * ✅ overview of users: remove user, storage used per user
   * server settings?
   * restart server?
   * uptime
@@ -242,7 +242,7 @@
   * button to do a scan
   * import albums from google photos
 * settings page
-  * contrast setting in theme
+  * ✅ contrast setting in theme
 * explore page
   * stats over je fotos?
   * most visited places

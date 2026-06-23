@@ -13,6 +13,7 @@ pub mod system;
 pub mod timeline;
 pub mod user;
 pub mod daily_cards;
+pub mod trash;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::people::router::{people_protected_router, people_public_router};
@@ -38,6 +39,7 @@ use common_services::database::app_user::UserRole;
 use crate::admin::router::admin_admin_routes;
 use crate::camera::router::camera_protected_router;
 use crate::daily_cards::router::daily_cards_protected_router;
+use crate::trash::router::trash_protected_router;
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {
@@ -87,6 +89,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
         .merge(user_protected_router())
         .merge(system_protected_router())
         .merge(daily_cards_protected_router())
+        .merge(trash_protected_router())
         .route_layer(from_extractor_with_state::<ApiUser, ApiContext>(api_state))
 }
 
