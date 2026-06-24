@@ -144,7 +144,7 @@ impl VisualAnalyzer {
         let now = Instant::now();
         let quality_judge = get_quality_judgement(&self.llm_client, &analysis_file).await?;
         println!("get_quality_judgement {:?}", now.elapsed());
-        
+
         tokio::fs::remove_file(&analysis_file).await?;
 
         println!("total ml analysis {:?}", start.elapsed());

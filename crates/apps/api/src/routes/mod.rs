@@ -7,6 +7,7 @@ pub mod photos;
 pub mod root;
 pub mod s2s;
 pub mod search;
+pub mod storage;
 pub mod theme;
 
 pub mod daily_cards;
@@ -32,6 +33,7 @@ use crate::photos::router::{photos_protected_router, photos_public_router};
 use crate::root::router::root_public_router;
 use crate::s2s::router::s2s_public_router;
 use crate::search::router::search_protected_router;
+use crate::storage::router::storage_protected_router;
 use crate::system::router::system_protected_router;
 use crate::theme::router::theme_protected_router;
 use crate::timeline::router::{timeline_protected_router, timeline_websocket_router};
@@ -83,6 +85,7 @@ fn protected_routes(api_state: ApiContext) -> Router<ApiContext> {
         .merge(theme_protected_router())
         .merge(timeline_protected_router())
         .merge(search_protected_router())
+        .merge(storage_protected_router())
         .merge(album_protected_router())
         .merge(camera_protected_router())
         .merge(people_protected_router())

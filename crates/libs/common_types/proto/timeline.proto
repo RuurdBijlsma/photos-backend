@@ -139,3 +139,27 @@ message MapPhotosResponse {
   repeated MapPhotoItem items = 1;
 }
 
+// --- Storage review ---
+message StorageReviewItem {
+  string id = 1;
+  bool is_video = 2;
+  bool has_thumbnails = 3;
+  optional int32 duration_ms = 4;
+  float ratio = 5;
+  int64 file_size = 6;
+  string timestamp = 7;
+  optional float weighted_score = 8;
+}
+
+message StorageReviewResponse {
+  repeated StorageReviewItem items = 1;
+  int64 total_size = 2;
+}
+
+message StorageSummaryResponse {
+  int64 large_potential_savings = 1;
+  int32 large_item_count = 2;
+  int64 blurry_potential_savings = 3;
+  int32 blurry_item_count = 4;
+}
+

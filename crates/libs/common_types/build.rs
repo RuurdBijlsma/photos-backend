@@ -89,6 +89,18 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
+        ".api.StorageReviewItem",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.StorageReviewResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.StorageSummaryResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
         ".api.SearchSuggestion",
         "#[derive(serde::Serialize, serde::Deserialize)]",
     );
