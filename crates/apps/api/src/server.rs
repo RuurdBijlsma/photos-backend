@@ -80,6 +80,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         .collect();
 
     let cors = CorsLayer::new()
+        .expose_headers([header::CONTENT_DISPOSITION])
         .allow_methods(cors::Any)
         .allow_origin(allowed_origins)
         .allow_headers([

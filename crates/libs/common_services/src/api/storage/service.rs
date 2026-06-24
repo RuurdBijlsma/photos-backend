@@ -11,24 +11,28 @@ pub async fn get_storage_summary(
     pool: &PgPool,
     user_id: i32,
 ) -> Result<StorageSummaryResponse, AppError> {
-    let large_rows = sqlx::query(
+    let large_row = sqlx::query!(
         r#"
-        SELECT mf.size_bytes
-        FROM media_item mi
-        JOIN media_features mf ON mf.media_item_id = mi.id
-        WHERE mi.user_id = $1 AND mi.deleted = false
-        ORDER BY mf.size_bytes DESC
-        LIMIT 10
+        SELECT
+            COALESCE(SUM(size_bytes), 0)::BIGINT AS "large_potential_savings!",
+            COUNT(*)::INT AS "large_item_count!"
+        FROM (
+            SELECT mf.size_bytes
+            FROM media_item mi
+            JOIN media_features mf ON mf.media_item_id = mi.id
+            WHERE mi.user_id = $1
+              AND mi.deleted = false
+              AND mf.size_bytes > $2
+            ORDER BY mf.size_bytes DESC
+            LIMIT $3
+        ) large_items
         "#,
+        user_id,
+        REVIEW_MIN_SIZE_BYTES,
+        REVIEW_LIMIT,
     )
-    .bind(user_id)
-    .fetch_all(pool)
-    .await?;
-
-    let large_potential_savings = large_rows
-        .iter()
-        .map(|row| row.get::<i64, _>("size_bytes"))
-        .sum::<i64>();
+        .fetch_one(pool)
+        .await?;
 
     let blurry_row = sqlx::query!(
         r#"
@@ -46,14 +50,16 @@ pub async fn get_storage_summary(
               AND mi.is_video = false
               AND mq.weighted_score < $2
         ) blurry_items
-        "#,user_id, BLURRY_QUALITY_THRESHOLD,
+        "#,
+        user_id,
+        BLURRY_QUALITY_THRESHOLD,
     )
-    .fetch_one(pool)
-    .await?;
+        .fetch_one(pool)
+        .await?;
 
     Ok(StorageSummaryResponse {
-        large_potential_savings,
-        large_item_count: large_rows.len() as i32,
+        large_potential_savings: large_row.large_potential_savings,
+        large_item_count: large_row.large_item_count,
         blurry_potential_savings: blurry_row.blurry_potential_savings,
         blurry_item_count: blurry_row.blurry_item_count,
     })
