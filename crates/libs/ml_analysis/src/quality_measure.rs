@@ -226,7 +226,7 @@ fn calculate_exposure(gray_img: &GrayImage) -> f64 {
     let mut p5 = 0;
     let mut p95 = 255;
     let mut p5_found = false;
-    let mut p95_found = false;
+    let p95_found = false;
 
     let target_p5 = (total_pixels * 0.05) as u64;
     let target_p95 = (total_pixels * 0.95) as u64;

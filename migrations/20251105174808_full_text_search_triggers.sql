@@ -62,8 +62,11 @@ BEGIN
     -- Performance optimization: If we are only syncing the 'deleted' flag,
     -- skip rebuilding the search vector entirely as the text content remains unchanged.
     IF TG_OP = 'UPDATE' THEN
-        IF TG_TABLE_NAME = 'visual_analysis' AND OLD.deleted IS DISTINCT FROM NEW.deleted THEN
-            RETURN NEW;
+        -- Nesting the check prevents other tables (like 'face') from compiling the inner expression
+        IF TG_TABLE_NAME = 'visual_analysis' THEN
+            IF OLD.deleted IS DISTINCT FROM NEW.deleted THEN
+                RETURN NEW;
+            END IF;
         END IF;
     END IF;
 
