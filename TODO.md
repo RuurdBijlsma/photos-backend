@@ -215,22 +215,18 @@
 * ✅ storage overview in bottom left van navbar.
   * ✅ als thumb storage zelfde drive is als main storage, show 1 balk
   * ✅ anders 2 balkjes, een voor thumb storage, een voor main storage
+* ✅ doe quality stats weer in fast_analysis
 * password reset flow (email) (make mail optional)
 * nginx thumbnail hosting (optional maak setting voor Rust thumb hosting).
 * check of readme uitleg klopt met verse windows installatie & linux
 * better error if exiftool isnt there (worker wont work then)
-* fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
-* make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * improve speed of album/{id} endpoint
-* maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
-* als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
-  embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
-* llm instelbaar maken in settings?
-* ✅ doe quality stats weer in fast_analysis
 
 # High level TODO:
 
 * ✅ trash can (deleted=true) (in trash UI kan je echte delete doen)
+* ✅ settings page
+  * ✅ contrast setting in theme
 * admin page
   * ✅ overview of users: remove user, storage used per user
   * server settings?
@@ -242,8 +238,6 @@
   * show status of ingest per media item, all 3 stages
   * button to do a scan
   * import albums from google photos
-* settings page
-  * ✅ contrast setting in theme
 * explore page
   * stats over je fotos?
   * most visited places
