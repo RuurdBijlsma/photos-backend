@@ -1,4 +1,4 @@
-use crate::api::admin::helpers::{check_drive_info, list_folders};
+use crate::api::admin::helpers::{list_folders};
 use crate::api::admin::interfaces::{
     AdminUserInfo, DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
+use crate::api::system::storage_helpers::{check_drive_info, get_folder_size};
 
 /// Gathers information about the media and thumbnail directories.
 pub fn get_disks_info(media_root: &Path, thumbnails_root: &Path) -> Result<DiskResponse, AppError> {
@@ -57,7 +58,7 @@ pub async fn create_folder(
         )));
     }
 
-    let user_path = validate_user_folder(media_root, base_folder).await?;
+    let user_path = is_valid_user_folder(media_root, base_folder).await?;
     tokio_fs::create_dir_all(user_path.join(new_name)).await?;
     Ok(())
 }
@@ -67,7 +68,7 @@ pub async fn get_subfolders(
     ingestion: &IngestSettings,
     folder: &str,
 ) -> Result<Vec<String>, AppError> {
-    let user_path = validate_user_folder(&ingestion.media_root, folder).await?;
+    let user_path = is_valid_user_folder(&ingestion.media_root, folder).await?;
     let folders = list_folders(&user_path).await?;
 
     folders
@@ -192,7 +193,7 @@ pub fn get_folder_unsupported_files(
 }
 
 /// Validates that a user-provided folder path is a valid, existing directory.
-pub async fn validate_user_folder(
+pub async fn is_valid_user_folder(
     media_root: &Path,
     user_folder: &str,
 ) -> Result<PathBuf, AppError> {
@@ -253,19 +254,6 @@ pub async fn check_folder_in_use(
     Ok(false)
 }
 
-/// Measures the recursive folder size of files on disk.
-fn get_folder_size(path: &Path) -> u64 {
-    if !path.exists() || !path.is_dir() {
-        return 0;
-    }
-    WalkDir::new(path)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .map(|entry| entry.metadata().map_or(0, |m| m.len()))
-        .sum()
-}
-
 /// Retrieves a list of all users along with their parsed disk space statistics.
 pub async fn list_admin_users(
     pool: &PgPool,
@@ -306,7 +294,7 @@ pub async fn admin_update_user_media_folder(
     user_folder: &str,
 ) -> Result<User, AppError> {
     let media_root = &settings.media_root;
-    let user_folder_path = validate_user_folder(media_root, user_folder).await?;
+    let user_folder_path = is_valid_user_folder(media_root, user_folder).await?;
     let relative = user_folder_path.make_relative_canon(&settings.media_root_canon)?;
     if check_folder_in_use(pool, &relative, Some(target_user_id)).await? {
         return Err(AppError::BadRequest(

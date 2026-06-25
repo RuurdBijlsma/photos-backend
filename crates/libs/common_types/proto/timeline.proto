@@ -162,5 +162,6 @@ message StorageSummaryResponse {
   int32 large_item_count = 2;
   int64 blurry_potential_savings = 3;
   int32 blurry_item_count = 4;
+  int64 media_folder_size_bytes = 5;
+  int64 thumbnail_folder_size_bytes = 6;
 }
-

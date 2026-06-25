@@ -1,4 +1,4 @@
-use crate::api::admin::service::{check_folder_in_use, validate_user_folder};
+use crate::api::admin::service::{check_folder_in_use, is_valid_user_folder};
 use crate::api::app_error::AppError;
 use crate::api::auth::hashing::{hash_password, verify_password};
 use crate::api::auth::interfaces::{AuthClaims, CreateUser, Tokens};
@@ -99,7 +99,7 @@ pub async fn generate_invite(
 ) -> Result<UserInvite, AppError> {
     let token = nice_id(32);
     let expires_at = Utc::now() + Duration::days(7);
-    let user_folder = validate_user_folder(&ingest_settings.media_root, user_folder).await?;
+    let user_folder = is_valid_user_folder(&ingest_settings.media_root, user_folder).await?;
     let relative = user_folder.make_relative_canon(&ingest_settings.media_root_canon)?;
     if check_folder_in_use(pool, &relative, None).await? {
         return Err(AppError::BadRequest("Folder already in use".to_owned()));

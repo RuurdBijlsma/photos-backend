@@ -1,6 +1,8 @@
 use crate::api::app_error::AppError;
+use app_state::IngestSettings;
 use common_types::pb::api::{StorageReviewItem, StorageReviewResponse, StorageSummaryResponse};
 use sqlx::PgPool;
+use crate::api::system::storage_helpers::get_folder_size;
 
 const REVIEW_LIMIT: i64 = 250;
 const REVIEW_MIN_SIZE_BYTES: i64 = 10 * 1024 * 1024;
@@ -8,9 +10,10 @@ const BLURRY_QUALITY_THRESHOLD: f64 = 50.0;
 
 pub async fn get_storage_summary(
     pool: &PgPool,
+    settings: &IngestSettings,
     user_id: i32,
 ) -> Result<StorageSummaryResponse, AppError> {
-    let large_row = sqlx::query!(
+    let large_task = sqlx::query!(
         r#"
         SELECT
             COALESCE(SUM(size_bytes), 0)::BIGINT AS "large_potential_savings!",
@@ -30,10 +33,9 @@ pub async fn get_storage_summary(
         REVIEW_MIN_SIZE_BYTES,
         REVIEW_LIMIT,
     )
-    .fetch_one(pool)
-    .await?;
+    .fetch_one(pool);
 
-    let blurry_row = sqlx::query!(
+    let blurry_task = sqlx::query!(
         r#"
         SELECT
             COALESCE(SUM(size_bytes), 0)::BIGINT AS "blurry_potential_savings!",
@@ -53,14 +55,32 @@ pub async fn get_storage_summary(
         user_id,
         BLURRY_QUALITY_THRESHOLD,
     )
-    .fetch_one(pool)
-    .await?;
+    .fetch_one(pool);
+
+    let media_folder = settings.media_root.clone();
+    let thumbnail_folder = settings.thumbnail_root.clone();
+
+    let fs_task = tokio::task::spawn_blocking(move || {
+        let media_size = get_folder_size(&media_folder);
+        let thumbnail_size = get_folder_size(&thumbnail_folder);
+        (media_size, thumbnail_size)
+    });
+
+    let (large_row, blurry_row, fs_res) = tokio::try_join!(
+        async { large_task.await.map_err(AppError::from) },
+        async { blurry_task.await.map_err(AppError::from) },
+        async { fs_task.await.map_err(AppError::from) }
+    )?;
+
+    let (media_folder_size, thumbnail_folder_size) = fs_res;
 
     Ok(StorageSummaryResponse {
         large_potential_savings: large_row.large_potential_savings,
         large_item_count: large_row.large_item_count,
         blurry_potential_savings: blurry_row.blurry_potential_savings,
         blurry_item_count: blurry_row.blurry_item_count,
+        media_folder_size_bytes: media_folder_size as i64,
+        thumbnail_folder_size_bytes: thumbnail_folder_size as i64,
     })
 }
 

@@ -1,32 +1,7 @@
-use crate::api::admin::interfaces::PathInfoResponse;
 use crate::api::app_error::AppError;
-use crate::api::system::service::get_single_disk_info;
-use app_state::to_posix_string;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
-use tempfile::NamedTempFile;
 use tokio::task;
-
-pub fn check_drive_info(folder: &Path) -> Result<PathInfoResponse, AppError> {
-    let (read, write) = check_read_write_access(folder);
-    let disk_info = get_single_disk_info(folder)?;
-
-    Ok(PathInfoResponse {
-        folder: to_posix_string(folder),
-        disk_available: disk_info.disk_available,
-        disk_used: disk_info.disk_used,
-        disk_total: disk_info.disk_total,
-        read_access: read,
-        write_access: write,
-    })
-}
-
-#[must_use]
-pub fn check_read_write_access(path: &Path) -> (bool, bool) {
-    let can_read = fs::read_dir(path).is_ok();
-    let can_write = NamedTempFile::new_in(path).is_ok();
-    (can_read, can_write)
-}
 
 pub async fn list_folders(user_folder: &Path) -> Result<Vec<PathBuf>, AppError> {
     let path_buf = user_folder.to_path_buf();

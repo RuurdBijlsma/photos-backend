@@ -12,7 +12,7 @@ use common_services::api::admin::interfaces::{
 use common_services::api::admin::service::{
     admin_delete_user, admin_update_user_media_folder, create_folder, get_disks_info,
     get_folder_unsupported_files, get_media_sample, get_subfolders, list_admin_users,
-    validate_user_folder,
+    is_valid_user_folder,
 };
 use common_services::api::app_error::AppError;
 use common_services::database::app_user::User;
@@ -30,7 +30,7 @@ pub async fn get_folder_media_sample(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<MediaSampleResponse>, AppError> {
-    let user_path = validate_user_folder(&ingestion.media_root, &query.folder).await?;
+    let user_path = is_valid_user_folder(&ingestion.media_root, &query.folder).await?;
     let response = get_media_sample(&ingestion, &user_path)?;
     Ok(Json(response))
 }
@@ -40,7 +40,7 @@ pub async fn get_folder_unsupported(
     State(ingestion): State<IngestSettings>,
     Query(query): Query<FolderParams>,
 ) -> Result<Json<UnsupportedFilesResponse>, AppError> {
-    let user_path = validate_user_folder(&ingestion.media_root, &query.folder).await?;
+    let user_path = is_valid_user_folder(&ingestion.media_root, &query.folder).await?;
     let response = get_folder_unsupported_files(&ingestion, &user_path)?;
     Ok(Json(response))
 }
