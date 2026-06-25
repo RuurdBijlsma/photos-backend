@@ -1,7 +1,6 @@
 use crate::api::app_error::AppError;
-use chrono::{DateTime, Utc};
 use common_types::pb::api::{StorageReviewItem, StorageReviewResponse, StorageSummaryResponse};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 
 const REVIEW_LIMIT: i64 = 250;
 const REVIEW_MIN_SIZE_BYTES: i64 = 10 * 1024 * 1024;
@@ -31,8 +30,8 @@ pub async fn get_storage_summary(
         REVIEW_MIN_SIZE_BYTES,
         REVIEW_LIMIT,
     )
-        .fetch_one(pool)
-        .await?;
+    .fetch_one(pool)
+    .await?;
 
     let blurry_row = sqlx::query!(
         r#"
@@ -54,8 +53,8 @@ pub async fn get_storage_summary(
         user_id,
         BLURRY_QUALITY_THRESHOLD,
     )
-        .fetch_one(pool)
-        .await?;
+    .fetch_one(pool)
+    .await?;
 
     Ok(StorageSummaryResponse {
         large_potential_savings: large_row.large_potential_savings,
@@ -69,20 +68,19 @@ pub async fn get_large_storage_items(
     pool: &PgPool,
     user_id: i32,
 ) -> Result<StorageReviewResponse, AppError> {
-    get_review_items(
-        pool,
-        user_id,
+    let items = sqlx::query_as!(
+        StorageReviewItem,
         r#"
         SELECT
-            mi.id,
-            mi.is_video,
-            mi.filename,
-            mi.has_thumbnails,
-            mi.duration_ms::INT AS duration_ms,
-            (mi.width::REAL / mi.height::REAL) AS ratio,
-            mf.size_bytes,
-            mi.sort_timestamp,
-            NULL::REAL AS weighted_score
+            mi.id AS "id!",
+            mi.is_video AS "is_video!",
+            mi.filename AS "filename!",
+            mi.has_thumbnails AS "has_thumbnails!",
+            mi.duration_ms::INT AS "duration_ms",
+            (mi.width::REAL / mi.height::REAL) AS "ratio!",
+            mf.size_bytes AS "size_bytes!",
+            mi.taken_at_local::TEXT AS "taken_at_local!",
+            NULL::REAL AS "weighted_score"
         FROM media_item mi
         JOIN media_features mf ON mf.media_item_id = mi.id
         WHERE mi.user_id = $1
@@ -91,21 +89,34 @@ pub async fn get_large_storage_items(
         ORDER BY mf.size_bytes DESC
         LIMIT $3
         "#,
-        Some(REVIEW_MIN_SIZE_BYTES),
-        Some(REVIEW_LIMIT),
+        user_id,
+        REVIEW_MIN_SIZE_BYTES,
+        REVIEW_LIMIT,
     )
-    .await
+    .fetch_all(pool)
+    .await?;
+
+    let total_size = items.iter().map(|r| r.size_bytes).sum::<i64>();
+    Ok(StorageReviewResponse { items, total_size })
 }
 
 pub async fn get_blurry_storage_items(
     pool: &PgPool,
     user_id: i32,
 ) -> Result<StorageReviewResponse, AppError> {
-    get_review_items(
-        pool,
-        user_id,
+    let items = sqlx::query_as!(
+        StorageReviewItem,
         r#"
-        SELECT *
+        SELECT
+            id AS "id!",
+            is_video AS "is_video!",
+            filename AS "filename!",
+            has_thumbnails AS "has_thumbnails!",
+            duration_ms AS "duration_ms",
+            ratio AS "ratio!",
+            size_bytes AS "size_bytes!",
+            taken_at_local::TEXT AS "taken_at_local!",
+            weighted_score AS "weighted_score"
         FROM (
             SELECT DISTINCT ON (mi.id)
                 mi.id,
@@ -115,7 +126,7 @@ pub async fn get_blurry_storage_items(
                 mi.duration_ms::INT AS duration_ms,
                 (mi.width::REAL / mi.height::REAL) AS ratio,
                 mf.size_bytes,
-                mi.sort_timestamp,
+                mi.taken_at_local,
                 mq.weighted_score::REAL AS weighted_score
             FROM media_item mi
             JOIN media_features mf ON mf.media_item_id = mi.id
@@ -129,48 +140,12 @@ pub async fn get_blurry_storage_items(
         ) items
         ORDER BY size_bytes DESC
         "#,
-        Some(BLURRY_QUALITY_THRESHOLD as i64),
-        None,
+        user_id,
+        BLURRY_QUALITY_THRESHOLD,
     )
-    .await
-}
+    .fetch_all(pool)
+    .await?;
 
-async fn get_review_items(
-    pool: &PgPool,
-    user_id: i32,
-    sql: &str,
-    threshold: Option<i64>,
-    limit: Option<i64>,
-) -> Result<StorageReviewResponse, AppError> {
-    let mut query = sqlx::query(sql).bind(user_id);
-    if let Some(threshold) = threshold {
-        query = query.bind(threshold);
-    }
-    if let Some(limit) = limit {
-        query = query.bind(limit);
-    }
-
-    let rows = query.fetch_all(pool).await?;
-    let mut items = Vec::with_capacity(rows.len());
-    let mut total_size = 0_i64;
-
-    for row in rows {
-        let file_size = row.get::<i64, _>("size_bytes");
-        total_size += file_size;
-        let timestamp = row.get::<DateTime<Utc>, _>("sort_timestamp").to_rfc3339();
-
-        items.push(StorageReviewItem {
-            id: row.get("id"),
-            is_video: row.get("is_video"),
-            has_thumbnails: row.get("has_thumbnails"),
-            duration_ms: row.get("duration_ms"),
-            ratio: row.get("ratio"),
-            filename: row.get("filename"),
-            file_size,
-            timestamp,
-            weighted_score: row.get("weighted_score"),
-        });
-    }
-
+    let total_size = items.iter().map(|r| r.size_bytes).sum::<i64>();
     Ok(StorageReviewResponse { items, total_size })
 }
