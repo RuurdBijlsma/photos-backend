@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM daily_card WHERE card_date < $1 OR (card_date IS NULL AND shown = true)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3fc076a29e497de89ee6ddee526a5332ec54846d2d889ef3b175601bb3566286"
+}

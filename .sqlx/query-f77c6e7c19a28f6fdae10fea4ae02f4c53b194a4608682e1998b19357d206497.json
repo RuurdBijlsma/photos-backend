@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM cluster_tags WHERE tag = ANY($1::varchar[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "VarcharArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f77c6e7c19a28f6fdae10fea4ae02f4c53b194a4608682e1998b19357d206497"
+}

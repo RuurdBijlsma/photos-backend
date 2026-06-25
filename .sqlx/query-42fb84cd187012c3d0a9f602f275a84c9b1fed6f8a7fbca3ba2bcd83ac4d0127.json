@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id AS \"id!\",\n            is_video AS \"is_video!\",\n            filename AS \"filename!\",\n            has_thumbnails AS \"has_thumbnails!\",\n            duration_ms AS \"duration_ms\",\n            ratio AS \"ratio!\",\n            size_bytes AS \"size_bytes!\",\n            taken_at_local::TEXT AS \"taken_at_local!\",\n            weighted_score AS \"weighted_score\"\n        FROM (\n            SELECT DISTINCT ON (mi.id)\n                mi.id,\n                mi.is_video,\n                mi.filename,\n                mi.has_thumbnails,\n                mi.duration_ms::INT AS duration_ms,\n                (mi.width::REAL / mi.height::REAL) AS ratio,\n                mf.size_bytes,\n                mi.taken_at_local,\n                mq.weighted_score::REAL AS weighted_score\n            FROM media_item mi\n            JOIN media_features mf ON mf.media_item_id = mi.id\n            JOIN visual_analysis va ON va.media_item_id = mi.id\n            JOIN measured_quality mq ON mq.visual_analysis_id = va.id\n            WHERE mi.user_id = $1\n              AND mi.deleted = false\n              AND mi.is_video = false\n              AND mq.weighted_score < $2\n            ORDER BY mi.id, mq.weighted_score ASC\n        ) items\n        ORDER BY size_bytes DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "is_video!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "filename!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "has_thumbnails!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "duration_ms",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "ratio!",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 6,
+        "name": "size_bytes!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "taken_at_local!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "weighted_score",
+        "type_info": "Float4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "42fb84cd187012c3d0a9f602f275a84c9b1fed6f8a7fbca3ba2bcd83ac4d0127"
+}

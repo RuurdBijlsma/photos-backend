@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT card_type FROM daily_card WHERE user_id = $1 AND card_date IS NULL AND shown = false",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "card_type",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "dd86a84d2640011a685a46aef16b834ab13cdd54c9f12589e440467beed509c6"
+}

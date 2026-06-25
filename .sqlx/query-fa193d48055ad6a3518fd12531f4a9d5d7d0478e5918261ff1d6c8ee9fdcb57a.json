@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT id, card_date, card_type, title, subtitle, thumbnail_media_item_id, payload\n                FROM daily_card\n                WHERE user_id = $1 AND card_type = $2 AND card_date IS NULL AND shown = false\n                ORDER BY created_at\n                LIMIT $3\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "card_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 2,
+        "name": "card_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "subtitle",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "thumbnail_media_item_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "payload",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "fa193d48055ad6a3518fd12531f4a9d5d7d0478e5918261ff1d6c8ee9fdcb57a"
+}

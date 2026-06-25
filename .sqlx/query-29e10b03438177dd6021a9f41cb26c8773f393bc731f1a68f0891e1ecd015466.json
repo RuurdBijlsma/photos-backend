@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM daily_card WHERE user_id = $1 AND card_type = 'cluster'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "29e10b03438177dd6021a9f41cb26c8773f393bc731f1a68f0891e1ecd015466"
+}

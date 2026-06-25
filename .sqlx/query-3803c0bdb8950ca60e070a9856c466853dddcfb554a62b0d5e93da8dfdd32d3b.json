@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT value\n            FROM key_json_store\n            WHERE key = $1 AND user_id IS NOT DISTINCT FROM $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "value",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "3803c0bdb8950ca60e070a9856c466853dddcfb554a62b0d5e93da8dfdd32d3b"
+}

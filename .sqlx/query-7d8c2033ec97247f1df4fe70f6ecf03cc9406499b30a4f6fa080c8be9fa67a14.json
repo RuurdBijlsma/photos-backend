@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO key_vector_store (key, vector, updated_at)\n            VALUES ($1, $2, now())\n            ON CONFLICT (key) DO UPDATE SET\n                vector = EXCLUDED.vector,\n                updated_at = now()\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7d8c2033ec97247f1df4fe70f6ecf03cc9406499b30a4f6fa080c8be9fa67a14"
+}
