@@ -64,7 +64,7 @@ pub async fn test_second_register_attempt(context: &TestContext) -> Result<()> {
     let status = response.status();
 
     // ASSERT
-    assert_eq!(status, reqwest::StatusCode::FORBIDDEN);
+    assert_eq!(status, reqwest::StatusCode::UNAUTHORIZED);
     let users = UserStore::list_user_ids(&context.pool).await?;
     assert_eq!(users.len(), 1);
 

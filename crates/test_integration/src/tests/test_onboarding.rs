@@ -128,7 +128,7 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
     // This sets the user's media folder and enqueues a scan job.
     let user_id = 1;
     let response = client
-        .post(format!("{api_url}/admin/users/{user_id}/media-folder"))
+        .put(format!("{api_url}/admin/users/{user_id}/media-folder"))
         .bearer_auth(&token)
         .json(&UpdateUserMediaFolderBody {
             user_folder: String::new(),
@@ -136,7 +136,7 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
         .send()
         .await?;
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
     // 5. Listen for WebSocket messages
     let timeout = Duration::from_mins(1);

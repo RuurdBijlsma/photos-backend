@@ -242,7 +242,11 @@ pub async fn test_get_color_theme(context: &TestContext) -> Result<()> {
     // ACT
     let response = client
         .get(&url)
-        .query(&[("color", color), ("variant", theme_variant.as_str())])
+        .query(&[
+            ("color", color),
+            ("variant", theme_variant.as_str()),
+            ("contrast", "0.2"),
+        ])
         .bearer_auth(&token)
         .send()
         .await?;
@@ -301,7 +305,7 @@ pub async fn test_get_random_photo(context: &TestContext) -> Result<()> {
     // ACT
     let response = client
         .get(&url)
-        .query(&[("variant", theme_variant)])
+        .query(&[("variant", theme_variant.as_str()), ("contrast", "0.2")])
         .bearer_auth(&token)
         .send()
         .await?;

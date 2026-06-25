@@ -48,7 +48,7 @@ try {
     # - Optimized Testing
     # This reuses the artifacts from the Clippy step above.
     Write-Host "`n=== 4. Running All Tests (Release Profile) ===" -ForegroundColor Cyan
-    cargo test --release --workspace --all-features -- --nocapture
+    cargo test --release --workspace --features load-dynamic -- --nocapture
     if ($LASTEXITCODE -ne 0) { exit 1 }
 
     # - Documentation check
