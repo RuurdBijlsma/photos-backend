@@ -76,6 +76,7 @@ pub async fn get_large_storage_items(
         SELECT
             mi.id,
             mi.is_video,
+            mi.filename,
             mi.has_thumbnails,
             mi.duration_ms::INT AS duration_ms,
             (mi.width::REAL / mi.height::REAL) AS ratio,
@@ -109,6 +110,7 @@ pub async fn get_blurry_storage_items(
             SELECT DISTINCT ON (mi.id)
                 mi.id,
                 mi.is_video,
+                mi.filename,
                 mi.has_thumbnails,
                 mi.duration_ms::INT AS duration_ms,
                 (mi.width::REAL / mi.height::REAL) AS ratio,
@@ -163,6 +165,7 @@ async fn get_review_items(
             has_thumbnails: row.get("has_thumbnails"),
             duration_ms: row.get("duration_ms"),
             ratio: row.get("ratio"),
+            filename: row.get("filename"),
             file_size,
             timestamp,
             weighted_score: row.get("weighted_score"),

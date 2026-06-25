@@ -148,7 +148,8 @@ message StorageReviewItem {
   float ratio = 5;
   int64 file_size = 6;
   string timestamp = 7;
-  optional float weighted_score = 8;
+  string filename = 8;
+  optional float weighted_score = 9;
 }
 
 message StorageReviewResponse {
