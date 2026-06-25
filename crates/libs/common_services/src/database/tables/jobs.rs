@@ -18,6 +18,7 @@ pub struct Job {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Type, Serialize, Deserialize)]
 #[sqlx(type_name = "job_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum JobType {
     IngestMetadata,
     IngestThumbnails,
@@ -80,6 +81,7 @@ impl JobType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Type, Serialize, Deserialize)]
 #[sqlx(type_name = "job_status", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum JobStatus {
     Queued,
     Running,

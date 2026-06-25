@@ -1,181 +1,7 @@
 use crate::api::app_error::AppError;
 use crate::api::jobs::interfaces::{JobInfo, JobsQuery, PaginatedJobsResponse};
 use sqlx::{PgPool, Postgres, QueryBuilder};
-
-/// Maps safe API fields (either camelCase or snake_case) to valid DB columns.
-/// Serves as an allowlist against SQL injection.
-fn map_field_to_column(field: &str) -> Option<&'static str> {
-    match field {
-        "id" => Some("id"),
-        "relative_path" | "relativePath" => Some("relative_path"),
-        "user_id" | "userId" => Some("user_id"),
-        "job_type" | "jobType" => Some("job_type"),
-        "payload" => Some("payload"),
-        "priority" => Some("priority"),
-        "status" => Some("status"),
-        "attempts" => Some("attempts"),
-        "dependency_attempts" | "dependencyAttempts" => Some("dependency_attempts"),
-        "max_attempts" | "maxAttempts" => Some("max_attempts"),
-        "owner" => Some("owner"),
-        "started_at" | "startedAt" => Some("started_at"),
-        "finished_at" | "finishedAt" => Some("finished_at"),
-        "created_at" | "createdAt" => Some("created_at"),
-        "scheduled_at" | "scheduledAt" => Some("scheduled_at"),
-        "last_heartbeat" | "lastHeartbeat" => Some("last_heartbeat"),
-        "last_error" | "lastError" => Some("last_error"),
-        _ => None,
-    }
-}
-
-/// Provides correct SQL types for Postgres type casting on parameter binds.
-fn get_column_cast_suffix(column: &str) -> &'static str {
-    match column {
-        "id" => "::bigint",
-        "relative_path" => "::text",
-        "user_id" => "::integer",
-        "job_type" => "::job_type",
-        "payload" => "::jsonb",
-        "priority" => "::integer",
-        "status" => "::job_status",
-        "attempts" => "::integer",
-        "dependency_attempts" => "::integer",
-        "max_attempts" => "::integer",
-        "owner" => "::text",
-        "started_at" => "::timestamp with time zone",
-        "finished_at" => "::timestamp with time zone",
-        "created_at" => "::timestamp with time zone",
-        "scheduled_at" => "::timestamp with time zone",
-        "last_heartbeat" => "::timestamp with time zone",
-        "last_error" => "::text",
-        _ => "",
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Filter {
-    column: &'static str,
-    operator: &'static str,
-    value: Option<String>,
-}
-
-fn parse_filter(filter_str: &str) -> Result<Filter, AppError> {
-    let parts: Vec<&str> = filter_str.splitn(3, ':').collect();
-    if parts.is_empty() {
-        return Err(AppError::BadRequest("Filter cannot be empty".to_owned()));
-    }
-
-    let raw_field = parts[0];
-    let column = map_field_to_column(raw_field)
-        .ok_or_else(|| AppError::BadRequest(format!("Invalid filter field: {raw_field}")))?;
-
-    if parts.len() == 1 {
-        return Err(AppError::BadRequest(format!(
-            "Filter '{filter_str}' is missing an operator"
-        )));
-    }
-
-    let raw_op = parts[1].to_lowercase();
-    let (operator, needs_value) = match raw_op.as_str() {
-        "eq" | "equals" | "==" => ("=", true),
-        "neq" | "notequals" | "!=" => ("!=", true),
-        "gt" | ">" => (">", true),
-        "gte" | ">=" => (">=", true),
-        "lt" | "<" => ("<", true),
-        "lte" | "<=" => ("<=", true),
-        "contains" | "like" => ("ILIKE", true),
-        "isnull" | "is_null" => ("IS NULL", false),
-        "isnotnull" | "is_not_null" => ("IS NOT NULL", false),
-        _ => {
-            return Err(AppError::BadRequest(format!(
-                "Invalid filter operator: {raw_op}"
-            )))
-        }
-    };
-
-    let value = if needs_value {
-        if parts.len() < 3 {
-            return Err(AppError::BadRequest(format!(
-                "Filter '{filter_str}' is missing a value"
-            )));
-        }
-        let mut val = parts[2].to_string();
-        if operator == "ILIKE" {
-            val = format!("%{}%", val);
-        }
-        Some(val)
-    } else {
-        None
-    };
-
-    Ok(Filter {
-        column,
-        operator,
-        value,
-    })
-}
-
-#[derive(Debug, Clone)]
-struct Sort {
-    column: &'static str,
-    direction: &'static str,
-}
-
-fn parse_sort(sort_str: &str) -> Result<Sort, AppError> {
-    let parts: Vec<&str> = sort_str.splitn(2, ':').collect();
-    if parts.is_empty() {
-        return Err(AppError::BadRequest("Sort cannot be empty".to_owned()));
-    }
-
-    let raw_field = parts[0];
-    let column = map_field_to_column(raw_field)
-        .ok_or_else(|| AppError::BadRequest(format!("Invalid sort field: {raw_field}")))?;
-
-    let direction = if parts.len() == 2 {
-        let dir = parts[1].to_lowercase();
-        if dir == "desc" || dir == "descending" {
-            "DESC"
-        } else if dir == "asc" || dir == "ascending" {
-            "ASC"
-        } else {
-            return Err(AppError::BadRequest(format!(
-                "Invalid sort direction '{dir}'. Must be 'asc' or 'desc'"
-            )));
-        }
-    } else {
-        "ASC"
-    };
-
-    Ok(Sort {
-        column,
-        direction,
-    })
-}
-
-fn apply_filters<'args>(
-    builder: &mut QueryBuilder<'args, Postgres>,
-    filters: &[Filter],
-) {
-    if !filters.is_empty() {
-        builder.push(" WHERE ");
-        for (i, filter) in filters.iter().enumerate() {
-            if i > 0 {
-                builder.push(" AND ");
-            }
-            builder.push(filter.column);
-            if let Some(ref val) = filter.value {
-                builder.push(" ");
-                builder.push(filter.operator);
-                builder.push(" ");
-                let cast_suffix = get_column_cast_suffix(filter.column);
-                builder.push_bind(val.clone());
-                builder.push(cast_suffix);
-            } else {
-                builder.push(" ");
-                builder.push(filter.operator);
-            }
-        }
-    }
-}
+use crate::api::jobs::query_helpers::{apply_filters, parse_filter, parse_sort, JobSort};
 
 pub async fn get_job_overview(
     pool: &PgPool,
@@ -192,7 +18,7 @@ pub async fn get_job_overview(
         }
     }
     if sorts.is_empty() {
-        sorts.push(Sort {
+        sorts.push(JobSort {
             column: "id",
             direction: "DESC",
         });
@@ -259,4 +85,59 @@ pub async fn get_job_overview(
         limit,
         offset,
     })
+}
+
+pub async fn cancel_job(
+    pool: &PgPool,
+    job_id: i64,
+) -> Result<(), AppError> {
+    let result = sqlx::query!(
+        r#"
+        UPDATE jobs
+        SET status = 'cancelled'::job_status,
+            finished_at = NOW()
+        WHERE id = $1 AND status IN ('queued'::job_status, 'running'::job_status)
+        "#,
+        job_id
+    )
+        .execute(pool)
+        .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::BadRequest(
+            "Job cannot be cancelled (it might not exist, or is already finished/cancelled)".to_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
+pub async fn retry_job(
+    pool: &PgPool,
+    job_id: i64,
+) -> Result<(), AppError> {
+    let result = sqlx::query!(
+        r#"
+        UPDATE jobs
+        SET status = 'queued'::job_status,
+            attempts = 0,
+            scheduled_at = NOW(),
+            finished_at = NULL,
+            started_at = NULL,
+            last_error = NULL,
+            owner = NULL
+        WHERE id = $1 AND status IN ('failed'::job_status, 'done'::job_status, 'cancelled'::job_status)
+        "#,
+        job_id
+    )
+        .execute(pool)
+        .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::BadRequest(
+            "Job cannot be retried (it might not exist, or is currently queued or running)".to_owned(),
+        ));
+    }
+
+    Ok(())
 }
