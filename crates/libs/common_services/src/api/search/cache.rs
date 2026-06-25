@@ -1,4 +1,4 @@
-use crate::api::search::error::SearchError;
+use crate::api::app_error::AppError;
 use crate::api::search::interfaces::SearchImage;
 use color_eyre::eyre::eyre;
 use moka::future::Cache;
@@ -29,7 +29,7 @@ pub async fn get_cached_image_embedding(
     model_id: &str,
     pool: &PgPool,
     embedder: Arc<VisionEmbedder>,
-) -> Result<Vec<f32>, SearchError> {
+) -> Result<Vec<f32>, AppError> {
     let cache = get_vision_cache();
     let key = (model_id.to_string(), search_image.session_id);
 
@@ -58,7 +58,7 @@ pub async fn get_cached_image_embedding(
     }
 
     let Some(img) = search_image.image else {
-        return Err(SearchError::Internal(eyre!(
+        return Err(AppError::Internal(eyre!(
             "No cached image embedding available"
         )));
     };
@@ -96,7 +96,7 @@ pub async fn get_cached_text_embedding(
     model_id: &str,
     pool: &PgPool,
     embedder: Arc<TextEmbedder>,
-) -> Result<Vec<f32>, SearchError> {
+) -> Result<Vec<f32>, AppError> {
     let cache = get_text_cache();
     let key = (model_id.to_string(), query.to_string());
 

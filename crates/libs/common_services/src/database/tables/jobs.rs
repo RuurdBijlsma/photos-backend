@@ -31,6 +31,8 @@ pub enum JobType {
     SyncThumbnails,
     ImportAlbumItem,
     UpdateGlobalCentroid,
+    CalcSystemStats,
+    GenerateDailyCards,
 }
 
 impl JobType {
@@ -54,9 +56,9 @@ impl JobType {
             }
             Self::IngestLlm => {
                 if is_video {
-                    155
+                    250
                 } else {
-                    150
+                    240
                 }
             }
             Self::Remove => 0,
@@ -64,11 +66,13 @@ impl JobType {
             Self::ImportAlbumItem => 25,
             Self::Scan => 70,
             // These can be done after ingest analysis is done
-            Self::UpdateGlobalCentroid => 99,
-            Self::ClusterFaces => 100,
-            Self::ClusterPhotos => 101,
-            Self::SyncThumbnails => 102,
-            Self::DelayedScan => 103,
+            Self::UpdateGlobalCentroid => 100,
+            Self::CalcSystemStats => 110,
+            Self::ClusterFaces => 120,
+            Self::ClusterPhotos => 130,
+            Self::SyncThumbnails => 140,
+            Self::DelayedScan => 150,
+            Self::GenerateDailyCards => 160,
         }
     }
 }

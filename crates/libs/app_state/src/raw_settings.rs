@@ -10,6 +10,7 @@ pub struct RawSettings {
     pub api: ApiSettings,
     pub secrets: SecretSettings,
     pub constants: RawConstants,
+    pub daily_cards: DailyCardsSettings,
 }
 
 /// Defines paths for media and thumbnail storage.
@@ -42,7 +43,6 @@ pub struct SearchSettings {
 #[derive(Debug, Deserialize, Clone)]
 pub struct ThemeSettings {
     pub variant: Variant,
-    pub contrast_level: f64,
 }
 
 /// Configuration for thumbnail generation settings.
@@ -128,7 +128,6 @@ pub struct RateLimitingSettings {
 #[derive(Debug, Deserialize, Clone)]
 pub struct SecretSettings {
     pub jwt: String,
-    pub database_url: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -137,6 +136,8 @@ pub struct RawConstants {
     pub onboarding_n_media_samples: usize,
     pub database: DatabaseConstants,
     pub auth: AuthConstants,
+    pub allow_file_modifications: bool,
+    pub allow_file_deletion: bool,
 }
 
 /// Database connection and related configuration.
@@ -157,4 +158,21 @@ pub struct AuthConstants {
     pub access_token_expiry_minutes: i64,
     pub refresh_token_expiry_days: i64,
     pub album_invitation_expiry_minutes: i64,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct DailyCardsSettings {
+    pub cluster: CardLimits,
+    pub estimatr: EstimatrSettings,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct CardLimits {
+    pub min_cards: usize,
+    pub max_cards: usize,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct EstimatrSettings {
+    pub rounds_per_day: i64,
 }

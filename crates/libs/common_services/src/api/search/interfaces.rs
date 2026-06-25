@@ -25,7 +25,7 @@ pub struct SearchMediaConfig {
     pub sort_by: SearchSortBy,
     pub negative_query: Option<String>,
     pub country_codes: Vec<String>,
-    pub face_names: Vec<String>,
+    pub person_ids: Vec<String>,
     pub all_faces_required: bool,
 }
 
@@ -43,7 +43,7 @@ pub struct SearchParams {
     pub sort_by: SearchSortBy,
     pub negative_query: Option<String>,
     pub country_codes: Option<String>,
-    pub face_names: Option<String>,
+    pub person_ids: Option<String>,
     pub all_faces_required: Option<bool>,
 }
 

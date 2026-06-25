@@ -1,12 +1,13 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{get_ingest_cache, hash_file, write_ingest_cache};
+use crate::handlers::common::cache::{get_ingest_cache, write_ingest_cache};
 use crate::handlers::common::remote_user::get_or_create_remote_user;
 use crate::jobs::management::is_job_cancelled;
 use app_state::constants;
 use color_eyre::eyre::Context;
 use color_eyre::{Result, eyre::eyre};
 use common_services::api::album::interfaces::AlbumSort;
+use common_services::caching::hash_file;
 use common_services::database::UpdateField;
 use common_services::database::album_store::AlbumStore;
 use common_services::database::jobs::Job;

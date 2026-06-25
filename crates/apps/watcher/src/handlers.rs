@@ -1,4 +1,4 @@
-use app_state::{AppSettings, MakeRelativePath};
+use app_state::{IngestSettings, MakeRelativePath};
 use common_services::database::user_store::UserStore;
 use common_services::job_queue::enqueue_full_ingest;
 use sqlx::PgPool;
@@ -14,7 +14,7 @@ enum WatcherJobType {
 /// Handles a create event from the watcher.
 pub async fn handle_create(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     path: &Path,
 ) -> color_eyre::Result<()> {
     if path.is_file() {
@@ -33,7 +33,7 @@ pub async fn handle_create(
 /// Handles a remove event from the watcher.
 pub async fn handle_remove(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     path: &Path,
 ) -> color_eyre::Result<()> {
     // This logic is preserved as per your request to differentiate file from folder deletes.
@@ -52,11 +52,11 @@ pub async fn handle_remove(
 /// A helper function to enqueue a job for a given file path.
 async fn enqueue_file_job(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     path: &Path,
     job_type: WatcherJobType,
 ) -> color_eyre::Result<()> {
-    let relative_path = &path.make_relative(&settings.ingest.media_root)?;
+    let relative_path = &path.make_relative(&settings.media_root)?;
     let Some(user) = UserStore::find_user_by_relative_path(pool, relative_path).await? else {
         warn!(
             "Could not find user for path: {}. Cannot enqueue job.",
@@ -72,7 +72,7 @@ async fn enqueue_file_job(
         WatcherJobType::Remove => {
             common_services::api::photos::removal::delete_item_and_thumbnails(
                 pool,
-                &settings.ingest.thumbnail_root,
+                &settings.thumbnail_root,
                 relative_path,
             )
             .await?;
@@ -85,10 +85,10 @@ async fn enqueue_file_job(
 /// Handles removing a folder by finding all its items in the DB and enqueuing their removal.
 async fn handle_remove_folder(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     folder: &Path,
 ) -> color_eyre::Result<()> {
-    let relative_dir = folder.make_relative(&settings.ingest.media_root)?;
+    let relative_dir = folder.make_relative(&settings.media_root)?;
     let pattern = format!("{relative_dir}%");
 
     let relative_paths = sqlx::query_scalar!(
@@ -107,7 +107,7 @@ async fn handle_remove_folder(
     }
 
     for path in relative_paths {
-        let absolute_path = settings.ingest.media_root.join(path);
+        let absolute_path = settings.media_root.join(path);
         enqueue_file_job(pool, settings, &absolute_path, WatcherJobType::Remove).await?;
     }
 
@@ -117,10 +117,10 @@ async fn handle_remove_folder(
 /// Checks if a given path exists in either the `media_item` or `jobs` table.
 async fn is_path_in_db(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     path: &Path,
 ) -> color_eyre::Result<bool> {
-    let relative_path = path.make_relative(&settings.ingest.media_root)?;
+    let relative_path = path.make_relative(&settings.media_root)?;
     let exists = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (

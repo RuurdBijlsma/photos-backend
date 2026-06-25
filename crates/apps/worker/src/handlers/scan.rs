@@ -1,6 +1,6 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use app_state::{AppSettings, MakeRelativePath};
+use app_state::{IngestSettings, MakeRelativePath};
 use color_eyre::eyre::Result;
 use common_services::database::jobs::{Job, JobType};
 use common_services::database::media_item_store::MediaItemStore;
@@ -33,11 +33,11 @@ fn get_media_files(folder: &Path, allowed_exts: &HashSet<&str>) -> Vec<std::path
 /// Synchronizes the filesystem state with the database by enqueuing new files for ingest and old files for removal.
 pub async fn sync_user_files_to_db(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     user_folder: &Path,
     user_id: i32,
 ) -> Result<()> {
-    let detection = &settings.ingest.file_detection;
+    let detection = &settings.file_detection;
     let allowed: HashSet<_> = detection
         .photo_extensions
         .iter()
@@ -56,14 +56,14 @@ pub async fn sync_user_files_to_db(
     )
     .fetch_all(pool)
     .await?;
-    let user_rel_path = user_folder.make_relative(&settings.ingest.media_root)?;
+    let user_rel_path = user_folder.make_relative(&settings.media_root)?;
     let sub_folders = other_media_folders
         .iter()
         .filter(|f| f.starts_with(&user_rel_path))
         .collect::<Vec<&String>>();
     let fs_paths: HashSet<String> = all_files
         .into_iter()
-        .flat_map(|p| p.make_relative(&settings.ingest.media_root))
+        .flat_map(|p| p.make_relative(&settings.media_root))
         // Filter out all fs_paths that start with another user's media_folder
         .filter(|fs_path| {
             sub_folders
@@ -84,12 +84,14 @@ pub async fn sync_user_files_to_db(
     let to_ingest: Vec<_> = fs_paths.difference(&db_paths_all).cloned().collect();
     let to_remove: Vec<_> = db_paths_all.difference(&fs_paths).cloned().collect();
 
-    bulk_enqueue_full_ingest(pool, &settings.ingest, &to_ingest, user_id).await?;
+    bulk_enqueue_full_ingest(pool, settings, &to_ingest, user_id).await?;
 
     tokio::try_join!(
         enqueue_job::<()>(pool, settings, JobType::UpdateGlobalCentroid).call(),
         enqueue_job::<()>(pool, settings, JobType::ClusterFaces).call(),
-        enqueue_job::<()>(pool, settings, JobType::ClusterPhotos).call()
+        enqueue_job::<()>(pool, settings, JobType::ClusterPhotos).call(),
+        enqueue_job::<()>(pool, settings, JobType::GenerateDailyCards).call(),
+        enqueue_job::<()>(pool, settings, JobType::CalcSystemStats).call(),
     )?;
 
     if !to_remove.is_empty() {
@@ -104,9 +106,9 @@ pub async fn sync_user_files_to_db(
 }
 
 /// Run the indexing scan.
-pub async fn run_scan(pool: &PgPool, settings: &AppSettings) -> Result<()> {
+pub async fn run_scan(pool: &PgPool, settings: &IngestSettings) -> Result<()> {
     let users = UserStore::list_users_with_media_folders(pool).await?;
-    let media_root = &settings.ingest.media_root;
+    let media_root = &settings.media_root;
     info!("Scanning \"{}\" ...", &media_root.display());
     for user in users {
         let Some(media_folder) = user.media_folder else {
@@ -121,7 +123,7 @@ pub async fn run_scan(pool: &PgPool, settings: &AppSettings) -> Result<()> {
 
 /// Triggers a full scan to synchronise the filesystem and database.
 pub async fn handle(context: &WorkerContext, _job: &Job) -> Result<JobResult> {
-    run_scan(&context.pool, &context.settings).await?;
+    run_scan(&context.pool, &context.settings.ingest).await?;
 
     Ok(JobResult::Done)
 }

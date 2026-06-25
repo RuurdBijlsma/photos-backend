@@ -4,7 +4,7 @@ use axum::extract::{Query, State, WebSocketUpgrade};
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
 use chrono::NaiveDate;
-use common_services::api::timeline::error::TimelineError;
+use common_services::api::app_error::AppError;
 use common_services::api::timeline::interfaces::{GetMediaByMonthParams, TimelineParams};
 use common_services::api::timeline::service::{
     get_photos_by_month, get_timeline_ids, get_timeline_ratios,
@@ -16,12 +16,12 @@ use common_types::pb::api::{TimelineItemsResponse, TimelineRatiosResponse};
 ///
 /// # Errors
 ///
-/// Returns a `TimelineError` if the database query fails.
+/// Returns a `AppError` if the database query fails.
 pub async fn get_timeline_ratios_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<TimelineParams>,
-) -> Result<Protobuf<TimelineRatiosResponse>, TimelineError> {
+) -> Result<Protobuf<TimelineRatiosResponse>, AppError> {
     let timeline = get_timeline_ratios(&user, &context.pool, params.sort).await?;
     Ok(Protobuf(timeline))
 }
@@ -30,12 +30,12 @@ pub async fn get_timeline_ratios_handler(
 ///
 /// # Errors
 ///
-/// Returns a `TimelineError` if the database query fails.
+/// Returns a `AppError` if the database query fails.
 pub async fn get_timeline_ids_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<TimelineParams>,
-) -> Result<Json<Vec<String>>, TimelineError> {
+) -> Result<Json<Vec<String>>, AppError> {
     let timeline = get_timeline_ids(&user, &context.pool, params.sort).await?;
     Ok(Json(timeline))
 }
@@ -44,12 +44,12 @@ pub async fn get_timeline_ids_handler(
 ///
 /// # Errors
 ///
-/// Returns a `TimelineError` if the database query fails.
+/// Returns a `AppError` if the database query fails.
 pub async fn get_photos_by_month_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Query(params): Query<GetMediaByMonthParams>,
-) -> Result<Protobuf<TimelineItemsResponse>, TimelineError> {
+) -> Result<Protobuf<TimelineItemsResponse>, AppError> {
     let month_ids = params
         .months
         .split(',')
@@ -58,7 +58,7 @@ pub async fn get_photos_by_month_handler(
         .map(|date_str| NaiveDate::parse_from_str(date_str, "%Y-%m-%d"))
         .collect::<Result<Vec<NaiveDate>, _>>()
         .map_err(|_| {
-            TimelineError::InvalidMonthFormat(
+            AppError::BadRequest(
                 "Invalid date format in 'months' parameter. Please use 'YYYY-MM-DD'.".to_string(),
             )
         })?;

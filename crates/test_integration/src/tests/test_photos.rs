@@ -5,7 +5,7 @@ use color_eyre::eyre::{ContextCompat, Result, bail};
 use common_services::api::album::interfaces::{
     AddMediaToAlbumRequest, CreateAlbumRequest, MediaItemWithAlbums,
 };
-use common_services::api::photos::interfaces::RandomPhotoResponse;
+use common_services::api::theme::interfaces::RandomPhotoResponse;
 use common_services::database::album::album::Album;
 use material_color_utils::dynamic::variant::Variant;
 use reqwest::StatusCode;
@@ -231,13 +231,22 @@ pub async fn test_get_color_theme(context: &TestContext) -> Result<()> {
     // ARRANGE
     let token = login(context).await?;
     let client = &context.http_client;
-    let url = format!("{}/photos/theme", context.settings.api.public_url);
+    let url = format!("{}/theme/by-color", context.settings.api.public_url);
     let color = "#FF5733";
+    let theme_variant =
+        serde_json::to_value(context.settings.ingest.analyzer.theme_generation.variant)?
+            .as_str()
+            .context("theme variant should serialize to a string")?
+            .to_string();
 
     // ACT
     let response = client
         .get(&url)
-        .query(&[("color", color)])
+        .query(&[
+            ("color", color),
+            ("variant", theme_variant.as_str()),
+            ("contrast", "0.2"),
+        ])
         .bearer_auth(&token)
         .send()
         .await?;
@@ -286,10 +295,20 @@ pub async fn test_get_random_photo(context: &TestContext) -> Result<()> {
     // ARRANGE
     let token = login(context).await?;
     let client = &context.http_client;
-    let url = format!("{}/photos/random", context.settings.api.public_url);
+    let url = format!("{}/theme/random-photo", context.settings.api.public_url);
+    let theme_variant =
+        serde_json::to_value(context.settings.ingest.analyzer.theme_generation.variant)?
+            .as_str()
+            .context("theme variant should serialize to a string")?
+            .to_string();
 
     // ACT
-    let response = client.get(&url).bearer_auth(&token).send().await?;
+    let response = client
+        .get(&url)
+        .query(&[("variant", theme_variant.as_str()), ("contrast", "0.2")])
+        .bearer_auth(&token)
+        .send()
+        .await?;
 
     // ASSERT
     assert_eq!(response.status(), StatusCode::OK);
@@ -299,7 +318,10 @@ pub async fn test_get_random_photo(context: &TestContext) -> Result<()> {
         bail!("No random photo data found");
     };
     assert!(!data.media_id.is_empty());
-    assert!(data.themes.is_some());
+    assert_eq!(
+        data.theme.variant,
+        context.settings.ingest.analyzer.theme_generation.variant
+    );
 
     Ok(())
 }

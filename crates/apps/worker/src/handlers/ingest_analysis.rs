@@ -1,9 +1,10 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{get_analysis_cache, hash_file, write_analysis_cache};
+use crate::handlers::common::cache::{get_analysis_cache, write_analysis_cache};
 use crate::handlers::common::utils::get_images_to_analyze;
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::eyre::{Result, eyre};
+use common_services::caching::hash_file;
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::visual_analysis_store::VisualAnalysisStore;

@@ -13,7 +13,6 @@ ingest:
     analyze_image_size: 720
     theme_generation:
       variant: Vibrant
-      contrast_level: 0.2
 
   file_detection:
     video_extensions:
@@ -34,6 +33,8 @@ ingest:
       - "tiff"
       - "tga"
       - "avif"
+      - "heic"
+      - "heif"
 
   thumbnails:
     recreate_if_exists: false
@@ -84,9 +85,10 @@ api:
 
 secrets:
   jwt: "overwrite-me-with-env"
-  database_url: postgres://user:overwritemewithenv@127.0.0.1/photos
 
 constants:
+  allow_file_modifications: true
+  allow_file_deletion: true
   fallback_timezone: Europe/Amsterdam
   onboarding_n_media_samples: 8
   
@@ -103,3 +105,10 @@ constants:
     access_token_expiry_minutes: 30
     refresh_token_expiry_days: 7
     album_invitation_expiry_minutes: 1440 # 24 hours
+
+daily_cards:
+  cluster:
+    min_cards: 1
+    max_cards: 3
+  estimatr:
+    rounds_per_day: 3

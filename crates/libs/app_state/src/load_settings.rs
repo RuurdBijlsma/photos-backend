@@ -1,9 +1,9 @@
 use crate::{AppConstants, AppSettings, RawSettings};
 use color_eyre::eyre::Result;
 use config::{Config, File};
-use std::fs;
 use std::path::Path;
 use std::sync::OnceLock;
+use std::{env, fs};
 
 pub fn load_settings_from_path(path: &Path, env_path: Option<&Path>) -> Result<AppSettings> {
     // Need to load from dotenv to get it to overwrite the secrets from env.
@@ -54,4 +54,11 @@ pub static CONSTANTS: OnceLock<AppConstants> = OnceLock::new();
 #[must_use]
 pub fn constants() -> &'static AppConstants {
     CONSTANTS.get_or_init(|| load_app_constants().expect("Cannot load app settings."))
+}
+
+pub static DATABASE_URL: OnceLock<String> = OnceLock::new();
+
+#[must_use]
+pub fn database_url() -> &'static String {
+    DATABASE_URL.get_or_init(|| env::var("DATABASE_URL").expect("No DATABASE_URL env variable set"))
 }

@@ -6,7 +6,7 @@ CREATE TABLE visual_analysis
 (
     id            BIGSERIAL PRIMARY KEY,
     user_id       INT         NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
-    deleted       BOOLEAN     NOT NULL DEFAULT false,
+    deleted       BOOLEAN     NOT NULL DEFAULT false, -- Trigger keeps this in sync with media_item.deleted
     media_item_id VARCHAR(10) NOT NULL REFERENCES media_item (id) ON DELETE CASCADE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     embedding     VECTOR(768) NOT NULL,
@@ -54,25 +54,31 @@ CREATE TABLE object
 CREATE INDEX idx_object_visual_analysis_id ON object (visual_analysis_id);
 
 -- Stores image quality metrics.
-CREATE TABLE quality
+CREATE TABLE measured_quality
 (
-    visual_analysis_id      BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    exposure                SMALLINT         NOT NULL,
-    contrast                SMALLINT         NOT NULL,
-    sharpness               SMALLINT         NOT NULL,
-    color_accuracy          SMALLINT         NOT NULL,
-    composition             SMALLINT         NOT NULL,
-    subject_clarity         SMALLINT         NOT NULL,
-    visual_impact           SMALLINT         NOT NULL,
-    creativity              SMALLINT         NOT NULL,
-    color_harmony           SMALLINT         NOT NULL,
-    storytelling            SMALLINT         NOT NULL,
-    style_suitability       SMALLINT         NOT NULL,
-    weighted_score          DOUBLE PRECISION NOT NULL,
-    measured_blurriness     DOUBLE PRECISION NOT NULL,
-    measured_noisiness      DOUBLE PRECISION NOT NULL,
-    measured_exposure       DOUBLE PRECISION NOT NULL,
-    measured_weighted_score DOUBLE PRECISION NOT NULL
+    visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
+    blurriness         DOUBLE PRECISION NOT NULL,
+    noisiness          DOUBLE PRECISION NOT NULL,
+    exposure           DOUBLE PRECISION NOT NULL,
+    accidentalness     DOUBLE PRECISION NOT NULL,
+    weighted_score     DOUBLE PRECISION NOT NULL
+);
+
+CREATE TABLE quality_judge
+(
+    visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
+    exposure           SMALLINT         NOT NULL,
+    contrast           SMALLINT         NOT NULL,
+    sharpness          SMALLINT         NOT NULL,
+    color_accuracy     SMALLINT         NOT NULL,
+    composition        SMALLINT         NOT NULL,
+    subject_clarity    SMALLINT         NOT NULL,
+    visual_impact      SMALLINT         NOT NULL,
+    creativity         SMALLINT         NOT NULL,
+    color_harmony      SMALLINT         NOT NULL,
+    storytelling       SMALLINT         NOT NULL,
+    style_suitability  SMALLINT         NOT NULL,
+    weighted_score     DOUBLE PRECISION NOT NULL
 );
 
 
@@ -80,12 +86,11 @@ CREATE TABLE quality
 CREATE TABLE color
 (
     visual_analysis_id BIGINT PRIMARY KEY REFERENCES visual_analysis (id) ON DELETE CASCADE,
-    themes             JSONB[] NOT NULL,
-    prominent_colors   TEXT[]  NOT NULL,
-    average_hue        REAL    NOT NULL,
-    average_saturation REAL    NOT NULL,
-    average_lightness  REAL    NOT NULL,
-    histogram          JSONB   NOT NULL
+    prominent_colors   TEXT[] NOT NULL,
+    average_hue        REAL   NOT NULL,
+    average_saturation REAL   NOT NULL,
+    average_lightness  REAL   NOT NULL,
+    histogram          JSONB  NOT NULL
 );
 
 

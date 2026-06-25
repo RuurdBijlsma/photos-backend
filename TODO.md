@@ -21,7 +21,7 @@
 * ✅ 👎 look into not using generated code, just add the prost annotations on the real structs
 * ✅ response size of by-month.pb is about 51 kb, so why is the request so slow? request on rust end is around 25-30 ms,
   but on frontend end is 100-125 ms.
-* ✅ de frontend blijft maar in een loop requests maken als de backend errort (/onboarding/folders/?folder= ten minste)
+* ✅ de frontend blijft maar in een loop requests maken als de backend errort (/admin/folders/?folder= ten minste)
 * ✅ make ratios endpoint more of a timeline endpoint, with count per month.
 * ✅ thumbnails zijn gedraait (orientation tag exif)
 * ✅ by-month and timeline dont return in sync media items. timeline ratios is wrong, it's not in order of
@@ -183,7 +183,7 @@
     * ✅ Als ik zoek "food" moet ik iets van duizend plaatjes krijgen
 * ✅ [SPECIAL CASE] WHEN SEARCH TERM = "", then return all photos that match the filters
 * ✅ search suggestions moet person names geven (moet ook een person face thumbnail bij in de response)
-  * ✅ hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
+    * ✅ hiervoor is een face page nodig denk ik, waar je alle fotos met een person kan zien. Niet search.
 * ✅ thumbnail hosting is niet veilig
 * ✅ retrieve person face thumb not safe (something like /thumbnails/people/1.webp)
 * ✅ also fotos exact zelfde sort datetime hebben, gaat de timeline UI mis, want de sorts zijn dan inconsistent voor deze
@@ -194,51 +194,59 @@
 * ✅ make sure cache control on thumbnails are immutable/max age.
 * ✅ automatic onboarding
 * ✅ review albums/handlers albums/service voor nieuwe ids/by-month/ratios endpoints
-  * ✅ is auth wel goed implemented? met is_public enzo
-  * ✅ minder repeated code maken voor de auth check daar
+    * ✅ is auth wel goed implemented? met is_public enzo
+    * ✅ minder repeated code maken voor de auth check daar
+* ✅ [BUG] Als je met filters naar persons zoek, zoekt ie op basis van FaceName om een of andere reden. Als je 2 personen
+  hebt met dezelfde naam, gaat dit fout.
+* ✅ REFACTOR TIME. Theme hoeft niet in DB. het zet de variant te vast en het kan meer dan snel genoeg zonder db access
+    * ✅ bij ingest, alleen de extracted kleuren van de item in db zetten
+    * ✅ bij get random theme endpoint, voeg variant parameter toe (wordt in settings gezet)
+    * ✅ haal theme json uit db
+    * ✅ in frontend, laat user variant kiezen voor random bg image
+* ✅ default sort for albums should be oldest first (currently newest first - WRONG)
+* ✅ mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
+* 👎 ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
+* ✅ when a second user registers, make sure to do a scan / sync
+* ✅ [BUG] when a second user registers with a subfolder of the first user as media folder, and there's already media in
+  there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
+  sure how to handle this case.
+* ✅ [check] als ik iets soft-delete, make sure dat visual_analysis.deleted ook op false gaat
+* ✅ only re-run photo/face cluster if photos have changed since last clustering
+* ✅ storage overview in bottom left van navbar.
+  * ✅ als thumb storage zelfde drive is als main storage, show 1 balk
+  * ✅ anders 2 balkjes, een voor thumb storage, een voor main storage
+* ✅ doe quality stats weer in fast_analysis
 * password reset flow (email) (make mail optional)
 * nginx thumbnail hosting (optional maak setting voor Rust thumb hosting).
 * check of readme uitleg klopt met verse windows installatie & linux
 * better error if exiftool isnt there (worker wont work then)
-* fix video transcode (C:\Users\Ruurd\Pictures\media_dir\rutenl/20140116_231818.mp4 faalt)
-* make ratios request a bit faster by making monthId 2025-01 instead of 2025-01-01 string
 * improve speed of album/{id} endpoint
-* maybe when creating an album, prioritise generating the thumbs for the thumbnail media item id in that album
-* als ik dynamisch embedder aanpassen wil supporten, moet ik de vector lengte iets van 2048 maken, en kleinere
-  embeddings met 0 padden. Misschien een field in tabellen met embedding welke embedder gebruikt is om die te genereren.
-* llm instelbaar maken in settings?
-* ingest queue is irritant want als metadata faalt dan zitten alle anderen nog in de queue ofzo (thumbs, analysis, llm)
-    * misschien moet dit met een andere methode
-* when a second user registers, make sure to do a scan / sync
-* [BUG] when a second user registers with a subfolder of the first user as media folder, and there's already media in
-  there that's ingested by the first user, then the photos dont count for the second user. This is weird behaviour. not
-  sure how to handle this case.
-* mayhaps kan de theme uit de full album item response, wordt niet meer gebruikt
-* [BUG] Als je met filters naar persons zoek, zoekt ie op basis van FaceName om een of andere reden. Als je 2 personen
-  hebt met dezelfde naam, gaat dit fout.
 
-# Features
+# High level TODO:
 
-* storage indicator bottom left, like googly photos
-* front page -> 1 year ago, 4 years ago today, etc. in top balk
-* photo rubbish bin?
-* upload photos
-    * robust! stable!
+* ✅ trash can (deleted=true) (in trash UI kan je echte delete doen)
+* ✅ settings page
+  * ✅ contrast setting in theme
+* admin page
+  * ✅ overview of users: remove user, storage used per user
+  * server settings?
+  * restart server?
+  * uptime
+  * jobs overview, inclusief schedule and manual job run
+  * backup (met export jsons / import?)
+* ingest overview page
+  * show status of ingest per media item, all 3 stages
+  * button to do a scan
+  * import albums from google photos
 * explore page
-    * personal geoguessr (on user's own photos / videos)
-    * cluster by photo embeddings
-    * sort by all kinds of things (exposure, iso, hue, saturation, gps lat, lon, temperature, altitude, windyness (
-      is_outdoor = true & sort by wind speed or gust)). UI similar to browsing a DB, but with photo previews and ability
-      to click photo. Columns with all interesting features a photo has, all sortable.
-    * group by: {country (if there are enough countries, otherwise group by province, otherwise group by city), camera
-      model}
-    * sunset/sunrise photos
-* fun "albums" notifications & in UI frontpage
-    * refresh daily (changes daily): "10 years ago today" → as long as there's enough photos on that day.
-    * refresh weekly ofzo? (only changes with significantly more photos): embedding cluster with LLM name ("Swimming at
-      the lake", "Cat pics")
-    * group by  (only changes with significantly more photos)
-        * caption columns ("setting", "main subject", "is_outside & sunset & ...")
-        * group by country?
-        * group by animal type?
-    * make sure each "fun album" is shown as notification only once. In UI it can be more often?
+  * stats over je fotos?
+  * most visited places
+  * sort by all kinds of fields (temp, altitude, lat/lon extremes, wind, shutter speed)
+  * photo distribution/histogram by day of  year, grouped by month/week?
+  * zelfde voor time of day?
+* photo viewer page
+  * implement different viewers
+  * find similar fotos view, misschien  een expandable ding in de info panel?
+* photo upload feature
+* disallow having root as user media folder if going with multiple users
+* email password reset?

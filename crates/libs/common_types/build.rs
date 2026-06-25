@@ -1,3 +1,4 @@
+#[allow(clippy::too_many_lines)]
 fn main() -> std::io::Result<()> {
     println!("cargo:rerun-if-changed=proto/timeline.proto");
 
@@ -88,6 +89,18 @@ fn main() -> std::io::Result<()> {
         "#[derive(serde::Serialize, serde::Deserialize)]",
     );
     config.type_attribute(
+        ".api.StorageReviewItem",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.StorageReviewResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.StorageSummaryResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
         ".api.SearchSuggestion",
         "#[derive(serde::Serialize, serde::Deserialize)]",
     );
@@ -107,6 +120,20 @@ fn main() -> std::io::Result<()> {
     );
     config.type_attribute(
         ".api.FullPersonMediaResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+
+    // --- CAMERA STRUCTS ---
+    config.type_attribute(
+        ".api.CameraInfo",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.ListCameraResponse",
+        "#[derive(serde::Serialize, serde::Deserialize)]",
+    );
+    config.type_attribute(
+        ".api.FullCameraPhotosResponse",
         "#[derive(serde::Serialize, serde::Deserialize)]",
     );
 

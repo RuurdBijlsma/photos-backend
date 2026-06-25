@@ -1,6 +1,7 @@
 set windows-shell := ["powershell.exe", "-Command"]
 set export := true
 ORT_DYLIB_PATH := "C:/Apps/onnxruntime/lib/onnxruntime.dll"
+DATABASE_URL := "postgresql://photos_user:dev-password@localhost:5432/photos"
 
 # --- Lints:
 
@@ -29,8 +30,7 @@ test:
     cargo test --profile release --features load-dynamic -- --nocapture
 
 bench:
-    cargo bench --features load-dynamic,cuda
-
+    cargo bench --bench system_bench --features load-dynamic
 run:
     cargo run --example visualize --profile release --features load-dynamic
 

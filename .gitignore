@@ -8,3 +8,5 @@ photo_clusters_output
 .ruff_cache
 __pycache__
 test_out
+umap_output
+quality_test_output

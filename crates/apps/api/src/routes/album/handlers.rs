@@ -4,17 +4,20 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use axum_extra::protobuf::Protobuf;
-use common_services::api::album::error::AlbumError;
+use common_services::api::album::backup_restore::{list_backups, restore_albums};
+
 use common_services::api::album::interfaces::{
-    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, CheckInviteRequest,
-    CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam, ReorderMediaRequest,
-    SharedMediaItem, UpdateAlbumRequest,
+    AcceptInviteRequest, AddCollaboratorRequest, AddMediaToAlbumRequest, BackupInfo,
+    CheckInviteRequest, CreateAlbumRequest, GetSortedAlbumItemsRequest, ListAlbumsParam,
+    ReorderMediaRequest, SharedMediaItem, UpdateAlbumRequest,
 };
 use common_services::api::album::service::{
     accept_invite, add_collaborator, add_media_to_album, create_album, delete_album,
     generate_invite, get_album_media, get_album_media_item, get_sorted_album_media,
     remove_collaborator, remove_media_from_album, reorder_media_items, update_album,
 };
+use common_services::api::app_error::AppError;
+use common_services::caching::cache_root;
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album::album_collaborator::AlbumCollaborator;
 use common_services::database::album_store::AlbumStore;
@@ -30,7 +33,7 @@ pub async fn create_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Json(payload): Json<CreateAlbumRequest>,
-) -> Result<(StatusCode, Json<Album>), AlbumError> {
+) -> Result<(StatusCode, Json<Album>), AppError> {
     let album = create_album(
         &context.pool,
         user.id,
@@ -51,7 +54,7 @@ pub async fn get_user_albums_handler(
     State(context): State<ApiContext>,
     Query(query): Query<ListAlbumsParam>,
     Extension(user): Extension<User>,
-) -> Result<Json<Vec<Album>>, AlbumError> {
+) -> Result<Json<Vec<Album>>, AppError> {
     let albums = AlbumStore::list_with_count_by_user_id(
         &context.pool,
         user.id,
@@ -70,7 +73,7 @@ pub async fn update_album_handler(
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
     Json(payload): Json<UpdateAlbumRequest>,
-) -> Result<Json<Album>, AlbumError> {
+) -> Result<Json<Album>, AppError> {
     let album = update_album(
         &context.pool,
         &album_id,
@@ -88,7 +91,7 @@ pub async fn delete_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
-) -> Result<(), AlbumError> {
+) -> Result<(), AppError> {
     delete_album(&context.pool, &album_id, user.id).await?;
     Ok(())
 }
@@ -102,7 +105,7 @@ pub async fn add_media_to_album_handler(
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
     Json(payload): Json<AddMediaToAlbumRequest>,
-) -> Result<StatusCode, AlbumError> {
+) -> Result<StatusCode, AppError> {
     add_media_to_album(&context.pool, &album_id, &payload.media_item_ids, user.id).await?;
     Ok(StatusCode::OK)
 }
@@ -114,7 +117,7 @@ pub async fn remove_media_from_album_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path((album_id, media_item_ids)): Path<(String, String)>,
-) -> Result<StatusCode, AlbumError> {
+) -> Result<StatusCode, AppError> {
     let media_item_ids = media_item_ids
         .split(',')
         .map(|s| s.trim().to_string())
@@ -132,7 +135,7 @@ pub async fn add_collaborator_handler(
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
     Json(payload): Json<AddCollaboratorRequest>,
-) -> Result<Json<AlbumCollaborator>, AlbumError> {
+) -> Result<Json<AlbumCollaborator>, AppError> {
     let collaborator = add_collaborator(
         &context.pool,
         &album_id,
@@ -151,7 +154,7 @@ pub async fn remove_collaborator_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path((album_id, user_id)): Path<(String, i64)>,
-) -> Result<StatusCode, AlbumError> {
+) -> Result<StatusCode, AppError> {
     remove_collaborator(&context.pool, &album_id, user_id, user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -162,7 +165,7 @@ pub async fn get_sorted_album_items_handler(
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
     Query(request): Query<GetSortedAlbumItemsRequest>,
-) -> Result<Protobuf<OrderedMediaResponse>, AlbumError> {
+) -> Result<Protobuf<OrderedMediaResponse>, AppError> {
     let items =
         get_sorted_album_media(&context.pool, &album_id, user.id, request.sort_mode).await?;
     Ok(Protobuf(OrderedMediaResponse { items }))
@@ -174,7 +177,7 @@ pub async fn reorder_media_handler(
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
     Json(payload): Json<ReorderMediaRequest>,
-) -> Result<(), AlbumError> {
+) -> Result<(), AppError> {
     reorder_media_items(
         &context.pool,
         &album_id,
@@ -193,7 +196,7 @@ pub async fn generate_invite_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Path(album_id): Path<String>,
-) -> Result<Json<String>, AlbumError> {
+) -> Result<Json<String>, AppError> {
     let token = generate_invite(
         &context.pool,
         context.settings.api.public_url,
@@ -209,7 +212,7 @@ pub async fn generate_invite_handler(
 pub async fn check_invite_handler(
     State(context): State<ApiContext>,
     Json(payload): Json<CheckInviteRequest>,
-) -> Result<Json<AlbumSummary>, AlbumError> {
+) -> Result<Json<AlbumSummary>, AppError> {
     let summary = context
         .s2s_client
         .get_album_invite_summary(&payload.token)
@@ -225,10 +228,10 @@ pub async fn accept_invite_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<User>,
     Json(payload): Json<AcceptInviteRequest>,
-) -> Result<Json<Album>, AlbumError> {
+) -> Result<Json<Album>, AppError> {
     let album = accept_invite(
         &context.pool,
-        &context.settings,
+        &context.settings.ingest,
         &context.s2s_client,
         user.id,
         payload,
@@ -246,7 +249,7 @@ pub async fn get_album_media_handler(
     State(context): State<ApiContext>,
     Extension(user): Extension<OptionalUser>,
     Path(album_id): Path<String>,
-) -> Result<Protobuf<FullAlbumMediaResponse>, AlbumError> {
+) -> Result<Protobuf<FullAlbumMediaResponse>, AppError> {
     let response = get_album_media(&context.pool, &album_id, user.0.map(|u| u.id)).await?;
     Ok(Protobuf(response))
 }
@@ -254,7 +257,31 @@ pub async fn get_album_media_handler(
 pub async fn get_album_media_item_handler(
     State(context): State<ApiContext>,
     Path((album_id, media_item_id)): Path<(String, String)>,
-) -> Result<Json<SharedMediaItem>, AlbumError> {
+) -> Result<Json<SharedMediaItem>, AppError> {
     let response = get_album_media_item(&context.pool, &album_id, &media_item_id).await?;
     Ok(Json(response))
+}
+
+// ====================================== //
+// === --- === BACKUP RESTORE === --- === //
+// ====================================== //
+
+pub async fn list_backups_handler(
+    Extension(user): Extension<User>,
+) -> Result<Json<Vec<BackupInfo>>, AppError> {
+    let backups = list_backups(user.id).await?;
+    Ok(Json(backups))
+}
+
+pub async fn restore_backup_handler(
+    State(context): State<ApiContext>,
+    Extension(user): Extension<User>,
+    Path(backup_filename): Path<String>,
+) -> Result<(), AppError> {
+    let backup_path = cache_root()
+        .join("albums")
+        .join(user.id.to_string())
+        .join(backup_filename);
+    restore_albums(&context.pool, user.id, &backup_path).await?;
+    Ok(())
 }

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT media_folder FROM user_invite",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "media_folder",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9325b2b02926d56b3dc0a49dad7bc0699c2203a07b69ba564f98c752d0cc4261"
+}

@@ -1,5 +1,5 @@
-use crate::api::photos::error::PhotosError;
-use crate::api::photos::interfaces::{RandomPhotoResponse, UpdateMediaItemRequest};
+use crate::api::app_error::AppError;
+use crate::api::photos::interfaces::UpdateMediaItemRequest;
 use crate::database::app_user::{User, UserRole};
 use crate::database::media_item_store::MediaItemStore;
 use crate::database::{UpdateField, UpdateMediaItemPayload, with_fallback_timezone};
@@ -15,7 +15,6 @@ use fast_image_resize as fr;
 use http::{Response, StatusCode, header};
 use image::ImageDecoder;
 use image::ImageReader;
-use rand::RngExt;
 use sqlx::{Executor, PgPool, Postgres};
 use std::io::Cursor;
 use std::ops::Bound;
@@ -27,83 +26,18 @@ use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
 
-/// Fetches a random photo with its color theme data for a specific user.
-///
-/// # Errors
-///
-/// Returns an error if either of the database queries fail.
-pub async fn random_photo(
-    user: &User,
-    pool: &PgPool,
-) -> Result<Option<RandomPhotoResponse>, PhotosError> {
-    // Count the total number of photos with associated colour data for the given user.
-    let count: i64 = sqlx::query_scalar!(
-        r#"
-        SELECT COUNT(cd.visual_analysis_id)
-        FROM color AS cd
-        JOIN visual_analysis AS va ON cd.visual_analysis_id = va.id
-        JOIN media_item AS mi ON va.media_item_id = mi.id
-        WHERE mi.user_id = $1 AND mi.deleted = false
-        "#,
-        user.id
-    )
-    .fetch_one(pool)
-    .await?
-    .unwrap_or(0); // Default to 0 if count is NULL
-
-    if count == 0 {
-        warn!("No photos with color data for user {}", user.id);
-        return Ok(None);
-    }
-
-    // Use a thread-safe random number generator to select a random offset.
-    let random_offset = rand::rng().random_range(0..count);
-
-    // Fetch a single row from `color_data` using the random offset,
-    // along with the associated `media_item_id`.
-    let random_data = sqlx::query_as!(
-        RandomPhotoResponse,
-        r#"
-        SELECT
-            cd.themes,
-            mi.id as media_id
-        FROM color AS cd
-        JOIN visual_analysis AS va ON cd.visual_analysis_id = va.id
-        JOIN media_item AS mi ON va.media_item_id = mi.id
-        WHERE mi.user_id = $1 AND mi.deleted = false
-        ORDER BY mi.id
-        LIMIT 1
-        OFFSET $2
-        "#,
-        user.id,
-        random_offset
-    )
-    .fetch_optional(pool)
-    .await?;
-
-    if random_data.is_none() {
-        // This can happen in a race condition if photos are deleted between the COUNT and this query.
-        warn!(
-            "No photo found at offset {} for user {}",
-            random_offset, user.id
-        );
-    }
-
-    Ok(random_data)
-}
-
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///
 /// # Errors
 ///
-/// Returns a `PhotosError` if path validation fails, the user is not authorized,
+/// Returns a `AppError` if path validation fails, the user is not authorized,
 /// the file is not found, the media type is unsupported, or if any file system
 /// or response building error occurs.
 pub async fn download_media_file(
     ingestion: &IngestSettings,
     user: &User,
     path: &str,
-) -> Result<Response<Body>, PhotosError> {
+) -> Result<Response<Body>, AppError> {
     // Path Validation
     let media_dir_canon = ingestion
         .media_root
@@ -115,7 +49,7 @@ pub async fn download_media_file(
         Ok(path) => path,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             debug!("File not found at path: {}", file_path.display());
-            return Err(PhotosError::MediaNotFound(path.to_owned()));
+            return Err(AppError::NotFound(path.to_owned()));
         }
         Err(e) => {
             return Err(Report::new(e)
@@ -126,7 +60,7 @@ pub async fn download_media_file(
 
     if !file_canon.starts_with(&media_dir_canon) {
         warn!("Blocked directory traversal attempt for: {}", path);
-        return Err(PhotosError::InvalidPath);
+        return Err(AppError::BadRequest("Invalid Path".to_owned()));
     }
 
     // Authorization
@@ -137,27 +71,27 @@ pub async fn download_media_file(
                 "Access denied for user {}: No media folder assigned.",
                 user.id
             );
-            return Err(PhotosError::AccessDenied);
+            return Err(AppError::Forbidden("Denied".to_owned()));
         };
         if !relative_path.starts_with(user_media_folder) {
             warn!(
                 "Access denied for user {}: Attempted to access path outside their media folder.",
                 user.id
             );
-            return Err(PhotosError::AccessDenied);
+            return Err(AppError::Forbidden("Denied".to_owned()));
         }
     }
 
     // Get file
     if !ingestion.is_media_file(&file_canon) {
         warn!("Unsupported media type requested: {}", file_canon.display());
-        return Err(PhotosError::UnsupportedMediaType);
+        return Err(AppError::UnsupportedMediaType(String::new()));
     }
     let file = match File::open(&file_canon).await {
         Ok(file) => file,
         Err(e) => match e.kind() {
-            std::io::ErrorKind::NotFound => Err(PhotosError::MediaNotFound(path.to_owned())),
-            std::io::ErrorKind::PermissionDenied => Err(PhotosError::AccessDenied),
+            std::io::ErrorKind::NotFound => Err(AppError::NotFound(path.to_owned())),
+            std::io::ErrorKind::PermissionDenied => Err(AppError::Forbidden("Denied".to_owned())),
             _ => Err(Report::new(e).wrap_err("Failed to open media file").into()),
         }?,
     };
@@ -187,7 +121,7 @@ pub async fn thumbnail_on_demand_cached(
     size: i32,
     media_item_id: &str,
     ingest_settings: &IngestSettings,
-) -> Result<Vec<u8>, PhotosError> {
+) -> Result<Vec<u8>, AppError> {
     let cache_dir = ingest_settings
         .thumbnail_root
         .join(ON_DEMAND_THUMBNAIL_CACHE_FOLDER);
@@ -200,7 +134,7 @@ pub async fn thumbnail_on_demand_cached(
 
     let Some(rel_path) = MediaItemStore::find_relative_path_by_id(pool, media_item_id).await?
     else {
-        return Err(PhotosError::MediaNotFound(media_item_id.to_owned()));
+        return Err(AppError::NotFound(media_item_id.to_owned()));
     };
     let media_path = ingest_settings.media_root.join(&rel_path);
     let is_video = ingest_settings.is_video_file(&media_path);
@@ -213,7 +147,7 @@ pub async fn thumbnail_on_demand_cached(
         }
     })
     .await
-    .map_err(|e| PhotosError::Internal(eyre!("Task join error: {e}")))??;
+    .map_err(|e| AppError::Internal(eyre!("Task join error: {e}")))??;
 
     if let Err(e) = fs::write(&cache_path, &image_bytes).await {
         tracing::log::warn!("Failed to write thumbnail to cache: {e}");
@@ -222,7 +156,7 @@ pub async fn thumbnail_on_demand_cached(
     Ok(image_bytes)
 }
 
-fn video_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
+fn video_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, AppError> {
     let seek_time = "0.5";
 
     let output = Command::new("ffmpeg")
@@ -230,7 +164,8 @@ fn video_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, Photo
             "-ss",
             seek_time, // Fast seek (before -i)
             "-i",
-            path.to_str().ok_or(PhotosError::InvalidPath)?,
+            path.to_str()
+                .ok_or(AppError::BadRequest("Invalid Path".to_owned()))?,
             "-vf",
             &format!("scale={target_size}:-2"), // Resize during decode
             "-frames:v",
@@ -250,7 +185,7 @@ fn video_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, Photo
         .stderr(Stdio::piped())
         .output()
         .map_err(|e| {
-            PhotosError::Internal(eyre!(e).wrap_err("Failed to execute ffmpeg for video thumbnail"))
+            AppError::Internal(eyre!(e).wrap_err("Failed to execute ffmpeg for video thumbnail"))
         })?;
 
     if !output.status.success() {
@@ -259,17 +194,18 @@ fn video_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, Photo
         if stderr.contains("Output file is empty") && seek_time != "0" {
             return video_thumb_on_demand_at_zero(path, target_size);
         }
-        return Err(PhotosError::Internal(eyre!("ffmpeg failed: {}", stderr)));
+        return Err(AppError::Internal(eyre!("ffmpeg failed: {}", stderr)));
     }
 
     Ok(output.stdout)
 }
 
-fn video_thumb_on_demand_at_zero(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
+fn video_thumb_on_demand_at_zero(path: &Path, target_size: i32) -> Result<Vec<u8>, AppError> {
     let output = Command::new("ffmpeg")
         .args([
             "-i",
-            path.to_str().ok_or(PhotosError::InvalidPath)?,
+            path.to_str()
+                .ok_or(AppError::BadRequest("Invalid Path".to_owned()))?,
             "-vf",
             &format!("scale={target_size}:-2"),
             "-frames:v",
@@ -283,14 +219,14 @@ fn video_thumb_on_demand_at_zero(path: &Path, target_size: i32) -> Result<Vec<u8
             "pipe:1",
         ])
         .output()
-        .map_err(|e| PhotosError::Internal(eyre!(e)))?;
+        .map_err(|e| AppError::Internal(eyre!(e)))?;
 
     Ok(output.stdout)
 }
 
-fn image_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, PhotosError> {
+fn image_thumb_on_demand(path: &Path, target_size: i32) -> Result<Vec<u8>, AppError> {
     let file_bytes = std::fs::read(path)
-        .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to read image source")))?;
+        .map_err(|e| AppError::Internal(eyre!(e).wrap_err("Failed to read image source")))?;
 
     let is_jpeg = path
         .extension()
@@ -345,15 +281,14 @@ fn try_extract_exif_thumbnail(file_bytes: &[u8], target_size: i32) -> Option<Vec
     None
 }
 
-fn quick_image_resize(path: &Path, file_bytes: &[u8], size: i32) -> Result<Vec<u8>, PhotosError> {
-    let mut img = image::load_from_memory(file_bytes).map_err(|e| {
-        PhotosError::Internal(eyre!(e).wrap_err("Failed to decode image for resize"))
-    })?;
+fn quick_image_resize(path: &Path, file_bytes: &[u8], size: i32) -> Result<Vec<u8>, AppError> {
+    let mut img = image::load_from_memory(file_bytes)
+        .map_err(|e| AppError::Internal(eyre!(e).wrap_err("Failed to decode image for resize")))?;
 
     let mut decoder = ImageReader::open(path)
-        .map_err(|e| PhotosError::Internal(eyre!("Failed to open image for orientation: {}", e)))?
+        .map_err(|e| AppError::Internal(eyre!("Failed to open image for orientation: {}", e)))?
         .into_decoder()
-        .map_err(|e| PhotosError::Internal(eyre!("Failed to init decoder: {}", e)))?;
+        .map_err(|e| AppError::Internal(eyre!("Failed to init decoder: {}", e)))?;
 
     if let Ok(orientation) = decoder.orientation() {
         img.apply_orientation(orientation);
@@ -373,13 +308,13 @@ fn quick_image_resize(path: &Path, file_bytes: &[u8], size: i32) -> Result<Vec<u
         img.to_rgb8().into_raw(),
         fr::PixelType::U8x3,
     )
-    .map_err(|e| PhotosError::Internal(eyre!("Resize source creation error: {e}")))?;
+    .map_err(|e| AppError::Internal(eyre!("Resize source creation error: {e}")))?;
 
     let mut dst_image = fr::images::Image::new(dst_width, dst_height, fr::PixelType::U8x3);
     let mut resizer = fr::Resizer::new();
     resizer
         .resize(&src_image, &mut dst_image, None)
-        .map_err(|e| PhotosError::Internal(eyre!("Resizing failed: {e}")))?;
+        .map_err(|e| AppError::Internal(eyre!("Resizing failed: {e}")))?;
 
     let mut buffer = Vec::new();
     let mut cursor = Cursor::new(&mut buffer);
@@ -392,7 +327,7 @@ fn quick_image_resize(path: &Path, file_bytes: &[u8], size: i32) -> Result<Vec<u
             dst_height,
             image::ExtendedColorType::Rgb8,
         )
-        .map_err(|e| PhotosError::Internal(eyre!(e).wrap_err("Failed to encode JPEG")))?;
+        .map_err(|e| AppError::Internal(eyre!(e).wrap_err("Failed to encode JPEG")))?;
 
     Ok(buffer)
 }
@@ -402,16 +337,16 @@ pub async fn stream_video_file(
     ingest_settings: &IngestSettings,
     media_item_id: &str,
     range_header: Option<Range>,
-) -> Result<Response<Body>, PhotosError> {
+) -> Result<Response<Body>, AppError> {
     let Some(rel_path) = MediaItemStore::find_relative_path_by_id(pool, media_item_id).await?
     else {
-        return Err(PhotosError::MediaNotFound(media_item_id.to_owned()));
+        return Err(AppError::NotFound(media_item_id.to_owned()));
     };
     let media_path = ingest_settings.media_root.join(&rel_path);
 
     let mut file = File::open(&media_path)
         .await
-        .map_err(|_| PhotosError::AccessDenied)?;
+        .map_err(|_| AppError::Forbidden("Denied".to_owned()))?;
     let metadata = file
         .metadata()
         .await
@@ -442,7 +377,10 @@ pub async fn stream_video_file(
 
     // Safety check for bounds
     if start > end || start >= file_size {
-        return Err(PhotosError::InvalidRange);
+        return Err(AppError::RangeNotSatisfiable {
+            message: "The requested byte range is unsatisfiable.".to_string(),
+            file_size,
+        });
     }
 
     let content_length = end - start + 1;
@@ -479,7 +417,7 @@ async fn compute_updated_timestamps(
     media_item_id: &str,
     new_local: Option<NaiveDateTime>,
     new_offset: &UpdateField<i32>,
-) -> Result<(UpdateField<DateTime<Utc>>, Option<DateTime<Utc>>), PhotosError> {
+) -> Result<(UpdateField<DateTime<Utc>>, Option<DateTime<Utc>>), AppError> {
     let is_updating_local = new_local.is_some();
     let is_updating_offset = !matches!(new_offset, UpdateField::Ignore);
     // If neither is changing, we don't need to update these derived fields
@@ -522,15 +460,15 @@ pub async fn update_media_item(
     media_item_id: &str,
     user_id: i32,
     payload: &UpdateMediaItemRequest,
-) -> Result<(), PhotosError> {
+) -> Result<(), AppError> {
     let mut tx = pool.begin().await?;
 
     let media_user_id = MediaItemStore::find_user_by_id(&mut *tx, media_item_id)
         .await?
-        .ok_or_else(|| PhotosError::MediaNotFound(media_item_id.to_owned()))?;
+        .ok_or_else(|| AppError::NotFound(media_item_id.to_owned()))?;
 
     if media_user_id != user_id {
-        return Err(PhotosError::AccessDenied);
+        return Err(AppError::Forbidden("Denied".to_owned()));
     }
 
     let UpdateMediaItemRequest {
@@ -544,7 +482,10 @@ pub async fn update_media_item(
     if let UpdateField::Value(v) = timezone_offset_seconds
         && FixedOffset::east_opt(*v).is_none()
     {
-        return Err(PhotosError::InvalidTimezoneOffset(*v));
+        return Err(AppError::BadRequest(format!(
+            "Invalid timezone offset: {}",
+            *v
+        )));
     }
 
     let taken_at_local_input = taken_at_local

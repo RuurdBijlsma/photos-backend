@@ -22,7 +22,7 @@ use sqlx::PgPool;
 use std::iter::once;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tasks::task_runner::schedule_tasks;
+use tasks::task_runner::init_task_scheduler;
 use tokio::fs;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
@@ -35,7 +35,7 @@ use tracing::{error, info};
 
 pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool) -> Result<()> {
     if run_task_scheduler {
-        schedule_tasks(&pool, &settings)?;
+        init_task_scheduler(&pool, &settings)?;
     }
     info!("Loading CLIP text embedder...");
     let text_embedder = TextEmbedder::from_hf(&settings.ingest.analyzer.search.embedder_model_id)
@@ -80,6 +80,7 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         .collect();
 
     let cors = CorsLayer::new()
+        .expose_headers([header::CONTENT_DISPOSITION])
         .allow_methods(cors::Any)
         .allow_origin(allowed_origins)
         .allow_headers([

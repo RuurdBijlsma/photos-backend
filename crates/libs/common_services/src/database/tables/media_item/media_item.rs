@@ -51,6 +51,10 @@ impl From<MediaMetadata> for CreateFullMediaItem {
             is_nightsight: result.features.is_night_sight,
             is_timelapse: result.features.is_timelapse,
             exif: result.exif,
+            audio_sample_rate: result.features.audio_sample_rate,
+            audio_format: result.features.audio_format,
+            audio_channels: result.features.audio_channels,
+            compressor_id: result.features.compressor_id,
         };
 
         Self {

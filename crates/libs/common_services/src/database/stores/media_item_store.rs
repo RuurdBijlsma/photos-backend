@@ -92,9 +92,13 @@ impl MediaItemStore {
                         'id', va.id,
                         'created_at', va.created_at,
                         'percentage', va.percentage,
-                        'quality', (
+                        'measured_quality', (
                             SELECT to_jsonb(qd)
-                            FROM quality qd WHERE qd.visual_analysis_id = va.id
+                            FROM measured_quality qd WHERE qd.visual_analysis_id = va.id
+                        ),
+                        'quality_judge', (
+                            SELECT to_jsonb(qj)
+                            FROM quality_judge qj WHERE qj.visual_analysis_id = va.id
                         ),
                         'colors', (
                             SELECT to_jsonb(cld)
@@ -309,9 +313,10 @@ impl MediaItemStore {
                 INSERT INTO media_features (
                     media_item_id, mime_type, size_bytes, is_motion_photo,
                     motion_photo_presentation_timestamp, is_hdr, is_burst, burst_id,
-                    capture_fps, video_fps, is_nightsight, is_timelapse, exif
+                    capture_fps, video_fps, is_nightsight, is_timelapse, exif, audio_format,
+                    audio_channels, audio_sample_rate, compressor_id
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                 "#,
             id,
             media_item.media_features.mime_type,
@@ -328,27 +333,45 @@ impl MediaItemStore {
             media_item.media_features.is_nightsight,
             media_item.media_features.is_timelapse,
             media_item.media_features.exif,
+            media_item.media_features.audio_format,
+            media_item.media_features.audio_channels.map(|i| i as i32),
+            media_item
+                .media_features
+                .audio_sample_rate
+                .map(|i| i as i32),
+            media_item.media_features.compressor_id,
         )
         .execute(&mut **tx)
         .await?;
 
         sqlx::query!(
-                r#"
+            r#"
                 INSERT INTO camera_settings (
-                    media_item_id, iso, exposure_time, aperture, focal_length, camera_make, camera_model
+                    media_item_id, iso, exposure_time, aperture, focal_length, camera_make,
+                    camera_model, flash_fired, flash_mode, lens_make, lens_model,
+                    digital_zoom_ratio, subject_distance, focal_length_in_35mm,
+                    exposure_compensation
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 "#,
-                id,
-                media_item.camera_settings.iso,
-                media_item.camera_settings.exposure_time,
-                media_item.camera_settings.aperture,
-                media_item.camera_settings.focal_length,
-                media_item.camera_settings.camera_make,
-                media_item.camera_settings.camera_model,
-            )
-                .execute(&mut **tx)
-                .await?;
+            id,
+            media_item.camera_settings.iso,
+            media_item.camera_settings.exposure_time,
+            media_item.camera_settings.aperture,
+            media_item.camera_settings.focal_length,
+            media_item.camera_settings.camera_make,
+            media_item.camera_settings.camera_model,
+            media_item.camera_settings.flash_fired,
+            media_item.camera_settings.flash_mode,
+            media_item.camera_settings.lens_make,
+            media_item.camera_settings.lens_model,
+            media_item.camera_settings.digital_zoom_ratio,
+            media_item.camera_settings.subject_distance,
+            media_item.camera_settings.focal_length_in_35mm,
+            media_item.camera_settings.exposure_compensation,
+        )
+        .execute(&mut **tx)
+        .await?;
 
         sqlx::query!(
             r#"

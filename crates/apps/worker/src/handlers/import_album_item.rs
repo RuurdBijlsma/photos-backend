@@ -78,7 +78,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
 
     enqueue_full_ingest(
         &context.pool,
-        &context.settings,
+        &context.settings.ingest,
         &relative_path,
         user_id,
         Some(IngestMetadataPayload {

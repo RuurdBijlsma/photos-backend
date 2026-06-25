@@ -20,6 +20,33 @@ and search.
   judging. [Installation Guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/install.md). Exact command for llama-server found in `./scripts/setup_env.ps1`.
 * **Rust** to compile the backend
 * **Postgres** database set up with `pgvector` installed, docker/podman command for this available in `./scripts/start_postgres.ps1`.
+* **libheif** Ubuntu: `sudo apt install libheif1 libheif-dev libde265-0 x265 libaom0`, For Windows, see below
+
+### libheif - Windows
+
+install vcpkg:
+
+```pwsh
+cd C:\
+mkdir src
+cd src
+git clone https://github.com/microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+setx VCPKG_ROOT "C:\src\vcpkg"
+```
+
+Add vcpkg to PATH env variable. (add `C:\src\vcpkg`), then restart terminal.
+
+Install libheif via vcpkg:
+
+```pwsh
+vcpkg integrate install
+vcpkg version
+# not sure if both are needed, maybe only second one
+vcpkg install libheif:x64-windows-static-md
+vcpkg install libheif:x64-windows-static
+```
 
 ## Installation
 
@@ -39,7 +66,7 @@ cd crates/libs/ml_analysis/py_ml
 uv sync
 ```
 
-### 3. Start the LLM Server
+### 3. Start the LLM Server (Optional)
 
 The worker requires a running `llama-server` to perform visual analysis. It is recommended to use a Vision-Language
 model like Qwen3-VL.
@@ -51,10 +78,10 @@ llama-server -hf unsloth/Qwen3-VL-4B-Instruct-GGUF:Q4_K_M --n-gpu-layers 99 --ji
 *Note: Ensure the `llm_base_url` in `config/settings.yaml` matches your server address (default
 is `http://localhost:8080`).*
 
-### 4. Set environment variables
+### 4. Set environment variables (.env file or env variables)
 
 ```text
-APP__DATABASE__URL=postgres://user:pass@localhost/photos
+DATABASE_URL=postgres://user:pass@localhost/photos
 APP__AUTH__JWT_SECRET=your123secret
 ```
 

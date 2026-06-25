@@ -4,7 +4,7 @@
     clippy::future_not_send
 )]
 
-use app_state::{constants, load_app_settings};
+use app_state::{constants, database_url};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use color_eyre::eyre::Result;
 use common_services::api::auth::hashing::hash_password;
@@ -122,6 +122,13 @@ async fn seed_mock_photos_in_tx(
                 focal_length: None,
                 camera_make: None,
                 camera_model: None,
+                exposure_compensation: None,
+                focal_length_in_35mm: None,
+                digital_zoom_ratio: None,
+                lens_model: None,
+                lens_make: None,
+                flash: None,
+                subject_distance: None,
             },
             features: MediaFeatures {
                 is_motion_photo: false,
@@ -135,6 +142,10 @@ async fn seed_mock_photos_in_tx(
                 is_video: false,
                 capture_fps: None,
                 video_fps: None,
+                compressor_id: None,
+                audio_sample_rate: None,
+                audio_format: None,
+                audio_channels: None,
             },
             time: TimeInfo {
                 datetime_utc: Some(taken_at),
@@ -177,8 +188,7 @@ async fn seed_mock_photos_in_tx(
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
-    let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
+    let pool = get_db_pool(database_url(), true).await?;
     seed_database_for_dev(&pool, 50_000).await?;
 
     Ok(())

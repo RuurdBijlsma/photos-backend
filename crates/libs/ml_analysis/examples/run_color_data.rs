@@ -1,4 +1,3 @@
-use material_color_utils::dynamic::variant::Variant;
 use ml_analysis::get_color_data;
 use std::path::Path;
 use std::time::Instant;
@@ -15,7 +14,7 @@ fn main() -> color_eyre::Result<()> {
     for image in images {
         let now = Instant::now();
         let img = image::open(image)?;
-        let color_data = get_color_data(&img, &Variant::Vibrant, 3.)?;
+        let color_data = get_color_data(&img)?;
         println!(
             "{} color: {:?} {:?} {:?} {:?}",
             image.file_name().unwrap().to_string_lossy(),

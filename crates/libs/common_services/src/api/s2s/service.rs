@@ -1,4 +1,4 @@
-use crate::api::s2s::error::S2SError;
+use crate::api::app_error::AppError;
 use crate::database::album::album::AlbumSummary;
 use crate::s2s_client::extract_token_claims;
 use sqlx::PgPool;
@@ -11,7 +11,7 @@ pub async fn get_invite_summary(
     pool: &PgPool,
     token: &str,
     jwt_secret: &str,
-) -> Result<AlbumSummary, S2SError> {
+) -> Result<AlbumSummary, AppError> {
     let claims = extract_token_claims(token, jwt_secret)?;
 
     let summary = sqlx::query_as!(
@@ -36,7 +36,7 @@ pub async fn get_invite_summary(
     )
     .fetch_optional(pool)
     .await?
-    .ok_or(S2SError::TokenInvalid)?;
+    .ok_or(AppError::Forbidden("Token invalid".to_owned()))?;
     Ok(summary)
 }
 
@@ -48,7 +48,7 @@ pub async fn validate_token_for_media_item(
     token: &str,
     jwt_secret: &str,
     media_item_id: &str,
-) -> Result<String, S2SError> {
+) -> Result<String, AppError> {
     let claims = extract_token_claims(token, jwt_secret)?;
 
     let album_id = sqlx::query_scalar!(
@@ -62,7 +62,7 @@ pub async fn validate_token_for_media_item(
     )
     .fetch_optional(pool)
     .await?
-    .ok_or(S2SError::PermissionDenied)?;
+    .ok_or(AppError::Forbidden("Denied".to_owned()))?;
 
     Ok(album_id)
 }
@@ -73,7 +73,7 @@ pub async fn get_media_item_path(
     pool: &PgPool,
     media_root: &Path,
     media_item_id: &str,
-) -> Result<std::path::PathBuf, S2SError> {
+) -> Result<std::path::PathBuf, AppError> {
     // todo: deze join is nutteloos
     let relative_path = sqlx::query_scalar!(
         r#"
@@ -86,7 +86,7 @@ pub async fn get_media_item_path(
     )
     .fetch_optional(pool)
     .await?
-    .ok_or_else(|| S2SError::NotFound(format!("Media item {media_item_id} not found.")))?;
+    .ok_or_else(|| AppError::NotFound(format!("Media item {media_item_id} not found.")))?;
 
     Ok(media_root.join(relative_path))
 }

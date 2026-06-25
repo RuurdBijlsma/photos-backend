@@ -1,5 +1,5 @@
+use crate::api::app_error::AppError;
 use crate::api::search::cache::get_cached_text_embedding;
-use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::{SearchMediaConfig, SearchMediaType, SearchSortBy};
 use crate::database::app_user::User;
 use common_types::pb::api::SimpleTimelineItem;
@@ -14,7 +14,7 @@ pub async fn basic_search_media(
     embedder: Arc<TextEmbedder>,
     query: &str,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     let query_str = query.to_string();
     let query_embedding =
         get_cached_text_embedding(&query_str, &config.embedder_model_id, pool, embedder).await?;
@@ -122,7 +122,7 @@ pub async fn advanced_search_media(
     embedder: Arc<TextEmbedder>,
     query: &str,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     let query_str = query.to_string();
     let embedder_clone = embedder.clone();
 
@@ -200,12 +200,12 @@ pub async fn advanced_search_media(
                   WHERE g.media_item_id = mi.id AND l.country_code = ANY($12)
               ))
               AND (cardinality($13::text[]) = 0 OR (
-                  SELECT COUNT(DISTINCT p.name)
+                  SELECT COUNT(DISTINCT p.id)
                   FROM visual_analysis va
                   JOIN face f ON f.visual_analysis_id = va.id
                   JOIN face_cluster fc ON f.face_cluster_id = fc.id
                   JOIN person p ON fc.person_id = p.id
-                  WHERE va.media_item_id = mi.id AND p.name = ANY($13)
+                  WHERE va.media_item_id = mi.id AND p.id = ANY($13)
               ) >= (CASE WHEN $16 THEN cardinality($13) ELSE 1 END))
         ),
         fts AS (
@@ -287,7 +287,7 @@ pub async fn advanced_search_media(
         config.end_date,          // $10
         is_video_filter,          // $11
         &config.country_codes,    // $12
-        &config.face_names,       // $13
+        &config.person_ids,       // $13
         sort_by_str,              // $14
         semantic_score_threshold, // $15
         config.all_faces_required, // $16
@@ -303,7 +303,7 @@ pub async fn filter_only_search_media(
     user: &User,
     pool: &PgPool,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     let limit = config.limit.unwrap_or(100).min(500);
     let offset = config.offset.unwrap_or(0);
 
@@ -333,12 +333,12 @@ pub async fn filter_only_search_media(
               WHERE g.media_item_id = mi.id AND l.country_code = ANY($5)
           ))
           AND (cardinality($6::text[]) = 0 OR (
-              SELECT COUNT(DISTINCT p.name)
+              SELECT COUNT(DISTINCT p.id)
               FROM visual_analysis va
               JOIN face f ON f.visual_analysis_id = va.id
               JOIN face_cluster fc ON f.face_cluster_id = fc.id
               JOIN person p ON fc.person_id = p.id
-              WHERE va.media_item_id = mi.id AND p.name = ANY($6)
+              WHERE va.media_item_id = mi.id AND p.id = ANY($6)
           ) >= (CASE WHEN $7 THEN cardinality($6) ELSE 1 END))
         ORDER BY mi.sort_timestamp DESC
         LIMIT $8 OFFSET $9
@@ -348,7 +348,7 @@ pub async fn filter_only_search_media(
         config.end_date,
         is_video_filter,
         &config.country_codes,
-        &config.face_names,
+        &config.person_ids,
         config.all_faces_required,
         limit,
         offset,

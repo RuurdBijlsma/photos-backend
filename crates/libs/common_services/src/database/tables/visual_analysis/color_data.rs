@@ -1,11 +1,10 @@
-use common_types::ml_analysis::MLColorData;
+use common_types::ml_analysis;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 /// Corresponds to the '`color_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ColorData {
-    pub themes: Vec<Value>,
     pub prominent_colors: Vec<String>,
     pub average_hue: f32,
     pub average_saturation: f32,
@@ -13,10 +12,9 @@ pub struct ColorData {
     pub histogram: Value,
 }
 
-impl From<MLColorData> for ColorData {
-    fn from(color_data: MLColorData) -> Self {
+impl From<ml_analysis::ColorData> for ColorData {
+    fn from(color_data: ml_analysis::ColorData) -> Self {
         Self {
-            themes: color_data.themes.iter().map(|t| json!(t)).collect(),
             prominent_colors: color_data.prominent_colors,
             average_hue: color_data.average_hue,
             average_saturation: color_data.average_saturation,

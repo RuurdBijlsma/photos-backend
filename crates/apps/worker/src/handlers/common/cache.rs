@@ -1,7 +1,7 @@
 use color_eyre::Result;
 use color_eyre::eyre::bail;
+use common_services::caching::cache_root;
 use common_types::ml_analysis::{MLChatAnalysis, MLFastAnalysis};
-use directories::ProjectDirs;
 use generate_thumbnails::copy_dir_contents;
 use media_analyzer::MediaMetadata;
 use serde::{Deserialize, Serialize};
@@ -36,20 +36,6 @@ pub struct CachedAnalysisResult {
 pub struct CachedLlmResult {
     pub llm_analyses: Vec<MLChatAnalysis>,
     pub version: u32,
-}
-
-pub fn hash_file(path: &Path) -> Result<String> {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update_mmap_rayon(path)?;
-    let hash = hasher.finalize();
-    Ok(hash.to_hex().to_string())
-}
-
-fn cache_root() -> PathBuf {
-    ProjectDirs::from("dev", "ruurd", "photos").map_or_else(
-        || Path::new(".cache").to_path_buf(),
-        |proj| proj.cache_dir().to_path_buf(),
-    )
 }
 
 /// Helper to get the path for a JSON cache file: cache/{category}/{hash}.json

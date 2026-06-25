@@ -9,7 +9,7 @@
 use color_eyre::eyre::Result;
 
 use ab_glyph::FontArc;
-use app_state::{load_app_settings, to_posix_string};
+use app_state::{database_url, load_app_settings, to_posix_string};
 use common_services::database::get_db_pool;
 use common_services::database::visual_analysis::face::FaceEmbedding;
 use image::{Rgb, RgbImage};
@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;
     let settings = load_app_settings()?;
-    let pool = get_db_pool(&settings.secrets.database_url, true).await?;
+    let pool = get_db_pool(database_url(), true).await?;
 
     // --- Configuration ---
     let user_id_to_debug = 1;

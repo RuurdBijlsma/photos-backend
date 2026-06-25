@@ -13,7 +13,7 @@ env:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - uses: actions/checkout@v5
@@ -29,8 +29,8 @@ jobs:
       - name: Cache and install system dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: libfontconfig1-dev pkg-config exiftool protobuf-compiler nasm postgresql-client
-          version: 1.0
+          packages: libfontconfig1-dev pkg-config exiftool protobuf-compiler nasm postgresql-client libheif-dev
+          version: 1.1
 
       - name: Check formatting
         run: cargo fmt --all -- --check

@@ -7,19 +7,23 @@ use sqlx::PgPool;
 use std::time::Duration;
 use tracing::{error, info};
 
-pub fn schedule_tasks(pool: &PgPool, settings: &AppSettings) -> Result<()> {
+pub fn init_task_scheduler(pool: &PgPool, settings: &AppSettings) -> Result<()> {
     let schedules = vec![
         TaskSchedule {
             interval: Duration::from_hours(24),
-            jobs: vec![JobType::Scan, JobType::CleanDB, JobType::SyncThumbnails],
-        },
-        TaskSchedule {
-            interval: Duration::from_hours(12),
             jobs: vec![
+                JobType::Scan,
+                JobType::CleanDB,
+                JobType::SyncThumbnails,
                 JobType::ClusterPhotos,
                 JobType::ClusterFaces,
                 JobType::UpdateGlobalCentroid,
+                JobType::CalcSystemStats,
             ],
+        },
+        TaskSchedule {
+            interval: Duration::from_hours(72),
+            jobs: vec![JobType::GenerateDailyCards],
         },
     ];
     run_tasks(pool, settings, schedules)?;
@@ -39,7 +43,7 @@ pub fn run_tasks(
 ) -> Result<()> {
     for schedule in schedules {
         let pool = pool.clone();
-        let settings = settings.clone();
+        let ingest_settings = settings.ingest.clone();
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(schedule.interval);
@@ -52,7 +56,9 @@ pub fn run_tasks(
                 );
 
                 for job_type in &schedule.jobs {
-                    let res = enqueue_job::<()>(&pool, &settings, *job_type).call().await;
+                    let res = enqueue_job::<()>(&pool, &ingest_settings, *job_type)
+                        .call()
+                        .await;
 
                     if let Err(e) = res {
                         error!("Failed to enqueue scheduled job {:?}: {}", job_type, e);

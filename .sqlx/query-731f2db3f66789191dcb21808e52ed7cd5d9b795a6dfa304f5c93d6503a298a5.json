@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH camera_groups AS (\n                SELECT\n                    c.media_item_id,\n                    TRIM(c.camera_make) AS raw_make,\n                    TRIM(c.camera_model) AS raw_model,\n                    LOWER(TRIM(c.camera_make)) AS norm_make,\n                    LOWER(REGEXP_REPLACE(TRIM(c.camera_model), '\\s*\\(.*\\)$', '', 'i')) AS norm_model,\n                    m.sort_timestamp,\n                    m.has_thumbnails\n                FROM camera_settings c\n                INNER JOIN media_item m ON c.media_item_id = m.id\n                WHERE m.user_id = $1\n                  AND m.deleted = false\n                  AND c.camera_make IS NOT NULL\n                  AND c.camera_model IS NOT NULL\n                  AND c.camera_make != '--'\n                  AND c.camera_model != '--'\n                  AND LOWER(TRIM(c.camera_make)) != 'unknown'\n            ),\n            camera_stats AS (\n                SELECT\n                    norm_make,\n                    norm_model,\n                    MIN(raw_make) AS camera_make,\n                    REGEXP_REPLACE(MIN(raw_model), '\\s*\\(.*\\)$', '', 'i') AS camera_model,\n                    COUNT(*)::INT AS count\n                FROM camera_groups\n                GROUP BY norm_make, norm_model\n            ),\n            ranked_photos AS (\n                SELECT\n                    norm_make,\n                    norm_model,\n                    media_item_id,\n                    ROW_NUMBER() OVER (\n                        PARTITION BY norm_make, norm_model\n                        ORDER BY has_thumbnails DESC, sort_timestamp DESC\n                    ) as rn\n                FROM camera_groups\n            )\n            SELECT\n                s.camera_make AS \"camera_make!\",\n                s.camera_model AS \"camera_model!\",\n                s.count AS \"count!\",\n                r.media_item_id AS \"thumbnail_id!\"\n            FROM camera_stats s\n            INNER JOIN ranked_photos r\n                ON s.norm_make = r.norm_make AND s.norm_model = r.norm_model\n            WHERE r.rn = 1\n            ORDER BY s.count DESC;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "camera_make!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "camera_model!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "count!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "thumbnail_id!",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "731f2db3f66789191dcb21808e52ed7cd5d9b795a6dfa304f5c93d6503a298a5"
+}

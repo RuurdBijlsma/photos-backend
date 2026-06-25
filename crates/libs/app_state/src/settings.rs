@@ -1,6 +1,6 @@
 use crate::{
-    AnalyzerSettings, ApiSettings, FileDetectionSettings, LoggingSettings, MakeRelativePath,
-    RawSettings, SecretSettings, ThumbnailSettings,
+    AnalyzerSettings, ApiSettings, DailyCardsSettings, FileDetectionSettings, LoggingSettings,
+    MakeRelativePath, RawSettings, SecretSettings, ThumbnailSettings,
 };
 use color_eyre::Result;
 use serde::Deserialize;
@@ -14,6 +14,7 @@ pub struct AppSettings {
     pub logging: LoggingSettings,
     pub api: ApiSettings,
     pub secrets: SecretSettings,
+    pub daily_cards: DailyCardsSettings,
 }
 
 /// Defines paths for media and thumbnail storage.
@@ -50,6 +51,7 @@ impl From<RawSettings> for AppSettings {
             logging: raw.logging,
             api: raw.api,
             secrets: raw.secrets,
+            daily_cards: raw.daily_cards,
         }
     }
 }

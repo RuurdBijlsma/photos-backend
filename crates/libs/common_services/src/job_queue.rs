@@ -1,5 +1,5 @@
 use crate::database::jobs::{JobStatus, JobType};
-use app_state::{AppSettings, IngestSettings};
+use app_state::IngestSettings;
 use bon::builder;
 use chrono::{DateTime, Utc};
 use color_eyre::eyre::Result;
@@ -22,7 +22,7 @@ pub struct IngestMetadataPayload {
 #[builder]
 pub async fn enqueue_job<T: Serialize + Send + Sync>(
     #[builder(start_fn)] pool: &PgPool,
-    #[builder(start_fn)] settings: &AppSettings,
+    #[builder(start_fn)] settings: &IngestSettings,
     #[builder(start_fn)] job_type: JobType,
     #[builder(into)] relative_path: Option<String>,
     scheduled_at: Option<DateTime<Utc>>,
@@ -37,11 +37,9 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
         per_job_logic(&mut tx, job_type, rel_path).await?;
     }
 
-    let is_video = relative_path.as_ref().is_some_and(|p| {
-        settings
-            .ingest
-            .is_video_file(&settings.ingest.media_root.join(p))
-    });
+    let is_video = relative_path
+        .as_ref()
+        .is_some_and(|p| settings.is_video_file(&settings.media_root.join(p)));
     let priority = job_type.get_priority(is_video);
 
     let result = sqlx::query!(
@@ -81,6 +79,26 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
     Ok(true)
 }
 
+pub async fn enqueue_full_scan(
+    pool: &PgPool,
+    settings: &IngestSettings,
+    target_user_id: i32,
+) -> Result<()> {
+    enqueue_job::<()>(pool, settings, JobType::Scan)
+        .user_id(target_user_id)
+        .call()
+        .await?;
+    enqueue_job::<()>(pool, settings, JobType::DelayedScan)
+        .user_id(target_user_id)
+        .call()
+        .await?;
+    enqueue_job::<()>(pool, settings, JobType::SyncThumbnails)
+        .user_id(target_user_id)
+        .call()
+        .await?;
+    Ok(())
+}
+
 /// Enqueues a full ingest and analysis job for a given file.
 ///
 /// # Errors
@@ -88,7 +106,7 @@ pub async fn enqueue_job<T: Serialize + Send + Sync>(
 /// Returns an error if any of the database operations fail.
 pub async fn enqueue_full_ingest(
     pool: &PgPool,
-    settings: &AppSettings,
+    settings: &IngestSettings,
     relative_path: &str,
     user_id: i32,
     payload: Option<IngestMetadataPayload>,
@@ -114,7 +132,6 @@ pub async fn enqueue_full_ingest(
         .user_id(user_id)
         .call()
         .await?;
-
     Ok(())
 }
 

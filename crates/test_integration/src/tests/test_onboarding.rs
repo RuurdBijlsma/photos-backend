@@ -3,9 +3,9 @@ use crate::test_helpers::{login, media_dir_contents};
 use app_state::MakeRelativePath;
 use color_eyre::Result;
 use color_eyre::eyre::bail;
-use common_services::api::onboarding::interfaces::{
-    DiskResponse, MakeFolderBody, MediaSampleResponse, StartProcessingBody,
-    UnsupportedFilesResponse,
+use common_services::api::admin::interfaces::{
+    DiskResponse, MakeFolderBody, MediaSampleResponse, UnsupportedFilesResponse,
+    UpdateUserMediaFolderBody,
 };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
@@ -25,7 +25,7 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
 
     // 2. Get Disk Info
     let response = client
-        .get(format!("{api_url}/onboarding/disk-info"))
+        .get(format!("{api_url}/admin/disk-info"))
         .bearer_auth(&token)
         .send()
         .await?;
@@ -37,7 +37,7 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
 
     // 3. List Folders (root)
     let response = client
-        .get(format!("{api_url}/onboarding/folders"))
+        .get(format!("{api_url}/admin/folders"))
         .query(&[("folder", "")])
         .bearer_auth(&token)
         .send()
@@ -49,7 +49,7 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
     // 4. Create a new folder
     let created_folder = "integration_test_folder";
     let response = client
-        .post(format!("{api_url}/onboarding/make-folder"))
+        .post(format!("{api_url}/admin/make-folder"))
         .bearer_auth(&token)
         .json(&MakeFolderBody {
             base_folder: String::new(),
@@ -62,7 +62,7 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
 
     // 5. Verify the folder exists
     let response = client
-        .get(format!("{api_url}/onboarding/folders"))
+        .get(format!("{api_url}/admin/folders"))
         .query(&[("folder", "")])
         .bearer_auth(&token)
         .send()
@@ -76,7 +76,7 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
 
     // 6. Check Media Sample
     let response = client
-        .get(format!("{api_url}/onboarding/media-sample"))
+        .get(format!("{api_url}/admin/media-sample"))
         .query(&[("folder", "")])
         .bearer_auth(&token)
         .send()
@@ -90,7 +90,7 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
 
     // 7. Check Unsupported Files
     let response = client
-        .get(format!("{api_url}/onboarding/unsupported-files"))
+        .get(format!("{api_url}/admin/unsupported-files"))
         .query(&[("folder", "")])
         .bearer_auth(&token)
         .send()
@@ -126,16 +126,17 @@ pub async fn test_start_processing(context: &TestContext) -> Result<()> {
 
     // 4. Start Processing
     // This sets the user's media folder and enqueues a scan job.
+    let user_id = 1;
     let response = client
-        .post(format!("{api_url}/onboarding/start-processing"))
+        .put(format!("{api_url}/admin/users/{user_id}/media-folder"))
         .bearer_auth(&token)
-        .json(&StartProcessingBody {
+        .json(&UpdateUserMediaFolderBody {
             user_folder: String::new(),
         })
         .send()
         .await?;
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
     // 5. Listen for WebSocket messages
     let timeout = Duration::from_mins(1);

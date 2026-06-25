@@ -1,5 +1,5 @@
+use crate::api::app_error::AppError;
 use crate::api::search::cache::{get_cached_image_embedding, get_cached_text_embedding};
-use crate::api::search::error::SearchError;
 use crate::api::search::interfaces::{
     SearchFilterRanges, SearchImage, SearchMediaConfig, SearchMediaType, SearchSortBy,
 };
@@ -21,7 +21,7 @@ pub async fn search_media(
     embedder: Arc<TextEmbedder>,
     query: Option<String>,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     let query = query.unwrap_or_default();
     if query.trim().is_empty() {
         if has_active_filters(&config) {
@@ -35,7 +35,7 @@ pub async fn search_media(
         && config.start_date.is_none()
         && config.end_date.is_none()
         && config.negative_query.is_none()
-        && config.face_names.is_empty()
+        && config.person_ids.is_empty()
         && config.country_codes.is_empty()
     {
         basic_search_media(user, pool, embedder, &query, config).await
@@ -53,7 +53,7 @@ pub async fn search_by_image(
     query: Option<String>,
     img: SearchImage,
     config: SearchMediaConfig,
-) -> Result<Vec<SimpleTimelineItem>, SearchError> {
+) -> Result<Vec<SimpleTimelineItem>, AppError> {
     // 1. Spawn vision embedding (CPU-bound / blocking task)
     let pool_clone = pool.clone();
     let model_id_clone = config.embedder_model_id.clone();
@@ -173,12 +173,12 @@ pub async fn search_by_image(
                   WHERE g.media_item_id = mi.id AND l.country_code = ANY($12)
               ))
               AND (cardinality($13::text[]) = 0 OR (
-                  SELECT COUNT(DISTINCT p.name)
+                  SELECT COUNT(DISTINCT p.id)
                   FROM visual_analysis va
                   JOIN face f ON f.visual_analysis_id = va.id
                   JOIN face_cluster fc ON f.face_cluster_id = fc.id
                   JOIN person p ON fc.person_id = p.id
-                  WHERE va.media_item_id = mi.id AND p.name = ANY($13)
+                  WHERE va.media_item_id = mi.id AND p.id = ANY($13)
               ) >= (CASE WHEN $16 THEN cardinality($13) ELSE 1 END))
         ),
         fts AS (
@@ -260,7 +260,7 @@ pub async fn search_by_image(
             config.end_date,          // $10
             is_video_filter,          // $11
             &config.country_codes,    // $12
-            &config.face_names,       // $13
+            &config.person_ids,       // $13
             sort_by_str,              // $14
             semantic_score_threshold, // $15
             config.all_faces_required, // $16
@@ -289,12 +289,12 @@ pub async fn search_by_image(
                       WHERE g.media_item_id = mi.id AND l.country_code = ANY($8)
                   ))
                   AND (cardinality($9::text[]) = 0 OR (
-                      SELECT COUNT(DISTINCT p.name)
+                      SELECT COUNT(DISTINCT p.id)
                       FROM visual_analysis va
                       JOIN face f ON f.visual_analysis_id = va.id
                       JOIN face_cluster fc ON f.face_cluster_id = fc.id
                       JOIN person p ON fc.person_id = p.id
-                      WHERE va.media_item_id = mi.id AND p.name = ANY($9)
+                      WHERE va.media_item_id = mi.id AND p.id = ANY($9)
                   ) >= (CASE WHEN $12 THEN cardinality($9) ELSE 1 END))
             ),
             vec AS (
@@ -338,7 +338,7 @@ pub async fn search_by_image(
             config.end_date,           // $6
             is_video_filter,           // $7
             &config.country_codes,     // $8
-            &config.face_names,        // $9
+            &config.person_ids,        // $9
             sort_by_str,               // $10
             semantic_score_threshold,  // $11
             config.all_faces_required, // $12
@@ -354,7 +354,7 @@ pub async fn search_by_image(
 pub async fn search_filter_ranges(
     user: &User,
     pool: &PgPool,
-) -> Result<SearchFilterRanges, SearchError> {
+) -> Result<SearchFilterRanges, AppError> {
     let months_task = sqlx::query!(
         r#"
         SELECT DISTINCT month_id AS "months!"
@@ -413,7 +413,7 @@ fn has_active_filters(config: &SearchMediaConfig) -> bool {
         || config.start_date.is_some()
         || config.end_date.is_some()
         || !config.country_codes.is_empty()
-        || !config.face_names.is_empty()
+        || !config.person_ids.is_empty()
         || config.negative_query.is_some()
 }
 
@@ -422,7 +422,7 @@ pub async fn get_search_suggestions(
     pool: &PgPool,
     query: &str,
     limit: Option<i64>,
-) -> Result<SearchSuggestionsResponse, SearchError> {
+) -> Result<SearchSuggestionsResponse, AppError> {
     if query.trim().is_empty() {
         return Ok(SearchSuggestionsResponse::default());
     }
@@ -525,7 +525,7 @@ pub async fn get_search_suggestions(
 pub async fn get_random_search_suggestion(
     user: &User,
     pool: &PgPool,
-) -> Result<Option<String>, SearchError> {
+) -> Result<Option<String>, AppError> {
     let rows = sqlx::query!(
         r#"
         WITH matched_terms AS (

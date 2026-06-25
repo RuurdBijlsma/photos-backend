@@ -1,6 +1,6 @@
 use crate::database::DbError;
 use crate::database::visual_analysis::caption_data::ClassificationData;
-use crate::database::visual_analysis::quality::QualityScore;
+use crate::database::visual_analysis::quality_judge::QualityJudge;
 use crate::database::visual_analysis::visual_analysis::CreateVisualAnalysis;
 use sqlx::PgTransaction;
 
@@ -11,12 +11,13 @@ impl VisualAnalysisStore {
         tx: &mut PgTransaction<'_>,
         visual_analysis_id: i64,
         classification: &ClassificationData,
-        quality: &QualityScore,
+        quality: Option<QualityJudge>,
     ) -> Result<i64, DbError> {
         // --- Quality Data ---
-        sqlx::query!(
-            r#"
-            INSERT INTO quality (
+        if let Some(quality) = quality {
+            sqlx::query!(
+                r#"
+            INSERT INTO quality_judge (
                 visual_analysis_id,
                 exposure,
                 contrast,
@@ -29,34 +30,27 @@ impl VisualAnalysisStore {
                 color_harmony,
                 storytelling,
                 style_suitability,
-                weighted_score,
-                measured_blurriness,
-                measured_noisiness,
-                measured_exposure,
-                measured_weighted_score
+                weighted_score
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         "#,
-            visual_analysis_id,
-            i16::from(quality.exposure),
-            i16::from(quality.contrast),
-            i16::from(quality.sharpness),
-            i16::from(quality.color_accuracy),
-            i16::from(quality.composition),
-            i16::from(quality.subject_clarity),
-            i16::from(quality.visual_impact),
-            i16::from(quality.creativity),
-            i16::from(quality.color_harmony),
-            i16::from(quality.storytelling),
-            i16::from(quality.style_suitability),
-            quality.weighted_score,
-            quality.measured_blurriness,
-            quality.measured_noisiness,
-            quality.measured_exposure,
-            quality.measured_weighted_score,
-        )
-        .execute(&mut **tx)
-        .await?;
+                visual_analysis_id,
+                i16::from(quality.exposure),
+                i16::from(quality.contrast),
+                i16::from(quality.sharpness),
+                i16::from(quality.color_accuracy),
+                i16::from(quality.composition),
+                i16::from(quality.subject_clarity),
+                i16::from(quality.visual_impact),
+                i16::from(quality.creativity),
+                i16::from(quality.color_harmony),
+                i16::from(quality.storytelling),
+                i16::from(quality.style_suitability),
+                quality.weighted_score
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
 
         // --- Classification Data ---
         sqlx::query!(
@@ -190,24 +184,43 @@ impl VisualAnalysisStore {
 
         // --- Color Data ---
         let color = &analysis.colors;
-        let themes_values: Vec<serde_json::Value> = color.themes.clone();
         let histogram_json = serde_json::to_value(&color.histogram)?;
 
         sqlx::query!(
             r#"
             INSERT INTO color (
-                visual_analysis_id, themes, prominent_colors,
+                visual_analysis_id, prominent_colors,
                 average_hue, average_saturation, average_lightness, histogram
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES ($1, $2, $3, $4, $5, $6)
             "#,
             visual_analysis_id,
-            &themes_values,
             &color.prominent_colors,
             color.average_hue,
             color.average_saturation,
             color.average_lightness,
             histogram_json,
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        // --- Quality Data ---
+        let quality = &analysis.quality;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO measured_quality (
+                visual_analysis_id, blurriness, noisiness, exposure, accidentalness,
+                weighted_score
+            )
+            VALUES ($1, $2, $3, $4, $5, $6)
+            "#,
+            visual_analysis_id,
+            quality.blurriness,
+            quality.noisiness,
+            quality.exposure,
+            quality.accidentalness,
+            quality.weighted_score,
         )
         .execute(&mut **tx)
         .await?;

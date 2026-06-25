@@ -153,18 +153,30 @@ CREATE TABLE media_features
     video_fps                           REAL,
     is_nightsight                       BOOLEAN NOT NULL,
     is_timelapse                        BOOLEAN NOT NULL,
-    exif                                JSONB   NOT NULL
+    exif                                JSONB   NOT NULL,
+    audio_format                        TEXT,
+    audio_channels                      INT,
+    audio_sample_rate                   INT,
+    compressor_id                       TEXT
 );
 
 CREATE TABLE camera_settings
 (
-    media_item_id VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    iso           INT,
-    exposure_time REAL,
-    aperture      REAL,
-    focal_length  REAL,
-    camera_make   TEXT,
-    camera_model  TEXT
+    media_item_id         VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
+    iso                   INT,
+    exposure_time         REAL,
+    aperture              REAL,
+    focal_length          REAL,
+    focal_length_in_35mm  REAL,
+    camera_make           TEXT,
+    camera_model          TEXT,
+    flash_fired           BOOLEAN,
+    flash_mode            TEXT,
+    lens_make             TEXT,
+    lens_model            TEXT,
+    digital_zoom_ratio    REAL,
+    subject_distance      REAL,
+    exposure_compensation REAL
 );
 
 CREATE TABLE panorama
@@ -215,3 +227,10 @@ CREATE INDEX idx_media_item_search_filters
 -- For /photos/geo (Map view)
 CREATE INDEX idx_media_item_geo_lookup
     ON media_item (user_id, deleted, sort_timestamp DESC) INCLUDE (id, width, height, is_video, has_thumbnails, duration_ms);
+
+-- For /camera
+CREATE INDEX idx_camera_settings_normalized_make_model
+    ON camera_settings (
+                        LOWER(TRIM(camera_make)),
+                        LOWER(REGEXP_REPLACE(TRIM(camera_model), '\s*\(.*\)$', '', 'i'))
+        );

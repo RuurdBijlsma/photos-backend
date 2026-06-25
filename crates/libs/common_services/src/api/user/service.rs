@@ -1,4 +1,4 @@
-use crate::api::user::error::UserError;
+use crate::api::app_error::AppError;
 use crate::api::user::interfaces::{UserProfile, UserStats};
 use crate::database::UpdateField::Value;
 use crate::database::app_user::UserRole;
@@ -10,10 +10,10 @@ pub async fn get_user_profile(
     pool: &PgPool,
     logged_in_user_id: i32,
     user_id: i32,
-) -> Result<UserProfile, UserError> {
+) -> Result<UserProfile, AppError> {
     let user = UserStore::find_by_id(pool, user_id)
         .await?
-        .ok_or(UserError::UserNotFound)?;
+        .ok_or(AppError::NotFound("user".into()))?;
 
     let stats = get_user_stats(pool, user_id).await?;
 
@@ -33,7 +33,7 @@ pub async fn get_user_profile(
     })
 }
 
-pub async fn get_user_stats(pool: &PgPool, user_id: i32) -> Result<UserStats, UserError> {
+pub async fn get_user_stats(pool: &PgPool, user_id: i32) -> Result<UserStats, AppError> {
     let counts = sqlx::query!(
         r#"
         SELECT
@@ -60,7 +60,7 @@ pub async fn update_user_profile(
     user_id: i32,
     name: Option<String>,
     avatar_id: UpdateField<String>,
-) -> Result<UserProfile, UserError> {
+) -> Result<UserProfile, AppError> {
     if let Value(ref aid) = avatar_id {
         let is_accessible = sqlx::query_scalar!(
             r#"
@@ -78,7 +78,7 @@ pub async fn update_user_profile(
         .await?;
 
         if !is_accessible {
-            return Err(UserError::InvalidAvatar);
+            return Err(AppError::BadRequest("Invalid avatar".into()));
         }
     }
 

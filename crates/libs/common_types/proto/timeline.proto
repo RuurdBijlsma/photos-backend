@@ -111,6 +111,23 @@ message FullPersonMediaResponse {
   repeated SimpleTimelineItem items = 2;
 }
 
+// --- Camera
+message CameraInfo {
+  string make = 1;
+  string model = 2;
+  int32 photo_count = 3;
+  string thumbnail_id = 4;
+}
+
+message ListCameraResponse {
+  repeated CameraInfo cameras = 1;
+}
+
+message FullCameraPhotosResponse {
+  CameraInfo camera = 1;
+  repeated SimpleTimelineItem items = 2;
+}
+
 // --- Map specific ---
 message MapPhotoItem {
   double latitude = 1;
@@ -122,3 +139,29 @@ message MapPhotosResponse {
   repeated MapPhotoItem items = 1;
 }
 
+// --- Storage review ---
+message StorageReviewItem {
+  string id = 1;
+  bool is_video = 2;
+  bool has_thumbnails = 3;
+  optional int32 duration_ms = 4;
+  float ratio = 5;
+  int64 size_bytes = 6;
+  string taken_at_local = 7;
+  string filename = 8;
+  optional float weighted_score = 9;
+}
+
+message StorageReviewResponse {
+  repeated StorageReviewItem items = 1;
+  int64 total_size = 2;
+}
+
+message StorageSummaryResponse {
+  int64 large_potential_savings = 1;
+  int32 large_item_count = 2;
+  int64 blurry_potential_savings = 3;
+  int32 blurry_item_count = 4;
+  int64 media_folder_size_bytes = 5;
+  int64 thumbnail_folder_size_bytes = 6;
+}

@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, friendly_label, centroid as \"centroid: _\" FROM photo_cluster WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "friendly_label",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "centroid: _",
+        "type_info": {
+          "Custom": {
+            "name": "vector",
+            "kind": "Simple"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "0c4e0b9cc5eff8a3a059c22ed8ef4ba85b81ac193288c6fc8a8136b34d1cc43c"
+}

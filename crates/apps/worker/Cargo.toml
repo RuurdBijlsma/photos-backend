@@ -9,7 +9,7 @@ common_types = { path = "../../libs/common_types" }
 common_services = { path = "../../libs/common_services" }
 generate_thumbnails = { path = "../../libs/generate_thumbnails" }
 ml_analysis = { path = "../../libs/ml_analysis" }
-media_analyzer = "0.6.6"
+media_analyzer = "0.9.0"
 sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono", "macros", "json", "uuid"] }
 tokio = { version = "1.47.1", features = ["full"] }
 color-eyre = "0.6.5"
@@ -28,11 +28,17 @@ imageproc = "0.26.0"
 ab_glyph = "0.2.32"
 reqwest = "0.13.2"
 sanitize-filename = "0.6.0"
-directories = "6.0.0"
-blake3 = "1.8.2"
 serde = { version = "1.0.228", features = ["derive"] }
 tempfile = "3.23.0"
 itertools = "0.14.0"
+open_clip_inference = { version = "0.4.0" }
+async-trait = "0.1.89"
 
 [features]
-load-dynamic = ["common_services/load-dynamic", "ml_analysis/load-dynamic", "common_types/load-dynamic"] # -> Load ONNXRuntime dynamically instead of statically
+load-dynamic = ["common_services/load-dynamic", "ml_analysis/load-dynamic", "common_types/load-dynamic", "open_clip_inference/load-dynamic"] # -> Load ONNXRuntime dynamically instead of statically
+
+[dev-dependencies]
+umap-rs = "0.4.5"
+ndarray = "0.17.2"
+rayon = "1.10.0"
+plotters = "0.3.7"

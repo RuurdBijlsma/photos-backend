@@ -296,10 +296,50 @@ async fn cleanup_obsolete(
     Ok(())
 }
 
+/// Checks if there have been any updates to media items or new visual analysis records
+/// since the last successful face cluster generation for the user.
+async fn needs_clustering(pool: &PgPool, user_id: i32) -> Result<bool> {
+    let needs_run = sqlx::query_scalar!(
+        r#"
+        WITH last_run AS (
+            SELECT MAX(updated_at) AS last_run_time
+            FROM face_cluster
+            WHERE user_id = $1
+        )
+        SELECT
+            CASE
+                -- If there is no record of previous runs, clustering must run
+                WHEN (SELECT last_run_time FROM last_run) IS NULL THEN TRUE
+                ELSE
+                    -- Check if any media items were created or updated since the last run
+                    -- Soft deletions are also detected, actual row deletions are not
+                    EXISTS (
+                        SELECT 1 FROM media_item
+                        WHERE user_id = $1 AND updated_at > (SELECT last_run_time FROM last_run)
+                    )
+            END AS "needs_run!"
+        "#,
+        user_id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(needs_run)
+}
+
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let user_ids = clustering::fetch_user_ids(&context.pool, job).await?;
 
     for user_id in user_ids {
+        // Skip user if there are no new updates or changes since the last run
+        if !needs_clustering(&context.pool, user_id).await? {
+            info!(
+                "Skipping face clustering for user {} - no updates detected",
+                user_id
+            );
+            continue;
+        }
+
         let existing_clusters = fetch_existing_clusters(&context.pool, user_id).await?;
         let items_to_cluster = fetch_embeddings(&context.pool, user_id).await?;
         if items_to_cluster.len() < MIN_ITEMS_TO_CLUSTER {

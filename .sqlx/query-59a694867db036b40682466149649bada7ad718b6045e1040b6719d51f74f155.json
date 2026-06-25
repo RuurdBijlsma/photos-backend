@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT EXTRACT(YEAR FROM taken_at_local)::integer as \"year!\"\n                FROM media_item\n                WHERE user_id = $1 AND deleted = false\n                  AND EXTRACT(MONTH FROM taken_at_local)::integer = $2\n                  AND EXTRACT(DAY FROM taken_at_local)::integer = $3\n                  AND EXTRACT(YEAR FROM taken_at_local)::integer < $4\n                GROUP BY 1\n                HAVING COUNT(*) >= 2\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "year!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "59a694867db036b40682466149649bada7ad718b6045e1040b6719d51f74f155"
+}

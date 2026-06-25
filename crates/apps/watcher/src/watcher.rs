@@ -1,5 +1,5 @@
 use crate::handlers::{handle_create, handle_remove};
-use app_state::AppSettings;
+use app_state::IngestSettings;
 use color_eyre::eyre::{Result, eyre};
 use common_services::alert;
 use common_types::constants::ALBUM_IMPORT_FOLDER;
@@ -11,8 +11,8 @@ use tracing::{error, info, warn};
 
 const EXCLUDED_WATCH_FOLDER: [&str; 1] = [ALBUM_IMPORT_FOLDER];
 
-pub async fn start_watching(pool: PgPool, settings: AppSettings) -> Result<()> {
-    if let Err(e) = run(&pool, &settings).await {
+pub async fn start_watching(pool: &PgPool, settings: &IngestSettings) -> Result<()> {
+    if let Err(e) = run(pool, settings).await {
         alert!("Watcher failed with an error: {}", e);
     }
 
@@ -23,7 +23,7 @@ pub async fn start_watching(pool: PgPool, settings: AppSettings) -> Result<()> {
 ///
 /// This function sets up a channel to receive file system events and processes them
 /// in a loop. Each event is handled in a separate asynchronous task.
-async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
+async fn run(pool: &PgPool, settings: &IngestSettings) -> notify::Result<()> {
     let (tx, mut rx) = mpsc::channel(100);
 
     let mut watcher = RecommendedWatcher::new(
@@ -35,8 +35,8 @@ async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
         Config::default(),
     )?;
 
-    watcher.watch(&settings.ingest.media_root, RecursiveMode::Recursive)?;
-    info!("👁️ Watcher started on: {:?}", &settings.ingest.media_root);
+    watcher.watch(&settings.media_root, RecursiveMode::Recursive)?;
+    info!("👁️ Watcher started on: {:?}", &settings.media_root);
 
     while let Some(result) = rx.recv().await {
         let pool = pool.clone();
@@ -59,7 +59,7 @@ async fn run(pool: &PgPool, settings: &AppSettings) -> notify::Result<()> {
 }
 
 /// Processes a single file system event from the watcher.
-async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) -> Result<()> {
+async fn process_event(pool: &PgPool, settings: &IngestSettings, event: Event) -> Result<()> {
     let Some(path) = event.paths.first() else {
         return Ok(());
     };
@@ -74,7 +74,7 @@ async fn process_event(pool: &PgPool, settings: &AppSettings, event: Event) -> R
         return Ok(());
     }
 
-    let rel_path = path.strip_prefix(&settings.ingest.media_root)?;
+    let rel_path = path.strip_prefix(&settings.media_root)?;
     if let Some(Component::Normal(name)) = rel_path.components().next()
         && EXCLUDED_WATCH_FOLDER.contains(&name.to_string_lossy().as_ref())
     {
