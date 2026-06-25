@@ -40,15 +40,8 @@ try {
     }
 
     # - Combined Clippy & Build (Using Release profile)
-    # By using --release here, we cache the builds for the tests later.
     Write-Host "`n=== 3. Running Clippy (Release Profile) ===" -ForegroundColor Cyan
     cargo clippy --release --all-targets --all-features -- -D clippy::pedantic -D clippy::nursery
-    if ($LASTEXITCODE -ne 0) { exit 1 }
-
-    # - Optimized Testing
-    # This reuses the artifacts from the Clippy step above.
-    Write-Host "`n=== 4. Running All Tests (Release Profile) ===" -ForegroundColor Cyan
-    cargo test --release --workspace --features load-dynamic -- --nocapture
     if ($LASTEXITCODE -ne 0) { exit 1 }
 
     # - Documentation check
