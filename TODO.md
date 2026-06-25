@@ -231,12 +231,15 @@
   * ✅ overview of users: remove user, storage used per user
   * restart server?
   * uptime
-  * jobs overview, inclusief schedule and manual job run
+  * ✅ jobs overview, inclusief manual job run
   * backup (met export jsons / import?)
-* ingest overview page
-  * show status of ingest per media item, all 3 stages
-  * button to do a scan
-  * import albums from google photos
+* user level job management
+  * ingest status
+    * user level global progress bar (3 progress bars?)
+    * per item list? net als immich
+    * failed ingest overview
+  * start Scan job for user
+* import albums from google photos
 * explore page
   * stats over je fotos?
   * most visited places
