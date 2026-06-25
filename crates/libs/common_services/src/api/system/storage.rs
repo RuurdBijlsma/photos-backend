@@ -1,12 +1,26 @@
 use crate::api::app_error::AppError;
+use crate::api::system::storage_helpers::get_folder_size;
 use app_state::IngestSettings;
 use common_types::pb::api::{StorageReviewItem, StorageReviewResponse, StorageSummaryResponse};
+use moka::future::Cache;
 use sqlx::PgPool;
-use crate::api::system::storage_helpers::get_folder_size;
+use std::sync::OnceLock;
+use std::time::Duration;
 
 const REVIEW_LIMIT: i64 = 250;
 const REVIEW_MIN_SIZE_BYTES: i64 = 10 * 1024 * 1024;
 const BLURRY_QUALITY_THRESHOLD: f64 = 50.0;
+
+static SIZE_CACHE: OnceLock<Cache<String, (u64, u64)>> = OnceLock::new();
+
+fn get_size_cache() -> &'static Cache<String, (u64, u64)> {
+    SIZE_CACHE.get_or_init(|| {
+        Cache::builder()
+            .max_capacity(10)
+            .time_to_live(Duration::from_mins(2))
+            .build()
+    })
+}
 
 pub async fn get_storage_summary(
     pool: &PgPool,
@@ -60,19 +74,24 @@ pub async fn get_storage_summary(
     let media_folder = settings.media_root.clone();
     let thumbnail_folder = settings.thumbnail_root.clone();
 
-    let fs_task = tokio::task::spawn_blocking(move || {
-        let media_size = get_folder_size(&media_folder);
-        let thumbnail_size = get_folder_size(&thumbnail_folder);
-        (media_size, thumbnail_size)
-    });
+    // Use moka cache with TTL
+    let cache = get_size_cache();
+    let (media_folder_size, thumbnail_folder_size) = cache
+        .get_with("sizes_key".to_string(), async move {
+            let res = tokio::task::spawn_blocking(move || {
+                let media = get_folder_size(&media_folder);
+                let thumb = get_folder_size(&thumbnail_folder);
+                (media, thumb)
+            })
+            .await;
+            res.unwrap_or((0, 0))
+        })
+        .await;
 
-    let (large_row, blurry_row, fs_res) = tokio::try_join!(
-        async { large_task.await.map_err(AppError::from) },
-        async { blurry_task.await.map_err(AppError::from) },
-        async { fs_task.await.map_err(AppError::from) }
-    )?;
-
-    let (media_folder_size, thumbnail_folder_size) = fs_res;
+    let (large_row, blurry_row) =
+        tokio::try_join!(async { large_task.await.map_err(AppError::from) }, async {
+            blurry_task.await.map_err(AppError::from)
+        })?;
 
     Ok(StorageSummaryResponse {
         large_potential_savings: large_row.large_potential_savings,
