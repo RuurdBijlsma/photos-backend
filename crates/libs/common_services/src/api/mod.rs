@@ -8,6 +8,7 @@ pub mod people;
 pub mod photos;
 pub mod s2s;
 pub mod search;
+pub mod jobs;
 pub mod system;
 pub mod theme;
 pub mod timeline;

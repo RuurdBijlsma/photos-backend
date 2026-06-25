@@ -229,7 +229,6 @@
   * ✅ contrast setting in theme
 * admin page
   * ✅ overview of users: remove user, storage used per user
-  * server settings?
   * restart server?
   * uptime
   * jobs overview, inclusief schedule and manual job run
