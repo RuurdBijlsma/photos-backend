@@ -14,9 +14,9 @@ impl VisualAnalysisStore {
         quality: Option<QualityJudge>,
     ) -> Result<i64, DbError> {
         // --- Quality Data ---
-        if let Some(quality) = quality{
+        if let Some(quality) = quality {
             sqlx::query!(
-            r#"
+                r#"
             INSERT INTO quality_judge (
                 visual_analysis_id,
                 exposure,
@@ -34,22 +34,22 @@ impl VisualAnalysisStore {
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         "#,
-            visual_analysis_id,
-            i16::from(quality.exposure),
-            i16::from(quality.contrast),
-            i16::from(quality.sharpness),
-            i16::from(quality.color_accuracy),
-            i16::from(quality.composition),
-            i16::from(quality.subject_clarity),
-            i16::from(quality.visual_impact),
-            i16::from(quality.creativity),
-            i16::from(quality.color_harmony),
-            i16::from(quality.storytelling),
-            i16::from(quality.style_suitability),
-            quality.weighted_score
-        )
-                .execute(&mut **tx)
-                .await?;
+                visual_analysis_id,
+                i16::from(quality.exposure),
+                i16::from(quality.contrast),
+                i16::from(quality.sharpness),
+                i16::from(quality.color_accuracy),
+                i16::from(quality.composition),
+                i16::from(quality.subject_clarity),
+                i16::from(quality.visual_impact),
+                i16::from(quality.creativity),
+                i16::from(quality.color_harmony),
+                i16::from(quality.storytelling),
+                i16::from(quality.style_suitability),
+                quality.weighted_score
+            )
+            .execute(&mut **tx)
+            .await?;
         }
 
         // --- Classification Data ---

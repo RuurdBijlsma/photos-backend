@@ -30,7 +30,7 @@ pub struct QualityMeasurement {
     pub noisiness: f64,
     pub exposure: f64,
     pub weighted_score: f64,
-    pub accidentalness: f64
+    pub accidentalness: f64,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
@@ -130,7 +130,7 @@ pub struct MLFastAnalysis {
     pub embedding: Vec<f32>,
     pub faces: Vec<FaceAnalysis>,
     pub objects: Vec<DetectedObject>,
-    pub measured_quality: QualityMeasurement
+    pub measured_quality: QualityMeasurement,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]

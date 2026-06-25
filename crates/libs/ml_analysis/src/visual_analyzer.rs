@@ -117,7 +117,7 @@ impl VisualAnalyzer {
             embedding,
             faces,
             objects,
-            measured_quality
+            measured_quality,
         })
     }
 

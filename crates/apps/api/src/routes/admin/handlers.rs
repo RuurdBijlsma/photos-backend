@@ -11,8 +11,8 @@ use common_services::api::admin::interfaces::{
 };
 use common_services::api::admin::service::{
     admin_delete_user, admin_update_user_media_folder, create_folder, get_disks_info,
-    get_folder_unsupported_files, get_media_sample, get_subfolders, list_admin_users,
-    is_valid_user_folder,
+    get_folder_unsupported_files, get_media_sample, get_subfolders, is_valid_user_folder,
+    list_admin_users,
 };
 use common_services::api::app_error::AppError;
 use common_services::database::app_user::User;

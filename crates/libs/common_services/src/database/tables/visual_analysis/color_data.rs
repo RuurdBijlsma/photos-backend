@@ -1,7 +1,6 @@
-
+use common_types::ml_analysis;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use common_types::ml_analysis;
 
 /// Corresponds to the '`color_data`' table.
 #[derive(Debug, Serialize, Deserialize, Clone)]

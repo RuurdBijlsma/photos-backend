@@ -121,9 +121,9 @@ impl From<tokio::task::JoinError> for AppError {
 impl From<crate::database::DbError> for AppError {
     fn from(err: crate::database::DbError) -> Self {
         match err {
-            crate::database::DbError::UniqueViolation(_) => Self::Conflict(
-                "A record with this unique attribute already exists.".to_string(),
-            ),
+            crate::database::DbError::UniqueViolation(_) => {
+                Self::Conflict("A record with this unique attribute already exists.".to_string())
+            }
             crate::database::DbError::Sqlx(e) => Self::from(e),
             crate::database::DbError::SerdeJson(e) => Self::Internal(color_eyre::Report::new(e)),
         }

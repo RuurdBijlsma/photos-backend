@@ -1,9 +1,10 @@
-use crate::api::admin::helpers::{list_folders};
+use crate::api::admin::helpers::list_folders;
 use crate::api::admin::interfaces::{
     AdminUserInfo, DiskResponse, MediaSampleResponse, UnsupportedFilesResponse,
 };
 use crate::api::album::backup_restore::backup_albums;
 use crate::api::app_error::AppError;
+use crate::api::system::storage_helpers::{check_drive_info, get_folder_size};
 use crate::database::app_user::User;
 use crate::database::user_store::UserStore;
 use crate::database::{UpdateField, UpdateUserPayload};
@@ -15,7 +16,6 @@ use std::path::{Path, PathBuf};
 use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
-use crate::api::system::storage_helpers::{check_drive_info, get_folder_size};
 
 /// Gathers information about the media and thumbnail directories.
 pub fn get_disks_info(media_root: &Path, thumbnails_root: &Path) -> Result<DiskResponse, AppError> {

@@ -32,9 +32,10 @@ pub fn get_quality_measurement_from_luma(gray_img: &GrayImage) -> QualityMeasure
     let exposure = calculate_exposure(gray_img);
 
     // Scaling down the weighted score based on how confidently bad the photo is.
-    let weighted_score = (1.0 - accidentalness)
-        .mul_add(0.3, exposure.mul_add(0.2, noisiness.mul_add(0.1, blurriness * 0.4)))
-        * 100.0;
+    let weighted_score = (1.0 - accidentalness).mul_add(
+        0.3,
+        exposure.mul_add(0.2, noisiness.mul_add(0.1, blurriness * 0.4)),
+    ) * 100.0;
 
     QualityMeasurement {
         weighted_score,

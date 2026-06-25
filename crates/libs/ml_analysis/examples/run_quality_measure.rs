@@ -1,4 +1,4 @@
-use image::{imageops, DynamicImage};
+use image::{DynamicImage, imageops};
 use ml_analysis::get_quality_measurement_from_image;
 use rayon::prelude::*;
 use std::fs;
@@ -77,10 +77,7 @@ fn main() -> color_eyre::Result<()> {
             let quality_data = get_quality_measurement_from_image(&resized);
 
             // Save the resized image once (this handles the slow JPEG compression work)
-            let weighted_name = format!(
-                "{:06.2}___{}",
-                quality_data.weighted_score, file_name
-            );
+            let weighted_name = format!("{:06.2}___{}", quality_data.weighted_score, file_name);
             let weighted_path = output_base.join("weighted").join(&weighted_name);
 
             if let Err(err) = resized.save(&weighted_path) {
@@ -90,18 +87,24 @@ fn main() -> color_eyre::Result<()> {
 
             // Copy the output file to the remaining folders (skips re-encoding JPEG 4 more times)
             let blur_name = format!("{:05.3}___{}", quality_data.blurriness, file_name);
-            let _ = fs::copy(&weighted_path, output_base.join("blurriness").join(blur_name));
+            let _ = fs::copy(
+                &weighted_path,
+                output_base.join("blurriness").join(blur_name),
+            );
 
             let noise_name = format!("{:05.3}___{}", quality_data.noisiness, file_name);
-            let _ = fs::copy(&weighted_path, output_base.join("noisyness").join(noise_name));
+            let _ = fs::copy(
+                &weighted_path,
+                output_base.join("noisyness").join(noise_name),
+            );
 
             let exposure_name = format!("{:05.3}___{}", quality_data.exposure, file_name);
-            let _ = fs::copy(&weighted_path, output_base.join("exposure").join(exposure_name));
-
-            let accidental_name = format!(
-                "{:05.3}___{}",
-                quality_data.accidentalness, file_name
+            let _ = fs::copy(
+                &weighted_path,
+                output_base.join("exposure").join(exposure_name),
             );
+
+            let accidental_name = format!("{:05.3}___{}", quality_data.accidentalness, file_name);
             let _ = fs::copy(
                 &weighted_path,
                 output_base.join("accidentallness").join(accidental_name),
