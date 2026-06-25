@@ -30,7 +30,7 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: libfontconfig1-dev pkg-config exiftool protobuf-compiler nasm postgresql-client libheif-dev
-          version: 1.0
+          version: 1.1
 
       - name: Check formatting
         run: cargo fmt --all -- --check
