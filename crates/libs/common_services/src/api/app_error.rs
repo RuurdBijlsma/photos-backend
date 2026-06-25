@@ -99,77 +99,75 @@ impl IntoResponse for AppError {
 impl From<sqlx::Error> for AppError {
     fn from(err: sqlx::Error) -> Self {
         if matches!(err, sqlx::Error::RowNotFound) {
-            AppError::NotFound("The requested resource was not found.".to_string())
+            Self::NotFound("The requested resource was not found.".to_string())
         } else {
-            AppError::Internal(color_eyre::Report::new(err))
+            Self::Internal(color_eyre::Report::new(err))
         }
     }
 }
 
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> Self {
-        AppError::Internal(color_eyre::Report::new(err))
+        Self::Internal(color_eyre::Report::new(err))
     }
 }
 
 impl From<tokio::task::JoinError> for AppError {
     fn from(err: tokio::task::JoinError) -> Self {
-        AppError::Internal(color_eyre::Report::new(err))
+        Self::Internal(color_eyre::Report::new(err))
     }
 }
 
 impl From<crate::database::DbError> for AppError {
     fn from(err: crate::database::DbError) -> Self {
         match err {
-            crate::database::DbError::UniqueViolation(_) => AppError::Conflict(
+            crate::database::DbError::UniqueViolation(_) => Self::Conflict(
                 "A record with this unique attribute already exists.".to_string(),
             ),
-            crate::database::DbError::Sqlx(e) => AppError::from(e),
-            crate::database::DbError::SerdeJson(e) => {
-                AppError::Internal(color_eyre::Report::new(e))
-            }
+            crate::database::DbError::Sqlx(e) => Self::from(e),
+            crate::database::DbError::SerdeJson(e) => Self::Internal(color_eyre::Report::new(e)),
         }
     }
 }
 
 impl From<chrono::ParseError> for AppError {
     fn from(err: chrono::ParseError) -> Self {
-        AppError::BadRequest(format!("Invalid datetime format: {err}"))
+        Self::BadRequest(format!("Invalid datetime format: {err}"))
     }
 }
 
 impl From<ColorParseError> for AppError {
     fn from(err: ColorParseError) -> Self {
-        AppError::BadRequest(format!("Color parse error: {err}"))
+        Self::BadRequest(format!("Color parse error: {err}"))
     }
 }
 
 impl From<ClipError> for AppError {
     fn from(err: ClipError) -> Self {
-        AppError::Internal(eyre!(err))
+        Self::Internal(eyre!(err))
     }
 }
 
 impl From<jsonwebtoken::errors::Error> for AppError {
     fn from(err: jsonwebtoken::errors::Error) -> Self {
-        AppError::Internal(eyre!(err))
+        Self::Internal(eyre!(err))
     }
 }
 
 impl From<url::ParseError> for AppError {
     fn from(err: url::ParseError) -> Self {
-        AppError::Internal(eyre!(err))
+        Self::Internal(eyre!(err))
     }
 }
 
 impl From<AuthError> for AppError {
     fn from(err: AuthError) -> Self {
-        AppError::Internal(eyre!(err))
+        Self::Internal(eyre!(err))
     }
 }
 
 impl From<ImageError> for AppError {
     fn from(err: ImageError) -> Self {
-        AppError::Internal(eyre!(err))
+        Self::Internal(eyre!(err))
     }
 }

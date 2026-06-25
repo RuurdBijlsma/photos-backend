@@ -53,8 +53,7 @@ pub async fn create_folder(
         .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     {
         return Err(AppError::BadRequest(format!(
-            "Can't create folder with this name: {}",
-            new_name.to_string()
+            "Can't create folder with this name: {new_name}"
         )));
     }
 
@@ -81,7 +80,7 @@ pub async fn get_subfolders(
                 .file_name()
                 .and_then(|name| name.to_str())
                 .map(ToOwned::to_owned)
-                .ok_or_else(|| AppError::BadRequest(format!("Invalid path: {}", path)))
+                .ok_or_else(|| AppError::BadRequest(format!("Invalid path: {path}")))
         })
         .collect()
 }

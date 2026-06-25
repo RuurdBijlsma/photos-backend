@@ -16,12 +16,14 @@ pub fn get_quality_measurement(image_path: &Path) -> Result<QualityMeasurement> 
 }
 
 /// Measures quality from an already decoded image to avoid duplicate decoding.
+#[must_use]
 pub fn get_quality_measurement_from_image(img: &image::DynamicImage) -> QualityMeasurement {
     let gray_img = img.to_luma8();
     get_quality_measurement_from_luma(&gray_img)
 }
 
 /// Measures quality directly from a grayscale image.
+#[must_use]
 pub fn get_quality_measurement_from_luma(gray_img: &GrayImage) -> QualityMeasurement {
     let accidentalness = calculate_accidentalness(gray_img);
     let texture = calculate_texture(gray_img);
@@ -30,10 +32,8 @@ pub fn get_quality_measurement_from_luma(gray_img: &GrayImage) -> QualityMeasure
     let exposure = calculate_exposure(gray_img);
 
     // Scaling down the weighted score based on how confidently bad the photo is.
-    let weighted_score = (blurriness * 0.4
-        + noisiness * 0.1
-        + exposure * 0.2
-        + (1.0 - accidentalness) * 0.3)
+    let weighted_score = (1.0 - accidentalness)
+        .mul_add(0.3, exposure.mul_add(0.2, noisiness.mul_add(0.1, blurriness * 0.4)))
         * 100.0;
 
     QualityMeasurement {
@@ -145,7 +145,7 @@ fn calculate_blurriness(gray_img: &GrayImage, texture: f64) -> f64 {
 
             if count > 1.0 {
                 let mean = sum / count;
-                let variance = (sum_sq / count) - (mean * mean);
+                let variance = mean.mul_add(-mean, sum_sq / count);
                 block_variances.push(variance);
             }
         }
@@ -155,7 +155,7 @@ fn calculate_blurriness(gray_img: &GrayImage, texture: f64) -> f64 {
     block_variances.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
 
     // Take the top 10% sharpest blocks to represent overall focus level
-    let top_k = ((block_variances.len() as f64) * 0.10).max(1.0).round() as usize;
+    let top_k = std::cmp::max(1, block_variances.len() / 10);
     let top_sum: f64 = block_variances.iter().take(top_k).sum();
     let representative_variance = top_sum / (top_k as f64);
 
@@ -217,27 +217,26 @@ fn calculate_exposure(gray_img: &GrayImage) -> f64 {
         hist[p[0] as usize] += 1;
     }
 
-    let total_pixels = f64::from(gray_img.width() * gray_img.height());
-    if total_pixels == 0.0 {
+    let total_pixels = u64::from(gray_img.width()) * u64::from(gray_img.height());
+    if total_pixels == 0 {
         return 0.0;
     }
 
     let mut running_sum = 0u64;
     let mut p5 = 0;
     let mut p95 = 255;
-    let mut p5_found = false;
-    let p95_found = false;
+    let mut lower_bound_reached = false;
 
-    let target_p5 = (total_pixels * 0.05) as u64;
-    let target_p95 = (total_pixels * 0.95) as u64;
+    let target_lower = total_pixels * 5 / 100;
+    let target_upper = total_pixels * 95 / 100;
 
     for (i, &count) in hist.iter().enumerate() {
         running_sum += count;
-        if !p5_found && running_sum >= target_p5 {
+        if !lower_bound_reached && running_sum >= target_lower {
             p5 = i;
-            p5_found = true;
+            lower_bound_reached = true;
         }
-        if !p95_found && running_sum >= target_p95 {
+        if running_sum >= target_upper {
             p95 = i;
             break;
         }

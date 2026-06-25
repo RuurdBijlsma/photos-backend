@@ -8,7 +8,7 @@ use std::path::Path;
 use tokio::fs;
 use tracing::info;
 
-/// Fetches all soft-deleted media items for the user, sorted by sort_timestamp descending.
+/// Fetches all soft-deleted media items for the user, sorted by `sort_timestamp` descending.
 pub async fn get_trash_items(
     pool: &PgPool,
     user_id: i32,
