@@ -26,7 +26,7 @@ pub enum JobType {
     IngestLlm,
     Remove,
     Scan,
-    CleanDB,
+    CleanDb,
     DelayedScan,
     ClusterFaces,
     ClusterPhotos,
@@ -64,7 +64,7 @@ impl JobType {
                 }
             }
             Self::Remove => 0,
-            Self::CleanDB => 20,
+            Self::CleanDb => 20,
             Self::ImportAlbumItem => 25,
             Self::Scan => 70,
             // These can be done after ingest analysis is done
