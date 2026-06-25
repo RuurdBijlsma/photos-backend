@@ -1,11 +1,9 @@
-// File: crates/libs/common_services/src/api/jobs/interfaces.rs
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use crate::database::jobs::{JobStatus, JobType};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, sqlx::FromRow, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct JobInfo {
     pub id: i64,
@@ -27,12 +25,27 @@ pub struct JobInfo {
     pub last_error: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct JobsResponse {
-    pub running: Vec<JobInfo>,
-    pub queued: Vec<JobInfo>,
-    pub failed: Vec<JobInfo>,
-    pub cancelled: Vec<JobInfo>,
-    pub recently_done: Vec<JobInfo>,
+pub struct JobsQuery {
+    pub page: Option<i64>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+
+    /// Sorting params, e.g. `sort=priority:asc&sort=scheduledAt:desc`
+    #[serde(default)]
+    pub sort: Vec<String>,
+
+    /// Filter params, e.g. `filter=status:eq:queued&filter=priority:gte:100`
+    #[serde(default)]
+    pub filter: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PaginatedJobsResponse {
+    pub data: Vec<JobInfo>,
+    pub total: i64,
+    pub limit: i64,
+    pub offset: i64,
 }
