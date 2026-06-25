@@ -100,6 +100,7 @@ fn random_init(n_samples: usize, n_components: usize) -> Array2<f32> {
 }
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     color_eyre::install()?;

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 use walkdir::WalkDir;
 
+#[allow(clippy::print_literal, clippy::too_many_lines)]
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
@@ -36,12 +37,11 @@ fn main() -> color_eyre::Result<()> {
     let mut paths = Vec::new();
     for entry in WalkDir::new(target_dir).into_iter().filter_map(Result::ok) {
         let path = entry.path();
-        if path.is_file() {
-            if let Some(ext) = path.extension() {
-                if ext.eq_ignore_ascii_case("jpg") || ext.eq_ignore_ascii_case("jpeg") {
-                    paths.push(path.to_path_buf());
-                }
-            }
+        if path.is_file()
+            && let Some(ext) = path.extension()
+            && (ext.eq_ignore_ascii_case("jpg") || ext.eq_ignore_ascii_case("jpeg"))
+        {
+            paths.push(path.to_path_buf());
         }
     }
 
@@ -81,7 +81,7 @@ fn main() -> color_eyre::Result<()> {
             let weighted_path = output_base.join("weighted").join(&weighted_name);
 
             if let Err(err) = resized.save(&weighted_path) {
-                eprintln!("Failed to save output to weighted folder: {:?}", err);
+                eprintln!("Failed to save output to weighted folder: {err:?}");
                 return None;
             }
 
