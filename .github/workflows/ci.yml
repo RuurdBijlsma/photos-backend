@@ -29,7 +29,7 @@ jobs:
       - name: Cache and install system dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: libfontconfig1-dev pkg-config exiftool protobuf-compiler nasm postgresql-client
+          packages: libfontconfig1-dev pkg-config exiftool protobuf-compiler nasm postgresql-client libheif-dev
           version: 1.0
 
       - name: Check formatting
