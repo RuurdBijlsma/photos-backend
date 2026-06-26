@@ -49,3 +49,29 @@ pub struct PaginatedJobsResponse {
     pub limit: i64,
     pub offset: i64,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct IngestJobCounts {
+    pub queued: i64,
+    pub running: i64,
+    pub failed: i64,
+    pub done: i64,
+    pub cancelled: i64,
+    pub total: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct IngestOverviewResponse {
+    pub metadata: IngestJobCounts,
+    pub thumbnails: IngestJobCounts,
+    pub analysis: IngestJobCounts,
+    pub llm: IngestJobCounts,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RetryJobPayload {
+    pub id: i64,
+}
