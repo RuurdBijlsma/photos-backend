@@ -8,7 +8,6 @@ use common_services::api::jobs::service::{cancel_job, get_job_overview, retry_jo
 use tracing::instrument;
 use common_services::api::jobs::user_level::{enqueue_scan_job, get_failed_ingest_jobs, get_running_ingest_jobs, get_user_ingest_overview, retry_user_job};
 use common_services::database::app_user::User;
-use crate::auth::middlewares::user::ApiUser;
 
 #[instrument(skip(context), err(Debug))]
 pub async fn job_summary_handler(
