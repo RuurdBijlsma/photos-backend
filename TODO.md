@@ -237,8 +237,7 @@
 # High level TODO:
 
 * admin page
-  * restart server?
-  * uptime
+  * restart server? [for later]
   * backup (met export jsons / import?)
 * import albums from google photos
 * explore page

@@ -4025,9 +4025,9 @@ dependencies = [
 
 [[package]]
 name = "media_analyzer"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1034595de82f498784398367805cd4f79ed3bc1d9ecf6738941bedea4e968ce5"
+checksum = "19554d6a8033c05a00d32227aab43dfcacbc1d626efbdbb9c571349901a20717"
 dependencies = [
  "blake3",
  "bon",

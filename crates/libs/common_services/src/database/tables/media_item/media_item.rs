@@ -1,7 +1,6 @@
 use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::media_features::MediaFeatures;
-use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
@@ -30,7 +29,6 @@ pub struct CreateFullMediaItem {
     pub weather: Option<Weather>,
     pub media_features: MediaFeatures,
     pub camera_settings: CameraSettings,
-    pub panorama: Panorama,
     pub orientation: i32,
 }
 
@@ -69,13 +67,12 @@ impl From<MediaMetadata> for CreateFullMediaItem {
             timezone_name: result.time.clone().timezone.map(|t| t.name),
             timezone_offset_seconds: result.time.clone().timezone.map(|t| t.offset_seconds),
             og_timezone_offset_seconds: result.time.clone().timezone.map(|t| t.offset_seconds),
-            use_panorama_viewer: result.panorama.use_panorama_viewer,
+            use_panorama_viewer: result.use_panorama_viewer,
             gps: result.gps.map(Into::into),
             time: result.time.into(),
             weather: result.weather.map(Into::into),
             media_features,
             camera_settings: result.camera.into(),
-            panorama: result.panorama.into(),
             orientation: result.basic.orientation.unwrap_or(1) as i32,
         }
     }
@@ -109,7 +106,6 @@ pub struct FullMediaItem {
     pub weather: Option<Weather>,
     pub media_features: MediaFeatures,
     pub camera_settings: CameraSettings,
-    pub panorama: Panorama,
     pub user_caption: Option<String>,
 }
 
@@ -140,7 +136,6 @@ pub struct FullMediaItemRow {
     pub weather: Option<Json<Weather>>,
     pub media_features: Json<MediaFeatures>,
     pub camera_settings: Json<CameraSettings>,
-    pub panorama: Json<Panorama>,
     pub user_caption: Option<String>,
 }
 
@@ -172,7 +167,6 @@ impl From<FullMediaItemRow> for FullMediaItem {
             weather: r.weather.map(|w| w.0),
             media_features: r.media_features.0,
             camera_settings: r.camera_settings.0,
-            panorama: r.panorama.0,
             user_caption: r.user_caption,
         }
     }

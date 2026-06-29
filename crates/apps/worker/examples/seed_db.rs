@@ -156,12 +156,7 @@ async fn seed_mock_photos_in_tx(
                     confidence: "high".to_string(),
                 },
             },
-            panorama: PanoInfo {
-                use_panorama_viewer: false,
-                is_photosphere: false,
-                view_info: None,
-                projection_type: None,
-            },
+            use_panorama_viewer: false,
             gps: None,
             weather: None,
         };

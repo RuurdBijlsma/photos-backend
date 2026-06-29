@@ -5,7 +5,6 @@ use crate::database::media_item::media_features::MediaFeatures;
 use crate::database::media_item::media_item::{
     CreateFullMediaItem, FullMediaItem, FullMediaItemRow,
 };
-use crate::database::media_item::panorama::Panorama;
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::structs::UpdateMediaItemPayload;
@@ -167,10 +166,7 @@ impl MediaItemStore {
                 AS "media_features!: Json<MediaFeatures>",
 
             (SELECT to_jsonb(cd) FROM camera_settings cd WHERE cd.media_item_id = mi.id)
-                AS "camera_settings!: Json<CameraSettings>",
-
-            (SELECT to_jsonb(p) FROM panorama p WHERE p.media_item_id = mi.id)
-                AS "panorama!: Json<Panorama>"
+                AS "camera_settings!: Json<CameraSettings>"
 
         FROM media_item mi
         LEFT JOIN visual_analyses va ON mi.id = va.media_item_id
@@ -369,25 +365,6 @@ impl MediaItemStore {
             media_item.camera_settings.subject_distance,
             media_item.camera_settings.focal_length_in_35mm,
             media_item.camera_settings.exposure_compensation,
-        )
-        .execute(&mut **tx)
-        .await?;
-
-        sqlx::query!(
-            r#"
-                INSERT INTO panorama (
-                    media_item_id, is_photosphere, projection_type, horizontal_fov_deg,
-                    vertical_fov_deg, center_yaw_deg, center_pitch_deg
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                "#,
-            id,
-            media_item.panorama.is_photosphere,
-            media_item.panorama.projection_type,
-            media_item.panorama.horizontal_fov_deg,
-            media_item.panorama.vertical_fov_deg,
-            media_item.panorama.center_yaw_deg,
-            media_item.panorama.center_pitch_deg,
         )
         .execute(&mut **tx)
         .await?;

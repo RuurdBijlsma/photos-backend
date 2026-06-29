@@ -179,17 +179,6 @@ CREATE TABLE camera_settings
     exposure_compensation REAL
 );
 
-CREATE TABLE panorama
-(
-    media_item_id      VARCHAR(10) PRIMARY KEY REFERENCES media_item (id) ON DELETE CASCADE,
-    is_photosphere     BOOLEAN NOT NULL,
-    projection_type    TEXT,
-    horizontal_fov_deg REAL,
-    vertical_fov_deg   REAL,
-    center_yaw_deg     REAL,
-    center_pitch_deg   REAL
-);
-
 -- Create indices for foreign keys and frequently queried columns for performance.
 
 -- Full text search index:
