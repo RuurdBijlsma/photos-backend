@@ -1,6 +1,8 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{get_thumbnail_cache, write_thumbnail_cache};
+use crate::handlers::common::cache::{
+    delete_thumbnail_cache, get_thumbnail_cache, write_thumbnail_cache,
+};
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
@@ -16,7 +18,7 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let media_root = &context.settings.ingest.media_root;
     let file_path = media_root.join(relative_path);
     let Some(row) = sqlx::query!(
-        "SELECT id, hash, orientation FROM media_item WHERE relative_path = $1",
+        "SELECT id, hash, orientation, use_panorama_viewer FROM media_item WHERE relative_path = $1",
         relative_path
     )
     .fetch_optional(&context.pool)
@@ -28,7 +30,15 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     if !file_path.exists() {
         return Ok(JobResult::Cancelled);
     }
-    process_thumbnails(context, &file_path, &row.hash, &row.id, row.orientation).await?;
+    process_thumbnails(
+        context,
+        &file_path,
+        &row.hash,
+        &row.id,
+        row.use_panorama_viewer,
+        row.orientation,
+    )
+    .await?;
     if !file_path.exists() || is_job_cancelled(&context.pool, job.id).await? {
         return Ok(JobResult::Cancelled);
     }
@@ -51,12 +61,17 @@ async fn process_thumbnails(
     file_path: &Path,
     file_hash: &str,
     media_item_id: &str,
+    use_panorama_viewer: bool,
     orientation: i32,
 ) -> Result<()> {
     let thumbnail_root = &context.settings.ingest.thumbnail_root;
     let thumbnails_out_folder = thumbnail_root.join(media_item_id);
 
     // Try Cache
+    // todo: remove this when i've rethumbnaild the panos
+    if use_panorama_viewer {
+        delete_thumbnail_cache(file_hash).await?;
+    }
     if context.settings.ingest.enable_cache
         && let Some(cached_folder) = get_thumbnail_cache(file_hash).await?
     {
@@ -74,6 +89,7 @@ async fn process_thumbnails(
         &context.settings.ingest,
         file_path,
         &thumbnails_out_folder,
+        use_panorama_viewer,
         orientation,
     )
     .await?;

@@ -51,7 +51,8 @@ pub async fn get_user_ingest_overview(
     Ok(overview)
 }
 
-/// Lists all running ingest jobs for the current user.
+/// Lists all running ingest jobs for the current user, as well as those successfully
+/// completed within the last 5 seconds to feed a real-time activity stream.
 pub async fn get_running_ingest_jobs(
     pool: &PgPool,
     user_id: i32,
@@ -79,9 +80,12 @@ pub async fn get_running_ingest_jobs(
             last_error
         FROM jobs
         WHERE user_id = $1
-          AND status = 'running'::job_status
           AND job_type IN ('ingest_metadata', 'ingest_thumbnails', 'ingest_analysis', 'ingest_llm')
-        ORDER BY started_at DESC
+          AND (
+              status = 'running'::job_status
+              OR (status = 'done'::job_status AND finished_at >= NOW() - INTERVAL '5 seconds')
+          )
+        ORDER BY started_at DESC NULLS LAST, finished_at DESC NULLS LAST
         "#,
         user_id
     )

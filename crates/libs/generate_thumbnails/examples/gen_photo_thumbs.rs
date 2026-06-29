@@ -41,7 +41,7 @@ async fn main() -> color_eyre::Result<()> {
 
             let out_folder = Path::new("test_out").join(&image_filename);
             fs::create_dir_all(&out_folder)?;
-            generate_thumbnails(&settings.ingest, image, &out_folder, 1).await?;
+            generate_thumbnails(&settings.ingest, image, &out_folder, false, 1).await?;
             let elapsed = now.elapsed();
             times.push(elapsed.as_millis());
             println!(

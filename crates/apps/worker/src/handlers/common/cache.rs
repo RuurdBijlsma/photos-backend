@@ -73,6 +73,14 @@ pub async fn write_thumbnail_cache(hash: &str, source_folder: &Path) -> Result<(
     Ok(())
 }
 
+pub async fn delete_thumbnail_cache(hash: &str) -> Result<()> {
+    let dest_folder = cache_root().join(THUMBNAILS_DIR).join(hash);
+    if dest_folder.exists() {
+        fs::remove_dir_all(&dest_folder).await?;
+    }
+    Ok(())
+}
+
 // --- Ingest ---
 
 pub async fn get_ingest_cache(hash: &str) -> Result<Option<MediaMetadata>> {
