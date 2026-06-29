@@ -14,8 +14,9 @@ pub struct JobSort {
     pub direction: &'static str,
 }
 
-/// Maps safe API fields (either camelCase or snake_case) to valid DB columns.
+/// Maps safe API fields (either camelCase or `snake_case`) to valid DB columns.
 /// Serves as an allowlist against SQL injection.
+#[must_use]
 pub fn map_field_to_column(field: &str) -> Option<&'static str> {
     match field {
         "id" => Some("id"),
@@ -40,25 +41,16 @@ pub fn map_field_to_column(field: &str) -> Option<&'static str> {
 }
 
 /// Provides correct SQL types for Postgres type casting on parameter binds.
+#[must_use]
 pub fn get_column_cast_suffix(column: &str) -> &'static str {
     match column {
         "id" => "::bigint",
-        "relative_path" => "::text",
-        "user_id" => "::integer",
+        "relative_path" | "owner" | "last_error" => "::text",
+        "user_id" | "priority" | "attempts" | "dependency_attempts" | "max_attempts" => "::integer",
         "job_type" => "::job_type",
         "payload" => "::jsonb",
-        "priority" => "::integer",
         "status" => "::job_status",
-        "attempts" => "::integer",
-        "dependency_attempts" => "::integer",
-        "max_attempts" => "::integer",
-        "owner" => "::text",
-        "started_at" => "::timestamp with time zone",
-        "finished_at" => "::timestamp with time zone",
-        "created_at" => "::timestamp with time zone",
-        "scheduled_at" => "::timestamp with time zone",
-        "last_heartbeat" => "::timestamp with time zone",
-        "last_error" => "::text",
+        "started_at" | "finished_at" | "created_at" | "scheduled_at" | "last_heartbeat" => "::timestamp with time zone",
         _ => "",
     }
 }
@@ -105,7 +97,7 @@ pub fn parse_filter(filter_str: &str) -> Result<JobFilter, AppError> {
         }
         let mut val = parts[2].to_string();
         if operator == "ILIKE" {
-            val = format!("%{}%", val);
+            val = format!("%{val}%");
         }
         Some(val)
     } else {
@@ -147,7 +139,7 @@ pub fn parse_sort(sort_str: &str) -> Result<JobSort, AppError> {
     Ok(JobSort { column, direction })
 }
 
-pub fn apply_filters<'args>(builder: &mut QueryBuilder<'args, Postgres>, filters: &[JobFilter]) {
+pub fn apply_filters(builder: &mut QueryBuilder<'_, Postgres>, filters: &[JobFilter]) {
     if !filters.is_empty() {
         builder.push(" WHERE ");
         for (i, filter) in filters.iter().enumerate() {
@@ -155,16 +147,13 @@ pub fn apply_filters<'args>(builder: &mut QueryBuilder<'args, Postgres>, filters
                 builder.push(" AND ");
             }
             builder.push(filter.column);
+            builder.push(" ");
+            builder.push(filter.operator);
             if let Some(ref val) = filter.value {
-                builder.push(" ");
-                builder.push(filter.operator);
                 builder.push(" ");
                 let cast_suffix = get_column_cast_suffix(filter.column);
                 builder.push_bind(val.clone());
                 builder.push(cast_suffix);
-            } else {
-                builder.push(" ");
-                builder.push(filter.operator);
             }
         }
     }

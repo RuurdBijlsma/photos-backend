@@ -14,7 +14,7 @@ use common_services::database::media_item_store::MediaItemStore;
 use common_services::utils::nice_id;
 use common_types::dev_constants::{EMAIL, PASSWORD, USERNAME};
 use media_analyzer::{
-    BasicMetadata, CameraSettings, MediaFeatures, MediaMetadata, PanoInfo, SourceDetails, TimeInfo,
+    BasicMetadata, CameraSettings, MediaFeatures, MediaMetadata, SourceDetails, TimeInfo,
 };
 use rand::RngExt;
 use sqlx::{PgPool, PgTransaction};
