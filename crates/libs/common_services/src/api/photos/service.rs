@@ -121,8 +121,7 @@ pub async fn thumbnail_on_demand_cached(
     media_item_id: &str,
     ingest_settings: &IngestSettings,
 ) -> Result<Vec<u8>, AppError> {
-    let cache_dir = &ingest_settings
-        .on_demand_thumbs_cache_root;
+    let cache_dir = &ingest_settings.on_demand_thumbs_cache_root;
     let cache_filename = format!("{media_item_id}_{size}.jpg");
     let cache_path = cache_dir.join(&cache_filename);
 

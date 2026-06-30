@@ -9,7 +9,7 @@ use crate::database::app_user::User;
 use crate::database::user_store::UserStore;
 use crate::database::{UpdateField, UpdateUserPayload};
 use crate::job_queue::enqueue_full_scan;
-use app_state::{AppSettings, IngestSettings, MakeRelativePath, to_posix_string, constants};
+use app_state::{AppSettings, IngestSettings, MakeRelativePath, constants, to_posix_string};
 use sqlx::{PgPool, query_scalar};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

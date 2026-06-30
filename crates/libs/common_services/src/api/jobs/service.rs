@@ -1,7 +1,7 @@
 use crate::api::app_error::AppError;
 use crate::api::jobs::interfaces::{JobInfo, JobsQuery, PaginatedJobsResponse};
+use crate::api::jobs::query_helpers::{JobSort, apply_filters, parse_filter, parse_sort};
 use sqlx::{PgPool, Postgres, QueryBuilder};
-use crate::api::jobs::query_helpers::{apply_filters, parse_filter, parse_sort, JobSort};
 
 pub async fn get_job_overview(
     pool: &PgPool,
@@ -54,7 +54,7 @@ pub async fn get_job_overview(
     let mut select_builder = QueryBuilder::<Postgres>::new(
         "SELECT id, relative_path, user_id, job_type, payload, priority, status, attempts, \
          dependency_attempts, max_attempts, owner, started_at, finished_at, created_at, \
-         scheduled_at, last_heartbeat, last_error FROM jobs"
+         scheduled_at, last_heartbeat, last_error FROM jobs",
     );
     apply_filters(&mut select_builder, &filters);
 
@@ -87,10 +87,7 @@ pub async fn get_job_overview(
     })
 }
 
-pub async fn cancel_job(
-    pool: &PgPool,
-    job_id: i64,
-) -> Result<(), AppError> {
+pub async fn cancel_job(pool: &PgPool, job_id: i64) -> Result<(), AppError> {
     let result = sqlx::query!(
         r#"
         UPDATE jobs
@@ -100,22 +97,20 @@ pub async fn cancel_job(
         "#,
         job_id
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::BadRequest(
-            "Job cannot be cancelled (it might not exist, or is already finished/cancelled)".to_owned(),
+            "Job cannot be cancelled (it might not exist, or is already finished/cancelled)"
+                .to_owned(),
         ));
     }
 
     Ok(())
 }
 
-pub async fn retry_job(
-    pool: &PgPool,
-    job_id: i64,
-) -> Result<(), AppError> {
+pub async fn retry_job(pool: &PgPool, job_id: i64) -> Result<(), AppError> {
     let result = sqlx::query!(
         r#"
         UPDATE jobs
@@ -135,7 +130,8 @@ pub async fn retry_job(
 
     if result.rows_affected() == 0 {
         return Err(AppError::BadRequest(
-            "Job cannot be retried (it might not exist, or is currently queued or running)".to_owned(),
+            "Job cannot be retried (it might not exist, or is currently queued or running)"
+                .to_owned(),
         ));
     }
 

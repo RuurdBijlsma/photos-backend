@@ -9,7 +9,7 @@ use crate::database::app_user::{User, UserInvite, UserRole, UserWithPassword};
 use crate::database::user_store::UserStore;
 use crate::job_queue::enqueue_full_scan;
 use crate::utils::nice_id;
-use app_state::{constants, IngestSettings, MakeRelativePath};
+use app_state::{IngestSettings, MakeRelativePath, constants};
 use axum::Json;
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};

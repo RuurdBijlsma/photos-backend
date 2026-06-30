@@ -2,6 +2,7 @@ use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::remote_user::get_or_create_remote_user;
 use app_state::MakeRelativePath;
+use app_state::constants::ALBUM_IMPORT_FOLDER;
 use color_eyre::Result;
 use color_eyre::eyre::eyre;
 use common_services::database::album_store::AlbumStore;
@@ -14,7 +15,6 @@ use serde_json::from_value;
 use std::path::Path;
 use std::slice;
 use tokio::fs;
-use app_state::constants::ALBUM_IMPORT_FOLDER;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let media_root = &context.settings.ingest.media_root;

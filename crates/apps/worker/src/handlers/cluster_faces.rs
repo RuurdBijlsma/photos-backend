@@ -140,10 +140,7 @@ async fn extract_and_save_cluster_thumbnail(
 
     let thumb = extract_face_thumbnail(&img, &bbox, PADDING_FACTOR, THUMBNAIL_SIZE);
 
-    let out_dir = &context
-        .settings
-        .ingest
-        .face_clusters_root;
+    let out_dir = &context.settings.ingest.face_clusters_root;
     tokio::fs::create_dir_all(out_dir).await?;
 
     let out_path = out_dir.join(format!("{cluster_id}.webp"));

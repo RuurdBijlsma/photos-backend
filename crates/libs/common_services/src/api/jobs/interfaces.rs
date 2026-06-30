@@ -1,7 +1,7 @@
+use crate::database::jobs::{JobStatus, JobType};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::database::jobs::{JobStatus, JobType};
 
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow, Clone)]
 #[serde(rename_all = "camelCase")]

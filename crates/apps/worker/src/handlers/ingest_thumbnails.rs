@@ -1,13 +1,11 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{
-    get_thumbnail_cache, write_thumbnail_cache,
-};
+use crate::handlers::common::cache::{get_thumbnail_cache, write_thumbnail_cache};
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
-use generate_thumbnails::{copy_dir_contents, generate_thumbnails};
+use generate_thumbnails::{generate_thumbnails};
 use serde_json::Value;
 use sqlx::PgPool;
 use std::fs::File;
@@ -26,8 +24,8 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
         "SELECT id, hash, orientation, use_panorama_viewer FROM media_item WHERE relative_path = $1",
         relative_path
     )
-    .fetch_optional(&context.pool)
-    .await?
+        .fetch_optional(&context.pool)
+        .await?
     else {
         warn!("IngestThumbnail was called but no media_item row exists for {relative_path}");
         return Ok(JobResult::Cancelled);
@@ -88,16 +86,17 @@ async fn process_thumbnails(
     let thumbnails_out_folder = context.settings.ingest.thumbnails_root.join(media_item_id);
     let pano_out_folder = context.settings.ingest.pano_root.join(media_item_id);
 
-    // Try Cache
     if context.settings.ingest.enable_cache
-        && let Some(cached_folder) = get_thumbnail_cache(file_hash).await?
+        // Cache Check
+        && get_thumbnail_cache(
+            file_hash,
+            &thumbnails_out_folder,
+            &pano_out_folder,
+            use_panorama_viewer,
+        )
+        .await?
     {
-        debug!(
-            "Using thumbnail cache for {:?}: {}",
-            file_path.file_name(),
-            cached_folder.display()
-        );
-        copy_dir_contents(&cached_folder, &thumbnails_out_folder).await?;
+        debug!("Using thumbnail cache for {:?}", file_path.file_name());
     } else {
         // Cache Miss: Generate
         generate_thumbnails(
@@ -109,19 +108,23 @@ async fn process_thumbnails(
             orientation,
         )
         .await?;
+
         // Write Cache
         if context.settings.ingest.enable_cache {
-            write_thumbnail_cache(file_hash, &thumbnails_out_folder).await?;
+            write_thumbnail_cache(
+                file_hash,
+                &thumbnails_out_folder,
+                &pano_out_folder,
+                use_panorama_viewer,
+            )
+            .await?;
         }
-    }
-    if use_panorama_viewer {
-        store_panorama_config(
-            &context.pool,
-            &pano_out_folder,
-            media_item_id,
-        )
-        .await
-        .ok();
+    };
+
+    if use_panorama_viewer
+        && let Err(e) = store_panorama_config(&context.pool, &pano_out_folder, media_item_id).await
+    {
+        warn!("Couldn't store panorama config for {}, {e}", file_path.display());
     }
 
     Ok(())

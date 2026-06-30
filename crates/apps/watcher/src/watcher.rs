@@ -1,5 +1,6 @@
 use crate::handlers::{handle_create, handle_remove};
 use app_state::IngestSettings;
+use app_state::constants::ALBUM_IMPORT_FOLDER;
 use color_eyre::eyre::{Result, eyre};
 use common_services::alert;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -7,7 +8,6 @@ use sqlx::PgPool;
 use std::path::Component;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
-use app_state::constants::ALBUM_IMPORT_FOLDER;
 
 const EXCLUDED_WATCH_FOLDER: [&str; 1] = [ALBUM_IMPORT_FOLDER];
 

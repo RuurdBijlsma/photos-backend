@@ -1,12 +1,12 @@
 use crate::api::app_error::AppError;
 use crate::api::photos::removal::delete_item_and_thumbnails;
+use app_state::constants;
 use common_types::pb::api::{OrderedMediaResponse, SimpleTimelineItem};
 use sqlx::PgPool;
 use std::collections::HashSet;
 use std::path::Path;
 use tokio::fs;
 use tracing::info;
-use app_state::constants;
 
 /// Fetches all soft-deleted media items for the user, sorted by `sort_timestamp` descending.
 pub async fn get_trash_items(

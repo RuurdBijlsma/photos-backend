@@ -1,4 +1,3 @@
-
 pub const ALBUM_IMPORT_FOLDER: &str = "import";
 
 // app_data folders

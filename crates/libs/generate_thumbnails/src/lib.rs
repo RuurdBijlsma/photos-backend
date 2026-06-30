@@ -100,7 +100,7 @@ pub async fn generate_thumbnails(
         }
 
         if use_panorama_viewer {
-            generate_pano_thumbs(file,  pano_sub_folder)?;
+            generate_pano_thumbs(file, pano_sub_folder)?;
         }
     } else if ingestion.is_video_file(file) {
         video::generate_video_thumbnails(file, temp_out_dir, &ingestion.thumbnails).await?;

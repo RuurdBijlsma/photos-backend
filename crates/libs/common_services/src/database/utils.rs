@@ -1,3 +1,4 @@
+use app_state::constants;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
 use color_eyre::eyre::Result;
 use sqlx::migrate::Migrator;
@@ -7,7 +8,6 @@ use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{info, warn};
-use app_state::constants;
 
 pub fn find_migrations_dir() -> Result<PathBuf> {
     let mut current_dir = env::current_exe()?

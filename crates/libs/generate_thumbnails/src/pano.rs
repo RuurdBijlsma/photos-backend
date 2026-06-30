@@ -1,5 +1,7 @@
 use color_eyre::Result;
-use panorama_tiler::{tile_panorama_with_guessed_angles, DownscalingMethod, OutputConfig, OutputFormat};
+use panorama_tiler::{
+    DownscalingMethod, OutputConfig, OutputFormat, tile_panorama_with_guessed_angles,
+};
 use std::fs;
 use std::path::Path;
 

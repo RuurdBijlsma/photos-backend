@@ -1,5 +1,6 @@
 use crate::runner::context::test_context::TestContext;
 use crate::test_helpers::login;
+use app_state::constants::ALBUM_IMPORT_FOLDER;
 use color_eyre::eyre::{Result, bail};
 use common_services::api::album::interfaces::{
     AcceptInviteRequest, AddMediaToAlbumRequest, CheckInviteRequest, CreateAlbumRequest,
@@ -15,7 +16,6 @@ use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::time::sleep;
 use tracing::info;
-use app_state::constants::ALBUM_IMPORT_FOLDER;
 
 pub async fn test_album_lifecycle(context: &TestContext) -> Result<()> {
     // ARRANGE

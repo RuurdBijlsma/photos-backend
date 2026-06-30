@@ -21,7 +21,7 @@ pub struct MediaItemStore;
 
 impl MediaItemStore {
     pub async fn find_relative_path_by_id(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         media_item_id: &str,
     ) -> Result<Option<String>, DbError> {
         Ok(sqlx::query_scalar!(
@@ -32,12 +32,12 @@ impl MediaItemStore {
             "#,
             media_item_id
         )
-            .fetch_optional(executor)
-            .await?)
+        .fetch_optional(executor)
+        .await?)
     }
 
     pub async fn find_id_by_relative_path(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         relative_path: &str,
     ) -> Result<Option<String>, DbError> {
         Ok(sqlx::query_scalar!(
@@ -48,12 +48,12 @@ impl MediaItemStore {
             "#,
             relative_path
         )
-            .fetch_optional(executor)
-            .await?)
+        .fetch_optional(executor)
+        .await?)
     }
 
     pub async fn find_user_by_id(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         media_item_id: &str,
     ) -> Result<Option<i32>, DbError> {
         Ok(sqlx::query_scalar!(
@@ -64,8 +64,8 @@ impl MediaItemStore {
             "#,
             media_item_id
         )
-            .fetch_optional(executor)
-            .await?)
+        .fetch_optional(executor)
+        .await?)
     }
 
     /// Fetches a full media item with all related analyses and metadata.
@@ -75,7 +75,7 @@ impl MediaItemStore {
     /// Returns an error if the database query fails or the connection pool is invalid.
     #[allow(clippy::too_many_lines)]
     pub async fn find_by_id(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         id: &str,
     ) -> Result<Option<FullMediaItem>, DbError> {
         let row_result = sqlx::query_as!(
@@ -177,8 +177,8 @@ impl MediaItemStore {
         "#,
             id,
         )
-            .fetch_optional(executor)
-            .await?;
+        .fetch_optional(executor)
+        .await?;
 
         Ok(row_result.map(FullMediaItem::from))
     }
@@ -289,8 +289,8 @@ impl MediaItemStore {
                 weather_info.dusk,
                 weather_info.is_daytime,
             )
-                .execute(&mut **tx)
-                .await?;
+            .execute(&mut **tx)
+            .await?;
         }
 
         sqlx::query!(
@@ -305,8 +305,8 @@ impl MediaItemStore {
             &media_item.time.source_details,
             &media_item.time.source_confidence,
         )
-            .execute(&mut **tx)
-            .await?;
+        .execute(&mut **tx)
+        .await?;
 
         sqlx::query!(
             r#"
@@ -341,8 +341,8 @@ impl MediaItemStore {
                 .map(|i| i as i32),
             media_item.media_features.compressor_id,
         )
-            .execute(&mut **tx)
-            .await?;
+        .execute(&mut **tx)
+        .await?;
 
         sqlx::query!(
             r#"
@@ -370,8 +370,8 @@ impl MediaItemStore {
             media_item.camera_settings.focal_length_in_35mm,
             media_item.camera_settings.exposure_compensation,
         )
-            .execute(&mut **tx)
-            .await?;
+        .execute(&mut **tx)
+        .await?;
 
         Ok(())
     }
@@ -379,7 +379,7 @@ impl MediaItemStore {
     /// Deletes a media item by its relative path and returns the ID of the deleted item.
     /// Database cascade rules are expected to clean up related data.
     pub async fn delete_by_relative_path(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         relative_path: &str,
     ) -> Result<Option<String>, DbError> {
         Ok(sqlx::query_scalar!(
@@ -390,13 +390,13 @@ impl MediaItemStore {
             "#,
             relative_path
         )
-            .fetch_optional(executor)
-            .await?)
+        .fetch_optional(executor)
+        .await?)
     }
 
     /// Deletes multiple media items by their relative paths.
     pub async fn delete_by_relative_paths(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         relative_paths: &[String],
     ) -> Result<PgQueryResult, DbError> {
         Ok(sqlx::query!(
@@ -406,13 +406,13 @@ impl MediaItemStore {
             "#,
             relative_paths
         )
-            .execute(executor)
-            .await?)
+        .execute(executor)
+        .await?)
     }
 
     /// Marks a media item as deleted without removing it from the database.
     pub async fn soft_delete_by_relative_path(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         relative_path: &str,
     ) -> Result<Option<String>, DbError> {
         Ok(sqlx::query_scalar!(
@@ -424,12 +424,12 @@ impl MediaItemStore {
             "#,
             relative_path
         )
-            .fetch_optional(executor)
-            .await?)
+        .fetch_optional(executor)
+        .await?)
     }
 
     pub async fn update(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         id: &str,
         payload: UpdateMediaItemPayload,
     ) -> Result<PgQueryResult, DbError> {
@@ -462,7 +462,7 @@ impl MediaItemStore {
     }
 
     pub async fn update_remote_user_id(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         id: &str,
         remote_user_id: i32,
     ) -> Result<PgQueryResult, DbError> {
@@ -475,8 +475,8 @@ impl MediaItemStore {
             remote_user_id,
             id
         )
-            .execute(executor)
-            .await?)
+        .execute(executor)
+        .await?)
     }
 
     /// Retrieves an existing location's ID or creates a new one if it doesn't exist.
@@ -491,8 +491,8 @@ impl MediaItemStore {
             &location_data.admin1,
             &location_data.country_code,
         )
-            .fetch_optional(&mut **tx)
-            .await?;
+        .fetch_optional(&mut **tx)
+        .await?;
 
         if let Some(id) = existing_id {
             Ok(id)
@@ -509,14 +509,14 @@ impl MediaItemStore {
                 &location_data.country_code,
                 &location_data.country_name,
             )
-                .fetch_one(&mut **tx)
-                .await?;
+            .fetch_one(&mut **tx)
+            .await?;
             Ok(new_id)
         }
     }
 
     pub async fn find_all_geo_by_user_id(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         user_id: i32,
         start_date: Option<DateTime<Utc>>,
         end_date: Option<DateTime<Utc>>,
@@ -542,8 +542,8 @@ impl MediaItemStore {
             start_date,
             end_date
         )
-            .fetch_all(executor)
-            .await?;
+        .fetch_all(executor)
+        .await?;
 
         let items = rows
             .into_iter()
@@ -564,7 +564,7 @@ impl MediaItemStore {
     }
 
     pub async fn upsert_panorama_config(
-        executor: impl Executor<'_, Database=Postgres>,
+        executor: impl Executor<'_, Database = Postgres>,
         media_item_id: &str,
         config: &serde_json::Value,
     ) -> Result<(), DbError> {
@@ -578,8 +578,8 @@ impl MediaItemStore {
             media_item_id,
             config
         )
-            .execute(executor)
-            .await?;
+        .execute(executor)
+        .await?;
 
         Ok(())
     }

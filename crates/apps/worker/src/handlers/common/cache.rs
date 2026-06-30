@@ -7,7 +7,7 @@ use media_analyzer::MediaMetadata;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::fs;
-use tracing::warn;
+use tracing::{debug, warn};
 
 // Category folder names
 const THUMBNAILS_DIR: &str = "thumbnails";
@@ -15,10 +15,17 @@ const INGEST_DIR: &str = "ingest";
 const ANALYSIS_DIR: &str = "analysis";
 const LLM_DIR: &str = "llm";
 
+const THUMBNAILS_CACHE_VERSION: u32 = 1;
 const INGEST_CACHE_VERSION: u32 = 2;
 const ANALYSIS_CACHE_VERSION: u32 = 1;
 const LLM_CACHE_VERSION: u32 = 1;
 const EXPECTED_EMBEDDING_LENGTH: usize = 768;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CachedThumbnailMetadata {
+    pub version: u32,
+    pub has_panorama: bool,
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CachedIngestResult {
@@ -56,20 +63,106 @@ async fn ensure_parent_dir(path: &Path) -> Result<()> {
 
 // --- Thumbnails ---
 
-pub async fn get_thumbnail_cache(hash: &str) -> Result<Option<PathBuf>> {
-    let thumbs_folder = cache_root().join(THUMBNAILS_DIR).join(hash);
-    if !thumbs_folder.exists() {
-        return Ok(None);
+pub async fn get_thumbnail_cache(
+    hash: &str,
+    thumbnails_dest: &Path,
+    pano_dest: &Path,
+    require_panorama: bool,
+) -> Result<bool> {
+    let cache_item_dir = cache_root().join(THUMBNAILS_DIR).join(hash);
+    let metadata_path = cache_item_dir.join("metadata.json");
+
+    if !metadata_path.exists() {
+        return Ok(false);
     }
-    Ok(Some(thumbs_folder))
+
+    let data = fs::read_to_string(&metadata_path).await?;
+    let cached: CachedThumbnailMetadata = match serde_json::from_str(&data) {
+        Ok(c) => c,
+        Err(_) => {
+            warn!("Invalid thumbnail cache metadata, deleting: {:?}", cache_item_dir);
+            let _ = fs::remove_dir_all(&cache_item_dir).await;
+            return Ok(false);
+        }
+    };
+
+    // Check version
+    if cached.version != THUMBNAILS_CACHE_VERSION {
+        warn!(
+            "Thumbnail cache version mismatch (expected {}, found {}), deleting: {:?}",
+            THUMBNAILS_CACHE_VERSION, cached.version, cache_item_dir
+        );
+        let _ = fs::remove_dir_all(&cache_item_dir).await;
+        return Ok(false);
+    }
+
+    // Ensure we aren't using a non-pano cache if a panorama is required
+    if require_panorama && !cached.has_panorama {
+        debug!("Cache exists but does not contain required panorama.");
+        return Ok(false);
+    }
+
+    // Restore thumbnails folder
+    let cached_thumbs = cache_item_dir.join("thumbs");
+    if cached_thumbs.exists() {
+        if !thumbnails_dest.exists() {
+            fs::create_dir_all(thumbnails_dest).await?;
+        }
+        copy_dir_contents(&cached_thumbs, thumbnails_dest).await?;
+    } else {
+        return Ok(false);
+    }
+
+    // Restore panorama folder if it was cached
+    if cached.has_panorama {
+        let cached_pano = cache_item_dir.join("pano");
+        if cached_pano.exists() {
+            if !pano_dest.exists() {
+                fs::create_dir_all(pano_dest).await?;
+            }
+            copy_dir_contents(&cached_pano, pano_dest).await?;
+        } else {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
 }
 
-pub async fn write_thumbnail_cache(hash: &str, source_folder: &Path) -> Result<()> {
-    let dest_folder = cache_root().join(THUMBNAILS_DIR).join(hash);
-    if !dest_folder.exists() {
-        fs::create_dir_all(&dest_folder).await?;
+pub async fn write_thumbnail_cache(
+    hash: &str,
+    thumbnails_src: &Path,
+    pano_src: &Path,
+    has_panorama: bool,
+) -> Result<()> {
+    let cache_item_dir = cache_root().join(THUMBNAILS_DIR).join(hash);
+    if cache_item_dir.exists() {
+        fs::remove_dir_all(&cache_item_dir).await?;
     }
-    copy_dir_contents(source_folder, &dest_folder).await?;
+    fs::create_dir_all(&cache_item_dir).await?;
+
+    // Copy thumbnails to cache
+    let cached_thumbs = cache_item_dir.join("thumbs");
+    fs::create_dir_all(&cached_thumbs).await?;
+    copy_dir_contents(thumbnails_src, &cached_thumbs).await?;
+
+    // Copy panorama to cache if requested and output directory exists
+    let actual_has_panorama = has_panorama && pano_src.exists();
+    if actual_has_panorama {
+        let cached_pano = cache_item_dir.join("pano");
+        fs::create_dir_all(&cached_pano).await?;
+        copy_dir_contents(pano_src, &cached_pano).await?;
+    }
+
+    // Write metadata file
+    let metadata_path = cache_item_dir.join("metadata.json");
+    let metadata = CachedThumbnailMetadata {
+        version: THUMBNAILS_CACHE_VERSION,
+        has_panorama: actual_has_panorama,
+    };
+    let json = serde_json::to_string(&metadata)?;
+    fs::write(metadata_path, json).await?;
+
     Ok(())
 }
 

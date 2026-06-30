@@ -127,7 +127,7 @@ impl IngestSettings {
             }
         }
 
-        let thumb_dir = self.app_data_root.join(thumb_sub_folder);
+        let thumb_dir = self.thumbnails_root.join(thumb_sub_folder);
         for thumb_filename in should_exist {
             let thumb_file_path = thumb_dir.join(thumb_filename.clone());
             if !thumb_file_path.exists() {

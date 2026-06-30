@@ -1,4 +1,5 @@
 use crate::api_state::ApiContext;
+use app_state::constants::FACE_CLUSTERS_FOLDER;
 use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Redirect};
 use axum::{Extension, Json};
@@ -12,7 +13,6 @@ use common_services::database::app_user::User;
 use common_types::pb::api::{FullPersonMediaResponse, ListPeopleResponse};
 use http::header::CACHE_CONTROL;
 use tracing::instrument;
-use app_state::constants::FACE_CLUSTERS_FOLDER;
 
 #[instrument(skip(context, user), err(Debug))]
 pub async fn list_people_handler(

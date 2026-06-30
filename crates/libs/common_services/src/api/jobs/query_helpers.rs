@@ -50,7 +50,9 @@ pub fn get_column_cast_suffix(column: &str) -> &'static str {
         "job_type" => "::job_type",
         "payload" => "::jsonb",
         "status" => "::job_status",
-        "started_at" | "finished_at" | "created_at" | "scheduled_at" | "last_heartbeat" => "::timestamp with time zone",
+        "started_at" | "finished_at" | "created_at" | "scheduled_at" | "last_heartbeat" => {
+            "::timestamp with time zone"
+        }
         _ => "",
     }
 }

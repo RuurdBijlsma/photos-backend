@@ -11,6 +11,7 @@ use crate::api_state::ApiContext;
 use crate::create_router;
 use crate::timeline::websocket::create_media_item_transmitter;
 use app_state::AppSettings;
+use app_state::constants::HOSTED_FOLDER;
 use axum::routing::get_service;
 use color_eyre::Result;
 use common_services::s2s_client::S2SClient;
@@ -30,7 +31,6 @@ use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
-use app_state::constants::{HOSTED_FOLDER};
 
 pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool) -> Result<()> {
     if run_task_scheduler {
@@ -100,7 +100,6 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         .layer::<_, std::convert::Infallible>(hosted_cache_layer)
         .layer::<_, std::convert::Infallible>(cors.clone());
 
-
     // --- Create Router ---
     let app = create_router(api_state)
         .layer(TraceLayer::new_for_http().on_request(()))
@@ -109,7 +108,10 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         .layer(SetSensitiveRequestHeadersLayer::new(once(
             header::AUTHORIZATION,
         )))
-        .nest_service("/thumbnails", get_service(serve_thumbnails).layer(thumbnail_cache_layer))
+        .nest_service(
+            "/thumbnails",
+            get_service(serve_thumbnails).layer(thumbnail_cache_layer),
+        )
         .nest_service("/hosted", serve_hosted);
 
     // --- Start Server ---

@@ -2,19 +2,19 @@ pub mod admin;
 pub mod album;
 pub mod auth;
 pub mod camera;
+pub mod daily_cards;
+pub mod jobs;
 pub mod people;
 pub mod photos;
 pub mod root;
 pub mod s2s;
 pub mod search;
 pub mod storage;
-pub mod theme;
-pub mod daily_cards;
 pub mod system;
+pub mod theme;
 pub mod timeline;
 pub mod trash;
 pub mod user;
-pub mod jobs;
 
 use crate::album::router::{album_auth_optional_router, album_protected_router};
 use crate::people::router::{people_protected_router, people_public_router};
@@ -28,7 +28,8 @@ use crate::auth::middlewares::user::ApiUser;
 use crate::auth::middlewares::websocket::WsUser;
 use crate::auth::router::{auth_admin_routes, auth_protected_router, auth_public_router};
 use crate::camera::router::camera_protected_router;
-use crate::daily_cards::router::{daily_cards_protected_router};
+use crate::daily_cards::router::daily_cards_protected_router;
+use crate::jobs::router::{jobs_admin_router, jobs_protected_router};
 use crate::photos::router::{photos_protected_router, photos_public_router};
 use crate::root::router::root_public_router;
 use crate::s2s::router::s2s_public_router;
@@ -42,7 +43,6 @@ use app_state::RateLimitingSettings;
 use axum::Router;
 use axum::middleware::{from_extractor_with_state, from_fn_with_state};
 use common_services::database::app_user::UserRole;
-use crate::jobs::router::{jobs_admin_router, jobs_protected_router};
 
 // --- Router Construction ---
 pub fn create_router(api_state: ApiContext) -> Router {

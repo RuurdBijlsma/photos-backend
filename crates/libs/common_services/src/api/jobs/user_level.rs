@@ -22,8 +22,8 @@ pub async fn get_user_ingest_overview(
         "#,
         user_id
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     let mut overview = IngestOverviewResponse::default();
 
@@ -99,10 +99,7 @@ pub async fn get_running_ingest_jobs(
 }
 
 /// Lists failed ingest jobs for the current user.
-pub async fn get_failed_ingest_jobs(
-    pool: &PgPool,
-    user_id: i32,
-) -> Result<Vec<JobInfo>, AppError> {
+pub async fn get_failed_ingest_jobs(pool: &PgPool, user_id: i32) -> Result<Vec<JobInfo>, AppError> {
     let jobs = sqlx::query_as!(
         JobInfo,
         r#"
@@ -132,8 +129,8 @@ pub async fn get_failed_ingest_jobs(
         "#,
         user_id
     )
-        .fetch_all(pool)
-        .await?;
+    .fetch_all(pool)
+    .await?;
 
     Ok(jobs)
 }
@@ -149,18 +146,14 @@ pub async fn enqueue_scan_job(pool: &PgPool, user_id: i32) -> Result<(), AppErro
         "#,
         user_id
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
 
 /// Scopes retry requests safely to the authorized user's own ingestion pipeline.
-pub async fn retry_user_job(
-    pool: &PgPool,
-    job_id: i64,
-    user_id: i32,
-) -> Result<(), AppError> {
+pub async fn retry_user_job(pool: &PgPool, job_id: i64, user_id: i32) -> Result<(), AppError> {
     let result = sqlx::query!(
         r#"
         UPDATE jobs
@@ -179,8 +172,8 @@ pub async fn retry_user_job(
         job_id,
         user_id
     )
-        .execute(pool)
-        .await?;
+    .execute(pool)
+    .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::BadRequest(

@@ -5,12 +5,12 @@
     clippy::struct_excessive_bools
 )]
 
+pub mod constants;
 mod load_constants;
 mod load_settings;
 mod raw_settings;
 mod settings;
 mod utils;
-pub mod constants;
 
 pub use load_constants::*;
 pub use load_settings::*;
