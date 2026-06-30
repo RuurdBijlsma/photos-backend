@@ -202,6 +202,7 @@ impl MediaItemStore {
             || relative_path.to_string(),
             |f| f.to_string_lossy().to_string(),
         );
+        // It's getting stuck here somtimes? Why??
 
         // Insert into the main media_item table
         sqlx::query!(
