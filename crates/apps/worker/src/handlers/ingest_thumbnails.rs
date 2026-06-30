@@ -5,7 +5,7 @@ use crate::jobs::management::is_job_cancelled;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
-use generate_thumbnails::{generate_thumbnails};
+use generate_thumbnails::generate_thumbnails;
 use serde_json::Value;
 use sqlx::PgPool;
 use std::fs::File;
@@ -86,9 +86,10 @@ async fn process_thumbnails(
     let thumbnails_out_folder = context.settings.ingest.thumbnails_root.join(media_item_id);
     let pano_out_folder = context.settings.ingest.pano_root.join(media_item_id);
 
+    // Cache Check
     if context.settings.ingest.enable_cache
-        // Cache Check
         && get_thumbnail_cache(
+            &context.settings.ingest.cache_root,
             file_hash,
             &thumbnails_out_folder,
             &pano_out_folder,
@@ -112,6 +113,7 @@ async fn process_thumbnails(
         // Write Cache
         if context.settings.ingest.enable_cache {
             write_thumbnail_cache(
+                &context.settings.ingest.cache_root,
                 file_hash,
                 &thumbnails_out_folder,
                 &pano_out_folder,
@@ -119,12 +121,15 @@ async fn process_thumbnails(
             )
             .await?;
         }
-    };
+    }
 
     if use_panorama_viewer
         && let Err(e) = store_panorama_config(&context.pool, &pano_out_folder, media_item_id).await
     {
-        warn!("Couldn't store panorama config for {}, {e}", file_path.display());
+        warn!(
+            "Couldn't store panorama config for {}, {e}",
+            file_path.display()
+        );
     }
 
     Ok(())

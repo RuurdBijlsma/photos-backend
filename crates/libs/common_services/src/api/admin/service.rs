@@ -318,7 +318,7 @@ pub async fn admin_update_user_media_folder(
     sqlx::query!("DELETE FROM daily_card WHERE user_id = $1", target_user_id)
         .execute(pool)
         .await?;
-    backup_albums(pool, target_user_id).await?;
+    backup_albums(pool, &settings.cache_root, target_user_id).await?;
     enqueue_full_scan(pool, settings, target_user_id).await?;
 
     Ok(updated_user)

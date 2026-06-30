@@ -34,6 +34,7 @@ pub fn init_app_data_folders(settings: &IngestSettings) {
     fs::create_dir_all(&settings.app_data_root).expect("Cannot create app_data_root folder");
     fs::create_dir_all(&settings.thumbnails_root).expect("Cannot create thumbnails_root folder");
     fs::create_dir_all(&settings.pano_root).expect("Cannot create pano_root folder");
+    fs::create_dir_all(&settings.cache_root).expect("Cannot create cache_root folder");
     fs::create_dir_all(&settings.on_demand_thumbs_cache_root)
         .expect("Cannot create on_demand_thumbs_cache_root folder");
     fs::create_dir_all(&settings.face_clusters_root)

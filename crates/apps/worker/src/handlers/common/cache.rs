@@ -1,6 +1,5 @@
 use color_eyre::Result;
 use color_eyre::eyre::bail;
-use common_services::caching::cache_root;
 use common_types::ml_analysis::{MLChatAnalysis, MLFastAnalysis};
 use generate_thumbnails::copy_dir_contents;
 use media_analyzer::MediaMetadata;
@@ -46,8 +45,8 @@ pub struct CachedLlmResult {
 }
 
 /// Helper to get the path for a JSON cache file: cache/{category}/{hash}.json
-fn get_json_path(category: &str, hash: &str) -> PathBuf {
-    cache_root().join(category).join(format!("{hash}.json"))
+fn get_json_path(cache_root: &Path, category: &str, hash: &str) -> PathBuf {
+    cache_root.join(category).join(format!("{hash}.json"))
 }
 
 /// Helper to ensure the parent directory exists before writing a file
@@ -64,12 +63,13 @@ async fn ensure_parent_dir(path: &Path) -> Result<()> {
 // --- Thumbnails ---
 
 pub async fn get_thumbnail_cache(
+    cache_root: &Path,
     hash: &str,
     thumbnails_dest: &Path,
     pano_dest: &Path,
     require_panorama: bool,
 ) -> Result<bool> {
-    let cache_item_dir = cache_root().join(THUMBNAILS_DIR).join(hash);
+    let cache_item_dir = cache_root.join(THUMBNAILS_DIR).join(hash);
     let metadata_path = cache_item_dir.join("metadata.json");
 
     if !metadata_path.exists() {
@@ -77,13 +77,15 @@ pub async fn get_thumbnail_cache(
     }
 
     let data = fs::read_to_string(&metadata_path).await?;
-    let cached: CachedThumbnailMetadata = match serde_json::from_str(&data) {
-        Ok(c) => c,
-        Err(_) => {
-            warn!("Invalid thumbnail cache metadata, deleting: {:?}", cache_item_dir);
-            let _ = fs::remove_dir_all(&cache_item_dir).await;
-            return Ok(false);
-        }
+    let cached: CachedThumbnailMetadata = if let Ok(c) = serde_json::from_str(&data) {
+        c
+    } else {
+        warn!(
+            "Invalid thumbnail cache metadata, deleting: {:?}",
+            cache_item_dir
+        );
+        let _ = fs::remove_dir_all(&cache_item_dir).await;
+        return Ok(false);
     };
 
     // Check version
@@ -130,12 +132,13 @@ pub async fn get_thumbnail_cache(
 }
 
 pub async fn write_thumbnail_cache(
+    cache_root: &Path,
     hash: &str,
     thumbnails_src: &Path,
     pano_src: &Path,
     has_panorama: bool,
 ) -> Result<()> {
-    let cache_item_dir = cache_root().join(THUMBNAILS_DIR).join(hash);
+    let cache_item_dir = cache_root.join(THUMBNAILS_DIR).join(hash);
     if cache_item_dir.exists() {
         fs::remove_dir_all(&cache_item_dir).await?;
     }
@@ -166,8 +169,8 @@ pub async fn write_thumbnail_cache(
     Ok(())
 }
 
-pub async fn delete_thumbnail_cache(hash: &str) -> Result<()> {
-    let dest_folder = cache_root().join(THUMBNAILS_DIR).join(hash);
+pub async fn delete_thumbnail_cache(cache_root: &Path, hash: &str) -> Result<()> {
+    let dest_folder = cache_root.join(THUMBNAILS_DIR).join(hash);
     if dest_folder.exists() {
         fs::remove_dir_all(&dest_folder).await?;
     }
@@ -176,8 +179,8 @@ pub async fn delete_thumbnail_cache(hash: &str) -> Result<()> {
 
 // --- Ingest ---
 
-pub async fn get_ingest_cache(hash: &str) -> Result<Option<MediaMetadata>> {
-    let path = get_json_path(INGEST_DIR, hash);
+pub async fn get_ingest_cache(cache_root: &Path, hash: &str) -> Result<Option<MediaMetadata>> {
+    let path = get_json_path(cache_root, INGEST_DIR, hash);
     if !path.exists() {
         return Ok(None);
     }
@@ -194,8 +197,12 @@ pub async fn get_ingest_cache(hash: &str) -> Result<Option<MediaMetadata>> {
     Ok(None)
 }
 
-pub async fn write_ingest_cache(hash: &str, media_metadata: MediaMetadata) -> Result<()> {
-    let path = get_json_path(INGEST_DIR, hash);
+pub async fn write_ingest_cache(
+    cache_root: &Path,
+    hash: &str,
+    media_metadata: MediaMetadata,
+) -> Result<()> {
+    let path = get_json_path(cache_root, INGEST_DIR, hash);
     ensure_parent_dir(&path).await?;
 
     let json = serde_json::to_string(&CachedIngestResult {
@@ -208,8 +215,11 @@ pub async fn write_ingest_cache(hash: &str, media_metadata: MediaMetadata) -> Re
 
 // --- Analysis ---
 
-pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<MLFastAnalysis>>> {
-    let path = get_json_path(ANALYSIS_DIR, hash);
+pub async fn get_analysis_cache(
+    cache_root: &Path,
+    hash: &str,
+) -> Result<Option<Vec<MLFastAnalysis>>> {
+    let path = get_json_path(cache_root, ANALYSIS_DIR, hash);
     if !path.exists() {
         return Ok(None);
     }
@@ -231,7 +241,11 @@ pub async fn get_analysis_cache(hash: &str) -> Result<Option<Vec<MLFastAnalysis>
     Ok(None)
 }
 
-pub async fn write_analysis_cache(hash: &str, analyses: &[MLFastAnalysis]) -> Result<()> {
+pub async fn write_analysis_cache(
+    cache_root: &Path,
+    hash: &str,
+    analyses: &[MLFastAnalysis],
+) -> Result<()> {
     for analysis in analyses {
         if analysis.embedding.len() != EXPECTED_EMBEDDING_LENGTH {
             bail!(
@@ -242,7 +256,7 @@ pub async fn write_analysis_cache(hash: &str, analyses: &[MLFastAnalysis]) -> Re
         }
     }
 
-    let path = get_json_path(ANALYSIS_DIR, hash);
+    let path = get_json_path(cache_root, ANALYSIS_DIR, hash);
     ensure_parent_dir(&path).await?;
 
     let json = serde_json::to_string(&CachedAnalysisResult {
@@ -255,8 +269,8 @@ pub async fn write_analysis_cache(hash: &str, analyses: &[MLFastAnalysis]) -> Re
 
 // --- LLM ---
 
-pub async fn get_llm_cache(hash: &str) -> Result<Option<Vec<MLChatAnalysis>>> {
-    let path = get_json_path(LLM_DIR, hash);
+pub async fn get_llm_cache(cache_root: &Path, hash: &str) -> Result<Option<Vec<MLChatAnalysis>>> {
+    let path = get_json_path(cache_root, LLM_DIR, hash);
     if !path.exists() {
         return Ok(None);
     }
@@ -273,8 +287,12 @@ pub async fn get_llm_cache(hash: &str) -> Result<Option<Vec<MLChatAnalysis>>> {
     Ok(None)
 }
 
-pub async fn write_llm_cache(hash: &str, analyses: &[MLChatAnalysis]) -> Result<()> {
-    let path = get_json_path(LLM_DIR, hash);
+pub async fn write_llm_cache(
+    cache_root: &Path,
+    hash: &str,
+    analyses: &[MLChatAnalysis],
+) -> Result<()> {
+    let path = get_json_path(cache_root, LLM_DIR, hash);
     ensure_parent_dir(&path).await?;
 
     let json = serde_json::to_string(&CachedLlmResult {

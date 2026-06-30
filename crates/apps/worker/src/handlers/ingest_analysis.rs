@@ -68,14 +68,15 @@ async fn get_llm_data(
 ) -> Result<Vec<MLFastAnalysis>> {
     let file_hash = hash_file(file_path)?;
     if context.settings.ingest.enable_cache
-        && let Some(cached_analysis) = get_analysis_cache(&file_hash).await?
+        && let Some(cached_analysis) =
+            get_analysis_cache(&context.settings.ingest.cache_root, &file_hash).await?
     {
         debug!("Using analysis cache for {}", media_item_id);
         return Ok(cached_analysis);
     }
     let analyses = compute_analysis(context, file_path, media_item_id).await?;
     if context.settings.ingest.enable_cache {
-        write_analysis_cache(&file_hash, &analyses).await?;
+        write_analysis_cache(&context.settings.ingest.cache_root, &file_hash, &analyses).await?;
     }
 
     Ok(analyses)
