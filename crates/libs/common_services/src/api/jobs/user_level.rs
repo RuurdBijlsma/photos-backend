@@ -51,9 +51,11 @@ pub async fn get_user_ingest_overview(
     Ok(overview)
 }
 
-/// Lists all running ingest jobs for the current user, as well as those successfully
-/// completed within the last 5 seconds to feed a real-time activity stream.
-/// Filters out jobs marked as 'running' if their heartbeat is older than 1 minute 30 seconds.
+/// Lists all running ingest jobs for the current user.
+///
+/// This includes successfully completed within the last 5 seconds to feed a real-time activity
+/// stream. Filters out jobs marked as 'running' if their heartbeat is older than 1 minute 30
+/// seconds.
 pub async fn get_running_ingest_jobs(
     pool: &PgPool,
     user_id: i32,

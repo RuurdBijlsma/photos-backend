@@ -68,10 +68,6 @@ async fn process_thumbnails(
     let thumbnails_out_folder = thumbnail_root.join(media_item_id);
 
     // Try Cache
-    // todo: remove this when i've rethumbnaild the panos
-    if use_panorama_viewer {
-        delete_thumbnail_cache(file_hash).await?;
-    }
     if context.settings.ingest.enable_cache
         && let Some(cached_folder) = get_thumbnail_cache(file_hash).await?
     {
