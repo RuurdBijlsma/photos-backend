@@ -1,10 +1,9 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::cache::{
-    delete_thumbnail_cache, get_thumbnail_cache, write_thumbnail_cache,
+    get_thumbnail_cache, write_thumbnail_cache,
 };
 use crate::jobs::management::is_job_cancelled;
-use app_state::constants::PANO_FOLDER;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
@@ -63,10 +62,10 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
 
 async fn store_panorama_config(
     pool: &PgPool,
+    pano_sub_folder: &Path,
     media_item_id: &str,
-    thumbnail_out_folder: &Path,
 ) -> Result<()> {
-    let pano_config_path = thumbnail_out_folder.join(PANO_FOLDER).join("config.json");
+    let pano_config_path = pano_sub_folder.join("config.json");
     if !pano_config_path.exists() {
         return Err(eyre!("Pano config file does not exist"));
     }
@@ -86,8 +85,8 @@ async fn process_thumbnails(
     use_panorama_viewer: bool,
     orientation: i32,
 ) -> Result<()> {
-    let thumbnail_root = &context.settings.ingest.thumbnail_root;
-    let thumbnails_out_folder = thumbnail_root.join(media_item_id);
+    let thumbnails_out_folder = context.settings.ingest.thumbnails_root.join(media_item_id);
+    let pano_out_folder = context.settings.ingest.pano_root.join(media_item_id);
 
     // Try Cache
     if context.settings.ingest.enable_cache
@@ -105,6 +104,7 @@ async fn process_thumbnails(
             &context.settings.ingest,
             file_path,
             &thumbnails_out_folder,
+            &pano_out_folder,
             use_panorama_viewer,
             orientation,
         )
@@ -115,9 +115,13 @@ async fn process_thumbnails(
         }
     }
     if use_panorama_viewer {
-        store_panorama_config(&context.pool, media_item_id, &thumbnails_out_folder)
-            .await
-            .ok();
+        store_panorama_config(
+            &context.pool,
+            &pano_out_folder,
+            media_item_id,
+        )
+        .await
+        .ok();
     }
 
     Ok(())

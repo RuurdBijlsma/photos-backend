@@ -2,6 +2,7 @@
 .idea
 .env
 /thumbnails
+/app_data
 .venv
 face_clusters_output
 photo_clusters_output

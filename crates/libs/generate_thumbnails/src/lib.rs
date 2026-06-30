@@ -68,6 +68,7 @@ pub async fn generate_thumbnails(
     ingestion: &IngestSettings,
     file: &Path,
     thumb_sub_folder: &Path,
+    pano_sub_folder: &Path,
     use_panorama_viewer: bool,
     orientation: i32,
 ) -> Result<()> {
@@ -99,7 +100,7 @@ pub async fn generate_thumbnails(
         }
 
         if use_panorama_viewer {
-            generate_pano_thumbs(file, temp_out_dir)?;
+            generate_pano_thumbs(file,  pano_sub_folder)?;
         }
     } else if ingestion.is_video_file(file) {
         video::generate_video_thumbnails(file, temp_out_dir, &ingestion.thumbnails).await?;

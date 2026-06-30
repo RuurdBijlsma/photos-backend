@@ -22,22 +22,22 @@ pub async fn get_system_stats(
     )
     .fetch_one(pool);
 
-    let thumb_folder = settings.thumbnail_root.clone();
+    let app_data_folder = settings.app_data_root.clone();
     let media_folder = settings.media_root.clone();
 
     let fs_task = task::spawn_blocking(move || {
         let are_same_drive =
-            *ARE_SAME_DRIVE.get_or_init(|| are_on_same_drive(&thumb_folder, &media_folder));
+            *ARE_SAME_DRIVE.get_or_init(|| are_on_same_drive(&app_data_folder, &media_folder));
 
-        let thumbnail_drive = get_single_disk_info(&thumb_folder)?;
+        let app_data_drive = get_single_disk_info(&app_data_folder)?;
         let media_drive = if are_same_drive {
-            thumbnail_drive.clone()
+            app_data_drive.clone()
         } else {
             get_single_disk_info(&media_folder)?
         };
 
         Ok::<_, AppError>(DiskStats {
-            thumbnail_drive,
+            app_data_drive,
             media_drive,
             are_same_drive,
         })

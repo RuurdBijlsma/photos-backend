@@ -11,7 +11,7 @@ pub struct DiskInfo {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DiskStats {
-    pub thumbnail_drive: DiskInfo,
+    pub app_data_drive: DiskInfo,
     pub media_drive: DiskInfo,
     pub are_same_drive: bool,
 }

@@ -13,9 +13,6 @@ use std::path::Path;
 use tokio::fs;
 use tracing::info;
 use tracing::warn;
-use app_state::constants::{FACE_CLUSTERS_FOLDER, ON_DEMAND_THUMBNAIL_CACHE_FOLDER};
-
-const EXCLUDED_THUMBNAIL_FOLDERS: [&str; 1] = [FACE_CLUSTERS_FOLDER];
 
 /// Reads the thumbnails directory and returns a set of all subdirectory names (media item IDs).
 async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String>> {
@@ -24,12 +21,7 @@ async fn get_thumbnail_folders(thumbnail_folder: &Path) -> Result<HashSet<String
     while let Some(entry) = entries.next_entry().await? {
         if entry.file_type().await?.is_dir()
             && let Some(name) = entry.file_name().to_str()
-            && !EXCLUDED_THUMBNAIL_FOLDERS.contains(&name)
         {
-            // ignore .jpg-cache folder
-            if name == ON_DEMAND_THUMBNAIL_CACHE_FOLDER {
-                continue;
-            }
             set.insert(name.to_owned());
         }
     }
@@ -50,7 +42,7 @@ async fn sync_thumbnails(pool: &PgPool, settings: &IngestSettings) -> Result<()>
         return Ok(()); // skip if ingest jobs are pending
     }
 
-    let thumbnails_root = &settings.thumbnail_root;
+    let thumbnails_root = &settings.thumbnails_root;
     let media_root = &settings.media_root;
 
     let (thumb_ids, db_ids) = tokio::try_join!(get_thumbnail_folders(thumbnails_root), async {

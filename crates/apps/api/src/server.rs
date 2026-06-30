@@ -22,7 +22,6 @@ use std::iter::once;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tasks::task_runner::init_task_scheduler;
-use tokio::fs;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors;
 use tower_http::cors::CorsLayer;
@@ -31,7 +30,7 @@ use tower_http::services::ServeDir;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
-use app_state::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
+use app_state::constants::{HOSTED_FOLDER};
 
 pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool) -> Result<()> {
     if run_task_scheduler {
@@ -56,14 +55,6 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         text_embedder: Arc::new(text_embedder),
         vision_embedder: Arc::new(vision_embedder),
     };
-
-    fs::create_dir_all(
-        &settings
-            .ingest
-            .thumbnail_root
-            .join(ON_DEMAND_THUMBNAIL_CACHE_FOLDER),
-    )
-    .await?;
 
     // --- CORS Configuration ---
     let allowed_origins: Vec<HeaderValue> = settings
@@ -94,13 +85,21 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         ]);
 
     // Static file serving
-    let serve_dir = ServeDir::new(&settings.ingest.thumbnail_root);
-
-    // Create a middleware layer to add the Cache-Control header.
-    let cache_layer = SetResponseHeaderLayer::if_not_present(
+    let serve_thumbnails = ServeDir::new(&settings.ingest.thumbnails_root);
+    let thumbnail_cache_layer = SetResponseHeaderLayer::if_not_present(
         header::CACHE_CONTROL,
         HeaderValue::from_static("public, max-age=31536000, immutable"),
     );
+
+    let serve_hosted = ServeDir::new(settings.ingest.app_data_root.join(HOSTED_FOLDER));
+    let hosted_cache_layer = SetResponseHeaderLayer::if_not_present(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=86400"),
+    );
+    let serve_hosted = get_service(serve_hosted)
+        .layer::<_, std::convert::Infallible>(hosted_cache_layer)
+        .layer::<_, std::convert::Infallible>(cors.clone());
+
 
     // --- Create Router ---
     let app = create_router(api_state)
@@ -110,7 +109,8 @@ pub async fn serve(pool: PgPool, settings: AppSettings, run_task_scheduler: bool
         .layer(SetSensitiveRequestHeadersLayer::new(once(
             header::AUTHORIZATION,
         )))
-        .nest_service("/thumbnails", get_service(serve_dir).layer(cache_layer));
+        .nest_service("/thumbnails", get_service(serve_thumbnails).layer(thumbnail_cache_layer))
+        .nest_service("/hosted", serve_hosted);
 
     // --- Start Server ---
     let listen_address = format!("{}:{}", settings.api.host, settings.api.port);

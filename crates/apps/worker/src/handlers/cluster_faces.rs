@@ -17,7 +17,6 @@ use sqlx::{PgPool, Transaction, query, query_as};
 use std::collections::{HashMap, HashSet};
 use tempfile::Builder;
 use tracing::info;
-use app_state::constants::FACE_CLUSTERS_FOLDER;
 
 const ENTITY_NAME: &str = "face";
 const MIN_ITEMS_TO_CLUSTER: usize = 4;
@@ -141,12 +140,11 @@ async fn extract_and_save_cluster_thumbnail(
 
     let thumb = extract_face_thumbnail(&img, &bbox, PADDING_FACTOR, THUMBNAIL_SIZE);
 
-    let out_dir = context
+    let out_dir = &context
         .settings
         .ingest
-        .thumbnail_root
-        .join(FACE_CLUSTERS_FOLDER);
-    tokio::fs::create_dir_all(&out_dir).await?;
+        .face_clusters_root;
+    tokio::fs::create_dir_all(out_dir).await?;
 
     let out_path = out_dir.join(format!("{cluster_id}.webp"));
     thumb.save(out_path)?;

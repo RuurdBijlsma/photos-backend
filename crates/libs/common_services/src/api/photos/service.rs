@@ -24,7 +24,6 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
-use app_state::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///
@@ -122,9 +121,8 @@ pub async fn thumbnail_on_demand_cached(
     media_item_id: &str,
     ingest_settings: &IngestSettings,
 ) -> Result<Vec<u8>, AppError> {
-    let cache_dir = ingest_settings
-        .thumbnail_root
-        .join(ON_DEMAND_THUMBNAIL_CACHE_FOLDER);
+    let cache_dir = &ingest_settings
+        .on_demand_thumbs_cache_root;
     let cache_filename = format!("{media_item_id}_{size}.jpg");
     let cache_path = cache_dir.join(&cache_filename);
 

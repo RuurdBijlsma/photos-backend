@@ -33,7 +33,7 @@ pub async fn test_onboarding(context: &TestContext) -> Result<()> {
     assert_eq!(response.status(), StatusCode::OK);
     let disk_info: DiskResponse = response.json().await?;
     assert!(disk_info.media_folder.read_access);
-    assert!(disk_info.thumbnails_folder.read_access);
+    assert!(disk_info.app_data_folder.read_access);
 
     // 3. List Folders (root)
     let response = client

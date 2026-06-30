@@ -17,8 +17,8 @@ use tokio::fs as tokio_fs;
 use tracing::{debug, warn};
 use walkdir::WalkDir;
 
-/// Gathers information about the media and thumbnail directories.
-pub fn get_disks_info(media_root: &Path, thumbnails_root: &Path) -> Result<DiskResponse, AppError> {
+/// Gathers information about the media and `app_data` directories.
+pub fn get_disks_info(media_root: &Path, app_data_root: &Path) -> Result<DiskResponse, AppError> {
     if !media_root.is_dir() {
         return Err(AppError::BadRequest(format!(
             "Invalid path: {}",
@@ -26,19 +26,19 @@ pub fn get_disks_info(media_root: &Path, thumbnails_root: &Path) -> Result<DiskR
         )));
     }
 
-    if !thumbnails_root.is_dir() {
+    if !app_data_root.is_dir() {
         return Err(AppError::BadRequest(format!(
             "Invalid path: {}",
-            to_posix_string(thumbnails_root)
+            to_posix_string(app_data_root)
         )));
     }
 
     let media_folder_info = check_drive_info(media_root)?;
-    let thumbnail_folder_info = check_drive_info(thumbnails_root)?;
+    let app_data_folder_info = check_drive_info(app_data_root)?;
 
     Ok(DiskResponse {
         media_folder: media_folder_info,
-        thumbnails_folder: thumbnail_folder_info,
+        app_data_folder: app_data_folder_info,
     })
 }
 

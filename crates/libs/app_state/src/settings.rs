@@ -1,3 +1,6 @@
+use crate::constants::{
+    FACE_CLUSTERS_FOLDER, ON_DEMAND_THUMBNAIL_CACHE_FOLDER, PANO_FOLDER, THUMBNAILS_FOLDER,
+};
 use crate::{
     AnalyzerSettings, ApiSettings, DailyCardsSettings, FileDetectionSettings, LoggingSettings,
     MakeRelativePath, RawSettings, SecretSettings, ThumbnailSettings,
@@ -22,7 +25,11 @@ pub struct AppSettings {
 pub struct IngestSettings {
     pub media_root: PathBuf,
     pub media_root_canon: PathBuf,
-    pub thumbnail_root: PathBuf,
+    pub app_data_root: PathBuf,
+    pub thumbnails_root: PathBuf,
+    pub on_demand_thumbs_cache_root: PathBuf,
+    pub pano_root: PathBuf,
+    pub face_clusters_root: PathBuf,
     pub enable_cache: bool,
     pub analyzer: AnalyzerSettings,
     pub file_detection: FileDetectionSettings,
@@ -31,19 +38,27 @@ pub struct IngestSettings {
 
 impl From<RawSettings> for AppSettings {
     fn from(raw: RawSettings) -> Self {
-        let thumbnail_root =
-            absolute(&raw.ingest.thumbnail_folder).expect("Invalid thumbnail_folder");
+        let app_data_root =
+            absolute(&raw.ingest.app_data_folder).expect("Invalid thumbnail_folder");
         let media_root = absolute(&raw.ingest.media_folder).expect("Invalid media_folder");
         let media_root_canon =
             canonicalize(&raw.ingest.media_folder).expect("Invalid media_folder");
+        let on_demand_thumbs_cache_root = app_data_root.join(ON_DEMAND_THUMBNAIL_CACHE_FOLDER);
+        let pano_root = app_data_root.join(PANO_FOLDER);
+        let face_clusters_root = app_data_root.join(FACE_CLUSTERS_FOLDER);
+        let thumbnails_root = app_data_root.join(THUMBNAILS_FOLDER);
         let ingest = IngestSettings {
             media_root_canon,
             media_root,
-            thumbnail_root,
+            app_data_root,
             enable_cache: raw.ingest.enable_cache,
             analyzer: raw.ingest.analyzer,
             file_detection: raw.ingest.file_detection,
             thumbnails: raw.ingest.thumbnails,
+            on_demand_thumbs_cache_root,
+            pano_root,
+            face_clusters_root,
+            thumbnails_root,
         };
 
         Self {
@@ -112,7 +127,7 @@ impl IngestSettings {
             }
         }
 
-        let thumb_dir = self.thumbnail_root.join(thumb_sub_folder);
+        let thumb_dir = self.app_data_root.join(thumb_sub_folder);
         for thumb_filename in should_exist {
             let thumb_file_path = thumb_dir.join(thumb_filename.clone());
             if !thumb_file_path.exists() {
