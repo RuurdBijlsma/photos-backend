@@ -9,7 +9,6 @@ use axum_extra::headers::Range;
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use color_eyre::Report;
 use color_eyre::eyre::eyre;
-use common_types::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 use exif::{In, Tag, Value};
 use fast_image_resize as fr;
 use http::{Response, StatusCode, header};
@@ -25,6 +24,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tokio::{fs, task};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tracing::{debug, warn};
+use app_state::constants::ON_DEMAND_THUMBNAIL_CACHE_FOLDER;
 
 /// Securely streams a validated media file to the client after performing authorization checks.
 ///

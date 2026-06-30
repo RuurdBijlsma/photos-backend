@@ -11,7 +11,7 @@ use crate::database::{CreateAlbumPayload, UpdateField};
 use crate::job_queue::enqueue_job;
 use crate::s2s_client::{S2SClient, insecure_extract_token_claims};
 use crate::utils::nice_id;
-use app_state::{IngestSettings, constants};
+use app_state::{constants, IngestSettings};
 use chrono::{Duration, Utc};
 use color_eyre::eyre::Context;
 use common_types::ImportAlbumItemPayload;

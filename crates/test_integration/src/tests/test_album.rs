@@ -9,13 +9,13 @@ use common_services::database::UpdateField;
 use common_services::database::album::album::{Album, AlbumSummary};
 use common_services::database::album_store::AlbumStore;
 use common_services::database::user_store::UserStore;
-use common_types::constants::ALBUM_IMPORT_FOLDER;
 use common_types::dev_constants::{EMAIL, USERNAME};
 use reqwest::StatusCode;
 use std::time::{Duration, Instant};
 use tokio::fs;
 use tokio::time::sleep;
 use tracing::info;
+use app_state::constants::ALBUM_IMPORT_FOLDER;
 
 pub async fn test_album_lifecycle(context: &TestContext) -> Result<()> {
     // ARRANGE

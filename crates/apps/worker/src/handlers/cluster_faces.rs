@@ -8,7 +8,6 @@ use common_services::database::jobs::Job;
 use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::person::ExistingFaceCluster;
 use common_services::utils::nice_id;
-use common_types::constants::FACE_CLUSTERS_FOLDER;
 use face_id::detector::BoundingBox;
 use face_id::helpers::extract_face_thumbnail;
 use generate_thumbnails::ffmpeg::FfmpegCommand;
@@ -18,6 +17,7 @@ use sqlx::{PgPool, Transaction, query, query_as};
 use std::collections::{HashMap, HashSet};
 use tempfile::Builder;
 use tracing::info;
+use app_state::constants::FACE_CLUSTERS_FOLDER;
 
 const ENTITY_NAME: &str = "face";
 const MIN_ITEMS_TO_CLUSTER: usize = 4;

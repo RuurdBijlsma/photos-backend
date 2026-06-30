@@ -2,9 +2,10 @@ use std::fs;
 use std::path::Path;
 use color_eyre::Result;
 use panorama_tiler::{tile_panorama_with_guessed_angles, DownscalingMethod, OutputConfig, OutputFormat};
+use app_state::constants::PANO_FOLDER;
 
 pub fn generate_pano_thumbs(input_file: &Path, output_folder: &Path) -> Result<()> {
-    let pano_dir = output_folder.join("pano");
+    let pano_dir = output_folder.join(PANO_FOLDER);
     if !pano_dir.exists() {
         fs::create_dir_all(&pano_dir)?;
     }

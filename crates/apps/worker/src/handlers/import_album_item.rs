@@ -10,11 +10,11 @@ use common_services::database::media_item_store::MediaItemStore;
 use common_services::database::user_store::UserStore;
 use common_services::job_queue::{IngestMetadataPayload, enqueue_full_ingest};
 use common_types::ImportAlbumItemPayload;
-use common_types::constants::ALBUM_IMPORT_FOLDER;
 use serde_json::from_value;
 use std::path::Path;
 use std::slice;
 use tokio::fs;
+use app_state::constants::ALBUM_IMPORT_FOLDER;
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let media_root = &context.settings.ingest.media_root;

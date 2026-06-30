@@ -107,6 +107,7 @@ pub struct FullMediaItem {
     pub media_features: MediaFeatures,
     pub camera_settings: CameraSettings,
     pub user_caption: Option<String>,
+    pub panorama_config: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone)]
@@ -137,6 +138,7 @@ pub struct FullMediaItemRow {
     pub media_features: Json<MediaFeatures>,
     pub camera_settings: Json<CameraSettings>,
     pub user_caption: Option<String>,
+    pub panorama_config: Option<Json<serde_json::Value>>,
 }
 
 impl From<FullMediaItemRow> for FullMediaItem {
@@ -168,6 +170,7 @@ impl From<FullMediaItemRow> for FullMediaItem {
             media_features: r.media_features.0,
             camera_settings: r.camera_settings.0,
             user_caption: r.user_caption,
+            panorama_config: r.panorama_config.map(|p| p.0),
         }
     }
 }

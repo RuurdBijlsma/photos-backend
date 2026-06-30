@@ -3,7 +3,7 @@ use crate::api::system::interfaces::{DiskStats, SystemStats};
 use crate::api::system::storage_helpers::{
     ARE_SAME_DRIVE, are_on_same_drive, get_single_disk_info,
 };
-use app_state::{IngestSettings, constants};
+use app_state::{constants, IngestSettings};
 use sqlx::PgPool;
 use tokio::task;
 

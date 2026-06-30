@@ -1,12 +1,18 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::cache::{
-    get_thumbnail_cache, write_thumbnail_cache,
+    delete_thumbnail_cache, get_thumbnail_cache, write_thumbnail_cache,
 };
 use crate::jobs::management::is_job_cancelled;
+use app_state::constants::PANO_FOLDER;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
+use common_services::database::media_item_store::MediaItemStore;
 use generate_thumbnails::{copy_dir_contents, generate_thumbnails};
+use serde_json::Value;
+use sqlx::PgPool;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 use tracing::{debug, warn};
 
@@ -55,6 +61,22 @@ pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     Ok(JobResult::Done)
 }
 
+async fn store_panorama_config(
+    pool: &PgPool,
+    media_item_id: &str,
+    thumbnail_out_folder: &Path,
+) -> Result<()> {
+    let pano_config_path = thumbnail_out_folder.join(PANO_FOLDER).join("config.json");
+    if !pano_config_path.exists() {
+        return Err(eyre!("Pano config file does not exist"));
+    }
+    let file = File::open(&pano_config_path)?;
+    let reader = BufReader::new(file);
+    let json: Value = serde_json::from_reader(reader)?;
+    MediaItemStore::upsert_panorama_config(pool, media_item_id, &json).await?;
+    Ok(())
+}
+
 /// Handles thumbnail creation. Checks cache first, generates if missing.
 async fn process_thumbnails(
     context: &WorkerContext,
@@ -77,22 +99,25 @@ async fn process_thumbnails(
             cached_folder.display()
         );
         copy_dir_contents(&cached_folder, &thumbnails_out_folder).await?;
-        return Ok(());
+    } else {
+        // Cache Miss: Generate
+        generate_thumbnails(
+            &context.settings.ingest,
+            file_path,
+            &thumbnails_out_folder,
+            use_panorama_viewer,
+            orientation,
+        )
+        .await?;
+        // Write Cache
+        if context.settings.ingest.enable_cache {
+            write_thumbnail_cache(file_hash, &thumbnails_out_folder).await?;
+        }
     }
-
-    // Cache Miss: Generate
-    generate_thumbnails(
-        &context.settings.ingest,
-        file_path,
-        &thumbnails_out_folder,
-        use_panorama_viewer,
-        orientation,
-    )
-    .await?;
-
-    // Write Cache
-    if context.settings.ingest.enable_cache {
-        write_thumbnail_cache(file_hash, &thumbnails_out_folder).await?;
+    if use_panorama_viewer {
+        store_panorama_config(&context.pool, media_item_id, &thumbnails_out_folder)
+            .await
+            .ok();
     }
 
     Ok(())
