@@ -1,7 +1,7 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
 use crate::handlers::common::cache::{
-    delete_thumbnail_cache, get_thumbnail_cache, write_thumbnail_cache,
+    get_thumbnail_cache, write_thumbnail_cache,
 };
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::{Result, eyre::eyre};
