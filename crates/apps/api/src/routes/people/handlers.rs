@@ -83,7 +83,7 @@ pub async fn get_person_thumbnail_redirect_handler(
         .fetch_one(&context.pool)
         .await?
     };
-    let target_url = format!("/thumbnails/{FACE_CLUSTERS_FOLDER}/{cluster_id}.webp");
+    let target_url = format!("/{FACE_CLUSTERS_FOLDER}/{cluster_id}.webp");
     let headers = [(CACHE_CONTROL, "public, max-age=300")];
     Ok((headers, Redirect::temporary(&target_url)))
 }
