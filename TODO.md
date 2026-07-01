@@ -236,6 +236,7 @@
 * ✅ remove exif from full photo response
 * ✅ write thumbnails to cache folder and symlink to thumbnails folder?
 * rotate image by changing thumbnail orientation?
+* add photo search type: Panorama (use_panorama_viewer flag). Currently type=photo|video, add panorama
 
 # High level TODO:
 
