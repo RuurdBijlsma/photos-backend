@@ -1,6 +1,6 @@
 use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
-use crate::database::media_item::media_features::MediaFeatures;
+use crate::database::media_item::media_features::{CreateMediaFeatures, ReadMediaFeatures};
 use crate::database::media_item::time_details::TimeDetails;
 use crate::database::media_item::weather::Weather;
 use crate::database::visual_analysis::visual_analysis::ReadVisualAnalysis;
@@ -27,14 +27,14 @@ pub struct CreateFullMediaItem {
     pub gps: Option<Gps>,
     pub time: TimeDetails,
     pub weather: Option<Weather>,
-    pub media_features: MediaFeatures,
+    pub media_features: CreateMediaFeatures,
     pub camera_settings: CameraSettings,
     pub orientation: i32,
 }
 
 impl From<MediaMetadata> for CreateFullMediaItem {
     fn from(result: MediaMetadata) -> Self {
-        let media_features = MediaFeatures {
+        let media_features = CreateMediaFeatures {
             mime_type: result.basic.mime_type,
             size_bytes: result.basic.size_bytes as i64,
             is_motion_photo: result.features.is_motion_photo,
@@ -104,7 +104,7 @@ pub struct FullMediaItem {
     pub gps: Option<Gps>,
     pub time: TimeDetails,
     pub weather: Option<Weather>,
-    pub media_features: MediaFeatures,
+    pub media_features: ReadMediaFeatures,
     pub camera_settings: CameraSettings,
     pub user_caption: Option<String>,
     pub panorama_config: Option<serde_json::Value>,
@@ -135,7 +135,7 @@ pub struct FullMediaItemRow {
     pub gps: Option<Json<Gps>>,
     pub time: Json<TimeDetails>,
     pub weather: Option<Json<Weather>>,
-    pub media_features: Json<MediaFeatures>,
+    pub media_features: Json<ReadMediaFeatures>,
     pub camera_settings: Json<CameraSettings>,
     pub user_caption: Option<String>,
     pub panorama_config: Option<Json<serde_json::Value>>,

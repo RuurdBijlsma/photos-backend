@@ -47,7 +47,7 @@ use color_eyre::Result;
 use color_eyre::eyre::bail;
 use std::path::Path;
 use temp_dir::TempDir;
-pub use utils::copy_dir_contents;
+pub use utils::{copy_dir_contents, link_or_copy_dir_contents};
 
 /// Generates thumbnails for a given media file (image or video) based on the provided configuration.
 ///

@@ -1,7 +1,7 @@
 use color_eyre::Result;
 use color_eyre::eyre::bail;
 use common_types::ml_analysis::{MLChatAnalysis, MLFastAnalysis};
-use generate_thumbnails::copy_dir_contents;
+use generate_thumbnails::{link_or_copy_dir_contents};
 use media_analyzer::MediaMetadata;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -104,13 +104,14 @@ pub async fn get_thumbnail_cache(
         return Ok(false);
     }
 
-    // Restore thumbnails folder
+    // Restore thumbnails folder using hard links
     let cached_thumbs = cache_item_dir.join("thumbs");
     if cached_thumbs.exists() {
         if !thumbnails_dest.exists() {
             fs::create_dir_all(thumbnails_dest).await?;
         }
-        copy_dir_contents(&cached_thumbs, thumbnails_dest).await?;
+        // Changed to link_or_copy_dir_contents:
+        link_or_copy_dir_contents(&cached_thumbs, thumbnails_dest).await?;
     } else {
         return Ok(false);
     }
@@ -122,7 +123,8 @@ pub async fn get_thumbnail_cache(
             if !pano_dest.exists() {
                 fs::create_dir_all(pano_dest).await?;
             }
-            copy_dir_contents(&cached_pano, pano_dest).await?;
+            // Changed to link_or_copy_dir_contents:
+            link_or_copy_dir_contents(&cached_pano, pano_dest).await?;
         } else {
             return Ok(false);
         }
@@ -144,17 +146,18 @@ pub async fn write_thumbnail_cache(
     }
     fs::create_dir_all(&cache_item_dir).await?;
 
-    // Copy thumbnails to cache
+    // Hard link thumbnails to cache
     let cached_thumbs = cache_item_dir.join("thumbs");
     fs::create_dir_all(&cached_thumbs).await?;
-    copy_dir_contents(thumbnails_src, &cached_thumbs).await?;
+    link_or_copy_dir_contents(thumbnails_src, &cached_thumbs).await?;
 
-    // Copy panorama to cache if requested and output directory exists
+    // Hard link panorama to cache if requested and output directory exists
     let actual_has_panorama = has_panorama && pano_src.exists();
     if actual_has_panorama {
         let cached_pano = cache_item_dir.join("pano");
         fs::create_dir_all(&cached_pano).await?;
-        copy_dir_contents(pano_src, &cached_pano).await?;
+        // Changed to link_or_copy_dir_contents:
+        link_or_copy_dir_contents(pano_src, &cached_pano).await?;
     }
 
     // Write metadata file

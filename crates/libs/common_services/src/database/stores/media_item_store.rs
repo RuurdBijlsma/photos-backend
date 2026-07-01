@@ -1,7 +1,7 @@
 use crate::database::media_item::camera_settings::CameraSettings;
 use crate::database::media_item::gps::Gps;
 use crate::database::media_item::location::Location;
-use crate::database::media_item::media_features::MediaFeatures;
+use crate::database::media_item::media_features::ReadMediaFeatures;
 use crate::database::media_item::media_item::{
     CreateFullMediaItem, FullMediaItem, FullMediaItemRow,
 };
@@ -163,7 +163,7 @@ impl MediaItemStore {
                 AS "weather: Json<Weather>",
 
             (SELECT to_jsonb(d) FROM media_features d WHERE d.media_item_id = mi.id)
-                AS "media_features!: Json<MediaFeatures>",
+                AS "media_features!: Json<ReadMediaFeatures>",
 
             (SELECT to_jsonb(cd) FROM camera_settings cd WHERE cd.media_item_id = mi.id)
                 AS "camera_settings!: Json<CameraSettings>",

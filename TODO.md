@@ -233,7 +233,7 @@
 * check of readme uitleg klopt met verse windows installatie & linux
 * better error if exiftool isnt there (worker wont work then)
 * improve speed of album/{id} endpoint
-* remove exif from full photo response
+* ✅ remove exif from full photo response
 * write thumbnails to cache folder and symlink to thumbnails folder? 
   * has perf impact? idk. Would take much less storage
 
