@@ -1,6 +1,5 @@
 use crate::context::WorkerContext;
 use crate::handlers::JobResult;
-use crate::handlers::common::cache::{get_thumbnail_cache, write_thumbnail_cache};
 use crate::jobs::management::is_job_cancelled;
 use color_eyre::{Result, eyre::eyre};
 use common_services::database::jobs::Job;
@@ -12,6 +11,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use tracing::{debug, warn};
+use crate::handlers::common::cache::thumbnail_cache::{get_thumbnail_cache, write_thumbnail_cache};
 
 pub async fn handle(context: &WorkerContext, job: &Job) -> Result<JobResult> {
     let relative_path = job

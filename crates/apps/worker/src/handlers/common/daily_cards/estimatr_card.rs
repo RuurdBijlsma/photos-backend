@@ -1,4 +1,4 @@
-use crate::handlers::daily_cards::DailyCardGenerator;
+use crate::handlers::common::daily_cards::DailyCardGenerator;
 use app_state::AppSettings;
 use async_trait::async_trait;
 use common_services::api::album::service::get_representative_thumbnail;

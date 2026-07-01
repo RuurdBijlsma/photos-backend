@@ -235,6 +235,7 @@
 * improve speed of album/{id} endpoint
 * ✅ remove exif from full photo response
 * ✅ write thumbnails to cache folder and symlink to thumbnails folder?
+* rotate image by changing thumbnail orientation?
 
 # High level TODO:
 

@@ -11,7 +11,6 @@ pub mod calc_system_stats;
 pub mod clean_db;
 pub mod cluster_faces;
 pub mod cluster_photos;
-pub mod daily_cards;
 pub mod delayed_scan;
 pub mod generate_daily_cards;
 pub mod import_album_item;
